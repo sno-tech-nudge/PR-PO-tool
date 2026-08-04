@@ -1,8 +1,5 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { approvePRLevel, generatePRPurchaseOrder, rejectPRLevel } from '../../lib/prApprovalActions'
-import PRRejectModal from './PRRejectModal'
-import POTemplate from './POTemplate'
 
 function timeAgo(dateStr) {
   if (!dateStr) return ''
@@ -31,47 +28,13 @@ function currentStageLabel(pr) {
   return `Approved by ${approved.map(a => a.approver_name).join(', ')}, pending ${pending.approver_name}`
 }
 
-function IconButton({ onClick, disabled, title, color, bg, children }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      style={{
-        width: '30px', height: '30px', borderRadius: '4px', border: 'none',
-        background: bg, color, fontSize: '15px', fontWeight: 700,
-        cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-      }}
-    >
-      {children}
-    </button>
-  )
-}
-
-function PRCard({ pr, onClick, user, onActioned, actioningId, setActioningId, setRejectingPR }) {
+// Approve/reject only happens in the detail view (PRApproverView) — same
+// convention as expense reports (ApproverDashboard.jsx's cards are pure
+// navigation too). This card is informational + a link, nothing more.
+function PRCard({ pr, onClick }) {
   const hoursAgo = Math.floor((Date.now() - new Date(pr.submitted_at || pr.created_at).getTime()) / 3600000)
   const isOverdue = hoursAgo >= 48
   const isWarning = hoursAgo >= 24 && !isOverdue
-  const isActioning = actioningId === pr.id
-
-  async function handleApprove(e) {
-    e.stopPropagation()
-    setActioningId(pr.id)
-    const approvals = pr.pr_approvals || []
-    const result = await approvePRLevel({ prId: pr.id, approvals, user })
-    if (result.isFinal) {
-      await generatePRPurchaseOrder({ prId: pr.id, pr, setPOData: po => onActioned.setPOData(po, pr) })
-    }
-    await onActioned.reload()
-    setActioningId(null)
-  }
-
-  function handleRejectClick(e) {
-    e.stopPropagation()
-    setRejectingPR(pr)
-  }
 
   return (
     <div
@@ -81,15 +44,7 @@ function PRCard({ pr, onClick, user, onActioned, actioningId, setActioningId, se
       <div style={{ padding: '14px 16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
           <div style={{ fontSize: '13px', fontWeight: 600, color: '#1A1A1A' }}>{pr.vendors?.org_name || 'Unknown Vendor'}</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ fontSize: '14px', fontWeight: 700, color: '#1A1A1A' }}>INR {Number(pr.amount || 0).toLocaleString('en-IN')}</div>
-            {pr.status === 'submitted' && (
-              <div style={{ display: 'flex', gap: '6px' }}>
-                <IconButton onClick={handleApprove} disabled={isActioning} title="Approve" color="#FFFFFF" bg="#15803D">✓</IconButton>
-                <IconButton onClick={handleRejectClick} disabled={isActioning} title="Reject" color="#FFFFFF" bg="#B91C1C">✗</IconButton>
-              </div>
-            )}
-          </div>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: '#1A1A1A' }}>INR {Number(pr.amount || 0).toLocaleString('en-IN')}</div>
         </div>
         <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>{pr.purpose?.substring(0, 70)}{pr.purpose?.length > 70 ? '…' : ''}</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -118,14 +73,12 @@ function PRCard({ pr, onClick, user, onActioned, actioningId, setActioningId, se
   )
 }
 
-export default function PRApproverDashboard({ user, onViewPR, onBack }) {
+export default function PRApproverDashboard({ onViewPR, onBack }) {
   const [tab, setTab]         = useState('pending')
   const [pending, setPending] = useState([])
   const [reviewed, setReviewed] = useState([])
   const [loading, setLoading] = useState(true)
-  const [actioningId, setActioningId] = useState(null)
-  const [rejectingPR, setRejectingPR] = useState(null)
-  const [poRenderData, setPoRenderData] = useState(null)
+  const [search, setSearch]   = useState('')
 
   useEffect(() => { load() }, [])
 
@@ -150,21 +103,21 @@ export default function PRApproverDashboard({ user, onViewPR, onBack }) {
     setLoading(false)
   }
 
-  async function handleRejectConfirm(reason) {
-    const approvals = rejectingPR.pr_approvals || []
-    await rejectPRLevel({ prId: rejectingPR.id, approvals, pr: rejectingPR, user, reason })
-    setRejectingPR(null)
-    await load()
-  }
-
   const list = tab === 'pending' ? pending : reviewed
-  const onActioned = { reload: load, setPOData: (po, pr) => setPoRenderData({ po, pr }) }
+  const filtered = search.trim()
+    ? list.filter(pr => {
+        const q = search.trim().toLowerCase()
+        return (
+          pr.pr_number?.toLowerCase().includes(q) ||
+          pr.vendors?.org_name?.toLowerCase().includes(q) ||
+          pr.requested_by?.toLowerCase().includes(q) ||
+          pr.category?.toLowerCase().includes(q)
+        )
+      })
+    : list
 
   return (
     <div style={{ maxWidth: '480px', margin: '0 auto', padding: '20px', width: '100%' }}>
-      {/* Hidden PO template for PDF generation on final-level approval */}
-      {poRenderData && <POTemplate po={poRenderData.po} pr={poRenderData.pr} vendor={poRenderData.pr?.vendors} />}
-
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
         {onBack && (
           <div onClick={onBack} style={{ fontSize: '13px', color: '#4A4A4A', cursor: 'pointer', textDecoration: 'underline', flexShrink: 0 }}>
@@ -176,6 +129,14 @@ export default function PRApproverDashboard({ user, onViewPR, onBack }) {
           <div style={{ fontSize: '20px', fontWeight: 500, color: '#1A1A1A' }}>Pending your review</div>
         </div>
       </div>
+
+      <input
+        type="text"
+        placeholder="Search PR number, vendor, requester…"
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        style={{ width: '100%', height: '36px', border: '1px solid #E3E8EF', borderRadius: '4px', padding: '0 12px', fontSize: '13px', color: '#1A1F36', outline: 'none', background: '#F8F9FA', boxSizing: 'border-box', marginBottom: '16px' }}
+      />
 
       <div style={{ display: 'flex', borderBottom: '1px solid #E8E8E8', marginBottom: '16px' }}>
         {[
@@ -200,32 +161,17 @@ export default function PRApproverDashboard({ user, onViewPR, onBack }) {
 
       {loading && <div style={{ fontSize: '13px', color: '#6B6B6B' }}>Loading…</div>}
 
-      {!loading && list.length === 0 && (
+      {!loading && filtered.length === 0 && (
         <div style={{ fontSize: '14px', color: '#4A4A4A', textAlign: 'center', padding: '40px 0' }}>
-          {tab === 'pending' ? 'No purchase requests pending review.' : 'No reviewed requests.'}
+          {list.length === 0
+            ? (tab === 'pending' ? 'No purchase requests pending review.' : 'No reviewed requests.')
+            : 'No requests match your search.'}
         </div>
       )}
 
-      {!loading && list.map(pr => (
-        <PRCard
-          key={pr.id}
-          pr={pr}
-          onClick={onViewPR}
-          user={user}
-          onActioned={onActioned}
-          actioningId={actioningId}
-          setActioningId={setActioningId}
-          setRejectingPR={setRejectingPR}
-        />
+      {!loading && filtered.map(pr => (
+        <PRCard key={pr.id} pr={pr} onClick={onViewPR} />
       ))}
-
-      {rejectingPR && (
-        <PRRejectModal
-          prNumber={rejectingPR.pr_number}
-          onConfirm={handleRejectConfirm}
-          onCancel={() => setRejectingPR(null)}
-        />
-      )}
     </div>
   )
 }

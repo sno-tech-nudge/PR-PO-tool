@@ -176,6 +176,20 @@ export default function QuoteRows({ value = {}, onChange, requiredQuotes = 2, er
           >
             + Add another quote
           </button>
+
+          {/* Comparing multiple vendors requires a comparative statement */}
+          <div style={{ border: '1px solid #E3E8EF', borderRadius: '6px', padding: '14px', background: '#FFFFFF' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '10px' }}>
+              Comparative Statement<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
+            </div>
+            <QuoteUpload
+              skipExtraction
+              onFileUploaded={path => set({ comparative_statement_path: path })}
+            />
+            <div style={{ fontSize: '11px', color: value.comparative_statement_path ? '#15803D' : '#9CA3AF', marginTop: '6px' }}>
+              {value.comparative_statement_path ? '✓ Document uploaded' : 'Document not uploaded'}
+            </div>
+          </div>
         </div>
       )}
 

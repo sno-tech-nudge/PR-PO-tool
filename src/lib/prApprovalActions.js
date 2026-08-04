@@ -17,7 +17,7 @@ export async function generatePONumber() {
 // If another level is 'waiting', advances it to 'pending' and keeps the PR
 // 'submitted'. Otherwise this was the final level — marks the PR 'approved'.
 // Returns { isFinal, currentPending, nextWaiting } — callers should follow up
-// with generatePRPurchaseOrder() when isFinal is true.
+// with createPendingPO() when isFinal is true.
 export async function approvePRLevel({ prId, approvals, user }) {
   const now = new Date().toISOString()
   const currentPending = approvals.find(a => a.status === 'pending')
@@ -38,42 +38,76 @@ export async function approvePRLevel({ prId, approvals, user }) {
   return { ok: true, isFinal: true, currentPending, nextWaiting: null }
 }
 
-// Generates the Purchase Order for a fully-approved PR: creates the
-// purchase_orders row, renders the hidden POTemplate (via setPOData, which
-// the caller must render as <POTemplate po={poData} .../> for the
-// html2canvas screenshot to work), uploads the PDF, links the PR to any
-// matching expense report, and notifies the requester.
-export async function generatePRPurchaseOrder({ prId, pr, setPOData }) {
+// Creates the Purchase Order row for a fully-approved PR, in a
+// 'pending_approval' state — it still needs a Finance user to review vendor
+// legitimacy/documentation and explicitly Approve PO before it's issued
+// (see approvePO below). `amount` defaults to the PR's full amount for the
+// first PO against a PR; pass a smaller sub-amount for additional POs when
+// a PR is being split across multiple purchase orders.
+export async function createPendingPO({ prId, pr, amount }) {
   try {
     const poNumber = await generatePONumber()
-    const { data: newPO } = await supabase.from('purchase_orders').insert({
+    const { data: newPO, error } = await supabase.from('purchase_orders').insert({
       po_number: poNumber, pr_id: prId, vendor_id: pr.vendor_id,
-      amount: pr.amount, entity: pr.entity, status: 'issued',
+      amount: amount != null ? amount : pr.amount, entity: pr.entity, status: 'pending_approval',
     }).select().single()
+    if (error) throw error
+    return newPO
+  } catch (err) {
+    console.error('PO creation error:', err.message)
+    return null
+  }
+}
 
-    if (!newPO) return null
-
-    setPOData(newPO)
+// Finance approves a pending PO: renders the hidden POTemplate (via
+// setPOData, which the caller must render as <POTemplate po={poData} .../>
+// for the html2canvas screenshot to work), generates + uploads the PDF,
+// flips the PO to 'issued', links the PR to any matching expense report,
+// and notifies the requester.
+export async function approvePO({ po, pr, user, setPOData }) {
+  try {
+    setPOData(po)
     // Give POTemplate time to render before screenshotting it.
     await new Promise(resolve => setTimeout(resolve, 500))
     const pdf = await generatePOPDF()
-    if (pdf) {
-      const path = await uploadPDFToSupabase(pdf, `${poNumber}.pdf`, supabase)
-      if (path) await supabase.from('purchase_orders').update({ pdf_storage_path: path }).eq('id', newPO.id)
-    }
-    await supabase.from('purchase_requests').update({ status: 'po_generated' }).eq('id', prId)
-    await autoLinkPRToExpense(prId, 'pr')
+    let pdfPath = null
+    if (pdf) pdfPath = await uploadPDFToSupabase(pdf, `${po.po_number}.pdf`, supabase)
+
+    const now = new Date().toISOString()
+    await supabase.from('purchase_orders').update({
+      status: 'issued', pdf_storage_path: pdfPath || null, approved_by: user.email, approved_at: now,
+    }).eq('id', po.id)
+    await supabase.from('purchase_requests').update({ status: 'po_generated' }).eq('id', pr.id)
+    await autoLinkPRToExpense(pr.id, 'pr')
     await supabase.from('expense_notifications').insert({
       recipient_id: pr.requested_by,
       type: 'pr_approved',
-      message: `Your purchase request ${pr.pr_number} has been fully approved. A Purchase Order has been generated.`,
+      message: `Purchase Order ${po.po_number} for your request ${pr.pr_number} has been approved and issued.`,
     }).catch(() => {})
 
-    return newPO
+    return true
   } catch (err) {
-    console.error('PO generation error:', err.message)
-    return null
+    console.error('PO approval error:', err.message)
+    return false
   }
+}
+
+// Finance rejects a pending PO — it's cancelled with a reason, but the
+// underlying PR stays approved so Finance can create a corrected
+// replacement PO against the same PR without re-running PR approval.
+export async function rejectPO({ poId, reason }) {
+  await supabase.from('purchase_orders').update({ status: 'rejected', rejection_reason: reason }).eq('id', poId)
+  return { ok: true }
+}
+
+// Sum of amounts across a PR's purchase_orders, excluding cancelled/rejected
+// ones — those don't count against the PR's approved total, so Finance can
+// create a corrected replacement PO for the freed-up amount.
+export async function getAllocatedPOTotal(prId) {
+  const { data } = await supabase.from('purchase_orders').select('amount, status').eq('pr_id', prId)
+  return (data || [])
+    .filter(po => po.status !== 'cancelled' && po.status !== 'rejected')
+    .reduce((sum, po) => sum + (Number(po.amount) || 0), 0)
 }
 
 // Rejects whichever pr_approvals row is currently 'pending', and rejects the PR.

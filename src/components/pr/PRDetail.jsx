@@ -1,6 +1,16 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import { createPendingPO } from '../../lib/prApprovalActions'
 import PRStatusTimeline from './PRStatusTimeline'
+import PRAttachmentsModal from './PRAttachmentsModal'
+
+const PO_STATUS_LABEL = {
+  pending_approval: 'Pending Approval',
+  issued: 'Issued',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+  rejected: 'Rejected',
+}
 
 function fmtDate(d) {
   if (!d) return '—'
@@ -25,10 +35,13 @@ const LINK_CONF = {
 export default function PRDetail({ prId, user, onBack, onEdit }) {
   const [pr, setPR]             = useState(null)
   const [approvals, setApprovals] = useState([])
-  const [po, setPO]             = useState(null)
+  const [pos, setPOs]           = useState([])
   const [linkedReport, setLinkedReport] = useState(null)
   const [loading, setLoading]   = useState(true)
-  const [quoteUrls, setQuoteUrls] = useState([])
+  const [showAttachments, setShowAttachments] = useState(false)
+  const [creatingPO, setCreatingPO] = useState(false)
+  const [newPOAmount, setNewPOAmount] = useState('')
+  const [poError, setPoError]   = useState(null)
 
   useEffect(() => { load() }, [prId])
 
@@ -45,17 +58,27 @@ export default function PRDetail({ prId, user, onBack, onEdit }) {
       setLinkedReport(rep)
     }
     if (prData) {
-      const { data: poData } = await supabase.from('purchase_orders').select('*').eq('pr_id', prId).maybeSingle()
-      setPO(poData)
-    }
-    const quotePaths = prData?.quote_paths || (prData?.quote_path ? [prData.quote_path] : [])
-    if (quotePaths.length > 0) {
-      const urls = await Promise.all(
-        quotePaths.map(p => supabase.storage.from('pr-quotes').createSignedUrl(p, 3600).then(r => r.data?.signedUrl))
-      )
-      setQuoteUrls(urls.filter(Boolean))
+      const { data: poData } = await supabase.from('purchase_orders').select('*').eq('pr_id', prId).order('generated_at', { ascending: true })
+      setPOs(poData || [])
     }
     setLoading(false)
+  }
+
+  const allocated = pos
+    .filter(p => p.status !== 'cancelled' && p.status !== 'rejected')
+    .reduce((sum, p) => sum + (Number(p.amount) || 0), 0)
+  const remaining = Math.max(0, Number(pr?.amount || 0) - allocated)
+  const canCreatePO = user.role === 'finance' && ['approved', 'po_generated'].includes(pr?.status) && remaining > 0
+
+  async function handleCreateAdditionalPO() {
+    const amt = Number(newPOAmount)
+    if (!amt || amt <= 0) { setPoError('Enter a valid amount.'); return }
+    if (amt > remaining) { setPoError(`Amount can't exceed the remaining ₹${remaining.toLocaleString('en-IN')}.`); return }
+    setPoError(null)
+    await createPendingPO({ prId, pr, amount: amt })
+    setNewPOAmount('')
+    setCreatingPO(false)
+    await load()
   }
 
   if (loading) return <div style={{ padding: '40px', textAlign: 'center', fontSize: '13px', color: '#6B7280' }}>Loading…</div>
@@ -203,13 +226,66 @@ export default function PRDetail({ prId, user, onBack, onEdit }) {
         </div>
       )}
 
-      {/* PO */}
-      {po && (
+      {/* Purchase Orders */}
+      {(pos.length > 0 || canCreatePO) && (
         <div style={{ background: '#fdf0ed', border: '1px solid #BFDBFE', borderRadius: '6px', padding: '16px 20px', marginBottom: '12px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: '#1E40AF', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '10px' }}>Purchase Order Issued</div>
-          <Row label="PO Number" value={po.po_number} />
-          <Row label="Issued On" value={fmtDate(po.generated_at)} />
-          <Row label="Status" value={po.status} />
+          <div style={{ fontSize: '11px', fontWeight: 700, color: '#1E40AF', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '10px' }}>
+            Purchase Order{pos.length !== 1 ? 's' : ''}
+          </div>
+
+          {pos.map((p, i) => (
+            <div key={p.id} style={{ marginBottom: i < pos.length - 1 ? '10px' : 0, paddingBottom: i < pos.length - 1 ? '10px' : 0, borderBottom: i < pos.length - 1 ? '1px solid rgba(30,64,175,0.15)' : 'none' }}>
+              <Row label="PO Number" value={p.po_number} />
+              <Row label="Amount" value={`₹${Number(p.amount || 0).toLocaleString('en-IN')}`} />
+              <Row label="Status" value={PO_STATUS_LABEL[p.status] || p.status} />
+            </div>
+          ))}
+
+          {pr.amount != null && (
+            <div style={{ fontSize: '12px', color: '#1E40AF', marginTop: '10px', paddingTop: '10px', borderTop: pos.length > 0 ? '1px solid rgba(30,64,175,0.15)' : 'none' }}>
+              Allocated ₹{allocated.toLocaleString('en-IN')} of ₹{Number(pr.amount).toLocaleString('en-IN')} approved · ₹{remaining.toLocaleString('en-IN')} remaining
+            </div>
+          )}
+
+          {canCreatePO && (
+            <div style={{ marginTop: '12px' }}>
+              {!creatingPO ? (
+                <button
+                  onClick={() => setCreatingPO(true)}
+                  style={{ height: '34px', padding: '0 16px', background: '#FFFFFF', color: '#1E40AF', border: '1px solid #BFDBFE', borderRadius: '4px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  + Create Additional PO
+                </button>
+              ) : (
+                <div>
+                  {poError && <div style={{ fontSize: '12px', color: '#B91C1C', marginBottom: '8px' }}>{poError}</div>}
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      type="number"
+                      min="0"
+                      max={remaining}
+                      value={newPOAmount}
+                      onChange={e => setNewPOAmount(e.target.value)}
+                      placeholder={`Up to ₹${remaining.toLocaleString('en-IN')}`}
+                      style={{ height: '34px', width: '160px', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '0 10px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                    <button
+                      onClick={handleCreateAdditionalPO}
+                      style={{ height: '34px', padding: '0 16px', background: '#1E40AF', color: '#FFFFFF', border: 'none', borderRadius: '4px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      Create
+                    </button>
+                    <button
+                      onClick={() => { setCreatingPO(false); setNewPOAmount(''); setPoError(null) }}
+                      style={{ height: '34px', padding: '0 14px', background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -233,28 +309,23 @@ export default function PRDetail({ prId, user, onBack, onEdit }) {
         )}
       </div>
 
-      {/* Quotes */}
-      {quoteUrls.length > 0 && (
-        <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '16px 20px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '10px' }}>
-            Vendor Quote{quoteUrls.length > 1 ? 's' : ''}
+      {/* Attachments */}
+      <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '16px 20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+            Attachments
           </div>
-          {quoteUrls.map((url, i) => {
-            const q = pr.quotes?.[i]
-            return (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: i < quoteUrls.length - 1 ? '8px' : 0 }}>
-                <div style={{ fontSize: '13px', color: '#374151' }}>
-                  {q?.vendor_name || `Quote ${i + 1}`}
-                  {q?.amount ? ` · ₹${Number(q.amount).toLocaleString('en-IN')}` : ''}
-                  {q?.selected && <span style={{ marginLeft: '6px', fontSize: '10px', fontWeight: 600, color: '#15803D' }}>SELECTED</span>}
-                </div>
-                <a href={url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: '#8C3225', textDecoration: 'underline', flexShrink: 0, marginLeft: '12px' }}>
-                  View
-                </a>
-              </div>
-            )
-          })}
+          <button
+            onClick={() => setShowAttachments(true)}
+            style={{ height: '30px', padding: '0 14px', background: '#FFFFFF', color: '#8C3225', border: '1px solid #E3E8EF', borderRadius: '3px', fontSize: '12px', cursor: 'pointer' }}
+          >
+            View Attachments
+          </button>
         </div>
+      </div>
+
+      {showAttachments && (
+        <PRAttachmentsModal pr={pr} onClose={() => setShowAttachments(false)} />
       )}
     </div>
   )

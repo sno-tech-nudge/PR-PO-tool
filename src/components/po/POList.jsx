@@ -12,16 +12,20 @@ function fmtAmt(n) {
 }
 
 const STATUS = {
-  issued:    { label: 'Issued',    color: '#8C3225', bg: '#fdf0ed' },
-  completed: { label: 'Completed', color: '#15803D', bg: '#F0FDF4' },
-  cancelled: { label: 'Cancelled', color: '#B91C1C', bg: '#FEF2F2' },
+  pending_approval: { label: 'Pending Approval', color: '#B45309', bg: '#FFFBEB' },
+  issued:           { label: 'Issued',           color: '#8C3225', bg: '#fdf0ed' },
+  completed:        { label: 'Completed',        color: '#15803D', bg: '#F0FDF4' },
+  cancelled:        { label: 'Cancelled',        color: '#B91C1C', bg: '#FEF2F2' },
+  rejected:         { label: 'Rejected',         color: '#B91C1C', bg: '#FEF2F2' },
 }
 
 const TABS = [
-  ['all',       'All'],
-  ['issued',    'Issued'],
-  ['completed', 'Completed'],
-  ['cancelled', 'Cancelled'],
+  ['all',              'All'],
+  ['pending_approval', 'Pending Approval'],
+  ['issued',           'Issued'],
+  ['completed',        'Completed'],
+  ['cancelled',        'Cancelled'],
+  ['rejected',         'Rejected'],
 ]
 
 export default function POList({ user, onViewPO }) {

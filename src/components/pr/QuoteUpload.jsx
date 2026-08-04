@@ -14,7 +14,7 @@ async function fileToBase64(file) {
   })
 }
 
-export default function QuoteUpload({ onExtracted, onFileUploaded }) {
+export default function QuoteUpload({ onExtracted, onFileUploaded, skipExtraction }) {
   const [file, setFile]         = useState(null)
   const [extracting, setExtracting] = useState(false)
   const [extracted, setExtracted]   = useState(null)
@@ -28,6 +28,8 @@ export default function QuoteUpload({ onExtracted, onFileUploaded }) {
     setFile(f)
     setExtracted(null)
     setError(null)
+    // Comparative statements etc. aren't single-vendor quotes — skip the AI extraction call.
+    if (skipExtraction) return
     setExtracting(true)
     try {
       const b64 = await fileToBase64(f)

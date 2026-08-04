@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { approvePRLevel, generatePRPurchaseOrder, rejectPRLevel } from '../../lib/prApprovalActions'
+import { approvePRLevel, createPendingPO, rejectPRLevel } from '../../lib/prApprovalActions'
 import PRStatusTimeline from './PRStatusTimeline'
-import POTemplate from './POTemplate'
+import PRAttachmentsModal from './PRAttachmentsModal'
 
 function fmtDate(d) {
   if (!d) return '—'
@@ -26,8 +26,7 @@ export default function PRApproverView({ prId, user, onBack, showToast }) {
   const [reason, setReason]     = useState('')
   const [saving, setSaving]     = useState(false)
   const [error, setError]       = useState(null)
-  const [poData, setPOData]     = useState(null)
-  const [generatingPO, setGeneratingPO] = useState(false)
+  const [showAttachments, setShowAttachments] = useState(false)
 
   useEffect(() => { load() }, [prId])
 
@@ -49,10 +48,8 @@ export default function PRApproverView({ prId, user, onBack, showToast }) {
 
     const result = await approvePRLevel({ prId, approvals, user })
     if (result.isFinal) {
-      setGeneratingPO(true)
-      await generatePRPurchaseOrder({ prId, pr, setPOData })
-      setGeneratingPO(false)
-      showToast?.('Purchase request fully approved. PO generated.', 'approved')
+      await createPendingPO({ prId, pr, amount: pr.amount })
+      showToast?.('Purchase request fully approved. Purchase Order created, pending Finance approval.', 'approved')
     } else {
       showToast?.(`Level ${currentPending.approver_level} approved. Forwarded to ${result.nextWaiting.approver_name}.`, 'info')
     }
@@ -81,9 +78,6 @@ export default function PRApproverView({ prId, user, onBack, showToast }) {
 
   return (
     <div style={{ maxWidth: '680px', margin: '0 auto', padding: '24px 20px 60px', width: '100%' }}>
-      {/* Hidden PO template for PDF generation */}
-      {poData && <POTemplate po={poData} pr={pr} vendor={pr.vendors} />}
-
       {/* Breadcrumb */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '20px' }}>
         <span onClick={onBack} style={{ fontSize: '12px', color: '#8C3225', cursor: 'pointer' }}>PR Approvals</span>
@@ -133,17 +127,14 @@ export default function PRApproverView({ prId, user, onBack, showToast }) {
         {pr.advance_percent != null && (
           <Row label="Payment Terms" value={`${Number(pr.advance_percent)}% advance · ${pr.after_delivery_percent != null ? Number(pr.after_delivery_percent) : 100 - Number(pr.advance_percent)}% after delivery`} />
         )}
-        {pr.single_source_justification && (
-          <div style={{ marginTop: '8px', padding: '10px 12px', background: '#FFFBEB', borderRadius: '4px', border: '1px solid #FDE68A' }}>
-            <div style={{ fontSize: '10px', fontWeight: 700, color: '#92400E', textTransform: 'uppercase', marginBottom: '4px' }}>Single Source Justification</div>
-            <div style={{ fontSize: '12px', color: '#78350F' }}>{pr.single_source_justification}</div>
-          </div>
-        )}
-        {pr.quote_paths?.length > 0 && (
-          <div style={{ marginTop: '8px', fontSize: '12px', color: '#6B7280' }}>
-            Quotes uploaded: {pr.quote_paths.length}
-          </div>
-        )}
+        <div style={{ marginTop: '8px' }}>
+          <button
+            onClick={() => setShowAttachments(true)}
+            style={{ height: '30px', padding: '0 14px', background: '#FFFFFF', color: '#8C3225', border: '1px solid #E3E8EF', borderRadius: '3px', fontSize: '12px', cursor: 'pointer' }}
+          >
+            View Attachments
+          </button>
+        </div>
         <Row label="Recurring" value={pr.is_recurring ? `Yes — ${pr.recurring_frequency || ''}` : 'No'} />
         <Row label="Submitted" value={fmtDate(pr.submitted_at)} />
       </div>
@@ -235,10 +226,10 @@ export default function PRApproverView({ prId, user, onBack, showToast }) {
             <div style={{ display: 'flex', gap: '10px' }}>
               <button
                 onClick={handleApprove}
-                disabled={saving || generatingPO}
-                style={{ height: '40px', padding: '0 28px', background: saving || generatingPO ? '#9CA3AF' : '#15803D', color: '#FFFFFF', border: 'none', borderRadius: '3px', fontSize: '13px', fontWeight: 600, cursor: saving || generatingPO ? 'default' : 'pointer' }}
+                disabled={saving}
+                style={{ height: '40px', padding: '0 28px', background: saving ? '#9CA3AF' : '#15803D', color: '#FFFFFF', border: 'none', borderRadius: '3px', fontSize: '13px', fontWeight: 600, cursor: saving ? 'default' : 'pointer' }}
               >
-                {generatingPO ? 'Generating PO…' : saving ? 'Saving…' : 'Approve'}
+                {saving ? 'Saving…' : 'Approve'}
               </button>
               <button
                 onClick={() => setRejecting(true)}
@@ -281,9 +272,13 @@ export default function PRApproverView({ prId, user, onBack, showToast }) {
       {isFullyApproved && (
         <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '6px', padding: '14px 18px' }}>
           <div style={{ fontSize: '13px', fontWeight: 600, color: '#15803D' }}>
-            {pr.status === 'po_generated' ? 'Purchase Order has been issued.' : 'Fully approved — generating PO…'}
+            {pr.status === 'po_generated' ? 'Purchase Order issued — see Purchase Orders for details.' : 'Fully approved — Purchase Order pending Finance approval.'}
           </div>
         </div>
+      )}
+
+      {showAttachments && (
+        <PRAttachmentsModal pr={pr} onClose={() => setShowAttachments(false)} />
       )}
     </div>
   )

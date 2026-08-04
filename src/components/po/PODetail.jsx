@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import { approvePO, rejectPO } from '../../lib/prApprovalActions'
+import POTemplate from '../pr/POTemplate'
+import SubmitPOExpense from './SubmitPOExpense'
 
 function fmtDate(d) {
   if (!d) return '—'
@@ -21,9 +24,11 @@ function Row({ label, value, mono }) {
 }
 
 const STATUS = {
-  issued:    { label: 'Issued',    color: '#8C3225', bg: '#fdf0ed' },
-  completed: { label: 'Completed', color: '#15803D', bg: '#F0FDF4' },
-  cancelled: { label: 'Cancelled', color: '#B91C1C', bg: '#FEF2F2' },
+  pending_approval: { label: 'Pending Approval', color: '#B45309', bg: '#FFFBEB' },
+  issued:           { label: 'Issued',           color: '#8C3225', bg: '#fdf0ed' },
+  completed:        { label: 'Completed',        color: '#15803D', bg: '#F0FDF4' },
+  cancelled:        { label: 'Cancelled',        color: '#B91C1C', bg: '#FEF2F2' },
+  rejected:         { label: 'Rejected',         color: '#B91C1C', bg: '#FEF2F2' },
 }
 
 export default function PODetail({ poId, user, onBack }) {
@@ -33,6 +38,13 @@ export default function PODetail({ poId, user, onBack }) {
   const [loading, setLoading] = useState(true)
   const [pdfUrl, setPdfUrl] = useState(null)
   const [markingDone, setMarkingDone] = useState(false)
+  const [approvingPO, setApprovingPO] = useState(false)
+  const [rejectingPO, setRejectingPO] = useState(false)
+  const [poRejectReason, setPoRejectReason] = useState('')
+  const [poError, setPoError] = useState(null)
+  const [poTemplateData, setPoTemplateData] = useState(null)
+  const [linkedExpenses, setLinkedExpenses] = useState([])
+  const [showSubmitExpense, setShowSubmitExpense] = useState(false)
 
   useEffect(() => { load() }, [poId])
 
@@ -47,12 +59,14 @@ export default function PODetail({ poId, user, onBack }) {
     if (!poData) { setLoading(false); return }
     setPO(poData)
 
-    const [{ data: prData }, { data: vendorData }] = await Promise.all([
+    const [{ data: prData }, { data: vendorData }, { data: expenseData }] = await Promise.all([
       supabase.from('purchase_requests').select('*').eq('id', poData.pr_id).single(),
       supabase.from('vendors').select('*').eq('id', poData.vendor_id).single(),
+      supabase.from('expense_reports').select('id, report_reference, total_amount, status').eq('po_id', poData.id),
     ])
     setPR(prData)
     setVendor(vendorData)
+    setLinkedExpenses(expenseData || [])
 
     if (poData.pdf_storage_path) {
       const { data: signed } = await supabase.storage
@@ -62,6 +76,27 @@ export default function PODetail({ poId, user, onBack }) {
     }
 
     setLoading(false)
+  }
+
+  async function handleApprovePO() {
+    setApprovingPO(true); setPoError(null)
+    const ok = await approvePO({ po, pr, user, setPOData: setPoTemplateData })
+    if (ok) {
+      await load()
+    } else {
+      setPoError('Could not approve this purchase order. Please try again.')
+    }
+    setApprovingPO(false)
+  }
+
+  async function handleRejectPO() {
+    if (!poRejectReason.trim()) { setPoError('Please enter a rejection reason.'); return }
+    setApprovingPO(true); setPoError(null)
+    await rejectPO({ poId, reason: poRejectReason.trim() })
+    setPO(prev => ({ ...prev, status: 'rejected', rejection_reason: poRejectReason.trim() }))
+    setRejectingPO(false)
+    setPoRejectReason('')
+    setApprovingPO(false)
   }
 
   async function handleMarkCompleted() {
@@ -84,9 +119,14 @@ export default function PODetail({ poId, user, onBack }) {
 
   const st = STATUS[po.status] || STATUS.issued
   const isFinance = user.role === 'finance'
+  const totalSubmitted = linkedExpenses.filter(e => e.status !== 'rejected').reduce((sum, e) => sum + (Number(e.total_amount) || 0), 0)
+  const pendingAmount = Math.max(0, (Number(po.amount) || 0) - totalSubmitted)
 
   return (
     <div style={{ maxWidth: '760px', margin: '0 auto', padding: '28px 24px 60px' }}>
+      {/* Hidden PO template for PDF generation on approval */}
+      {poTemplateData && <POTemplate po={poTemplateData} pr={pr} vendor={vendor} />}
+
       {/* Breadcrumb */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '20px' }}>
         <span onClick={onBack} style={{ fontSize: '12px', color: '#8C3225', cursor: 'pointer' }}>
@@ -135,7 +175,7 @@ export default function PODetail({ poId, user, onBack }) {
           <div>
             <Row label="PO Number"  value={po.po_number} mono />
             <Row label="Entity"     value={po.entity} />
-            <Row label="Issued On"  value={fmtDate(po.generated_at)} />
+            <Row label={po.status === 'pending_approval' ? 'Created On' : 'Issued On'} value={fmtDate(po.generated_at)} />
           </div>
           <div>
             <Row label="Linked PR"  value={pr?.pr_number} mono />
@@ -188,6 +228,132 @@ export default function PODetail({ poId, user, onBack }) {
           </div>
           <div style={{ fontSize: '13px', color: '#374151', lineHeight: 1.6 }}>{pr.purpose}</div>
         </div>
+      )}
+
+      {/* PO approval — vendor legitimacy, quotation selection rationale, documentation
+          compliance for audit purposes are checked here before a PO is issued */}
+      {po.status === 'rejected' && po.rejection_reason && (
+        <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderLeft: '3px solid #EF4444', borderRadius: '2px', padding: '10px 14px', marginBottom: '16px' }}>
+          <div style={{ fontSize: '10px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>Rejection Reason</div>
+          <div style={{ fontSize: '12px', color: '#B91C1C' }}>{po.rejection_reason}</div>
+        </div>
+      )}
+
+      {isFinance && po.status === 'pending_approval' && (
+        <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '8px', padding: '20px', marginBottom: '16px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '14px' }}>
+            Purchase Order Approval
+          </div>
+
+          {poError && (
+            <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '3px', padding: '10px 14px', marginBottom: '12px', fontSize: '13px', color: '#B91C1C' }}>
+              {poError}
+            </div>
+          )}
+
+          {!rejectingPO ? (
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={handleApprovePO}
+                disabled={approvingPO}
+                style={{ height: '40px', padding: '0 24px', background: approvingPO ? '#9CA3AF' : '#15803D', color: '#FFFFFF', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: approvingPO ? 'default' : 'pointer' }}
+              >
+                {approvingPO ? 'Approving…' : 'Approve PO'}
+              </button>
+              <button
+                onClick={() => setRejectingPO(true)}
+                disabled={approvingPO}
+                style={{ height: '40px', padding: '0 20px', background: '#FFFFFF', color: '#B91C1C', border: '1px solid #FECACA', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}
+              >
+                Reject PO
+              </button>
+            </div>
+          ) : (
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>Rejection reason</div>
+              <textarea
+                value={poRejectReason}
+                onChange={e => setPoRejectReason(e.target.value)}
+                rows={3}
+                placeholder="Why is this purchase order being rejected? (e.g. vendor legitimacy concerns, missing documentation)"
+                style={{ width: '100%', border: '1px solid #E3E8EF', borderRadius: '4px', padding: '10px 12px', fontSize: '13px', color: '#1A1F36', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit', marginBottom: '12px' }}
+              />
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={handleRejectPO}
+                  disabled={approvingPO}
+                  style={{ height: '38px', padding: '0 24px', background: approvingPO ? '#9CA3AF' : '#B91C1C', color: '#FFFFFF', border: 'none', borderRadius: '4px', fontSize: '13px', fontWeight: 600, cursor: approvingPO ? 'default' : 'pointer' }}
+                >
+                  {approvingPO ? 'Saving…' : 'Confirm Rejection'}
+                </button>
+                <button
+                  onClick={() => { setRejectingPO(false); setPoRejectReason('') }}
+                  style={{ height: '38px', padding: '0 18px', background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '13px', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Expense submissions against this PO — tranche payments */}
+      {po.status === 'issued' && (
+        <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '8px', padding: '20px', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+            <div style={{ fontSize: '11px', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Expense Submissions
+            </div>
+            {pendingAmount > 0 && (
+              <button
+                onClick={() => setShowSubmitExpense(true)}
+                style={{ height: '32px', padding: '0 14px', fontSize: '12px', fontWeight: 600, background: '#8C3225', color: '#FFFFFF', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
+              >
+                Submit Expense for this PO
+              </button>
+            )}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0 20px', marginBottom: linkedExpenses.length ? '16px' : '0' }}>
+            <div>
+              <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '2px' }}>Approved</div>
+              <div style={{ fontSize: '15px', fontWeight: 600, color: '#1A1F36' }}>{fmtAmt(po.amount)}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '2px' }}>Total Submitted</div>
+              <div style={{ fontSize: '15px', fontWeight: 600, color: '#1A1F36' }}>{fmtAmt(totalSubmitted)}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '2px' }}>Pending</div>
+              <div style={{ fontSize: '15px', fontWeight: 600, color: pendingAmount > 0 ? '#B45309' : '#15803D' }}>{fmtAmt(pendingAmount)}</div>
+            </div>
+          </div>
+
+          {linkedExpenses.length > 0 && (
+            <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: '12px' }}>
+              {linkedExpenses.map(e => (
+                <div key={e.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '6px 0' }}>
+                  <span style={{ fontFamily: 'monospace', color: '#6B7280' }}>{e.report_reference}</span>
+                  <span style={{ color: '#374151' }}>{fmtAmt(e.total_amount)}</span>
+                  <span style={{ color: e.status === 'rejected' ? '#B91C1C' : '#6B7280', textTransform: 'capitalize' }}>{e.status}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {showSubmitExpense && (
+        <SubmitPOExpense
+          po={po}
+          pr={pr}
+          vendor={vendor}
+          user={user}
+          pending={pendingAmount}
+          onClose={() => setShowSubmitExpense(false)}
+          onSubmitted={async () => { setShowSubmitExpense(false); await load() }}
+        />
       )}
 
       {/* Finance actions */}

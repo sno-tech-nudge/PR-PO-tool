@@ -153,6 +153,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
     quotes: existingPR?.quotes || (existingPR?.quote_paths || []).map(p => ({ vendor_name: '', amount: '', quote_path: p, selected: false })),
     singleSource: !!existingPR?.single_source_justification,
     singleSourceJustification: existingPR?.single_source_justification || '',
+    comparative_statement_path: existingPR?.comparative_statement_path || '',
   })
   const [advanceState, setAdvanceState] = useState({
     advancePercent: existingPR?.advance_percent != null ? String(existingPR.advance_percent) : '',
@@ -188,7 +189,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
       if (!quotesValidity(quoteState, requiredQuotes).valid) {
         e.quotes = quoteState.singleSource
           ? 'You must explain why only one vendor is available, and attach that quotation.'
-          : `Upload ${requiredQuotes} quotes and mark the selected vendor.`
+          : `Upload ${requiredQuotes} quotes, mark the selected vendor, and attach the comparative statement.`
       }
       if (!advFlags.valid) {
         e.advance = advFlags.requiresFLEmail
@@ -239,6 +240,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
         quotes:                    cleanQuotes,
         quote_paths:               cleanQuotes.map(q => q.quote_path).filter(Boolean),
         single_source_justification: quoteState.singleSource ? quoteState.singleSourceJustification.trim() : null,
+        comparative_statement_path: quoteState.singleSource ? null : (quoteState.comparative_statement_path || null),
         advance_percent:           advFlags.advance,
         after_delivery_percent:    advFlags.afterDelivery,
         advance_fl_email_ack:      advFlags.requiresFLEmail ? !!advanceState.flEmailAck : false,

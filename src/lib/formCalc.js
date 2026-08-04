@@ -34,7 +34,7 @@ export function quotesValidity(value = {}, requiredQuotes = 0) {
     return { valid: !!value.singleSourceJustification?.trim() && uploaded >= 1, uploaded }
   }
   const hasSelected = quotes.some(q => q.selected && q.quote_path)
-  return { valid: uploaded >= requiredQuotes && hasSelected, uploaded }
+  return { valid: uploaded >= requiredQuotes && hasSelected && !!value.comparative_statement_path, uploaded }
 }
 
 // Advance split validity. value = { advancePercent, flEmailAck }
