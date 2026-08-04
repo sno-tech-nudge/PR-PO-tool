@@ -1,0 +1,133 @@
+import { useState } from 'react'
+import { extractVendorQuote } from '../../lib/claude'
+import { supabase } from '../../lib/supabase'
+
+async function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const b64 = reader.result.split(',')[1]
+      resolve(b64)
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
+export default function QuoteUpload({ onExtracted, onFileUploaded }) {
+  const [file, setFile]         = useState(null)
+  const [extracting, setExtracting] = useState(false)
+  const [extracted, setExtracted]   = useState(null)
+  const [error, setError]           = useState(null)
+  const [uploading, setUploading]   = useState(false)
+  const [uploaded, setUploaded]     = useState(false)
+
+  async function handleFile(e) {
+    const f = e.target.files?.[0]
+    if (!f) return
+    setFile(f)
+    setExtracted(null)
+    setError(null)
+    setExtracting(true)
+    try {
+      const b64 = await fileToBase64(f)
+      const result = await extractVendorQuote(b64)
+      if (result) {
+        setExtracted(result)
+        onExtracted(result)
+      } else {
+        setError('Could not extract data from this document. You can still proceed and fill fields manually.')
+      }
+    } catch (err) {
+      setError('Extraction failed: ' + err.message)
+    }
+    setExtracting(false)
+  }
+
+  async function handleUpload() {
+    if (!file) return
+    setUploading(true)
+    try {
+      const ext = file.name.split('.').pop()
+      const path = `quotes/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const { error: uploadErr } = await supabase.storage.from('pr-quotes').upload(path, file)
+      if (uploadErr) {
+        if (uploadErr.message?.toLowerCase().includes('not found') || uploadErr.statusCode === 404 || uploadErr.error === 'Bucket not found') {
+          throw new Error('Storage bucket "pr-quotes" has not been created yet. Run the SQL in supabase_migration_vendors_bucket.sql in your Supabase SQL Editor, then retry.')
+        }
+        throw uploadErr
+      }
+      onFileUploaded(path)
+      setUploaded(true)
+    } catch (err) {
+      setError('Upload failed: ' + err.message)
+    }
+    setUploading(false)
+  }
+
+  return (
+    <div>
+      <div style={{ marginBottom: '12px' }}>
+        <input
+          type="file"
+          accept="image/*,.pdf"
+          onChange={handleFile}
+          style={{ fontSize: '13px', color: '#374151' }}
+        />
+      </div>
+
+      {extracting && (
+        <div style={{ background: '#fdf0ed', border: '1px solid #BFDBFE', borderRadius: '4px', padding: '12px 14px', fontSize: '13px', color: '#1E40AF' }}>
+          Extracting data from document…
+        </div>
+      )}
+
+      {error && (
+        <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '4px', padding: '10px 14px', fontSize: '12px', color: '#B91C1C', marginBottom: '8px' }}>
+          {error}
+        </div>
+      )}
+
+      {extracted && (
+        <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '4px', padding: '14px', marginBottom: '10px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: '#15803D', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>Extracted from document</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            {[
+              ['Vendor', extracted.vendor_name],
+              ['Quote No.', extracted.quote_number],
+              ['Date', extracted.date],
+              ['Total Amount', extracted.total_amount != null ? `INR ${Number(extracted.total_amount).toLocaleString('en-IN')}` : null],
+            ].map(([label, val]) => val ? (
+              <div key={label}>
+                <div style={{ fontSize: '10px', color: '#15803D', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1px' }}>{label}</div>
+                <div style={{ fontSize: '13px', color: '#14532D', fontWeight: 500 }}>{val}</div>
+              </div>
+            ) : null)}
+          </div>
+          {extracted.line_items && extracted.line_items.length > 0 && (
+            <div style={{ marginTop: '10px' }}>
+              <div style={{ fontSize: '10px', color: '#15803D', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>Line Items</div>
+              {extracted.line_items.map((item, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#14532D', marginBottom: '2px' }}>
+                  <span>{item.description}</span>
+                  <span>{item.total != null ? `INR ${Number(item.total).toLocaleString('en-IN')}` : ''}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {file && !uploading && !uploaded && (
+        <button
+          onClick={handleUpload}
+          style={{ height: '34px', padding: '0 16px', background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}
+        >
+          Upload to system
+        </button>
+      )}
+      {uploading && <div style={{ fontSize: '12px', color: '#6B7280' }}>Uploading…</div>}
+      {uploaded && <div style={{ fontSize: '12px', color: '#15803D', fontWeight: 500 }}>Uploaded successfully</div>}
+    </div>
+  )
+}
