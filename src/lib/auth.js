@@ -1,8 +1,8 @@
 // ─── Role & name mapping ──────────────────────────────────────────────────────
 const ROLE_MAP = {
-  'kalhan.tanush@gmail.com':       'employee',
-  'tanushk.internships@gmail.com': 'manager',
-  'kalhan.tanush@icloud.com':      'finance',
+  'gaurangwadhawan3@gmail.com':    'employee',
+  'anurag.vaishnav@thenudge.org':  'manager',
+  'gaurang.wadhawan@thenudge.org': 'finance',
 
   // ─── Test accounts ────────────────────────────────────────────────────────
   'employee1@test.com': 'employee',
@@ -14,9 +14,9 @@ const ROLE_MAP = {
 }
 
 const NAME_MAP = {
-  'kalhan.tanush@gmail.com':       'Tanush Kalhan',
-  'tanushk.internships@gmail.com': 'Tanush K',
-  'kalhan.tanush@icloud.com':      'Tanush K',
+  'gaurangwadhawan3@gmail.com':    'Gaurang Wadhawan',
+  'anurag.vaishnav@thenudge.org':  'Anurag Vaishnav',
+  'gaurang.wadhawan@thenudge.org': 'Gaurang Wadhawan',
 
   // ─── Test accounts ────────────────────────────────────────────────────────
   'employee1@test.com': 'Test Employee 1',
