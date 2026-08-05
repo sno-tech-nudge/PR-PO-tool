@@ -494,19 +494,6 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
             </PolicyBanner>
           )}
 
-          <div style={{ background: '#fdf0ed', border: '1px solid #f9c5b7', borderRadius: '6px', padding: '16px', marginBottom: '12px' }}>
-            <div style={{ fontSize: '11px', fontWeight: 700, color: '#7c2d12', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>Approval Route (per Procurement Policy v3.0)</div>
-            {approvalLevels.map((l, i) => (
-              <div key={l.level} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: i < approvalLevels.length - 1 ? '8px' : 0 }}>
-                <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#8C3225', color: '#FFFFFF', fontSize: '11px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{l.level}</div>
-                <span style={{ fontSize: '13px', color: '#7c2d12', fontWeight: 500 }}>{l.label}</span>
-              </div>
-            ))}
-            <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '10px' }}>
-              Quotes required: {requiredQuotes} · {quoteState.singleSource ? 'Single source justification provided' : `${quotesValidity(quoteState, requiredQuotes).uploaded} uploaded`}
-            </div>
-          </div>
-
           {saveError && (
             <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '4px', padding: '10px 14px', marginBottom: '12px', fontSize: '13px', color: '#B91C1C' }}>
               {saveError}

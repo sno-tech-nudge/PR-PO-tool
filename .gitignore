@@ -31,3 +31,6 @@ dist-ssr
 
 .vercel
 .env*
+
+# Raw DB export containing real vendor bank details / PII — never commit
+/db_export_backup/
