@@ -30,20 +30,25 @@ async function generatePRNumber() {
   return `${fy}-PR-07-${((count || 0) + 1).toString().padStart(4, '0')}`
 }
 
-function StepIndicator({ current, total }) {
+function StepIndicator({ current, total, labels }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px' }}>
+    <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '24px' }}>
       {Array.from({ length: total }, (_, i) => (
-        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{
-            width: '28px', height: '28px', borderRadius: '50%', display: 'flex',
-            alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 600,
-            background: i < current ? '#16A34A' : i === current ? '#8C3225' : '#E5E7EB',
-            color: i <= current ? '#FFFFFF' : '#6B7280',
-          }}>
-            {i < current ? '✓' : i + 1}
+        <div key={i} style={{ display: 'flex', alignItems: 'flex-start' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+            <div style={{
+              width: '28px', height: '28px', borderRadius: '50%', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 600,
+              background: i < current ? '#16A34A' : i === current ? '#8C3225' : '#E5E7EB',
+              color: i <= current ? '#FFFFFF' : '#6B7280',
+            }}>
+              {i < current ? '✓' : i + 1}
+            </div>
+            <div style={{ fontSize: '10px', fontWeight: i === current ? 700 : 500, color: i === current ? '#1A1F36' : '#9CA3AF', whiteSpace: 'nowrap' }}>
+              {labels?.[i]}
+            </div>
           </div>
-          {i < total - 1 && <div style={{ width: '36px', height: '1px', background: i < current ? '#16A34A' : '#E5E7EB' }} />}
+          {i < total - 1 && <div style={{ width: '36px', height: '1px', background: i < current ? '#16A34A' : '#E5E7EB', marginTop: '13px' }} />}
         </div>
       ))}
     </div>
@@ -168,8 +173,37 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
   const advFlags        = advanceValidity(advanceState)
 
   const STEPS = ['Program & Donor', 'Purchase Details', 'Review']
+  const STEP_LABELS = ['Program', 'Details', 'Review']
 
-  function handleVendorSelect(id, v) { setVendorId(id); setVendorData(v) }
+  const allocationsValid = validateAllocations(allocations).valid
+  const checklist = [
+    { label: 'Budget confirmed', done: budgeted !== null },
+    { label: 'Vendor approved',  done: !!vendorId },
+    { label: 'Quotes attached',  done: requiredQuotes === 0 ? true : quotesValidity(quoteState, requiredQuotes).valid },
+    { label: 'Advance terms set', done: advFlags.valid },
+  ]
+
+  async function handleVendorSelect(id, v) {
+    setVendorId(id); setVendorData(v)
+    // Auto-populate recurring details from this vendor's last recurring PR, so
+    // requesters don't have to re-declare "yes, recurring, quarterly" every
+    // time they raise the next PR in the same recurring series.
+    if (!isEdit && id) {
+      const { data } = await supabase
+        .from('purchase_requests')
+        .select('is_recurring, recurring_frequency')
+        .eq('vendor_id', id)
+        .eq('requested_by', user.email)
+        .eq('is_recurring', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (data) {
+        setIsRecurring(true)
+        setFrequency(data.recurring_frequency || '')
+      }
+    }
+  }
 
   function validateStep(s) {
     const e = {}
@@ -331,23 +365,27 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
         </h2>
       </div>
 
-      <StepIndicator current={step} total={STEPS.length} />
+      <StepIndicator current={step} total={STEPS.length} labels={STEP_LABELS} />
       <div style={{ fontSize: '14px', fontWeight: 700, color: '#1A1F36', marginBottom: '20px' }}>{STEPS[step]}</div>
 
       {/* ── Section 1: Program & Donor Details ── */}
       {step === 0 && (
         <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '24px' }}>
-          <Field label="Budgeted?" error={errors.budgeted} required hint="Is this spend within an approved budget line?">
-            <YesNoToggle value={budgeted} onChange={setBudgeted} />
-          </Field>
-
-          <Field label="Expense Nature" error={errors.expenseType} required hint="Revenue vs capital vs programme classification">
-            {sel(expenseType, setExpenseType, EXPENSE_NATURES, 'Select nature…')}
-          </Field>
-
           <Field label="Donor / Programme Allocation" error={errors.allocations} required hint="Split this spend across donors / programmes — must total 100%">
             <DonorAllocations value={allocations} onChange={setAllocations} error={errors.allocations} />
           </Field>
+
+          {allocationsValid && (
+            <Field label="Budgeted?" error={errors.budgeted} required hint="Is this spend within an approved budget line?">
+              <YesNoToggle value={budgeted} onChange={setBudgeted} />
+            </Field>
+          )}
+
+          {allocationsValid && budgeted !== null && (
+            <Field label="Expense Nature" error={errors.expenseType} required hint="Revenue vs capital vs programme classification">
+              {sel(expenseType, setExpenseType, EXPENSE_NATURES, 'Select nature…')}
+            </Field>
+          )}
         </div>
       )}
 
@@ -448,16 +486,17 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
           )}
 
           <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '24px', marginBottom: '12px' }}>
-            <div style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '16px' }}>Summary</div>
+            <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '4px' }}>{isEdit ? 'Editing' : 'New'} Purchase Request</div>
+            <div style={{ fontSize: '32px', fontWeight: 700, color: '#1A1F36' }}>₹{numericAmount.toLocaleString('en-IN')}</div>
+            <div style={{ fontSize: '13px', color: '#6B7280', marginTop: '2px', marginBottom: '16px' }}>{vendorData?.org_name || vendorId}</div>
+            <div style={{ height: '1px', background: '#F3F4F6', marginBottom: '16px' }} />
             {[
-              ['Vendor',        vendorData?.org_name || vendorId],
               ['Budgeted',      budgeted === null ? '—' : budgeted ? 'Budgeted' : 'Not Budgeted'],
               ['Expense Nature', expenseType],
               ['Category',      category],
               ['Base Amount',   `₹${(Number(breakdown.base) || 0).toLocaleString('en-IN')}`],
               ['Tax (GST)',     `₹${(Number(breakdown.tax) || 0).toLocaleString('en-IN')}`],
               (Number(breakdown.incidental) || 0) > 0 ? ['Incidentals', `₹${Number(breakdown.incidental).toLocaleString('en-IN')}`] : null,
-              ['Total Amount',  `₹${numericAmount.toLocaleString('en-IN')}`],
               ['Purpose',       purpose],
               isRecurring ? ['Recurring', frequency || 'Yes'] : null,
               ['Advance Split', `${advFlags.advance}% advance · ${advFlags.afterDelivery}% after delivery`],
@@ -467,7 +506,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
             ].filter(Boolean).map(([label, val]) => (
               <div key={label} style={{ display: 'flex', gap: '12px', marginBottom: '8px', fontSize: '13px' }}>
                 <span style={{ color: '#9CA3AF', width: '140px', flexShrink: 0, fontSize: '12px' }}>{label}</span>
-                <span style={{ color: '#1A1F36', fontWeight: label === 'Total Amount' ? 700 : 400 }}>{val}</span>
+                <span style={{ color: '#1A1F36' }}>{val}</span>
               </div>
             ))}
 
@@ -537,6 +576,25 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
         >
           ← Edit
         </button>
+      )}
+
+      {/* Live checklist — lets requesters see what's still missing before they hit Continue/Submit */}
+      {!showBelowBlock && step < STEPS.length - 1 && (
+        <div style={{
+          position: 'fixed', bottom: '24px', right: '24px', zIndex: 40,
+          background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '8px',
+          padding: '14px 16px', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', minWidth: '190px',
+        }}>
+          <div style={{ fontSize: '10px', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
+            Before you submit
+          </div>
+          {checklist.map(c => (
+            <div key={c.label} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', marginBottom: '6px', color: c.done ? '#15803D' : '#9CA3AF' }}>
+              <span>{c.done ? '✓' : '○'}</span>
+              <span>{c.label}</span>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   )

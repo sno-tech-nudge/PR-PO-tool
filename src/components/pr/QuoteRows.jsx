@@ -68,35 +68,8 @@ export default function QuoteRows({ value = {}, onChange, requiredQuotes = 2, er
           {/* Even a single-vendor purchase still needs its one quotation attached */}
           <div style={{ marginTop: '14px', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '14px', background: '#FFFFFF' }}>
             <div style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '10px' }}>Quotation</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '8px', marginBottom: '10px' }}>
-              <div>
-                <div style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '3px' }}>Vendor name</div>
-                <input
-                  value={quotes[0].vendor_name}
-                  onChange={e => updateQuote(0, { vendor_name: e.target.value })}
-                  placeholder="Vendor / supplier"
-                  style={{ width: '100%', height: '34px', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '0 8px', fontSize: '12px', color: '#1A1F36', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box' }}
-                />
-              </div>
-              <div>
-                <div style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '3px' }}>Quote amount (₹)</div>
-                <input
-                  type="number"
-                  value={quotes[0].amount}
-                  onChange={e => updateQuote(0, { amount: e.target.value })}
-                  placeholder="0"
-                  min="0"
-                  style={{ width: '100%', height: '34px', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '0 8px', fontSize: '12px', color: '#1A1F36', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box' }}
-                />
-              </div>
-            </div>
             <QuoteUpload
-              onExtracted={data => {
-                const patch = {}
-                if (data?.vendor_name && !quotes[0].vendor_name) patch.vendor_name = data.vendor_name
-                if (data?.total_amount != null && !quotes[0].amount) patch.amount = String(data.total_amount)
-                if (Object.keys(patch).length) updateQuote(0, patch)
-              }}
+              skipExtraction
               onFileUploaded={path => updateQuote(0, { quote_path: path, selected: true })}
             />
             <div style={{ fontSize: '11px', color: quotes[0].quote_path ? '#15803D' : '#9CA3AF', marginTop: '6px' }}>
