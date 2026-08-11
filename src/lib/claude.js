@@ -1,76 +1,15 @@
+import { callGemini } from './gemini'
+
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions'
 
-async function callGroq(base64Image, prompt) {
-  const key = import.meta.env.VITE_GROQ_API_KEY
-  console.log('Groq key exists:', !!key)
-  console.log('Groq key starts with:', key ? key.substring(0, 8) : 'NO KEY FOUND')
-
-  try {
-    const response = await fetch(GROQ_API_URL, {
-      method: 'POST',
-      mode: 'cors',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${key}`
-      },
-      body: JSON.stringify({
-        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-        max_tokens: 600,
-        temperature: 0,
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'image_url',
-                image_url: {
-                  url: `data:image/jpeg;base64,${base64Image}`
-                }
-              },
-              {
-                type: 'text',
-                text: prompt
-              }
-            ]
-          }
-        ]
-      })
-    })
-
-    const data = await response.json()
-    console.log('Groq full response:', JSON.stringify(data))
-
-    if (data.error) {
-      console.log('Groq API error:', data.error.message)
-      return null
-    }
-
-    const text = data.choices[0].message.content
-    console.log('Groq raw text:', text)
-
-    const cleaned = text
-      .replace(/```json/g, '')
-      .replace(/```/g, '')
-      .replace(/^json/g, '')
-      .trim()
-
-    console.log('Groq cleaned text:', cleaned)
-    return JSON.parse(cleaned)
-
-  } catch (error) {
-    console.log('Groq call failed:', error.message)
-    return null
-  }
-}
-
 export async function checkDocumentQuality(base64Image) {
-  return await callGroq(base64Image,
+  return await callGemini(base64Image,
     'Look at this image. Is the text readable? Reply with JSON only, no markdown, no code blocks, just raw JSON: { "readable": true or false, "issue": null or "blurry" or "dark" or "cropped" }'
   )
 }
 
 export async function extractReceiptData(base64Image) {
-  return await callGroq(base64Image,
+  return await callGemini(base64Image,
     `You are an expert at reading Indian expense receipts, tax invoices, hotel bills, restaurant bills, travel tickets, UPI screenshots, and handwritten bills. Extract all fields accurately.
 
 --- AMOUNT (most important) ---
@@ -138,13 +77,13 @@ Use null for any field genuinely not visible. Do not guess.`
 }
 
 export async function detectUPI(base64Image) {
-  return await callGroq(base64Image,
+  return await callGemini(base64Image,
     'Is this a UPI payment screenshot from GPay, PhonePe, Paytm or any Indian UPI app? Reply with JSON only, no markdown, no code blocks, just raw JSON: { "is_upi": true or false, "amount": number, "recipient": string, "transaction_id": string, "date": string, "payment_app": string, "has_vendor_info": true or false }. Amount must be a number not a string. Use null for any value you cannot find.'
   )
 }
 
 export async function extractPaymentAmount(base64Image) {
-  return await callGroq(base64Image,
+  return await callGemini(base64Image,
     'Look at this payment document. It could be a UPI screenshot, bank SMS, or card SMS. Find the total amount that was debited or paid. Reply with JSON only, no markdown, no code blocks, just raw JSON: { "amount": number }. Amount must be a number not a string. Use null if you cannot find an amount.'
   )
 }
@@ -188,7 +127,7 @@ Reply with JSON only, no markdown, no code blocks:
       method: 'POST', mode: 'cors',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
       body: JSON.stringify({
-        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        model: 'llama-3.3-70b-versatile',
         max_tokens: 400, temperature: 0,
         messages: [{ role: 'user', content: prompt }],
       }),
@@ -274,7 +213,7 @@ confidence values: "high" | "medium" | "low"`
         'Authorization': `Bearer ${key}`,
       },
       body: JSON.stringify({
-        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        model: 'llama-3.3-70b-versatile',
         max_tokens: 900,
         temperature: 0,
         messages: [{ role: 'user', content: prompt }],
@@ -292,7 +231,7 @@ confidence values: "high" | "medium" | "low"`
 }
 
 export async function extractVendorQuote(base64Image) {
-  return await callGroq(base64Image,
+  return await callGemini(base64Image,
     `You are extracting data from a vendor quote or invoice document. Extract all key fields accurately.
 Reply with raw JSON only — no markdown, no backticks, no explanation:
 {"vendor_name":string,"quote_number":string,"date":string,"line_items":[{"description":string,"qty":number,"unit_price":number,"total":number}],"subtotal":number,"tax":number,"total_amount":number}
@@ -321,7 +260,7 @@ Reply with raw JSON only, no markdown:
       method: 'POST', mode: 'cors',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
       body: JSON.stringify({
-        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        model: 'llama-3.3-70b-versatile',
         max_tokens: 200, temperature: 0,
         messages: [{ role: 'user', content: prompt }],
       }),
@@ -348,7 +287,7 @@ export async function suggestCategory(vendorName) {
         'Authorization': `Bearer ${import.meta.env.VITE_GROQ_API_KEY}`
       },
       body: JSON.stringify({
-        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        model: 'llama-3.3-70b-versatile',
         max_tokens: 50,
         temperature: 0,
         messages: [

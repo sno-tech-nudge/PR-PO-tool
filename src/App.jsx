@@ -4,6 +4,7 @@ import { getSession, canAccessApprovals, canAccessFinance, signOut } from './lib
 import LoginScreen from './components/auth/LoginScreen'
 import OfflineBanner from './components/capture/OfflineBanner'
 import NewExpense from './components/capture/NewExpense'
+import QuickAddDropzone from './components/capture/QuickAddDropzone'
 import ExpenseDetails from './components/layer2/ExpenseDetails'
 import PolicyCheck from './components/layer3/PolicyCheck'
 import ExpenseSelector from './components/layer4/ExpenseSelector'
@@ -114,6 +115,7 @@ export default function App() {
   function handleContinueToDetails(data) { setLayer1Data(data); setAppScreen('details') }
   function handleSaved()                 { setAppScreen('list') }
   function handleAddAnother()            { setLayer1Data(null); setAppScreen('capture') }
+  function handleQuickReceipt(data)      { setLayer1Data(data); setAppScreen('details') }
 
   function handleProceedToReport({ expenses, results }) {
     setLayer4Expenses(expenses); setLayer4Results(results)
@@ -333,27 +335,47 @@ export default function App() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '28px' }}>
-              <button
-                onClick={handleAddAnother}
-                style={{
-                  flex: 1, height: '44px', background: '#8C3225', color: '#FFFFFF',
-                  border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                + New Expense
-              </button>
-              <button
-                onClick={handleNewReport}
-                style={{
-                  flex: 1, height: '44px', background: '#FFFFFF', color: '#111827',
-                  border: '1.5px solid #E5E7EB', borderRadius: '8px', fontSize: '14px', fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                New Report →
-              </button>
+            <div style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '10px', padding: '20px', marginBottom: '28px' }}>
+              <div style={{ fontSize: '16px', fontWeight: 700, color: '#111827', marginBottom: '16px' }}>Quick Add</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '14px' }}>
+                <QuickAddDropzone onReady={handleQuickReceipt} />
+
+                <div
+                  onClick={handleAddAnother}
+                  style={{
+                    border: '1px solid #E5E7EB', borderRadius: '10px', padding: '28px 12px',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', minHeight: '148px', boxSizing: 'border-box', textAlign: 'center',
+                  }}
+                >
+                  <div style={{
+                    width: '40px', height: '40px', borderRadius: '50%', background: '#fdf0ed',
+                    color: '#8C3225', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '18px', fontWeight: 700, marginBottom: '10px',
+                  }}>
+                    +
+                  </div>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#1A1F36' }}>New Expense</div>
+                </div>
+
+                <div
+                  onClick={handleNewReport}
+                  style={{
+                    border: '1px solid #E5E7EB', borderRadius: '10px', padding: '28px 12px',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', minHeight: '148px', boxSizing: 'border-box', textAlign: 'center',
+                  }}
+                >
+                  <div style={{
+                    width: '40px', height: '40px', borderRadius: '50%', background: '#fdf0ed',
+                    color: '#8C3225', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '16px', marginBottom: '10px',
+                  }}>
+                    ◷
+                  </div>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#1A1F36' }}>New Report</div>
+                </div>
+              </div>
             </div>
 
             <HomeScreenAddons user={user} onViewReport={handleViewReport} />

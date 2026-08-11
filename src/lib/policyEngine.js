@@ -248,7 +248,7 @@ export async function checkNonReimbursableAI(expense) {
       mode: 'cors',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${import.meta.env.VITE_GROQ_API_KEY}` },
       body: JSON.stringify({
-        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        model: 'llama-3.3-70b-versatile',
         max_tokens: 150,
         temperature: 0,
         messages: [{
