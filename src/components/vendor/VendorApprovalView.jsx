@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import PanDuplicateModal from './PanDuplicateModal'
+
+const INDIVIDUAL_ORG_TYPE = 'Individual/Freelancer'
 
 function fmtDate(d) {
   if (!d) return '—'
@@ -22,6 +25,10 @@ export default function VendorApprovalView({ vendor, user, onBack, onActioned })
   const [error, setError]           = useState(null)
   const [chequeUrl, setChequeUrl]   = useState(null)
   const [panUrl, setPanUrl]         = useState(null)
+  const [aadhaarUrl, setAadhaarUrl] = useState(null)
+  const [aadhaarProofUrl, setAadhaarProofUrl] = useState(null)
+  const [panSiblings, setPanSiblings] = useState([])
+  const [showPanModal, setShowPanModal] = useState(false)
 
   useEffect(() => {
     if (vendor?.cancelled_cheque_path) {
@@ -31,6 +38,19 @@ export default function VendorApprovalView({ vendor, user, onBack, onActioned })
     if (vendor?.pan_copy_path) {
       supabase.storage.from('vendor-documents').createSignedUrl(vendor.pan_copy_path, 3600)
         .then(({ data: s }) => { if (s?.signedUrl) setPanUrl(s.signedUrl) })
+    }
+    if (vendor?.aadhaar_copy_path) {
+      supabase.storage.from('vendor-documents').createSignedUrl(vendor.aadhaar_copy_path, 3600)
+        .then(({ data: s }) => { if (s?.signedUrl) setAadhaarUrl(s.signedUrl) })
+    }
+    if (vendor?.aadhaar_pan_link_proof_path) {
+      supabase.storage.from('vendor-documents').createSignedUrl(vendor.aadhaar_pan_link_proof_path, 3600)
+        .then(({ data: s }) => { if (s?.signedUrl) setAadhaarProofUrl(s.signedUrl) })
+    }
+    if (vendor?.pan_number) {
+      supabase.from('vendors').select('id, vendor_id, org_name, status, submitted_by')
+        .eq('pan_number', vendor.pan_number).neq('id', vendor.id)
+        .then(({ data }) => setPanSiblings(data || []))
     }
   }, [vendor])
 
@@ -43,11 +63,15 @@ export default function VendorApprovalView({ vendor, user, onBack, onActioned })
       rejection_reason: null,
     }).eq('id', vendor.id)
     if (err) { setError(err.message); setSaving(false); return }
-    await supabase.from('expense_notifications').insert({
-      recipient_id: vendor.submitted_by,
-      type: 'vendor_approved',
-      message: `Your vendor "${vendor.org_name}" has been approved. You can now raise purchase requests against them.`,
-    }).catch(() => {})
+    // Best-effort — the query builder only implements .then(), not .catch(),
+    // so a real try/catch is needed here to avoid a TypeError masking success.
+    try {
+      await supabase.from('expense_notifications').insert({
+        recipient_id: vendor.submitted_by,
+        type: 'vendor_approved',
+        message: `Your vendor "${vendor.org_name}" has been approved. You can now raise purchase requests against them.`,
+      })
+    } catch { /* non-blocking — the vendor is already approved above */ }
     onActioned('approved')
   }
 
@@ -61,11 +85,13 @@ export default function VendorApprovalView({ vendor, user, onBack, onActioned })
       approved_at: null,
     }).eq('id', vendor.id)
     if (err) { setError(err.message); setSaving(false); return }
-    await supabase.from('expense_notifications').insert({
-      recipient_id: vendor.submitted_by,
-      type: 'vendor_rejected',
-      message: `Your vendor "${vendor.org_name}" was not approved. Reason: ${reason.trim()}. You can edit and resubmit.`,
-    }).catch(() => {})
+    try {
+      await supabase.from('expense_notifications').insert({
+        recipient_id: vendor.submitted_by,
+        type: 'vendor_rejected',
+        message: `Your vendor "${vendor.org_name}" was not approved. Reason: ${reason.trim()}. You can edit and resubmit.`,
+      })
+    } catch { /* non-blocking — the vendor is already rejected above */ }
     onActioned('rejected')
   }
 
@@ -89,17 +115,31 @@ export default function VendorApprovalView({ vendor, user, onBack, onActioned })
           </div>
         </div>
 
+        {panSiblings.length > 0 && (
+          <div
+            onClick={() => setShowPanModal(true)}
+            style={{
+              background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '3px',
+              padding: '12px 16px', marginBottom: '12px', fontSize: '13px', color: '#92400E', cursor: 'pointer',
+            }}
+          >
+            ⚠ This PAN is already registered to {panSiblings.length} other vendor{panSiblings.length !== 1 ? 's' : ''} — click to view. Duplicate PAN/GST is allowed, this is informational only.
+          </div>
+        )}
+
         {/* Details */}
         {[
           {
             title: 'Organisation',
             rows: [
+              ['Nature of Business', vendor.nature_of_business],
               ['PAN', vendor.pan_number, true],
               ['Registration No.', vendor.org_registration_number, true],
               ['Registration State', vendor.org_registration_state],
               ['Incorporated', fmtDate(vendor.date_of_incorporation)],
               ['MSME', vendor.is_msme ? 'Yes' : 'No'],
               ['GSTIN', vendor.is_gstin_registered ? (vendor.gstin || 'Registered but GSTIN missing') : 'Not registered', !!vendor.gstin],
+              ['Related to Organisation', vendor.is_related_to_org ? `Yes — ${vendor.related_org_description || ''}` : 'No'],
             ],
           },
           {
@@ -151,6 +191,30 @@ export default function VendorApprovalView({ vendor, user, onBack, onActioned })
             ) : <span style={{ fontSize: '13px', color: '#B91C1C' }}>PAN not uploaded</span>}
           </div>
         </div>
+
+        {vendor.org_type === INDIVIDUAL_ORG_TYPE && (
+          <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '3px', marginBottom: '12px', overflow: 'hidden' }}>
+            <div style={{ padding: '12px 20px', background: '#F8F9FA', borderBottom: '1px solid #E3E8EF' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Aadhaar Details (Individual Vendor)</span>
+            </div>
+            <Row label="Aadhaar Number" value={vendor.aadhaar_number} mono />
+            <Row label="Aadhaar-PAN Linked" value={vendor.aadhaar_pan_linked ? 'Confirmed by vendor' : 'Not confirmed'} />
+            <div style={{ padding: '16px 20px', display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+              {aadhaarUrl ? (
+                <a href={aadhaarUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: '#8C3225', textDecoration: 'underline' }}>
+                  View Aadhaar Copy
+                </a>
+              ) : <span style={{ fontSize: '13px', color: '#B91C1C' }}>Aadhaar copy not uploaded</span>}
+              {vendor.aadhaar_pan_linked && (
+                aadhaarProofUrl ? (
+                  <a href={aadhaarProofUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: '#8C3225', textDecoration: 'underline' }}>
+                    View Aadhaar-PAN Link Proof
+                  </a>
+                ) : <span style={{ fontSize: '13px', color: '#B91C1C' }}>Link proof not uploaded</span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Approve / Reject panel */}
         <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '3px', overflow: 'hidden' }}>
@@ -215,6 +279,14 @@ export default function VendorApprovalView({ vendor, user, onBack, onActioned })
           </div>
         </div>
       </div>
+
+      {showPanModal && (
+        <PanDuplicateModal
+          vendors={panSiblings}
+          readOnly
+          onClose={() => setShowPanModal(false)}
+        />
+      )}
     </div>
   )
 }

@@ -29,6 +29,43 @@ function fmtAmount(n) {
   return n != null ? Number(n).toFixed(2) : ''
 }
 
+function maskAadhaar(a) {
+  if (!a || a.length < 4) return ''
+  return `XXXX-XXXX-${a.slice(-4)}`
+}
+
+// Vendor export field superset — keys map to columns; label is the CSV
+// header. Aadhaar is always masked regardless of selection (never the full
+// number in an exported file).
+export const VENDOR_EXPORT_FIELDS = [
+  { key: 'vendor_id', label: 'Vendor ID', value: v => v.vendor_id || '' },
+  { key: 'org_name', label: 'Organisation', value: v => v.org_name || '' },
+  { key: 'org_type', label: 'Type', value: v => v.org_type || '' },
+  { key: 'nature_of_business', label: 'Nature of Business', value: v => v.nature_of_business || '' },
+  { key: 'pan_number', label: 'PAN', value: v => v.pan_number || '' },
+  { key: 'gstin', label: 'GSTIN', value: v => v.gstin || '' },
+  { key: 'aadhaar_number', label: 'Aadhaar Number', value: v => maskAadhaar(v.aadhaar_number) },
+  { key: 'location', label: 'Location', value: v => [v.city, v.state].filter(Boolean).join(', ') },
+  { key: 'contact_person', label: 'Contact Person', value: v => v.contact_person || '' },
+  { key: 'phone', label: 'Phone', value: v => v.phone || '' },
+  { key: 'email', label: 'Email', value: v => v.email || '' },
+  { key: 'bank_name', label: 'Bank Name', value: v => v.bank_name || '' },
+  { key: 'ifsc_code', label: 'IFSC Code', value: v => v.ifsc_code || '' },
+  { key: 'submitted_by', label: 'Submitted By', value: v => v.submitted_by || '' },
+  { key: 'status', label: 'Status', value: v => v.status || '' },
+  { key: 'submitted_at', label: 'Submitted Date', value: v => fmtDate(v.submitted_at) },
+  { key: 'approved_at', label: 'Approved Date', value: v => fmtDate(v.approved_at) },
+]
+
+export function vendorsToRows(vendors, fieldKeys) {
+  const fields = VENDOR_EXPORT_FIELDS.filter(f => fieldKeys.includes(f.key))
+  return vendors.map(v => {
+    const row = {}
+    for (const f of fields) row[f.label] = f.value(v)
+    return row
+  })
+}
+
 export function reportsToRows(reports) {
   const rows = []
   for (const r of reports) {

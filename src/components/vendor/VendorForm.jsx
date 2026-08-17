@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { getFiscalYearPrefix } from '../../lib/formCalc'
+import { NATURE_OF_BUSINESS_OPTIONS } from '../../lib/vendorData'
+import PanDuplicateModal from './PanDuplicateModal'
 
 const ORG_TYPES = [
   'Private Limited', 'Public Limited', 'LLP', 'Partnership', 'Proprietorship',
@@ -14,11 +16,13 @@ const INDIAN_STATES = [
   'Dadra and Nagar Haveli and Daman and Diu','Delhi','Jammu and Kashmir','Ladakh','Lakshadweep','Puducherry',
 ]
 
-const PAN_RE   = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/
-const GSTIN_RE = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/
-const IFSC_RE  = /^[A-Z]{4}0[A-Z0-9]{6}$/
-const PIN_RE   = /^[0-9]{6}$/
-const PHONE_RE = /^[0-9]{10}$/
+const PAN_RE     = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/
+const GSTIN_RE   = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/
+const IFSC_RE    = /^[A-Z]{4}0[A-Z0-9]{6}$/
+const PIN_RE     = /^[0-9]{6}$/
+const PHONE_RE   = /^[0-9]{10}$/
+const AADHAAR_RE = /^[0-9]{12}$/
+const INDIVIDUAL_ORG_TYPE = 'Individual/Freelancer'
 
 const GST_STATE_CODES = {
   '01':'Jammu & Kashmir','02':'Himachal Pradesh','03':'Punjab','04':'Chandigarh',
@@ -116,6 +120,25 @@ function Toggle({ label, checked, onChange }) {
   )
 }
 
+function YesNo({ value, onChange, error }) {
+  const pill = selected => ({
+    flex: 1, textAlign: 'center', padding: '10px 12px', cursor: 'pointer',
+    borderRadius: '6px', fontSize: '13px', fontWeight: 600,
+    border: `1px solid ${selected ? '#8C3225' : '#D1D5DB'}`,
+    background: selected ? '#fdf0ed' : '#FFFFFF',
+    color: selected ? '#8C3225' : '#374151',
+  })
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={pill(value === true)} onClick={() => onChange(true)}>Yes</div>
+        <div style={pill(value === false)} onClick={() => onChange(false)}>No</div>
+      </div>
+      {error && <div style={{ fontSize: '11px', color: '#DC2626', marginTop: '4px' }}>{error}</div>}
+    </div>
+  )
+}
+
 function SectionHeader({ number, title, subtitle }) {
   return (
     <div style={{ marginBottom: '22px', paddingBottom: '14px', borderBottom: '2px solid #F3F4F6' }}>
@@ -181,21 +204,32 @@ async function generateVendorId() {
 
 // ─── main component ─────────────────────────────────────────────────────────────
 export default function VendorForm({ user, existingVendor = null, onSaved, onBack }) {
-  const isEdit = !!existingVendor
+  const isEdit = !!existingVendor && existingVendor.status !== 'draft'
 
-  const [vendorId, setVendorId]     = useState('')
+  const [vendorId, setVendorId]     = useState(existingVendor?.status === 'draft' ? '' : (existingVendor?.vendor_id || ''))
+  const [draftId, setDraftId]       = useState(existingVendor?.id || null)
   const [errors, setErrors]         = useState({})
   const [saving, setSaving]         = useState(false)
+  const [savingDraft, setSavingDraft] = useState(false)
   const [saveError, setSaveError]   = useState(null)
+  const [draftSavedAt, setDraftSavedAt] = useState(null)
   const [ifscLooking, setIfscLooking]       = useState(false)
+  const [ifscLookupFailed, setIfscLookupFailed] = useState(false)
+  const [branchLocked, setBranchLocked]     = useState(false)
   const [gstinValidated, setGstinValidated] = useState(null) // null | {ok, stateCode, stateName, embeddedPan, panMatch}
 
+  const [panDuplicates, setPanDuplicates]     = useState([])
+  const [showPanDupModal, setShowPanDupModal] = useState(false)
+  const [panDupAcknowledged, setPanDupAcknowledged] = useState(false)
+
   const [f, setF] = useState({
-    org_name: '', org_type: '',
+    org_name: '', org_type: '', nature_of_business: '',
     address_line1: '', address_line2: '', pincode: '', city: '', state: '', country: 'India',
     date_of_incorporation: '', pan_number: '',
     is_msme: false, msme_details: '',
     is_gstin_registered: false, gstin: '',
+    aadhaar_number: '', aadhaar_pan_linked: false,
+    is_related_to_org: null, related_org_description: '',
     contact_person: '', phone: '', email: '', website: '',
     org_registration_number: '', org_registration_state: '',
     beneficiary_name: '', account_number: '', ifsc_code: '', bank_name: '', branch: '',
@@ -207,6 +241,8 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
   const [regCertFile,  setRegCertFile]  = useState(null)
   const [msmeCertFile, setMsmeCertFile] = useState(null)
   const [gstCertFile,  setGstCertFile]  = useState(null)
+  const [aadhaarFile,      setAadhaarFile]      = useState(null)
+  const [aadhaarProofFile, setAadhaarProofFile] = useState(null)
 
   // existing paths (edit mode)
   const [chequePath]   = useState(existingVendor?.cancelled_cheque_path || null)
@@ -214,16 +250,19 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
   const [regCertPath]  = useState(existingVendor?.registration_certificate_path || null)
   const [msmeCertPath] = useState(existingVendor?.msme_certificate_path || null)
   const [gstCertPath]  = useState(existingVendor?.gst_certificate_path || null)
+  const [aadhaarPath]      = useState(existingVendor?.aadhaar_copy_path || null)
+  const [aadhaarProofPath] = useState(existingVendor?.aadhaar_pan_link_proof_path || null)
 
   // derived: GSTIN field enabled only when org state + valid PAN are filled
   const gstinEnabled = !!f.org_registration_state && PAN_RE.test(f.pan_number.toUpperCase().trim())
+  const isIndividual = f.org_type === INDIVIDUAL_ORG_TYPE
 
   useEffect(() => {
     if (existingVendor) {
-      setVendorId(existingVendor.vendor_id)
       setF({
         org_name: existingVendor.org_name || '',
         org_type: existingVendor.org_type || '',
+        nature_of_business: existingVendor.nature_of_business || '',
         address_line1: existingVendor.address_line1 || '',
         address_line2: existingVendor.address_line2 || '',
         pincode: existingVendor.pincode || '',
@@ -236,6 +275,10 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         msme_details: existingVendor.msme_details || '',
         is_gstin_registered: existingVendor.is_gstin_registered || false,
         gstin: existingVendor.gstin || '',
+        aadhaar_number: existingVendor.aadhaar_number || '',
+        aadhaar_pan_linked: existingVendor.aadhaar_pan_linked || false,
+        is_related_to_org: existingVendor.is_related_to_org ?? null,
+        related_org_description: existingVendor.related_org_description || '',
         contact_person: existingVendor.contact_person || '',
         phone: existingVendor.phone || '',
         email: existingVendor.email || '',
@@ -248,8 +291,6 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         bank_name: existingVendor.bank_name || '',
         branch: existingVendor.branch || '',
       })
-    } else {
-      generateVendorId().then(setVendorId)
     }
   }, [existingVendor])
 
@@ -257,44 +298,106 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
     const code = f.ifsc_code.toUpperCase().trim()
     if (!IFSC_RE.test(code)) return
     setIfscLooking(true)
+    setIfscLookupFailed(false)
     try {
       const res = await fetch(`https://ifsc.razorpay.com/${code}`)
       if (res.ok) {
         const d = await res.json()
         setF(prev => ({ ...prev, bank_name: d.BANK || prev.bank_name, branch: d.BRANCH || prev.branch }))
+        setBranchLocked(true)
+      } else {
+        setBranchLocked(false)
+        setIfscLookupFailed(true)
       }
     } catch (err) {
       console.error('IFSC lookup failed:', err)
+      setBranchLocked(false)
+      setIfscLookupFailed(true)
     }
     setIfscLooking(false)
   }
 
-  function validate() {
-    const e = {}
-    if (!f.org_name.trim())              e.org_name = 'Required'
-    if (!f.org_type)                     e.org_type = 'Required'
-    if (!f.address_line1.trim())         e.address_line1 = 'Required'
-    if (!PIN_RE.test(f.pincode))         e.pincode = 'Enter 6-digit pincode'
-    if (!f.city.trim())                  e.city = 'Required'
-    if (!f.state)                        e.state = 'Required'
-    if (!f.date_of_incorporation)        e.date_of_incorporation = 'Required'
-    if (!PAN_RE.test(f.pan_number.toUpperCase().trim())) e.pan_number = 'Invalid PAN (e.g. ABCDE1234F)'
-    if (f.is_msme && !f.msme_details.trim()) e.msme_details = 'Please provide MSME registration details'
-    if (f.is_msme && !isEdit && !msmeCertPath && !msmeCertFile) e.msme_cert = 'MSME certificate is required'
-    if (f.is_gstin_registered) {
-      if (!GSTIN_RE.test(f.gstin.toUpperCase().trim())) e.gstin = 'Invalid GSTIN (15 characters)'
-      if (!isEdit && !gstCertPath && !gstCertFile) e.gst_cert = 'GST registration certificate is required'
+  // Duplicate PAN is a warning, never a blocker (Finance's explicit
+  // requirement — PAN/GST must not gate a submission). This state is
+  // deliberately separate from `errors`, which does gate submission.
+  async function checkPanDuplicates(pan) {
+    const cleaned = pan.toUpperCase().trim()
+    if (!PAN_RE.test(cleaned)) return
+    const currentRowId = existingVendor?.id || draftId
+    let q = supabase.from('vendors').select('id, vendor_id, org_name, status, submitted_by').eq('pan_number', cleaned)
+    if (currentRowId) q = q.neq('id', currentRowId)
+    const { data } = await q
+    if (data && data.length > 0) {
+      setPanDuplicates(data)
+      setShowPanDupModal(true)
+      setPanDupAcknowledged(false)
+    } else {
+      setPanDuplicates([])
     }
-    if (!f.contact_person.trim())        e.contact_person = 'Required'
-    if (!PHONE_RE.test(f.phone.replace(/\s/g, '').replace(/^\+91/, ''))) e.phone = 'Enter 10-digit mobile number'
-    if (!f.email.trim() || !f.email.includes('@')) e.email = 'Enter valid email'
-    if (!f.org_registration_number.trim()) e.org_registration_number = 'Required'
-    if (!f.beneficiary_name.trim())      e.beneficiary_name = 'Required'
-    if (!f.account_number.trim())        e.account_number = 'Required'
-    if (!IFSC_RE.test(f.ifsc_code.toUpperCase().trim())) e.ifsc_code = 'Invalid IFSC (e.g. SBIN0001234)'
-    if (!f.bank_name.trim())             e.bank_name = 'Required'
-    if (!f.branch.trim())                e.branch = 'Required'
-    if (!isEdit) {
+  }
+
+  function validate(mode) {
+    const e = {}
+    const submit = mode === 'submit'
+    if (submit && !f.org_name.trim())              e.org_name = 'Required'
+    if (submit && !f.org_type)                     e.org_type = 'Required'
+    if (submit && !f.nature_of_business)           e.nature_of_business = 'Required'
+    if (submit && !f.address_line1.trim())         e.address_line1 = 'Required'
+    if (submit) {
+      if (!PIN_RE.test(f.pincode))                 e.pincode = 'Enter 6-digit pincode'
+    } else if (f.pincode && !PIN_RE.test(f.pincode)) {
+      e.pincode = 'Enter 6-digit pincode'
+    }
+    if (submit && !f.city.trim())                  e.city = 'Required'
+    if (submit && !f.state)                        e.state = 'Required'
+    if (submit && !f.date_of_incorporation)        e.date_of_incorporation = 'Required'
+    if (submit) {
+      if (!PAN_RE.test(f.pan_number.toUpperCase().trim())) e.pan_number = 'Invalid PAN (e.g. ABCDE1234F)'
+    } else if (f.pan_number && !PAN_RE.test(f.pan_number.toUpperCase().trim())) {
+      e.pan_number = 'Invalid PAN (e.g. ABCDE1234F)'
+    }
+    if (f.is_msme && !f.msme_details.trim() && submit) e.msme_details = 'Please provide MSME registration details'
+    if (submit && f.is_msme && !isEdit && !msmeCertPath && !msmeCertFile) e.msme_cert = 'MSME certificate is required'
+    if (f.is_gstin_registered) {
+      if (submit) {
+        if (!GSTIN_RE.test(f.gstin.toUpperCase().trim())) e.gstin = 'Invalid GSTIN (15 characters)'
+        if (!isEdit && !gstCertPath && !gstCertFile) e.gst_cert = 'GST registration certificate is required'
+      } else if (f.gstin && !GSTIN_RE.test(f.gstin.toUpperCase().trim())) {
+        e.gstin = 'Invalid GSTIN (15 characters)'
+      }
+    }
+    if (isIndividual && submit) {
+      if (!AADHAAR_RE.test(f.aadhaar_number.trim())) e.aadhaar_number = 'Enter 12-digit Aadhaar number'
+      if (!isEdit && !aadhaarPath && !aadhaarFile)    e.aadhaar_copy = 'Aadhaar copy is required'
+      if (!f.aadhaar_pan_linked)                      e.aadhaar_pan_linked = 'Please confirm Aadhaar and PAN are linked'
+      if (f.aadhaar_pan_linked && !isEdit && !aadhaarProofPath && !aadhaarProofFile) {
+        e.aadhaar_pan_proof = 'Proof of Aadhaar-PAN linkage is required'
+      }
+    } else if (isIndividual && f.aadhaar_number && !AADHAAR_RE.test(f.aadhaar_number.trim())) {
+      e.aadhaar_number = 'Enter 12-digit Aadhaar number'
+    }
+    if (submit && f.is_related_to_org === null)     e.is_related_to_org = 'Please select Yes or No'
+    if (submit && f.is_related_to_org === true && !f.related_org_description.trim()) {
+      e.related_org_description = 'Please describe the relationship'
+    }
+    if (submit && !f.contact_person.trim())        e.contact_person = 'Required'
+    if (submit) {
+      if (!PHONE_RE.test(f.phone.replace(/\s/g, '').replace(/^\+91/, ''))) e.phone = 'Enter 10-digit mobile number'
+    } else if (f.phone && !PHONE_RE.test(f.phone.replace(/\s/g, '').replace(/^\+91/, ''))) {
+      e.phone = 'Enter 10-digit mobile number'
+    }
+    if (submit && (!f.email.trim() || !f.email.includes('@'))) e.email = 'Enter valid email'
+    if (submit && !f.org_registration_number.trim()) e.org_registration_number = 'Required'
+    if (submit && !f.beneficiary_name.trim())      e.beneficiary_name = 'Required'
+    if (submit && !f.account_number.trim())        e.account_number = 'Required'
+    if (submit) {
+      if (!IFSC_RE.test(f.ifsc_code.toUpperCase().trim())) e.ifsc_code = 'Invalid IFSC (e.g. SBIN0001234)'
+    } else if (f.ifsc_code && !IFSC_RE.test(f.ifsc_code.toUpperCase().trim())) {
+      e.ifsc_code = 'Invalid IFSC (e.g. SBIN0001234)'
+    }
+    if (submit && !f.bank_name.trim())             e.bank_name = 'Required'
+    if (submit && !f.branch.trim())                e.branch = 'Required'
+    if (submit && !isEdit) {
       if (!chequePath && !chequeFile)  e.cheque   = 'Cancelled cheque or bank statement is required'
       if (!panPath    && !panFile)     e.pan_copy = 'PAN copy is required'
       if (!regCertPath && !regCertFile) e.reg_cert = 'Registration certificate is required'
@@ -310,8 +413,91 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
     return path
   }
 
+  async function buildPayload({ status, vendor_id }) {
+    let cPath  = chequePath,  pPath = panPath,   rPath = regCertPath
+    let mPath  = msmeCertPath, gPath = gstCertPath
+    let aPath  = aadhaarPath, apPath = aadhaarProofPath
+    if (chequeFile)        cPath  = await uploadFile(chequeFile,        'cheques')
+    if (panFile)            pPath  = await uploadFile(panFile,           'pan')
+    if (regCertFile)        rPath  = await uploadFile(regCertFile,       'reg-cert')
+    if (msmeCertFile)       mPath  = await uploadFile(msmeCertFile,      'msme-cert')
+    if (gstCertFile)        gPath  = await uploadFile(gstCertFile,       'gst-cert')
+    if (aadhaarFile)        aPath  = await uploadFile(aadhaarFile,       'aadhaar')
+    if (aadhaarProofFile)   apPath = await uploadFile(aadhaarProofFile,  'aadhaar-pan-proof')
+
+    return {
+      vendor_id,
+      org_name:                       f.org_name.trim(),
+      org_type:                       f.org_type,
+      nature_of_business:             f.nature_of_business || null,
+      address_line1:                  f.address_line1.trim(),
+      address_line2:                  f.address_line2.trim() || null,
+      pincode:                        f.pincode.trim(),
+      city:                           f.city.trim(),
+      state:                          f.state,
+      country:                        f.country,
+      date_of_incorporation:          f.date_of_incorporation || null,
+      pan_number:                     f.pan_number.toUpperCase().trim(),
+      is_msme:                        f.is_msme,
+      msme_details:                   f.is_msme ? f.msme_details.trim() : null,
+      msme_certificate_path:          f.is_msme ? (mPath || null) : null,
+      is_gstin_registered:            f.is_gstin_registered,
+      gstin:                          f.is_gstin_registered ? f.gstin.toUpperCase().trim() : null,
+      gst_certificate_path:           f.is_gstin_registered ? (gPath || null) : null,
+      aadhaar_number:                 isIndividual ? (f.aadhaar_number.trim() || null) : null,
+      aadhaar_copy_path:              isIndividual ? (aPath || null) : null,
+      aadhaar_pan_linked:             isIndividual ? f.aadhaar_pan_linked : false,
+      aadhaar_pan_link_proof_path:    isIndividual && f.aadhaar_pan_linked ? (apPath || null) : null,
+      is_related_to_org:              f.is_related_to_org,
+      related_org_description:        f.is_related_to_org ? f.related_org_description.trim() : null,
+      contact_person:                 f.contact_person.trim(),
+      phone:                          f.phone.trim(),
+      email:                          f.email.trim().toLowerCase(),
+      website:                        f.website.trim() || null,
+      org_registration_number:        f.org_registration_number.trim(),
+      org_registration_state:         f.org_registration_state || null,
+      beneficiary_name:               f.beneficiary_name.trim(),
+      account_number:                 f.account_number.trim(),
+      ifsc_code:                      f.ifsc_code.toUpperCase().trim(),
+      bank_name:                      f.bank_name.trim(),
+      branch:                         f.branch.trim(),
+      cancelled_cheque_path:          cPath,
+      pan_copy_path:                  pPath,
+      registration_certificate_path:  rPath,
+      submitted_by:                   user.email,
+      status,
+      rejection_reason:               null,
+    }
+  }
+
+  async function handleSaveDraft() {
+    const e = validate('draft')
+    setErrors(e)
+    if (Object.keys(e).length) {
+      const firstErrEl = document.querySelector('[data-error="true"]')
+      if (firstErrEl) firstErrEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
+    setSavingDraft(true); setSaveError(null)
+    try {
+      const payload = await buildPayload({ status: 'draft', vendor_id: null })
+      let result
+      if (draftId) {
+        result = await supabase.from('vendors').update(payload).eq('id', draftId).select().single()
+      } else {
+        result = await supabase.from('vendors').insert(payload).select().single()
+      }
+      if (result.error) throw result.error
+      if (!draftId) setDraftId(result.data.id)
+      setDraftSavedAt(new Date())
+    } catch (err) {
+      setSaveError(err.message || 'Failed to save draft.')
+    }
+    setSavingDraft(false)
+  }
+
   async function handleSubmit() {
-    const e = validate()
+    const e = validate('submit')
     setErrors(e)
     if (Object.keys(e).length) {
       // Scroll to first error
@@ -319,56 +505,22 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
       if (firstErrEl) firstErrEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
     }
+    if (panDuplicates.length > 0 && !panDupAcknowledged) {
+      setShowPanDupModal(true)
+      return
+    }
     setSaving(true); setSaveError(null)
     try {
-      let cPath  = chequePath,  pPath = panPath,   rPath = regCertPath
-      let mPath  = msmeCertPath, gPath = gstCertPath
-      if (chequeFile)   cPath = await uploadFile(chequeFile,   'cheques')
-      if (panFile)      pPath = await uploadFile(panFile,      'pan')
-      if (regCertFile)  rPath = await uploadFile(regCertFile,  'reg-cert')
-      if (msmeCertFile) mPath = await uploadFile(msmeCertFile, 'msme-cert')
-      if (gstCertFile)  gPath = await uploadFile(gstCertFile,  'gst-cert')
-
-      const payload = {
-        vendor_id:                      vendorId,
-        org_name:                       f.org_name.trim(),
-        org_type:                       f.org_type,
-        address_line1:                  f.address_line1.trim(),
-        address_line2:                  f.address_line2.trim() || null,
-        pincode:                        f.pincode.trim(),
-        city:                           f.city.trim(),
-        state:                          f.state,
-        country:                        f.country,
-        date_of_incorporation:          f.date_of_incorporation,
-        pan_number:                     f.pan_number.toUpperCase().trim(),
-        is_msme:                        f.is_msme,
-        msme_details:                   f.is_msme ? f.msme_details.trim() : null,
-        msme_certificate_path:          f.is_msme ? (mPath || null) : null,
-        is_gstin_registered:            f.is_gstin_registered,
-        gstin:                          f.is_gstin_registered ? f.gstin.toUpperCase().trim() : null,
-        gst_certificate_path:           f.is_gstin_registered ? (gPath || null) : null,
-        contact_person:                 f.contact_person.trim(),
-        phone:                          f.phone.trim(),
-        email:                          f.email.trim().toLowerCase(),
-        website:                        f.website.trim() || null,
-        org_registration_number:        f.org_registration_number.trim(),
-        org_registration_state:         f.org_registration_state || null,
-        beneficiary_name:               f.beneficiary_name.trim(),
-        account_number:                 f.account_number.trim(),
-        ifsc_code:                      f.ifsc_code.toUpperCase().trim(),
-        bank_name:                      f.bank_name.trim(),
-        branch:                         f.branch.trim(),
-        cancelled_cheque_path:          cPath,
-        pan_copy_path:                  pPath,
-        registration_certificate_path:  rPath,
-        submitted_by:                   user.email,
-        status:                         'pending',
-        rejection_reason:               null,
-      }
+      const vid = vendorId || await generateVendorId()
+      if (!vendorId) setVendorId(vid)
+      const payload = await buildPayload({ status: 'pending', vendor_id: vid })
+      payload.submitted_at = new Date().toISOString()
 
       let result
       if (isEdit) {
         result = await supabase.from('vendors').update(payload).eq('id', existingVendor.id).select().single()
+      } else if (draftId) {
+        result = await supabase.from('vendors').update(payload).eq('id', draftId).select().single()
       } else {
         result = await supabase.from('vendors').insert(payload).select().single()
       }
@@ -397,7 +549,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         </button>
         <span style={{ color: '#D1D5DB' }}>/</span>
         <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A1F36', margin: 0 }}>
-          {isEdit ? 'Edit Vendor' : 'Vendor Registration'}
+          {isEdit ? 'Edit Vendor' : existingVendor?.status === 'draft' ? 'Continue Vendor Draft' : 'Vendor Registration'}
         </h2>
       </div>
 
@@ -410,7 +562,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         <div>
           <div style={{ fontSize: '10px', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Vendor ID</div>
           <div style={{ fontSize: '16px', fontWeight: 700, color: '#8C3225', fontFamily: 'monospace', marginTop: '2px' }}>
-            {vendorId || 'Generating…'}
+            {vendorId || 'Will be assigned on submission'}
           </div>
         </div>
         <div style={{ fontSize: '11px', color: '#9CA3AF' }}>Auto-assigned</div>
@@ -430,6 +582,9 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           </div>
           <Field label="Type of Organisation" required error={errors.org_type}>
             <Sel field="org_type" f={f} setF={setF} options={ORG_TYPES} placeholder="Select type…" err={!!errors.org_type} />
+          </Field>
+          <Field label="Nature of Business" required error={errors.nature_of_business}>
+            <Sel field="nature_of_business" f={f} setF={setF} options={NATURE_OF_BUSINESS_OPTIONS} placeholder="Select nature of business…" err={!!errors.nature_of_business} />
           </Field>
           <Field label="Date of Incorporation" required error={errors.date_of_incorporation}>
             <input
@@ -465,13 +620,72 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
             <input
               type="text"
               value={f.pan_number}
-              onChange={e => setF(p => ({ ...p, pan_number: e.target.value.toUpperCase() }))}
+              onChange={e => { setF(p => ({ ...p, pan_number: e.target.value.toUpperCase() })); setPanDupAcknowledged(false) }}
+              onBlur={e => checkPanDuplicates(e.target.value)}
               placeholder="ABCDE1234F"
               maxLength={10}
               style={inputStyle(!!errors.pan_number, { fontFamily: 'monospace', letterSpacing: '0.1em' })}
             />
+            {panDuplicates.length > 0 && (
+              <div
+                onClick={() => setShowPanDupModal(true)}
+                style={{
+                  marginTop: '6px', fontSize: '11px', color: '#92400E', cursor: 'pointer',
+                  background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '4px', padding: '6px 10px',
+                }}
+              >
+                ⚠ {panDuplicates.length} other vendor{panDuplicates.length !== 1 ? 's' : ''} already registered with this PAN — click to view
+              </div>
+            )}
           </Field>
         </div>
+
+        {/* Individual vendor — Aadhaar (mandatory only for Individual/Freelancer) */}
+        {isIndividual && (
+          <div style={{ background: '#F5F3FF', border: '1px solid #DDD6FE', borderRadius: '6px', padding: '16px', marginBottom: '14px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#5B21B6', marginBottom: '12px' }}>Aadhaar Details (Individual Vendor)</div>
+            <Field label="Aadhaar Number" required error={errors.aadhaar_number}>
+              <input
+                type="text"
+                value={f.aadhaar_number}
+                onChange={e => setF(p => ({ ...p, aadhaar_number: e.target.value.replace(/\D/g, '') }))}
+                placeholder="123412341234"
+                maxLength={12}
+                style={inputStyle(!!errors.aadhaar_number, { fontFamily: 'monospace', letterSpacing: '0.08em' })}
+              />
+            </Field>
+            <FileUpload
+              label="Aadhaar Copy"
+              required
+              error={errors.aadhaar_copy}
+              existing={aadhaarPath}
+              file={aadhaarFile}
+              onChange={setAadhaarFile}
+            />
+            <div style={{ marginTop: '4px' }}>
+              <Toggle
+                label="I confirm my Aadhaar and PAN are linked"
+                checked={f.aadhaar_pan_linked}
+                onChange={e => setF(p => ({ ...p, aadhaar_pan_linked: e.target.checked }))}
+              />
+              {errors.aadhaar_pan_linked && (
+                <div style={{ fontSize: '11px', color: '#DC2626', marginTop: '4px' }}>{errors.aadhaar_pan_linked}</div>
+              )}
+            </div>
+            {f.aadhaar_pan_linked && (
+              <div style={{ marginTop: '14px' }}>
+                <FileUpload
+                  label="Proof of Aadhaar-PAN Link"
+                  required
+                  error={errors.aadhaar_pan_proof}
+                  existing={aadhaarProofPath}
+                  file={aadhaarProofFile}
+                  onChange={setAadhaarProofFile}
+                />
+              </div>
+            )}
+          </div>
+        )}
 
         {/* MSME toggle + conditional */}
         <div style={{ marginBottom: '14px' }}>
@@ -671,6 +885,32 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
             hint="Fill this to unlock the GSTIN field">
             <Sel field="org_registration_state" f={f} setF={setF} options={INDIAN_STATES} placeholder="Select state…" />
           </Field>
+          <div style={full}>
+            <Field label="Is this vendor related to / connected with the organisation?" required error={errors.is_related_to_org}>
+              <YesNo
+                value={f.is_related_to_org}
+                onChange={v => setF(p => ({ ...p, is_related_to_org: v }))}
+              />
+            </Field>
+          </div>
+          {f.is_related_to_org === true && (
+            <div style={full}>
+              <Field label="Describe the relationship / connection" required error={errors.related_org_description}>
+                <textarea
+                  value={f.related_org_description}
+                  onChange={e => setF(p => ({ ...p, related_org_description: e.target.value }))}
+                  placeholder="e.g. Vendor is owned by a family member of an employee"
+                  rows={3}
+                  style={{
+                    width: '100%', border: `1px solid ${errors.related_org_description ? '#DC2626' : '#D1D5DB'}`,
+                    borderRadius: '4px', padding: '10px', fontSize: '13px', color: '#1A1F36',
+                    outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit',
+                    background: '#FFFFFF',
+                  }}
+                />
+              </Field>
+            </div>
+          )}
         </div>
       </div>
 
@@ -704,13 +944,34 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
               )}
             </div>
             <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '3px' }}>Bank and branch auto-fill on valid IFSC</div>
+            {ifscLookupFailed && (
+              <div style={{ fontSize: '11px', color: '#B45309', marginTop: '3px' }}>
+                Auto lookup unavailable — please enter bank name and branch manually.
+              </div>
+            )}
           </Field>
           <Field label="Bank Name" required error={errors.bank_name}>
-            <Inp field="bank_name" f={f} setF={setF} placeholder="e.g. State Bank of India" err={!!errors.bank_name} />
+            <Inp field="bank_name" f={f} setF={setF} placeholder="e.g. State Bank of India" disabled={branchLocked} err={!!errors.bank_name} />
+            {branchLocked && (
+              <span
+                onClick={() => setBranchLocked(false)}
+                style={{ fontSize: '11px', color: '#2563EB', cursor: 'pointer', textDecoration: 'underline', display: 'inline-block', marginTop: '4px' }}
+              >
+                Edit manually
+              </span>
+            )}
           </Field>
           <div style={full}>
             <Field label="Branch" required error={errors.branch}>
-              <Inp field="branch" f={f} setF={setF} placeholder="e.g. MG Road, Bangalore" err={!!errors.branch} />
+              <Inp field="branch" f={f} setF={setF} placeholder="e.g. MG Road, Bangalore" disabled={branchLocked} err={!!errors.branch} />
+              {branchLocked && (
+                <span
+                  onClick={() => setBranchLocked(false)}
+                  style={{ fontSize: '11px', color: '#2563EB', cursor: 'pointer', textDecoration: 'underline', display: 'inline-block', marginTop: '4px' }}
+                >
+                  Edit manually
+                </span>
+              )}
             </Field>
           </div>
         </div>
@@ -766,6 +1027,11 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           {saveError}
         </div>
       )}
+      {draftSavedAt && (
+        <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '6px', padding: '12px 16px', marginBottom: '16px', fontSize: '13px', color: '#15803D' }}>
+          Draft saved ✓ {draftSavedAt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+        </div>
+      )}
       {Object.keys(errors).length > 0 && (
         <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '6px', padding: '12px 16px', marginBottom: '16px' }}>
           <div style={{ fontSize: '12px', fontWeight: 700, color: '#B91C1C', marginBottom: '6px' }}>Please fix the following before submitting:</div>
@@ -781,7 +1047,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
       <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
         <button
           onClick={handleSubmit}
-          disabled={saving}
+          disabled={saving || savingDraft}
           style={{
             height: '46px', padding: '0 36px',
             background: saving ? '#9CA3AF' : '#8C3225',
@@ -791,6 +1057,19 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         >
           {saving ? 'Submitting…' : isEdit ? 'Resubmit for Approval' : 'Submit for Approval'}
         </button>
+        {(!isEdit) && (
+          <button
+            onClick={handleSaveDraft}
+            disabled={saving || savingDraft}
+            style={{
+              height: '46px', padding: '0 24px',
+              background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '6px',
+              fontSize: '14px', fontWeight: 600, cursor: savingDraft ? 'default' : 'pointer',
+            }}
+          >
+            {savingDraft ? 'Saving…' : 'Save as Draft'}
+          </button>
+        )}
         <button
           onClick={onBack}
           style={{ height: '46px', padding: '0 24px', background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '6px', fontSize: '14px', cursor: 'pointer' }}
@@ -798,6 +1077,14 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           Cancel
         </button>
       </div>
+
+      {showPanDupModal && (
+        <PanDuplicateModal
+          vendors={panDuplicates}
+          onAcknowledge={() => { setPanDupAcknowledged(true); setShowPanDupModal(false) }}
+          onClose={() => setShowPanDupModal(false)}
+        />
+      )}
     </div>
   )
 }

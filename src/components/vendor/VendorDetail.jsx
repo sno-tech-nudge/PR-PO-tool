@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import VendorStatusBadge from './VendorStatusBadge'
+import PanDuplicateModal from './PanDuplicateModal'
+
+const INDIVIDUAL_ORG_TYPE = 'Individual/Freelancer'
 
 function fmtDate(d) {
   if (!d) return '—'
@@ -32,6 +35,10 @@ export default function VendorDetail({ vendorId, user, onBack, onEdit, onApprove
   const [loading, setLoading] = useState(true)
   const [chequeUrl, setChequeUrl] = useState(null)
   const [panUrl, setPanUrl]   = useState(null)
+  const [aadhaarUrl, setAadhaarUrl] = useState(null)
+  const [aadhaarProofUrl, setAadhaarProofUrl] = useState(null)
+  const [panSiblings, setPanSiblings] = useState([])
+  const [showPanModal, setShowPanModal] = useState(false)
 
   async function load() {
     setLoading(true)
@@ -44,6 +51,22 @@ export default function VendorDetail({ vendorId, user, onBack, onEdit, onApprove
     if (data?.pan_copy_path) {
       const { data: s } = await supabase.storage.from('vendor-documents').createSignedUrl(data.pan_copy_path, 3600)
       if (s?.signedUrl) setPanUrl(s.signedUrl)
+    }
+    if (data?.aadhaar_copy_path) {
+      const { data: s } = await supabase.storage.from('vendor-documents').createSignedUrl(data.aadhaar_copy_path, 3600)
+      if (s?.signedUrl) setAadhaarUrl(s.signedUrl)
+    }
+    if (data?.aadhaar_pan_link_proof_path) {
+      const { data: s } = await supabase.storage.from('vendor-documents').createSignedUrl(data.aadhaar_pan_link_proof_path, 3600)
+      if (s?.signedUrl) setAadhaarProofUrl(s.signedUrl)
+    }
+    if (data?.pan_number) {
+      const { data: siblings } = await supabase
+        .from('vendors')
+        .select('id, vendor_id, org_name, status, submitted_by')
+        .eq('pan_number', data.pan_number)
+        .neq('id', data.id)
+      setPanSiblings(siblings || [])
     }
     setLoading(false)
   }
@@ -133,14 +156,52 @@ export default function VendorDetail({ vendorId, user, onBack, onEdit, onApprove
         </div>
 
         <Section title="Organisation Details">
+          <Row label="Nature of Business" value={vendor.nature_of_business} />
           <Row label="PAN Number" value={vendor.pan_number} mono />
+          {panSiblings.length > 0 && (
+            <div style={{ padding: '10px 20px', borderBottom: '1px solid #F3F4F6', display: 'flex' }}>
+              <div style={{ width: '200px', fontSize: '11px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0, paddingTop: '1px' }}>Other Vendors with this PAN</div>
+              <div
+                onClick={() => setShowPanModal(true)}
+                style={{ fontSize: '13px', color: '#8C3225', cursor: 'pointer', textDecoration: 'underline' }}
+              >
+                {panSiblings.length} other vendor{panSiblings.length !== 1 ? 's' : ''} — View
+              </div>
+            </div>
+          )}
           <Row label="Registration No." value={vendor.org_registration_number} mono />
           <Row label="Registration State" value={vendor.org_registration_state} />
           <Row label="Date of Incorporation" value={fmtDate(vendor.date_of_incorporation)} />
           <Row label="MSME Registered" value={vendor.is_msme ? 'Yes' : 'No'} />
           <Row label="GSTIN Registered" value={vendor.is_gstin_registered ? 'Yes' : 'No'} />
           {vendor.gstin && <Row label="GSTIN" value={vendor.gstin} mono />}
+          <Row label="Related to Organisation" value={vendor.is_related_to_org ? `Yes — ${vendor.related_org_description || ''}` : 'No'} />
         </Section>
+
+        {vendor.org_type === INDIVIDUAL_ORG_TYPE && (
+          <Section title="Aadhaar Details (Individual Vendor)">
+            <Row label="Aadhaar Number" value={vendor.aadhaar_number} mono />
+            <Row label="Aadhaar-PAN Linked" value={vendor.aadhaar_pan_linked ? 'Confirmed by vendor' : 'Not confirmed'} />
+            <div style={{ padding: '16px 20px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+              {aadhaarUrl ? (
+                <a href={aadhaarUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: '#8C3225', textDecoration: 'underline' }}>
+                  View Aadhaar Copy
+                </a>
+              ) : (
+                <span style={{ fontSize: '13px', color: '#9CA3AF' }}>Aadhaar copy not available</span>
+              )}
+              {vendor.aadhaar_pan_linked && (
+                aadhaarProofUrl ? (
+                  <a href={aadhaarProofUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: '#8C3225', textDecoration: 'underline' }}>
+                    View Aadhaar-PAN Link Proof
+                  </a>
+                ) : (
+                  <span style={{ fontSize: '13px', color: '#9CA3AF' }}>Link proof not available</span>
+                )
+              )}
+            </div>
+          </Section>
+        )}
 
         <Section title="Contact & Address">
           <Row label="Contact Person" value={vendor.contact_person} />
@@ -181,6 +242,14 @@ export default function VendorDetail({ vendorId, user, onBack, onEdit, onApprove
           </div>
         </Section>
       </div>
+
+      {showPanModal && (
+        <PanDuplicateModal
+          vendors={panSiblings}
+          readOnly
+          onClose={() => setShowPanModal(false)}
+        />
+      )}
     </div>
   )
 }
