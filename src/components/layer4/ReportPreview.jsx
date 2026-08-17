@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
 import { determineApprovalRoute, checkLargeClaimDonorMention, flagEntityContext } from '../../lib/policyEngine'
 import { generateExpenseReportPDF, downloadPDF, uploadPDFToSupabase } from '../../lib/pdfGenerator'
+import { generateReportReference } from '../../lib/reportReference'
 import ReportSummaryCard from './ReportSummaryCard'
 import ExpenseLineItem from './ExpenseLineItem'
 import PDFTemplate from './PDFTemplate'
@@ -29,10 +30,9 @@ function getPeriod(expenses) {
 }
 
 export default function ReportPreview({ expenses, results, reportDetails, user, onSubmitted, onBack }) {
-  const [reference] = useState(() => {
-    const y = String(new Date().getFullYear()).slice(-2)
-    return 'TNI' + y + Math.floor(1000 + Math.random() * 9000)
-  })
+  const [fallbackReference] = useState(() => generateReportReference())
+  const reference = reportDetails?.report_reference || fallbackReference
+  const reportId = reportDetails?.report_id || null
 
   const [pdfCache, setPdfCache] = useState(null)
   const [generating, setGenerating] = useState(false)
@@ -138,22 +138,22 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
       }
     }
 
+    const reportPayload = {
+      report_reference: reference,
+      brand: entity,
+      total_amount: total,
+      expense_count: expenses.length,
+      approval_route: approvalRoute.route,
+      status: 'submitted',
+      pdf_storage_path: pdfPath || null,
+      selected_expense_ids: expenses.map(e => e.id),
+      employee_email: user?.email ?? null,
+    }
+
     try {
-      const { data: report, error } = await supabase
-        .from('expense_reports')
-        .insert({
-          report_reference: reference,
-          brand: entity,
-          total_amount: total,
-          expense_count: expenses.length,
-          approval_route: approvalRoute.route,
-          status: 'submitted',
-          pdf_storage_path: pdfPath || null,
-          selected_expense_ids: expenses.map(e => e.id),
-          employee_email: user?.email ?? null,
-        })
-        .select()
-        .single()
+      const { data: report, error } = reportId
+        ? await supabase.from('expense_reports').update(reportPayload).eq('id', reportId).select().single()
+        : await supabase.from('expense_reports').insert(reportPayload).select().single()
 
       if (error) throw error
 
@@ -214,6 +214,9 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
           approvalRoute={approvalRoute}
           generatedAt={generatedAt}
           reportDetails={reportDetails}
+          businessPurpose={reportDetails?.business_purpose}
+          durationStart={reportDetails?.duration_start}
+          durationEnd={reportDetails?.duration_end}
         />
 
         <div style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A1A', margin: '20px 0 12px' }}>

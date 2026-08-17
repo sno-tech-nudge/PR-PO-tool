@@ -6,6 +6,7 @@ import NotificationToast from './NotificationToast'
 import ReportChat from '../shared/ReportChat'
 
 const STATUS_BADGE = {
+  draft: { bg: '#F3F4F6', color: '#6B7280', label: 'Draft' },
   submitted: { bg: '#F7F7F7', color: '#1A1A1A', label: 'Submitted' },
   under_review: { bg: '#fdf0ed', color: '#8C3225', label: 'Under Review' },
   approved: { bg: '#F0FDF4', color: '#16A34A', label: 'Approved' },
@@ -17,6 +18,7 @@ const STATUS_BADGE = {
 function getStatusMessage(status, reviewedBy) {
   const approver = reviewedBy || 'your approver'
   switch (status) {
+    case 'draft': return 'This report has not been submitted yet'
     case 'submitted': return `Waiting for ${approver} to review`
     case 'under_review': return `${approver} is reviewing your report`
     case 'approved': return `Approved by ${approver}. Finance is processing.`
@@ -178,6 +180,25 @@ export default function ReportStatus({ reportId, onBack, onStartNew }) {
           {report?.report_reference || '—'} · {report?.created_at ? new Date(report.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
         </div>
       </div>
+
+      {(report?.business_purpose || report?.duration_start || report?.duration_end) && (
+        <div style={{ border: '1px solid #E8E8E8', marginBottom: '16px', overflow: 'hidden' }}>
+          {report?.business_purpose && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', borderBottom: report?.duration_start || report?.duration_end ? '1px solid #E8E8E8' : 'none' }}>
+              <span style={{ fontSize: '12px', color: '#6B6B6B' }}>Business Purpose</span>
+              <span style={{ fontSize: '13px', color: '#1A1A1A', textAlign: 'right', maxWidth: '65%' }}>{report.business_purpose}</span>
+            </div>
+          )}
+          {(report?.duration_start || report?.duration_end) && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: '#F7F7F7' }}>
+              <span style={{ fontSize: '12px', color: '#6B6B6B' }}>Duration</span>
+              <span style={{ fontSize: '13px', color: '#1A1A1A' }}>
+                {[report.duration_start, report.duration_end].filter(Boolean).map(d => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })).join(' – ')}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
 
       {polling && (
         <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '8px' }}>

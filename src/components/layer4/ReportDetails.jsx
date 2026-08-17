@@ -62,7 +62,13 @@ function TextInput({ value, onChange, placeholder, label }) {
   )
 }
 
-export default function ReportDetails({ expenses, onContinue, onBack }) {
+function formatDuration(start, end) {
+  if (!start && !end) return null
+  const fmt = d => d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'
+  return `${fmt(start)} – ${fmt(end)}`
+}
+
+export default function ReportDetails({ expenses, reportMeta, onContinue, onBack }) {
   const total = (expenses || []).reduce((s, e) => s + (e.amount || 0), 0)
   const count = (expenses || []).length
 
@@ -95,6 +101,11 @@ export default function ReportDetails({ expenses, onContinue, onBack }) {
 
   function handleContinue() {
     onContinue({
+      report_id: reportMeta?.id || null,
+      report_reference: reportMeta?.report_reference || null,
+      business_purpose: reportMeta?.business_purpose || null,
+      duration_start: reportMeta?.duration_start || null,
+      duration_end: reportMeta?.duration_end || null,
       entity: entity || null,
       expense_type: whoType === 'multiple' ? 'my_team' : 'just_me',
       attendee_count: actualCount || null,
@@ -136,6 +147,24 @@ export default function ReportDetails({ expenses, onContinue, onBack }) {
         These details apply to all {count} selected expense{count !== 1 ? 's' : ''}.
       </div>
       <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '20px' }}>Step 2 of 3 · All fields optional</div>
+
+      {reportMeta && (
+        <div style={{ border: '1px solid #E8E8E8', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid #E8E8E8' }}>
+            <span style={{ fontSize: '12px', color: '#6B6B6B' }}>Report Name</span>
+            <span style={{ fontSize: '13px', color: '#1A1A1A', fontFamily: 'monospace' }}>{reportMeta.report_reference}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid #E8E8E8', background: '#F7F7F7' }}>
+            <span style={{ fontSize: '12px', color: '#6B6B6B' }}>Business Purpose</span>
+            <span style={{ fontSize: '13px', color: '#1A1A1A', textAlign: 'right', maxWidth: '65%' }}>{reportMeta.business_purpose || '—'}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px' }}>
+            <span style={{ fontSize: '12px', color: '#6B6B6B' }}>Duration</span>
+            <span style={{ fontSize: '13px', color: '#1A1A1A' }}>{formatDuration(reportMeta.duration_start, reportMeta.duration_end)}</span>
+          </div>
+        </div>
+      )}
+
       <div style={{ height: '1px', background: '#E8E8E8', marginBottom: '24px' }} />
 
       {/* SECTION A — Who */}

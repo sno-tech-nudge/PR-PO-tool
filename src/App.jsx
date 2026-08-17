@@ -5,11 +5,13 @@ import LoginScreen from './components/auth/LoginScreen'
 import OfflineBanner from './components/capture/OfflineBanner'
 import NewExpense from './components/capture/NewExpense'
 import QuickAddDropzone from './components/capture/QuickAddDropzone'
+import FeedbackWidget from './components/shared/FeedbackWidget'
 import ExpenseDetails from './components/layer2/ExpenseDetails'
 import PolicyCheck from './components/layer3/PolicyCheck'
 import ExpenseSelector from './components/layer4/ExpenseSelector'
 import ReportPreview from './components/layer4/ReportPreview'
 import ReportDetails from './components/layer4/ReportDetails'
+import NewReportModal from './components/layer4/NewReportModal'
 import SubmissionConfirmation from './components/layer5/SubmissionConfirmation'
 import ReportStatus from './components/layer5/ReportStatus'
 import ApproverDashboard from './components/layer5/ApproverDashboard'
@@ -70,6 +72,8 @@ export default function App() {
   const [selectedExpenses, setSelectedExpenses] = useState([])
   const [selectedResults, setSelectedResults] = useState([])
   const [layer4ReportDetails, setLayer4ReportDetails] = useState(null)
+  const [newReportMeta, setNewReportMeta] = useState(null)
+  const [showNewReportModal, setShowNewReportModal] = useState(false)
 
   const [submissionData, setSubmissionData] = useState(null)
   const [currentReportId, setCurrentReportId] = useState(null)
@@ -133,9 +137,29 @@ export default function App() {
 
   function handleLayer4Submitted(data) { setSubmissionData(data); setAppScreen('layer5') }
   function handleTrackReport(id)       { setCurrentReportId(id); setAppScreen('status') }
-  function handleViewReport(id)        { setCurrentReportId(id); setAppScreen('status') }
 
-  async function handleNewReport() {
+  // A draft report was never submitted — its own workspace (drag receipts in,
+  // pick from saved expenses) is what "viewing" it should mean, not the
+  // submitted-report status tracker, which has nothing meaningful to show
+  // for something no approver has ever seen.
+  async function handleViewReport(id) {
+    const { data: reportRow } = await supabase
+      .from('expense_reports')
+      .select('*')
+      .eq('id', id)
+      .single()
+    if (reportRow?.status === 'draft') {
+      await enterReportWorkspace(reportRow)
+      return
+    }
+    setCurrentReportId(id)
+    setAppScreen('status')
+  }
+
+  function handleNewReport() { setShowNewReportModal(true) }
+
+  async function enterReportWorkspace(reportRow) {
+    setNewReportMeta(reportRow)
     setLayer4Expenses([]); setLayer4Results([])
     setLayer4Screen('selector')
     const { data } = await supabase
@@ -148,11 +172,20 @@ export default function App() {
     setAppScreen('policy')
   }
 
+  async function handleReportCreated(reportRow) {
+    setShowNewReportModal(false)
+    await enterReportWorkspace(reportRow)
+  }
+
   function handleSignOut() { signOut(); setUser(null); setAppScreen('list') }
 
   function openVendorCreate()        { setEditingVendor(null); setVendorSubScreen('search') }
   function openVendorForm()          { setVendorSubScreen('form') }
   function openVendorDetail(id)      { setViewingVendorId(id); setVendorSubScreen('detail') }
+  async function openDraftEdit(id) {
+    const { data } = await supabase.from('vendors').select('*').eq('id', id).single()
+    if (data) { setEditingVendor(data); setVendorSubScreen('form') }
+  }
   function openVendorApproval(v)     { setApprovingVendor(v); setVendorSubScreen('approval') }
   function openBankChange(v)         { setBankChangeVendor(v); setVendorSubScreen('bank-change') }
   function openVendorList() {
@@ -184,6 +217,7 @@ export default function App() {
   ]
 
   const activeNav = SCREEN_PARENT[appScreen] || appScreen
+  const moduleName = navItems.find(n => n.key === activeNav)?.label || appScreen
 
   function handleNavClick(key) {
     if (key === 'vendors') openVendorList()
@@ -308,8 +342,8 @@ export default function App() {
         )}
 
         {appScreen === 'capture' && (
-          <div style={{ maxWidth: '520px', margin: '0 auto', padding: '32px 24px' }}>
-            <NewExpense onContinueToDetails={handleContinueToDetails} />
+          <div style={{ padding: '32px 24px' }}>
+            <NewExpense user={user} onContinueToDetails={handleContinueToDetails} onBack={() => setAppScreen('list')} />
           </div>
         )}
 
@@ -396,6 +430,7 @@ export default function App() {
             expenses={layer4Expenses}
             results={layer4Results}
             user={user}
+            reportMeta={newReportMeta}
             onPreview={handleLayer4Preview}
             onBack={() => setAppScreen('list')}
           />
@@ -405,6 +440,7 @@ export default function App() {
           <ReportDetails
             expenses={selectedExpenses}
             results={selectedResults}
+            reportMeta={newReportMeta}
             onContinue={handleLayer4Details}
             onBack={() => setLayer4Screen('selector')}
           />
@@ -418,6 +454,14 @@ export default function App() {
             user={user}
             onSubmitted={handleLayer4Submitted}
             onBack={() => setLayer4Screen('details')}
+          />
+        )}
+
+        {showNewReportModal && (
+          <NewReportModal
+            user={user}
+            onCreated={handleReportCreated}
+            onClose={() => setShowNewReportModal(false)}
           />
         )}
 
@@ -518,7 +562,7 @@ export default function App() {
 
         {/* ── Vendor screens ── */}
         {appScreen === 'vendors' && vendorSubScreen === 'list' && (
-          <VendorList user={user} onViewVendor={openVendorDetail} onCreateVendor={openVendorCreate} />
+          <VendorList user={user} onViewVendor={openVendorDetail} onCreateVendor={openVendorCreate} onResumeDraft={openDraftEdit} />
         )}
         {appScreen === 'vendors' && vendorSubScreen === 'search' && (
           <VendorSearch onCreateNew={openVendorForm} onSelectExisting={(v) => openVendorDetail(v.id)} />
@@ -528,10 +572,11 @@ export default function App() {
             user={user}
             existingVendor={editingVendor}
             onSaved={() => {
-              showToast(editingVendor ? 'Vendor resubmitted for approval.' : 'Vendor submitted for approval.', 'info')
+              const wasResubmit = editingVendor && editingVendor.status !== 'draft'
+              showToast(wasResubmit ? 'Vendor resubmitted for approval.' : 'Vendor submitted for approval.', 'info')
               openVendorList()
             }}
-            onBack={() => setVendorSubScreen(editingVendor ? 'detail' : 'search')}
+            onBack={() => setVendorSubScreen(!editingVendor ? 'search' : editingVendor.status === 'draft' ? 'list' : 'detail')}
           />
         )}
         {appScreen === 'vendors' && vendorSubScreen === 'detail' && (
@@ -594,6 +639,8 @@ export default function App() {
           <PRDetail prId={viewingPRId} user={user} onBack={openPRList} onEdit={openPREdit} />
         )}
       </div>
+
+      <FeedbackWidget user={user} moduleName={moduleName} />
     </div>
   )
 }

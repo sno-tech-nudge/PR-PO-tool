@@ -68,11 +68,13 @@ export default function BankChangeRequest({ vendor, user, onBack, onSubmitted })
         status: 'pending',
       })
       if (error) throw error
-      await supabase.from('expense_notifications').insert({
-        recipient_id: 'finance1@test.com',
-        type: 'bank_change_request',
-        message: `Bank detail change requested for vendor "${vendor.org_name}" (${vendor.vendor_id}). Please review in Vendor Management.`,
-      }).catch(() => {})
+      try {
+        await supabase.from('expense_notifications').insert({
+          recipient_id: 'finance1@test.com',
+          type: 'bank_change_request',
+          message: `Bank detail change requested for vendor "${vendor.org_name}" (${vendor.vendor_id}). Please review in Vendor Management.`,
+        })
+      } catch { /* non-blocking — the change request is already saved above */ }
       onSubmitted()
     } catch (err) {
       setSaveError(err.message || 'Failed to submit request.')

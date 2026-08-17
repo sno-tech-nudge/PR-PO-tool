@@ -1,29 +1,59 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import ExpenseDetails from '../layer2/ExpenseDetails'
+import QuickAddDropzone from '../capture/QuickAddDropzone'
 
-export default function ExpenseSelector({ expenses: initialExpenses, results: initialResults, onPreview }) {
+export default function ExpenseSelector({ expenses: initialExpenses, results: initialResults, user, reportMeta, onPreview }) {
   const [expenses, setExpenses] = useState(initialExpenses || [])
   const [loading, setLoading] = useState(!initialExpenses || initialExpenses.length === 0)
   const [selected, setSelected] = useState(new Set())
   const [grouped, setGrouped] = useState(false)
+  const [editingExpense, setEditingExpense] = useState(null)
+  const [showAddPanel, setShowAddPanel] = useState(!!reportMeta)
+  const [newLayer1Data, setNewLayer1Data] = useState(null)
+  const [addingNew, setAddingNew] = useState(false)
 
   const results = initialResults || []
 
+  // Any expense already tagged with this draft report (dropped in directly
+  // from this screen, or linked via the Report dropdown elsewhere) shows up
+  // pre-selected — matches Zoho's behaviour where a receipt dropped onto a
+  // report's own page is already "in" that report, no extra click needed.
+  useEffect(() => {
+    if (!reportMeta?.id) return
+    const linkedIds = expenses.filter(e => e.report_id === reportMeta.id).map(e => e.id)
+    if (linkedIds.length === 0) return
+    setSelected(prev => {
+      const next = new Set(prev)
+      linkedIds.forEach(id => next.add(id))
+      return next
+    })
+  }, [expenses, reportMeta?.id])
+
+  function refetch() {
+    return supabase
+      .from('expense_details')
+      .select('*')
+      .in('status', ['saved', 'flagged'])
+      .order('created_at', { ascending: false })
+      .then(({ data }) => setExpenses(data || []))
+  }
+
   useEffect(() => {
     if (!initialExpenses || initialExpenses.length === 0) {
-      supabase
-        .from('expense_details')
-        .select('*')
-        .in('status', ['saved', 'flagged'])
-        .order('created_at', { ascending: false })
-        .then(({ data }) => {
-          setExpenses(data || [])
-          setLoading(false)
-        })
+      refetch().then(() => setLoading(false))
     } else {
       setLoading(false)
     }
   }, [])
+
+  function handleExpenseSaved() {
+    setEditingExpense(null)
+    setAddingNew(false)
+    setNewLayer1Data(null)
+    setShowAddPanel(false)
+    refetch()
+  }
 
   // Policy violations are advisory (see PolicyResult.jsx) — they never prevent
   // an expense from being selected. Only a persisted hard block from Finance
@@ -84,6 +114,13 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
 
   const selectedExpenses = expenses.filter(e => selected.has(e.id))
   const selectedTotal = selectedExpenses.reduce((sum, e) => sum + (e.amount || 0), 0)
+  const selectedReimbursable = selectedExpenses.reduce((sum, e) => sum + (e.reimbursable !== false ? (e.amount || 0) : 0), 0)
+
+  function formatDuration(start, end) {
+    if (!start && !end) return null
+    const fmt = d => d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'
+    return `${fmt(start)} – ${fmt(end)}`
+  }
 
   function getGrouped() {
     const groups = {}
@@ -148,12 +185,20 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
               <div style={{ fontSize: '12px', color: '#6B6B6B' }}>
                 {[exp.category, exp.date].filter(Boolean).join(' · ')}
               </div>
-              <div style={{
-                fontSize: '11px', fontWeight: 500,
-                padding: '2px 8px', borderRadius: '2px',
-                background: badge.bg, color: badge.color, flexShrink: 0, marginLeft: '8px',
-              }}>
-                {badge.label}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, marginLeft: '8px' }}>
+                <div style={{
+                  fontSize: '11px', fontWeight: 500,
+                  padding: '2px 8px', borderRadius: '2px',
+                  background: badge.bg, color: badge.color,
+                }}>
+                  {badge.label}
+                </div>
+                <span
+                  onClick={e => { e.stopPropagation(); setEditingExpense(exp) }}
+                  style={{ fontSize: '11px', color: '#4A4A4A', textDecoration: 'underline', cursor: 'pointer' }}
+                >
+                  Edit
+                </span>
               </div>
             </div>
           </div>
@@ -186,14 +231,51 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
 
   return (
     <div style={{ maxWidth: '480px', margin: '0 auto', width: '100%', paddingBottom: '80px' }}>
+      {/* Report workspace header — this draft report's own page */}
+      {reportMeta && (
+        <div style={{ padding: '20px 20px 0' }}>
+          <div style={{ border: '1px solid #E8E8E8', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', borderBottom: '1px solid #E8E8E8' }}>
+              <span style={{ fontSize: '13px', fontFamily: 'monospace', color: '#1A1A1A' }}>{reportMeta.report_reference}</span>
+              <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 8px', borderRadius: '2px', background: '#F7F7F7', color: '#6B6B6B', letterSpacing: '0.03em' }}>
+                {(reportMeta.status || 'draft').toUpperCase()}
+              </span>
+              {formatDuration(reportMeta.duration_start, reportMeta.duration_end) && (
+                <span style={{ fontSize: '12px', color: '#6B6B6B', marginLeft: 'auto' }}>
+                  {formatDuration(reportMeta.duration_start, reportMeta.duration_end)}
+                </span>
+              )}
+            </div>
+            {reportMeta.business_purpose && (
+              <div style={{ padding: '10px 16px', borderBottom: '1px solid #E8E8E8', background: '#F7F7F7' }}>
+                <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '2px' }}>Business Purpose</div>
+                <div style={{ fontSize: '13px', color: '#1A1A1A' }}>{reportMeta.business_purpose}</div>
+              </div>
+            )}
+            <div style={{ display: 'flex' }}>
+              <div style={{ flex: 1, padding: '12px 16px', borderRight: '1px solid #E8E8E8' }}>
+                <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '2px' }}>Total</div>
+                <div style={{ fontSize: '15px', fontWeight: 600, color: '#1A1A1A' }}>₹{selectedTotal.toLocaleString('en-IN')}</div>
+              </div>
+              <div style={{ flex: 1, padding: '12px 16px' }}>
+                <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '2px' }}>Amount to be Reimbursed</div>
+                <div style={{ fontSize: '15px', fontWeight: 600, color: '#1A1A1A' }}>₹{selectedReimbursable.toLocaleString('en-IN')}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div style={{ padding: '20px 20px 0' }}>
-        <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '8px' }}>Create Report</div>
+        <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '8px' }}>{reportMeta ? 'Add expenses to this report' : 'Create Report'}</div>
         <div style={{ fontSize: '20px', fontWeight: 500, color: '#1A1A1A', marginBottom: '8px' }}>
-          Select expenses to include
+          {reportMeta ? 'Drag receipts in, or pick from saved expenses' : 'Select expenses to include'}
         </div>
         <div style={{ fontSize: '13px', color: '#4A4A4A', marginBottom: '16px', lineHeight: '1.5' }}>
-          Choose which expenses to include in this report. You can create multiple reports from your saved expenses.
+          {reportMeta
+            ? 'Each receipt is auto-read and added straight into this report — check the fields it fills in before submitting.'
+            : 'Choose which expenses to include in this report. You can create multiple reports from your saved expenses.'}
         </div>
         <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
           <span onClick={selectAll} style={{ fontSize: '13px', color: '#1A1A1A', textDecoration: 'underline', cursor: 'pointer' }}>
@@ -202,7 +284,25 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
           <span onClick={clearAll} style={{ fontSize: '13px', color: '#4A4A4A', textDecoration: 'underline', cursor: 'pointer' }}>
             Clear all
           </span>
+          <span
+            onClick={() => setShowAddPanel(s => !s)}
+            style={{ fontSize: '13px', color: '#1A1A1A', textDecoration: 'underline', cursor: 'pointer', marginLeft: 'auto' }}
+          >
+            + Add expense
+          </span>
         </div>
+
+        {showAddPanel && (
+          <div style={{ marginBottom: '16px' }}>
+            <QuickAddDropzone onReady={data => { setNewLayer1Data(data); setAddingNew(true) }} />
+            <div
+              onClick={() => { setNewLayer1Data(null); setAddingNew(true) }}
+              style={{ textAlign: 'center', fontSize: '12px', color: '#4A4A4A', textDecoration: 'underline', cursor: 'pointer', marginTop: '10px' }}
+            >
+              or enter details manually
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Expense list */}
@@ -279,6 +379,41 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
           </div>
         </div>
       </div>
+
+      {/* Edit an existing expense in place */}
+      {editingExpense && (
+        <div
+          onClick={() => setEditingExpense(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(26,26,26,0.5)', zIndex: 100, overflowY: 'auto' }}
+        >
+          <div onClick={e => e.stopPropagation()} style={{ background: '#FFFFFF', minHeight: '100vh' }}>
+            <ExpenseDetails
+              existingExpense={editingExpense}
+              user={user}
+              onSaved={handleExpenseSaved}
+              onBack={() => setEditingExpense(null)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Add a new expense without leaving report creation */}
+      {addingNew && (
+        <div
+          onClick={() => setAddingNew(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(26,26,26,0.5)', zIndex: 100, overflowY: 'auto' }}
+        >
+          <div onClick={e => e.stopPropagation()} style={{ background: '#FFFFFF', minHeight: '100vh' }}>
+            <ExpenseDetails
+              layer1Data={newLayer1Data}
+              defaultReportId={reportMeta?.id}
+              user={user}
+              onSaved={handleExpenseSaved}
+              onBack={() => setAddingNew(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

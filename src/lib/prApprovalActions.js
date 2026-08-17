@@ -79,11 +79,13 @@ export async function approvePO({ po, pr, user, setPOData }) {
     }).eq('id', po.id)
     await supabase.from('purchase_requests').update({ status: 'po_generated' }).eq('id', pr.id)
     await autoLinkPRToExpense(pr.id, 'pr')
-    await supabase.from('expense_notifications').insert({
-      recipient_id: pr.requested_by,
-      type: 'pr_approved',
-      message: `Purchase Order ${po.po_number} for your request ${pr.pr_number} has been approved and issued.`,
-    }).catch(() => {})
+    try {
+      await supabase.from('expense_notifications').insert({
+        recipient_id: pr.requested_by,
+        type: 'pr_approved',
+        message: `Purchase Order ${po.po_number} for your request ${pr.pr_number} has been approved and issued.`,
+      })
+    } catch { /* non-blocking — the PO is already approved above */ }
 
     return true
   } catch (err) {
@@ -120,10 +122,12 @@ export async function rejectPRLevel({ prId, approvals, pr, user, reason }) {
     }).eq('id', currentPending.id)
   }
   await supabase.from('purchase_requests').update({ status: 'rejected', rejection_reason: reason }).eq('id', prId)
-  await supabase.from('expense_notifications').insert({
-    recipient_id: pr.requested_by,
-    type: 'pr_rejected',
-    message: `Your purchase request ${pr.pr_number} was rejected. Reason: ${reason}. You can edit and resubmit.`,
-  }).catch(() => {})
+  try {
+    await supabase.from('expense_notifications').insert({
+      recipient_id: pr.requested_by,
+      type: 'pr_rejected',
+      message: `Your purchase request ${pr.pr_number} was rejected. Reason: ${reason}. You can edit and resubmit.`,
+    })
+  } catch { /* non-blocking — the PR is already rejected above */ }
   return { ok: true }
 }

@@ -313,13 +313,18 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
       }))
       await supabase.from('pr_approvals').insert(approvalRecords)
 
-      // Notify FL (level 1 approver)
+      // Notify FL (level 1 approver) — best-effort, must never block a
+      // successful submission (the postgrest-js query builder only
+      // implements .then(), not .catch(), so chaining .catch() on it
+      // throws a TypeError instead of suppressing the error).
       const advNote = advFlags.requiresFLEmail ? ' — 100% ADVANCE: email approval required.' : ''
-      await supabase.from('expense_notifications').insert({
-        recipient_id: 'finance1@test.com',
-        type: 'pr_submitted',
-        message: `New PR ${prNumber} for ₹${bd.total.toLocaleString('en-IN')} (${category}) requires Functional Leader approval.${advNote}`,
-      }).catch(() => {})
+      try {
+        await supabase.from('expense_notifications').insert({
+          recipient_id: 'finance1@test.com',
+          type: 'pr_submitted',
+          message: `New PR ${prNumber} for ₹${bd.total.toLocaleString('en-IN')} (${category}) requires Functional Leader approval.${advNote}`,
+        })
+      } catch { /* non-blocking */ }
 
       onSaved({ prId, prNumber })
     } catch (err) {

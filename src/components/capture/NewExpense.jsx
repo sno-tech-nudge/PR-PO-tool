@@ -3,6 +3,7 @@ import Step1Receipt from './Step1Receipt'
 import Step2Payment from './Step2Payment'
 import CrossValidation from './CrossValidation'
 import ConfirmationScreen from './ConfirmationScreen'
+import BulkAddExpenses from '../layer2/BulkAddExpenses'
 import { useNetworkStatus } from '../../hooks/useNetworkStatus'
 import { supabase } from '../../lib/supabase'
 import { saveToQueue, getUnsynced, markSynced } from '../../lib/offlineQueue'
@@ -16,7 +17,8 @@ const STEPS = {
   CONFIRMATION: 'confirmation',
 }
 
-export default function NewExpense({ onContinueToDetails }) {
+export default function NewExpense({ user, onContinueToDetails, onBack }) {
+  const [activeTab, setActiveTab] = useState('single')
   const [step, setStep] = useState(STEPS.STEP1)
   const [receiptData, setReceiptData] = useState(null)
   const [paymentData, setPaymentData] = useState(null)
@@ -191,6 +193,15 @@ export default function NewExpense({ onContinueToDetails }) {
     }
   }
 
+  // The tab switcher only makes sense before any capture progress has been
+  // made — once you're mid-flow (payment step, cross-validation, etc.) the
+  // tabs disappear so switching can't discard in-progress work.
+  const showTabs = step === STEPS.STEP1
+
+  if (activeTab === 'bulk') {
+    return <BulkAddExpenses user={user} onSaved={onBack} onBack={() => setActiveTab('single')} />
+  }
+
   return (
     <div style={{ maxWidth: '480px', margin: '0 auto', padding: '20px', width: '100%' }}>
       {syncNotification && (
@@ -200,6 +211,26 @@ export default function NewExpense({ onContinueToDetails }) {
           padding: '10px 20px', borderRadius: '4px', zIndex: 60,
         }}>
           Your saved documents have been uploaded
+        </div>
+      )}
+
+      {showTabs && (
+        <div style={{ display: 'flex', borderBottom: '1px solid #E8E8E8', marginBottom: '20px' }}>
+          {[['single', 'Add Expense'], ['bulk', 'Bulk Add Expenses']].map(([key, label]) => (
+            <div
+              key={key}
+              onClick={() => setActiveTab(key)}
+              style={{
+                padding: '10px 16px', fontSize: '13px', cursor: 'pointer',
+                fontWeight: activeTab === key ? 600 : 400,
+                color: activeTab === key ? '#1A1A1A' : '#6B6B6B',
+                borderBottom: activeTab === key ? '2px solid #8C3225' : '2px solid transparent',
+                marginBottom: '-1px',
+              }}
+            >
+              {label}
+            </div>
+          ))}
         </div>
       )}
 

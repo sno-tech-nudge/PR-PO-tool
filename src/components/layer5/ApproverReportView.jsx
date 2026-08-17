@@ -240,6 +240,16 @@ export default function ApproverReportView({ reportId, onBack, showToast }) {
       <div style={{ border: '1px solid #E8E8E8', overflow: 'hidden', marginBottom: '20px', borderRadius: '6px' }}>
         <SummaryRow label="Reference" value={<span style={{ fontFamily: 'monospace' }}>{report.report_reference}</span>} alt={false} />
         <SummaryRow label="Entity" value={report.brand || 'The Nudge Institute'} alt={true} />
+        {(report.duration_start || report.duration_end) && (
+          <SummaryRow
+            label="Duration"
+            value={[report.duration_start, report.duration_end].filter(Boolean).map(d => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })).join(' – ')}
+            alt={false}
+          />
+        )}
+        {report.business_purpose && (
+          <SummaryRow label="Business Purpose" value={report.business_purpose} alt={true} />
+        )}
         <SummaryRow label="Expenses" value={`${expenses.length} item${expenses.length !== 1 ? 's' : ''}`} alt={false} />
         <SummaryRow label="Total amount" value={`₹${Number(report.total_amount || 0).toLocaleString('en-IN')}`} alt={true} />
         <SummaryRow label="Approval route" value={ROUTE_LABEL[report.approval_route] || '—'} alt={false} />

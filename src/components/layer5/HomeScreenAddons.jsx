@@ -9,6 +9,7 @@ const POLICY_REMINDERS = [
 ]
 
 const STATUS_BADGE = {
+  draft:        { label: 'Draft',      color: '#6B7280', bg: '#F3F4F6' },
   submitted:    { label: 'Submitted',  color: '#B45309', bg: '#FFFBEB' },
   under_review: { label: 'In Review',  color: '#8C3225', bg: '#fdf0ed' },
   approved:     { label: 'Approved',   color: '#15803D', bg: '#F0FDF4' },

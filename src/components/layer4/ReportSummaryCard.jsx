@@ -28,18 +28,27 @@ function Row({ label, value, alt, valueStyle }) {
   )
 }
 
-export default function ReportSummaryCard({ reference, entity, period, expenseCount, total, approvalRoute, generatedAt, reportDetails }) {
+function formatDuration(start, end) {
+  if (!start && !end) return null
+  const fmt = d => d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'
+  return `${fmt(start)} – ${fmt(end)}`
+}
+
+export default function ReportSummaryCard({ reference, entity, period, expenseCount, total, approvalRoute, generatedAt, reportDetails, businessPurpose, durationStart, durationEnd }) {
   const purpose = reportDetails?.purpose_type ? (PURPOSE_LABELS[reportDetails.purpose_type] || reportDetails.purpose_type) : null
   const trip = reportDetails?.trip_related ? (reportDetails.trip_name || 'Yes — outstation') : null
   const people = reportDetails?.attendee_count > 1
     ? `${reportDetails.attendee_count} people${reportDetails.per_person_amount ? ` · ₹${Number(reportDetails.per_person_amount).toLocaleString('en-IN')} each` : ''}`
     : null
+  const duration = formatDuration(durationStart, durationEnd)
 
   return (
     <div style={{ border: '1px solid #E8E8E8', marginBottom: '20px', overflow: 'hidden' }}>
       <Row label="Reference" value={reference} alt={false} />
       <Row label="Entity" value={entity || '—'} alt={true} />
       <Row label="Period" value={period} alt={false} />
+      {duration && <Row label="Duration" value={duration} alt={true} />}
+      {businessPurpose && <Row label="Business Purpose" value={businessPurpose} alt={false} />}
       <Row label="Expenses" value={`${expenseCount} item${expenseCount !== 1 ? 's' : ''}`} alt={true} />
       <Row
         label="Total amount"

@@ -80,7 +80,7 @@ export async function autoLinkPRToExpense(triggerId, triggerType) {
           report_id: best.id,
           type: 'link_suggestion',
           message: `PR auto-linked to an expense report (medium confidence). Please verify in Finance > All Reports.`,
-        }).catch(() => {})
+        })
       }
 
     } else if (triggerType === 'expense_report') {

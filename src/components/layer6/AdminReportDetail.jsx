@@ -228,6 +228,8 @@ export default function AdminReportDetail({ reportId, onBack }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0', padding: '0' }}>
           {[
             { label: 'Entity',          value: report.brand },
+            (report.duration_start || report.duration_end) ? { label: 'Duration', value: [report.duration_start, report.duration_end].filter(Boolean).map(fmtDate).join(' – ') } : null,
+            report.business_purpose ? { label: 'Business Purpose', value: report.business_purpose } : null,
             { label: 'Expenses',        value: report.expense_count || expenses.length },
             { label: 'Approval Route',  value: (report.approval_route || '').replace(/_/g, ' ') },
             { label: 'Submitted',       value: fmtDate(report.created_at) },
