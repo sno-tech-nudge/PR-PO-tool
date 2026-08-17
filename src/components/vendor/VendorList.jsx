@@ -15,6 +15,7 @@ const ALL_COLUMNS = [
   { key: 'vendor_id', label: 'Vendor ID' },
   { key: 'org_name', label: 'Organisation' },
   { key: 'org_type', label: 'Type' },
+  { key: 'org_registration_number', label: 'Org Reg No.' },
   { key: 'nature_of_business', label: 'Nature of Business' },
   { key: 'pan_number', label: 'PAN' },
   { key: 'gstin', label: 'GSTIN' },
@@ -24,7 +25,7 @@ const ALL_COLUMNS = [
   { key: 'status', label: 'Status' },
   { key: 'created_at', label: 'Date' },
 ]
-const DEFAULT_VISIBLE_COLUMNS = ['vendor_id', 'org_name', 'org_type', 'location', 'submitted_by', 'status', 'created_at']
+const DEFAULT_VISIBLE_COLUMNS = ['vendor_id', 'org_name', 'org_registration_number', 'location', 'submitted_by', 'status', 'created_at']
 const DEFAULT_EXPORT_FIELDS = ['vendor_id', 'org_name', 'org_type', 'pan_number', 'location', 'submitted_by', 'status', 'submitted_at']
 
 const COLUMNS_KEY = 'nudge_vendor_list_columns'
@@ -33,7 +34,14 @@ const EXPORT_KEY  = 'nudge_vendor_export_fields'
 function loadColumns() {
   try {
     const raw = localStorage.getItem(COLUMNS_KEY)
-    if (raw) return JSON.parse(raw)
+    if (raw) {
+      const stored = JSON.parse(raw)
+      // One-time migration for anyone who already customized columns before
+      // "Type" was replaced with "Org Reg No." in the default view.
+      return stored.includes('org_type') && !stored.includes('org_registration_number')
+        ? stored.map(k => k === 'org_type' ? 'org_registration_number' : k)
+        : stored
+    }
   } catch { /* ignore */ }
   return DEFAULT_VISIBLE_COLUMNS
 }
@@ -72,7 +80,7 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
   async function load() {
     setLoading(true)
     let q = supabase.from('vendors').select(
-      'id, vendor_id, org_name, org_type, nature_of_business, pan_number, gstin, aadhaar_number, ' +
+      'id, vendor_id, org_name, org_type, org_registration_number, nature_of_business, pan_number, gstin, aadhaar_number, ' +
       'city, state, contact_person, phone, email, bank_name, ifsc_code, status, submitted_by, ' +
       'submitted_at, approved_at, created_at'
     )
