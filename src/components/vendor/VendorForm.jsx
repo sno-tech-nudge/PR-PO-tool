@@ -257,6 +257,17 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
   const gstinEnabled = !!f.org_registration_state && PAN_RE.test(f.pan_number.toUpperCase().trim())
   const isIndividual = f.org_type === INDIVIDUAL_ORG_TYPE
 
+  // Individuals don't have a company registration number — show "0" instead
+  // of asking them to type one. Switching back to a non-individual type
+  // clears the auto-set "0" so a real number can be entered.
+  useEffect(() => {
+    if (isIndividual) {
+      setF(prev => prev.org_registration_number === '0' ? prev : { ...prev, org_registration_number: '0' })
+    } else {
+      setF(prev => prev.org_registration_number === '0' ? { ...prev, org_registration_number: '' } : prev)
+    }
+  }, [isIndividual])
+
   useEffect(() => {
     if (existingVendor) {
       setF({
@@ -878,8 +889,9 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           <Field label="Organisation Website">
             <Inp field="website" f={f} setF={setF} placeholder="https://organisation.com" />
           </Field>
-          <Field label="Organisation Registration Number" required error={errors.org_registration_number}>
-            <Inp field="org_registration_number" f={f} setF={setF} placeholder="e.g. U74999KA2020PTC…" err={!!errors.org_registration_number} mono />
+          <Field label="Organisation Registration Number" required error={errors.org_registration_number}
+            hint={isIndividual ? 'Individual vendors do not have a registration number' : undefined}>
+            <Inp field="org_registration_number" f={f} setF={setF} placeholder="e.g. U74999KA2020PTC…" err={!!errors.org_registration_number} mono disabled={isIndividual} />
           </Field>
           <Field label="Organisation Registration State"
             hint="Fill this to unlock the GSTIN field">
