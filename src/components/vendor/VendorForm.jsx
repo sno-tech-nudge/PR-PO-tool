@@ -49,7 +49,14 @@ const GSTIN_RE   = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/
 const IFSC_RE    = /^[A-Z]{4}0[A-Z0-9]{6}$/
 const PIN_RE     = /^[0-9]{6}$/
 const PHONE_RE   = /^[0-9]{10}$/
+// Landline entry includes an STD code (and sometimes an extension), so it
+// can't be pinned to exactly 10 digits like a mobile number — just a sane
+// length range.
+const LANDLINE_RE = /^[0-9]{6,15}$/
 const AADHAAR_RE = /^[0-9]{12}$/
+// Contact person is a human name — letters and spaces only, no digits or
+// symbols, everywhere else in the form stays unrestricted.
+const NAME_RE = /^[A-Za-z ]+$/
 // Per the Finance-provided requirements sheet, Sole Proprietorship and
 // Individual/Freelancer share identical document requirements (PAN, Bank
 // Details, and a soft copy of Aadhaar in place of an incorporation cert).
@@ -247,8 +254,15 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
   const [ifscLooking, setIfscLooking]       = useState(false)
   const [ifscLookupFailed, setIfscLookupFailed] = useState(false)
   const [chequeOcrLoading, setChequeOcrLoading] = useState(false)
+  const [pincodeLooking, setPincodeLooking] = useState(false)
   const [branchLocked, setBranchLocked]     = useState(false)
   const [gstinValidated, setGstinValidated] = useState(null) // null | {ok, stateCode, stateName, embeddedPan, panMatch}
+  // '+91' for a mobile number, '' for a landline/other number entered as-is
+  // (with STD code). Not persisted separately — derived from the stored
+  // phone value on edit, since a 10-digit number is unambiguously a mobile.
+  const [phonePrefix, setPhonePrefix] = useState(
+    existingVendor?.phone && !PHONE_RE.test(existingVendor.phone.replace(/[\s-]/g, '')) ? '' : '+91'
+  )
 
   const [panDuplicates, setPanDuplicates]     = useState([])
   const [showPanDupModal, setShowPanDupModal] = useState(false)
@@ -260,7 +274,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
     date_of_incorporation: '', pan_number: '',
     is_msme: false, msme_details: '',
     is_gstin_registered: false, gstin: '',
-    aadhaar_number: '', aadhaar_pan_linked: false,
+    aadhaar_number: '', aadhaar_pan_linked: null,
     is_related_to_org: null, related_org_description: '',
     contact_person: '', phone: '', email: '', website: '',
     org_registration_number: '', org_registration_state: '',
@@ -319,7 +333,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         is_gstin_registered: existingVendor.is_gstin_registered || false,
         gstin: existingVendor.gstin || '',
         aadhaar_number: existingVendor.aadhaar_number || '',
-        aadhaar_pan_linked: existingVendor.aadhaar_pan_linked || false,
+        aadhaar_pan_linked: existingVendor.aadhaar_pan_linked ?? null,
         is_related_to_org: existingVendor.is_related_to_org ?? null,
         related_org_description: existingVendor.related_org_description || '',
         contact_person: existingVendor.contact_person || '',
@@ -336,6 +350,33 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
       })
     }
   }, [existingVendor])
+
+  // Auto-fills city/state from a 6-digit pincode via India Post's public
+  // pincode API — same "never override what's already there" rule as the
+  // cheque OCR auto-fill below.
+  async function lookupPincode(codeOverride) {
+    const code = (typeof codeOverride === 'string' ? codeOverride : f.pincode).trim()
+    if (!PIN_RE.test(code)) return
+    setPincodeLooking(true)
+    try {
+      const res = await fetch(`https://api.postalpincode.in/pincode/${code}`)
+      if (res.ok) {
+        const data = await res.json()
+        const po = data?.[0]?.Status === 'Success' ? data[0].PostOffice?.[0] : null
+        if (po) {
+          const matchedState = INDIAN_STATES.find(s => s.toLowerCase() === (po.State || '').toLowerCase()) || null
+          setF(prev => ({
+            ...prev,
+            city: prev.city || po.District || prev.city,
+            state: prev.state || matchedState || prev.state,
+          }))
+        }
+      }
+    } catch (err) {
+      console.error('Pincode lookup failed:', err)
+    }
+    setPincodeLooking(false)
+  }
 
   async function lookupIFSC(codeOverride) {
     const code = (typeof codeOverride === 'string' ? codeOverride : f.ifsc_code).toUpperCase().trim()
@@ -460,8 +501,11 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
     if (isIndividual && submit) {
       if (!AADHAAR_RE.test(f.aadhaar_number.trim())) e.aadhaar_number = 'Enter 12-digit Aadhaar number'
       if (!isEdit && !aadhaarPath && !aadhaarFile)    e.aadhaar_copy = 'Aadhaar copy is required'
-      if (!f.aadhaar_pan_linked)                      e.aadhaar_pan_linked = 'Please confirm Aadhaar and PAN are linked'
-      if (f.aadhaar_pan_linked && !isEdit && !aadhaarProofPath && !aadhaarProofFile) {
+      if (f.aadhaar_pan_linked === null) {
+        e.aadhaar_pan_linked = 'Please disclose whether your Aadhaar and PAN are linked'
+      } else if (f.aadhaar_pan_linked === false) {
+        e.aadhaar_pan_linked = 'Aadhaar and PAN must be linked to register an individual vendor. Please link them and try again.'
+      } else if (!isEdit && !aadhaarProofPath && !aadhaarProofFile) {
         e.aadhaar_pan_proof = 'Proof of Aadhaar-PAN linkage is required'
       }
     } else if (isIndividual && f.aadhaar_number && !AADHAAR_RE.test(f.aadhaar_number.trim())) {
@@ -472,10 +516,16 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
       e.related_org_description = 'Please describe the relationship'
     }
     if (submit && !f.contact_person.trim())        e.contact_person = 'Required'
-    if (submit) {
-      if (!PHONE_RE.test(f.phone.replace(/\s/g, '').replace(/^\+91/, ''))) e.phone = 'Enter 10-digit mobile number'
-    } else if (f.phone && !PHONE_RE.test(f.phone.replace(/\s/g, '').replace(/^\+91/, ''))) {
-      e.phone = 'Enter 10-digit mobile number'
+    else if (f.contact_person && !NAME_RE.test(f.contact_person.trim())) e.contact_person = 'Only letters and spaces allowed'
+    {
+      const cleanedPhone = f.phone.replace(/[\s-]/g, '')
+      const phoneRe = phonePrefix === '+91' ? PHONE_RE : LANDLINE_RE
+      const phoneMsg = phonePrefix === '+91' ? 'Enter a 10-digit mobile number' : 'Enter a valid telephone number, STD code included'
+      if (submit) {
+        if (!phoneRe.test(cleanedPhone)) e.phone = phoneMsg
+      } else if (f.phone && !phoneRe.test(cleanedPhone)) {
+        e.phone = phoneMsg
+      }
     }
     if (submit && (!f.email.trim() || !f.email.includes('@'))) e.email = 'Enter valid email'
     if (submit && !f.org_registration_number.trim()) e.org_registration_number = 'Required'
@@ -708,8 +758,21 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
               <Inp field="address_line2" f={f} setF={setF} placeholder="Area, landmark (optional)" />
             </Field>
           </div>
-          <Field label="Pincode" required error={errors.pincode}>
-            <Inp field="pincode" f={f} setF={setF} placeholder="560001" err={!!errors.pincode} maxLength={6} />
+          <Field label="Pincode" required error={errors.pincode} hint="City and state auto-fill from a valid pincode">
+            <input
+              type="text"
+              value={f.pincode}
+              onChange={e => {
+                const digits = e.target.value.replace(/\D/g, '')
+                setF(p => ({ ...p, pincode: digits }))
+                if (digits.length === 6) lookupPincode(digits)
+              }}
+              onBlur={() => lookupPincode()}
+              placeholder="560001"
+              maxLength={6}
+              style={inputStyle(!!errors.pincode)}
+            />
+            {pincodeLooking && <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '3px' }}>Looking up…</div>}
           </Field>
           <Field label="City / District" required error={errors.city}>
             <Inp field="city" f={f} setF={setF} placeholder="Bangalore" err={!!errors.city} />
@@ -730,6 +793,18 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
               maxLength={10}
               style={inputStyle(!!errors.pan_number, { fontFamily: 'monospace', letterSpacing: '0.1em' })}
             />
+            {PAN_RE.test(f.pan_number.toUpperCase().trim()) && (
+              <button
+                type="button"
+                onClick={() => checkPanDuplicates(f.pan_number)}
+                style={{
+                  background: 'none', border: 'none', padding: '4px 0', fontSize: '11px', color: '#2563EB',
+                  cursor: 'pointer', fontWeight: 600, display: 'block', marginTop: '4px', textDecoration: 'underline',
+                }}
+              >
+                Verify Again
+              </button>
+            )}
             {panDuplicates.length > 0 && (
               <div
                 onClick={() => setShowPanDupModal(true)}
@@ -768,16 +843,14 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
               onChange={setAadhaarFile}
             />
             <div style={{ marginTop: '4px' }}>
-              <Toggle
-                label="I confirm my Aadhaar and PAN are linked"
-                checked={f.aadhaar_pan_linked}
-                onChange={e => setF(p => ({ ...p, aadhaar_pan_linked: e.target.checked }))}
-              />
-              {errors.aadhaar_pan_linked && (
-                <div style={{ fontSize: '11px', color: '#DC2626', marginTop: '4px' }}>{errors.aadhaar_pan_linked}</div>
-              )}
+              <Field label="Are your Aadhaar and PAN linked?" required error={errors.aadhaar_pan_linked}>
+                <YesNo
+                  value={f.aadhaar_pan_linked}
+                  onChange={v => setF(p => ({ ...p, aadhaar_pan_linked: v }))}
+                />
+              </Field>
             </div>
-            {f.aadhaar_pan_linked && (
+            {f.aadhaar_pan_linked === true && (
               <div style={{ marginTop: '14px' }}>
                 <FileUpload
                   label="Proof of Aadhaar-PAN Link"
@@ -932,6 +1005,17 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                       ) : (
                         <div style={{ color: '#B91C1C', fontWeight: 600 }}>✗ {gstinValidated.msg}</div>
                       )}
+                      <button
+                        type="button"
+                        onClick={handleValidate}
+                        style={{
+                          background: 'none', border: 'none', padding: '6px 0 0',
+                          fontSize: '11px', color: '#2563EB', cursor: 'pointer',
+                          fontWeight: 600, display: 'block', textDecoration: 'underline',
+                        }}
+                      >
+                        Verify Again
+                      </button>
                     </div>
                   )}
                 </Field>
@@ -1018,23 +1102,44 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         <SectionHeader number="3" title="Contact & Registration" subtitle="Point of contact and legal registration" />
         <div style={grid2}>
           <div style={full}>
-            <Field label="Contact Person" required error={errors.contact_person}>
-              <Inp field="contact_person" f={f} setF={setF} placeholder="Full name" err={!!errors.contact_person} />
+            <Field label="Contact Person" required error={errors.contact_person} hint="Letters and spaces only">
+              <input
+                type="text"
+                value={f.contact_person}
+                onChange={e => setF(p => ({ ...p, contact_person: e.target.value.replace(/[^A-Za-z ]/g, '') }))}
+                placeholder="Full name"
+                style={inputStyle(!!errors.contact_person)}
+              />
             </Field>
           </div>
-          <Field label="Telephone Number (+91)" required error={errors.phone}>
+          <Field label="Telephone Number" required error={errors.phone}
+            hint={phonePrefix === '+91' ? 'Mobile number' : 'Landline — include STD code'}>
             <div style={{ display: 'flex', gap: '6px' }}>
-              <div style={{
-                height: '38px', padding: '0 10px', border: '1px solid #D1D5DB', borderRadius: '4px',
-                display: 'flex', alignItems: 'center', fontSize: '13px', color: '#374151',
-                background: '#F9FAFB', flexShrink: 0,
-              }}>+91</div>
+              <div style={{ display: 'flex', border: '1px solid #D1D5DB', borderRadius: '4px', overflow: 'hidden', flexShrink: 0 }}>
+                {['+91', ''].map(p => (
+                  <div
+                    key={p || 'other'}
+                    onClick={() => { setPhonePrefix(p); setF(prev => ({ ...prev, phone: '' })) }}
+                    style={{
+                      height: '36px', padding: '0 10px', display: 'flex', alignItems: 'center', cursor: 'pointer',
+                      fontSize: '13px', fontWeight: 600,
+                      background: phonePrefix === p ? '#8C3225' : '#F9FAFB',
+                      color: phonePrefix === p ? '#FFFFFF' : '#374151',
+                    }}
+                  >
+                    {p || 'Landline'}
+                  </div>
+                ))}
+              </div>
               <input
                 type="tel"
                 value={f.phone}
-                onChange={e => setF(p => ({ ...p, phone: e.target.value.replace(/\D/g, '') }))}
-                placeholder="9876543210"
-                maxLength={10}
+                onChange={e => setF(p => ({
+                  ...p,
+                  phone: phonePrefix === '+91' ? e.target.value.replace(/\D/g, '') : e.target.value.replace(/[^0-9\- ]/g, ''),
+                }))}
+                placeholder={phonePrefix === '+91' ? '9876543210' : 'e.g. 080-12345678'}
+                maxLength={phonePrefix === '+91' ? 10 : 15}
                 style={{ flex: 1, ...inputStyle(!!errors.phone) }}
               />
             </div>

@@ -4,6 +4,7 @@ import VendorStatusBadge from './VendorStatusBadge'
 import VendorColumnPicker from './VendorColumnPicker'
 import VendorExportModal from './VendorExportModal'
 import PanDuplicateModal from './PanDuplicateModal'
+import VendorStatusModal from './VendorStatusModal'
 import { downloadCSV, vendorsToRows } from '../../lib/exportUtils'
 
 function fmtDate(d) {
@@ -74,6 +75,7 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
   const [visibleColumns, setVisibleColumns] = useState(loadColumns)
   const [showExportModal, setShowExportModal] = useState(false)
   const [panPreview, setPanPreview] = useState(null) // { vendors } when viewing a PAN-duplicate pill
+  const [statusVendor, setStatusVendor] = useState(null) // vendor row when viewing the status timeline
 
   useEffect(() => { load() }, [])
 
@@ -82,7 +84,7 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
     let q = supabase.from('vendors').select(
       'id, vendor_id, org_name, org_type, org_registration_number, nature_of_business, pan_number, gstin, aadhaar_number, ' +
       'city, state, contact_person, phone, email, bank_name, ifsc_code, status, submitted_by, ' +
-      'submitted_at, approved_at, created_at'
+      'submitted_at, approved_at, approved_by, rejected_at, rejected_by, rejection_reason, created_at'
     )
     if (!isFinance) {
       q = q.eq('submitted_by', user.email)
@@ -245,6 +247,9 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
                         {c.label}
                       </th>
                     ))}
+                    <th style={{ padding: '10px 14px', fontSize: '10px', fontWeight: 600, color: '#6B7280', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                      Status Timeline
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -280,6 +285,17 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
                             )}
                           </td>
                         ))}
+                        <td style={{ padding: '11px 14px' }}>
+                          <button
+                            onClick={e => { e.stopPropagation(); setStatusVendor(v) }}
+                            style={{
+                              height: '28px', padding: '0 12px', background: '#FFFFFF', color: '#8C3225',
+                              border: '1px solid #f9c5b7', borderRadius: '3px', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
+                            }}
+                          >
+                            View Status
+                          </button>
+                        </td>
                       </tr>
                     )
                   })}
@@ -306,6 +322,13 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
           vendors={panPreview}
           readOnly
           onClose={() => setPanPreview(null)}
+        />
+      )}
+
+      {statusVendor && (
+        <VendorStatusModal
+          vendor={statusVendor}
+          onClose={() => setStatusVendor(null)}
         />
       )}
     </div>

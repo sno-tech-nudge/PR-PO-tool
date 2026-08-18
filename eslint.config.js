@@ -29,4 +29,13 @@ export default defineConfig([
       'react-hooks/purity': 'warn',
     },
   },
+  {
+    // Vercel serverless functions run in Node, not the browser — needs
+    // `process`/`console` etc. instead of browser globals.
+    files: ['api/**/*.js'],
+    extends: [js.configs.recommended],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
 ])

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import PanDuplicateModal from './PanDuplicateModal'
+import { sendVendorEmail } from '../../lib/vendorEmail'
 
 // Sole Proprietorship shares the same Aadhaar-based document requirement as
 // Individual/Freelancer per Finance's Vendor Document Requirements sheet.
@@ -65,6 +66,8 @@ export default function VendorApprovalView({ vendor, user, onBack, onActioned })
       approved_by: user.email,
       approved_at: new Date().toISOString(),
       rejection_reason: null,
+      rejected_by: null,
+      rejected_at: null,
       notes: comment || null,
     }).eq('id', vendor.id)
     if (err) { setError(err.message); setSaving(false); return }
@@ -77,6 +80,10 @@ export default function VendorApprovalView({ vendor, user, onBack, onActioned })
         message: `Your vendor "${vendor.org_name}" has been approved. You can now raise purchase requests against them.${comment ? ` Comment: ${comment}` : ''}`,
       })
     } catch { /* non-blocking — the vendor is already approved above */ }
+    sendVendorEmail({
+      type: 'approved', vendorOrgName: vendor.org_name, vendorId: vendor.vendor_id,
+      recipientEmail: vendor.submitted_by, actorName: user.name || user.email, comment,
+    })
     onActioned('approved')
   }
 
@@ -86,6 +93,8 @@ export default function VendorApprovalView({ vendor, user, onBack, onActioned })
     const { error: err } = await supabase.from('vendors').update({
       status: 'rejected',
       rejection_reason: reason.trim(),
+      rejected_by: user.email,
+      rejected_at: new Date().toISOString(),
       approved_by: null,
       approved_at: null,
     }).eq('id', vendor.id)
@@ -97,6 +106,10 @@ export default function VendorApprovalView({ vendor, user, onBack, onActioned })
         message: `Your vendor "${vendor.org_name}" was not approved. Reason: ${reason.trim()}. You can edit and resubmit.`,
       })
     } catch { /* non-blocking — the vendor is already rejected above */ }
+    sendVendorEmail({
+      type: 'rejected', vendorOrgName: vendor.org_name, vendorId: vendor.vendor_id,
+      recipientEmail: vendor.submitted_by, actorName: user.name || user.email, reason: reason.trim(),
+    })
     onActioned('rejected')
   }
 

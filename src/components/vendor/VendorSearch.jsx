@@ -110,6 +110,37 @@ export default function VendorSearch({ onCreateNew, onSelectExisting }) {
           </span>
         )}
       </div>
+
+      {/* Fills the otherwise-empty space below the search box with a preview
+          of what the form will ask for, so nothing about search above changes. */}
+      <div style={{
+        marginTop: '32px', background: '#F9FAFB', border: '1px solid #E3E8EF',
+        borderRadius: '6px', padding: '18px 20px',
+      }}>
+        <div style={{ fontSize: '11px', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px' }}>
+          What you'll need before you start
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 20px' }}>
+          {[
+            'Organisation name, type and registered address',
+            'PAN number and a copy of the PAN card',
+            'Cancelled cheque or bank statement (beneficiary name, account number, IFSC)',
+            'Registration certificate (varies by organisation type — HUF Deed, Partnership Deed, Certificate of Incorporation, etc.)',
+            'Aadhaar number and copy — only for Individual/Freelancer or Proprietorship vendors',
+            'GST certificate — only if GST-registered',
+            'MSME certificate — only if MSME-registered',
+            'Contact person, phone and email for the vendor',
+          ].map(item => (
+            <div key={item} style={{ display: 'flex', gap: '8px', fontSize: '12px', color: '#4B5563', lineHeight: '1.4' }}>
+              <span style={{ color: '#8C3225', flexShrink: 0 }}>○</span>
+              <span>{item}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '12px' }}>
+          Don't have everything yet? You can save the form as a draft and finish it later.
+        </div>
+      </div>
     </div>
   )
 }
