@@ -153,6 +153,12 @@ export default function VendorDetail({ vendorId, user, onBack, onEdit, onApprove
               <div style={{ fontSize: '12px', color: '#B91C1C' }}>{vendor.rejection_reason}</div>
             </div>
           )}
+          {vendor.status === 'approved' && vendor.notes && (
+            <div style={{ margin: '0 20px 16px', padding: '10px 14px', background: '#F0FDF4', borderRadius: '2px', borderLeft: '3px solid #15803D' }}>
+              <div style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Finance Comment</div>
+              <div style={{ fontSize: '12px', color: '#15803D' }}>{vendor.notes}</div>
+            </div>
+          )}
         </div>
 
         <Section title="Organisation Details">

@@ -230,6 +230,18 @@ confidence values: "high" | "medium" | "low"`
   }
 }
 
+export async function extractChequeDetails(base64Image) {
+  return await callGemini(base64Image,
+    `You are extracting bank account and address details from an Indian cancelled cheque, bank statement, or passbook image.
+The beneficiary_name is the account holder's name printed on the cheque (not the bank's name).
+The account_number and ifsc_code are usually printed at the bottom of the cheque (MICR line) or on the passbook/statement header — IFSC is an 11-character code like SBIN0001234.
+If a postal address for the account holder/organisation is printed anywhere on the document (often near the account holder's name), also extract it, split into a street/building line and the city, state, and 6-digit pincode.
+Reply with raw JSON only — no markdown, no backticks, no explanation:
+{"beneficiary_name":string,"account_number":string,"ifsc_code":string,"bank_name":string,"branch":string,"address_line1":string,"city":string,"state":string,"pincode":string}
+Use null for any field not visible. Do not guess.`
+  )
+}
+
 export async function extractVendorQuote(base64Image) {
   return await callGemini(base64Image,
     `You are extracting data from a vendor quote or invoice document. Extract all key fields accurately.

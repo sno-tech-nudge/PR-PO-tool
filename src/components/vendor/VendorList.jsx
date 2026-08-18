@@ -84,8 +84,13 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
       'city, state, contact_person, phone, email, bank_name, ifsc_code, status, submitted_by, ' +
       'submitted_at, approved_at, created_at'
     )
-    if (!isFinance) q = q.eq('submitted_by', user.email)
-    else q = q.neq('status', 'draft')
+    if (!isFinance) {
+      q = q.eq('submitted_by', user.email)
+    } else {
+      // Finance sees every submitted vendor, but drafts are private scratch
+      // work — a draft only shows up here if Finance is the one who saved it.
+      q = q.or(`status.neq.draft,and(status.eq.draft,submitted_by.eq.${user.email})`)
+    }
     q = q.order('created_at', { ascending: false })
     const { data } = await q
     setVendors(data || [])
@@ -133,8 +138,7 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
     draft: vendors.filter(v => v.status === 'draft').length,
   }
 
-  const tabs = [['all','All'],['pending','Pending'],['approved','Approved'],['rejected','Rejected']]
-  if (!isFinance) tabs.push(['draft', 'Draft'])
+  const tabs = [['all','All'],['pending','Pending'],['approved','Approved'],['rejected','Rejected'],['draft','Draft']]
 
   const columnsToShow = ALL_COLUMNS.filter(c => visibleColumns.includes(c.key))
 

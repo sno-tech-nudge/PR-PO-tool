@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { getFiscalYearPrefix } from '../../lib/formCalc'
 import { NATURE_OF_BUSINESS_OPTIONS } from '../../lib/vendorData'
+import { extractChequeDetails } from '../../lib/claude'
+import { imageFileToJpegBase64, pdfPageToBase64 } from '../../lib/receiptImage'
 import PanDuplicateModal from './PanDuplicateModal'
 
 const ORG_TYPES = [
@@ -215,6 +217,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
   const [draftSavedAt, setDraftSavedAt] = useState(null)
   const [ifscLooking, setIfscLooking]       = useState(false)
   const [ifscLookupFailed, setIfscLookupFailed] = useState(false)
+  const [chequeOcrLoading, setChequeOcrLoading] = useState(false)
   const [branchLocked, setBranchLocked]     = useState(false)
   const [gstinValidated, setGstinValidated] = useState(null) // null | {ok, stateCode, stateName, embeddedPan, panMatch}
 
@@ -305,8 +308,8 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
     }
   }, [existingVendor])
 
-  async function lookupIFSC() {
-    const code = f.ifsc_code.toUpperCase().trim()
+  async function lookupIFSC(codeOverride) {
+    const code = (typeof codeOverride === 'string' ? codeOverride : f.ifsc_code).toUpperCase().trim()
     if (!IFSC_RE.test(code)) return
     setIfscLooking(true)
     setIfscLookupFailed(false)
@@ -314,7 +317,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
       const res = await fetch(`https://ifsc.razorpay.com/${code}`)
       if (res.ok) {
         const d = await res.json()
-        setF(prev => ({ ...prev, bank_name: d.BANK || prev.bank_name, branch: d.BRANCH || prev.branch }))
+        setF(prev => ({ ...prev, ifsc_code: code, bank_name: d.BANK || prev.bank_name, branch: d.BRANCH || prev.branch }))
         setBranchLocked(true)
       } else {
         setBranchLocked(false)
@@ -326,6 +329,54 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
       setIfscLookupFailed(true)
     }
     setIfscLooking(false)
+  }
+
+  // OCR the cancelled cheque / bank statement to auto-fill the bank section —
+  // same "fill once from a document" pattern already used for expense
+  // receipts. Never overrides a field the user already filled in.
+  async function handleChequeFile(file) {
+    setChequeFile(file)
+    if (!file) return
+    setChequeOcrLoading(true)
+    try {
+      const { base64 } = file.type === 'application/pdf'
+        ? await pdfPageToBase64(file)
+        : await imageFileToJpegBase64(file)
+      const extracted = await extractChequeDetails(base64)
+      if (extracted) {
+        const hadIfsc = !!f.ifsc_code
+        const matchedState = extracted.state
+          ? INDIAN_STATES.find(s =>
+              s.toLowerCase() === extracted.state.toLowerCase() ||
+              s.toLowerCase().includes(extracted.state.toLowerCase()) ||
+              extracted.state.toLowerCase().includes(s.toLowerCase().split(' ')[0])
+            )
+          : null
+        // Address fields are a convenience fill only — always left freely
+        // editable, never locked like bank name/branch above.
+        setF(prev => ({
+          ...prev,
+          beneficiary_name: prev.beneficiary_name || extracted.beneficiary_name || prev.beneficiary_name,
+          account_number: prev.account_number || extracted.account_number || prev.account_number,
+          address_line1: prev.address_line1 || extracted.address_line1 || prev.address_line1,
+          city: prev.city || extracted.city || prev.city,
+          state: prev.state || matchedState || prev.state,
+          pincode: prev.pincode || extracted.pincode || prev.pincode,
+        }))
+        if (!hadIfsc && extracted.ifsc_code) {
+          await lookupIFSC(extracted.ifsc_code)
+        } else if (!f.bank_name && !f.branch && (extracted.bank_name || extracted.branch)) {
+          setF(prev => ({
+            ...prev,
+            bank_name: prev.bank_name || extracted.bank_name || prev.bank_name,
+            branch: prev.branch || extracted.branch || prev.branch,
+          }))
+        }
+      }
+    } catch (err) {
+      console.error('Cheque OCR failed:', err)
+    }
+    setChequeOcrLoading(false)
   }
 
   // Duplicate PAN is a warning, never a blocker (Finance's explicit
@@ -580,10 +631,61 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
       </div>
 
       {/* ══════════════════════════════════════
-          SECTION 1 — Organisation Details
+          SECTION 1 — Attachments (moved first: upload documents up front so
+          the cheque/bank-statement OCR can auto-fill the fields below before
+          the user gets to them — they just review and adjust from there)
       ══════════════════════════════════════ */}
       <div style={card}>
-        <SectionHeader number="1" title="Organisation Details" subtitle="Legal identity and registered address" />
+        <SectionHeader number="1" title="Attachments" subtitle="Upload documents first — bank and address details below auto-fill from the cheque or statement" />
+
+        <div style={grid2}>
+          <div style={full}>
+            <FileUpload
+              label="Cancelled Cheque or Bank Statement / Passbook"
+              required={!isEdit}
+              error={errors.cheque}
+              existing={chequePath}
+              file={chequeFile}
+              onChange={handleChequeFile}
+            />
+            {chequeOcrLoading && (
+              <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '-10px', marginBottom: '14px' }}>
+                Reading document — auto-filling bank and address details…
+              </div>
+            )}
+          </div>
+          <div style={full}>
+            <FileUpload
+              label="PAN Copy"
+              required={!isEdit}
+              error={errors.pan_copy}
+              existing={panPath}
+              file={panFile}
+              onChange={setPanFile}
+            />
+          </div>
+          <div style={full}>
+            <FileUpload
+              label="Registration Certificate"
+              required={!isEdit}
+              error={errors.reg_cert}
+              existing={regCertPath}
+              file={regCertFile}
+              onChange={setRegCertFile}
+            />
+          </div>
+        </div>
+
+        <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '4px' }}>
+          Accepted formats: PDF, JPG, PNG, JPEG · Max 10 MB per file
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════
+          SECTION 2 — Organisation Details
+      ══════════════════════════════════════ */}
+      <div style={card}>
+        <SectionHeader number="2" title="Organisation Details" subtitle="Legal identity and registered address" />
 
         <div style={grid2}>
           <div style={full}>
@@ -856,10 +958,10 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
       </div>
 
       {/* ══════════════════════════════════════
-          SECTION 2 — Contact & Registration
+          SECTION 3 — Contact & Registration
       ══════════════════════════════════════ */}
       <div style={card}>
-        <SectionHeader number="2" title="Contact & Registration" subtitle="Point of contact and legal registration" />
+        <SectionHeader number="3" title="Contact & Registration" subtitle="Point of contact and legal registration" />
         <div style={grid2}>
           <div style={full}>
             <Field label="Contact Person" required error={errors.contact_person}>
@@ -927,10 +1029,10 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
       </div>
 
       {/* ══════════════════════════════════════
-          SECTION 3 — Bank Account Details
+          SECTION 4 — Bank Account Details
       ══════════════════════════════════════ */}
       <div style={card}>
-        <SectionHeader number="3" title="Bank Account Details" subtitle="Beneficiary details for payment processing" />
+        <SectionHeader number="4" title="Bank Account Details" subtitle="Beneficiary details for payment processing" />
         <div style={grid2}>
           <div style={full}>
             <Field label="Beneficiary Name" required error={errors.beneficiary_name}>
@@ -986,50 +1088,6 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
               )}
             </Field>
           </div>
-        </div>
-      </div>
-
-      {/* ══════════════════════════════════════
-          SECTION 4 — Attachments
-      ══════════════════════════════════════ */}
-      <div style={card}>
-        <SectionHeader number="4" title="Attachments" subtitle="All documents must be clear and legible" />
-
-        <div style={grid2}>
-          <div style={full}>
-            <FileUpload
-              label="Cancelled Cheque or Bank Statement / Passbook"
-              required={!isEdit}
-              error={errors.cheque}
-              existing={chequePath}
-              file={chequeFile}
-              onChange={setChequeFile}
-            />
-          </div>
-          <div style={full}>
-            <FileUpload
-              label="PAN Copy"
-              required={!isEdit}
-              error={errors.pan_copy}
-              existing={panPath}
-              file={panFile}
-              onChange={setPanFile}
-            />
-          </div>
-          <div style={full}>
-            <FileUpload
-              label="Registration Certificate"
-              required={!isEdit}
-              error={errors.reg_cert}
-              existing={regCertPath}
-              file={regCertFile}
-              onChange={setRegCertFile}
-            />
-          </div>
-        </div>
-
-        <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '4px' }}>
-          Accepted formats: PDF, JPG, PNG, JPEG · Max 10 MB per file
         </div>
       </div>
 

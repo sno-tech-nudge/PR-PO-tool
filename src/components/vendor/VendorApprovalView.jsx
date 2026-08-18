@@ -21,6 +21,7 @@ function Row({ label, value, mono }) {
 export default function VendorApprovalView({ vendor, user, onBack, onActioned }) {
   const [rejecting, setRejecting]   = useState(false)
   const [reason, setReason]         = useState('')
+  const [approveComment, setApproveComment] = useState('')
   const [saving, setSaving]         = useState(false)
   const [error, setError]           = useState(null)
   const [chequeUrl, setChequeUrl]   = useState(null)
@@ -56,11 +57,13 @@ export default function VendorApprovalView({ vendor, user, onBack, onActioned })
 
   async function handleApprove() {
     setSaving(true); setError(null)
+    const comment = approveComment.trim()
     const { error: err } = await supabase.from('vendors').update({
       status: 'approved',
       approved_by: user.email,
       approved_at: new Date().toISOString(),
       rejection_reason: null,
+      notes: comment || null,
     }).eq('id', vendor.id)
     if (err) { setError(err.message); setSaving(false); return }
     // Best-effort — the query builder only implements .then(), not .catch(),
@@ -69,7 +72,7 @@ export default function VendorApprovalView({ vendor, user, onBack, onActioned })
       await supabase.from('expense_notifications').insert({
         recipient_id: vendor.submitted_by,
         type: 'vendor_approved',
-        message: `Your vendor "${vendor.org_name}" has been approved. You can now raise purchase requests against them.`,
+        message: `Your vendor "${vendor.org_name}" has been approved. You can now raise purchase requests against them.${comment ? ` Comment: ${comment}` : ''}`,
       })
     } catch { /* non-blocking — the vendor is already approved above */ }
     onActioned('approved')
@@ -229,21 +232,35 @@ export default function VendorApprovalView({ vendor, user, onBack, onActioned })
             )}
 
             {!rejecting ? (
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button
-                  onClick={handleApprove}
-                  disabled={saving}
-                  style={{ height: '38px', padding: '0 24px', background: saving ? '#9CA3AF' : '#15803D', color: '#FFFFFF', border: 'none', borderRadius: '3px', fontSize: '13px', fontWeight: 600, cursor: saving ? 'default' : 'pointer' }}
-                >
-                  {saving ? 'Saving…' : 'Approve Vendor'}
-                </button>
-                <button
-                  onClick={() => setRejecting(true)}
-                  disabled={saving}
-                  style={{ height: '38px', padding: '0 24px', background: '#FFFFFF', color: '#B91C1C', border: '1px solid #FECACA', borderRadius: '3px', fontSize: '13px', cursor: 'pointer' }}
-                >
-                  Reject
-                </button>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>Comment (optional)</div>
+                <textarea
+                  value={approveComment}
+                  onChange={e => setApproveComment(e.target.value)}
+                  placeholder="Any notes for the record or for the submitter — shown to them alongside the approval."
+                  rows={2}
+                  style={{
+                    width: '100%', border: '1px solid #E3E8EF', borderRadius: '3px', padding: '10px 12px',
+                    fontSize: '13px', color: '#1A1F36', outline: 'none', resize: 'vertical',
+                    boxSizing: 'border-box', fontFamily: 'inherit', marginBottom: '14px',
+                  }}
+                />
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    onClick={handleApprove}
+                    disabled={saving}
+                    style={{ height: '38px', padding: '0 24px', background: saving ? '#9CA3AF' : '#15803D', color: '#FFFFFF', border: 'none', borderRadius: '3px', fontSize: '13px', fontWeight: 600, cursor: saving ? 'default' : 'pointer' }}
+                  >
+                    {saving ? 'Saving…' : 'Approve Vendor'}
+                  </button>
+                  <button
+                    onClick={() => setRejecting(true)}
+                    disabled={saving}
+                    style={{ height: '38px', padding: '0 24px', background: '#FFFFFF', color: '#B91C1C', border: '1px solid #FECACA', borderRadius: '3px', fontSize: '13px', cursor: 'pointer' }}
+                  >
+                    Reject
+                  </button>
+                </div>
               </div>
             ) : (
               <div>
