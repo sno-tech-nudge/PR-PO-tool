@@ -3,7 +3,9 @@ import { supabase } from '../../lib/supabase'
 import VendorStatusBadge from './VendorStatusBadge'
 import PanDuplicateModal from './PanDuplicateModal'
 
-const INDIVIDUAL_ORG_TYPE = 'Individual/Freelancer'
+// Sole Proprietorship shares the same Aadhaar-based document requirement as
+// Individual/Freelancer per Finance's Vendor Document Requirements sheet.
+const AADHAAR_REQUIRED_ORG_TYPES = ['Individual/Freelancer', 'Proprietorship']
 
 function fmtDate(d) {
   if (!d) return '—'
@@ -184,7 +186,7 @@ export default function VendorDetail({ vendorId, user, onBack, onEdit, onApprove
           <Row label="Related to Organisation" value={vendor.is_related_to_org ? `Yes — ${vendor.related_org_description || ''}` : 'No'} />
         </Section>
 
-        {vendor.org_type === INDIVIDUAL_ORG_TYPE && (
+        {AADHAAR_REQUIRED_ORG_TYPES.includes(vendor.org_type) && (
           <Section title="Aadhaar Details (Individual Vendor)">
             <Row label="Aadhaar Number" value={vendor.aadhaar_number} mono />
             <Row label="Aadhaar-PAN Linked" value={vendor.aadhaar_pan_linked ? 'Confirmed by vendor' : 'Not confirmed'} />

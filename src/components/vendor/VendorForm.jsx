@@ -7,9 +7,35 @@ import { imageFileToJpegBase64, pdfPageToBase64 } from '../../lib/receiptImage'
 import PanDuplicateModal from './PanDuplicateModal'
 
 const ORG_TYPES = [
-  'Private Limited', 'Public Limited', 'LLP', 'Partnership', 'Proprietorship',
-  'Trust/NGO', 'Section 8 Company', 'Producer Company', 'Individual/Freelancer', 'Government Entity', 'Other',
+  'Private Limited', 'Public Limited', 'LLP', 'Partnership', 'Proprietorship', 'HUF',
+  'Trust/NGO', 'Section 8 Company', 'Producer Company', 'Individual/Freelancer',
+  'Co-operative Society / AOP / SHG', 'Government Entity', 'Local Authority', 'Other',
 ]
+
+// Per "Vendor Document Requirements.xlsx" (Finance-provided): PAN and Bank
+// Details are mandatory for every org type, and GST/MSME certs are already
+// conditionally required via their own toggles regardless of type — the one
+// thing that genuinely varies by org type is which incorporation-style
+// document is needed. Sole Proprietorship and Individual/Freelancer share a
+// row in that sheet (both just need an Aadhaar copy — see
+// AADHAAR_REQUIRED_ORG_TYPES below), so neither appears here.
+const INCORPORATION_DOC_LABELS = {
+  'HUF': 'HUF Deed',
+  'Partnership': 'Partnership Deed',
+  'LLP': 'Partnership Deed of Signing Partner + LLP Incorporation Certificate (MCA)',
+  'Private Limited': 'Certificate of Incorporation (MCA)',
+  'Public Limited': 'Certificate of Incorporation (MCA)',
+  'Section 8 Company': 'Certificate of Incorporation + Section 8 License (MCA) — combine into one file if needed',
+  'Trust/NGO': 'Trust Deed',
+  'Co-operative Society / AOP / SHG': 'Certificate of Registration (Societies Act) or equivalent AOP/SHG registration',
+  'Government Entity': 'Certificate of registration establishing incorporation',
+  'Local Authority': 'Certificate of registration establishing incorporation',
+  'Producer Company': 'Certificate of Incorporation (MCA)',
+  'Other': 'Any certificate of registration establishing incorporation',
+}
+function incorporationDocLabel(orgType) {
+  return INCORPORATION_DOC_LABELS[orgType] || 'Registration Certificate'
+}
 const INDIAN_STATES = [
   'Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat','Haryana',
   'Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh','Maharashtra','Manipur',
@@ -24,7 +50,10 @@ const IFSC_RE    = /^[A-Z]{4}0[A-Z0-9]{6}$/
 const PIN_RE     = /^[0-9]{6}$/
 const PHONE_RE   = /^[0-9]{10}$/
 const AADHAAR_RE = /^[0-9]{12}$/
-const INDIVIDUAL_ORG_TYPE = 'Individual/Freelancer'
+// Per the Finance-provided requirements sheet, Sole Proprietorship and
+// Individual/Freelancer share identical document requirements (PAN, Bank
+// Details, and a soft copy of Aadhaar in place of an incorporation cert).
+const AADHAAR_REQUIRED_ORG_TYPES = ['Individual/Freelancer', 'Proprietorship']
 
 const GST_STATE_CODES = {
   '01':'Jammu & Kashmir','02':'Himachal Pradesh','03':'Punjab','04':'Chandigarh',
@@ -258,7 +287,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
 
   // derived: GSTIN field enabled only when org state + valid PAN are filled
   const gstinEnabled = !!f.org_registration_state && PAN_RE.test(f.pan_number.toUpperCase().trim())
-  const isIndividual = f.org_type === INDIVIDUAL_ORG_TYPE
+  const isIndividual = AADHAAR_REQUIRED_ORG_TYPES.includes(f.org_type)
 
   // Individuals don't have a company registration number — show "0" instead
   // of asking them to type one. Switching back to a non-individual type
@@ -462,7 +491,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
     if (submit && !isEdit) {
       if (!chequePath && !chequeFile)  e.cheque   = 'Cancelled cheque or bank statement is required'
       if (!panPath    && !panFile)     e.pan_copy = 'PAN copy is required'
-      if (!regCertPath && !regCertFile) e.reg_cert = 'Registration certificate is required'
+      if (!isIndividual && !regCertPath && !regCertFile) e.reg_cert = 'Registration certificate is required'
     }
     return e
   }
@@ -594,6 +623,16 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
     setSaving(false)
   }
 
+  // Live checklist — same "before you submit" pattern as PRForm.jsx, so
+  // whoever is filling this out can see what's still missing at a glance.
+  const checklist = [
+    { label: 'Documents attached', done: isEdit || !!((chequePath || chequeFile) && (panPath || panFile) && (isIndividual || (regCertPath || regCertFile))) },
+    { label: 'Organisation details filled', done: !!(f.org_name && f.org_type && f.nature_of_business && f.address_line1 && f.pincode && f.city && f.state && f.date_of_incorporation && f.pan_number) },
+    { label: 'Contact details filled', done: !!(f.contact_person && f.phone && f.email && f.org_registration_number) },
+    { label: 'Bank details filled', done: !!(f.beneficiary_name && f.account_number && f.ifsc_code && f.bank_name && f.branch) },
+    ...(isIndividual ? [{ label: 'Aadhaar verified', done: !!(f.aadhaar_number && (aadhaarPath || aadhaarFile) && f.aadhaar_pan_linked && (aadhaarProofPath || aadhaarProofFile)) }] : []),
+  ]
+
   const grid2 = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 20px' }
   const full  = { gridColumn: '1 / -1' }
   const card  = {
@@ -631,61 +670,12 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
       </div>
 
       {/* ══════════════════════════════════════
-          SECTION 1 — Attachments (moved first: upload documents up front so
-          the cheque/bank-statement OCR can auto-fill the fields below before
-          the user gets to them — they just review and adjust from there)
+          SECTION 1 — Organisation Details (comes first so Type of
+          Organisation is known before Attachments, which tailors exactly
+          which documents it asks for based on that selection)
       ══════════════════════════════════════ */}
       <div style={card}>
-        <SectionHeader number="1" title="Attachments" subtitle="Upload documents first — bank and address details below auto-fill from the cheque or statement" />
-
-        <div style={grid2}>
-          <div style={full}>
-            <FileUpload
-              label="Cancelled Cheque or Bank Statement / Passbook"
-              required={!isEdit}
-              error={errors.cheque}
-              existing={chequePath}
-              file={chequeFile}
-              onChange={handleChequeFile}
-            />
-            {chequeOcrLoading && (
-              <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '-10px', marginBottom: '14px' }}>
-                Reading document — auto-filling bank and address details…
-              </div>
-            )}
-          </div>
-          <div style={full}>
-            <FileUpload
-              label="PAN Copy"
-              required={!isEdit}
-              error={errors.pan_copy}
-              existing={panPath}
-              file={panFile}
-              onChange={setPanFile}
-            />
-          </div>
-          <div style={full}>
-            <FileUpload
-              label="Registration Certificate"
-              required={!isEdit}
-              error={errors.reg_cert}
-              existing={regCertPath}
-              file={regCertFile}
-              onChange={setRegCertFile}
-            />
-          </div>
-        </div>
-
-        <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '4px' }}>
-          Accepted formats: PDF, JPG, PNG, JPEG · Max 10 MB per file
-        </div>
-      </div>
-
-      {/* ══════════════════════════════════════
-          SECTION 2 — Organisation Details
-      ══════════════════════════════════════ */}
-      <div style={card}>
-        <SectionHeader number="2" title="Organisation Details" subtitle="Legal identity and registered address" />
+        <SectionHeader number="1" title="Organisation Details" subtitle="Legal identity and registered address" />
 
         <div style={grid2}>
           <div style={full}>
@@ -693,7 +683,8 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
               <Inp field="org_name" f={f} setF={setF} placeholder="e.g. Acme Solutions Pvt Ltd" err={!!errors.org_name} />
             </Field>
           </div>
-          <Field label="Type of Organisation" required error={errors.org_type}>
+          <Field label="Type of Organisation" required error={errors.org_type}
+            hint="Determines which documents Attachments will ask for below">
             <Sel field="org_type" f={f} setF={setF} options={ORG_TYPES} placeholder="Select type…" err={!!errors.org_type} />
           </Field>
           <Field label="Nature of Business" required error={errors.nature_of_business}>
@@ -753,7 +744,8 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           </Field>
         </div>
 
-        {/* Individual vendor — Aadhaar (mandatory only for Individual/Freelancer) */}
+        {/* Individual/Proprietorship vendor — Aadhaar (per the Finance
+            requirements sheet, both share the same document requirements) */}
         {isIndividual && (
           <div style={{ background: '#F5F3FF', border: '1px solid #DDD6FE', borderRadius: '6px', padding: '16px', marginBottom: '14px' }}>
             <div style={{ fontSize: '12px', fontWeight: 700, color: '#5B21B6', marginBottom: '12px' }}>Aadhaar Details (Individual Vendor)</div>
@@ -958,6 +950,68 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
       </div>
 
       {/* ══════════════════════════════════════
+          SECTION 2 — Attachments (tailored per Type of Organisation, per
+          Finance's Vendor Document Requirements sheet)
+      ══════════════════════════════════════ */}
+      <div style={card}>
+        <SectionHeader
+          number="2"
+          title="Attachments"
+          subtitle={f.org_type ? `Documents required for ${f.org_type}` : 'Select Type of Organisation above to see exactly what’s needed'}
+        />
+
+        <div style={grid2}>
+          <div style={full}>
+            <FileUpload
+              label="Cancelled Cheque or Bank Statement / Passbook"
+              required={!isEdit}
+              error={errors.cheque}
+              existing={chequePath}
+              file={chequeFile}
+              onChange={handleChequeFile}
+            />
+            {chequeOcrLoading && (
+              <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '-10px', marginBottom: '14px' }}>
+                Reading document — auto-filling bank and address details…
+              </div>
+            )}
+          </div>
+          <div style={full}>
+            <FileUpload
+              label="PAN Copy"
+              required={!isEdit}
+              error={errors.pan_copy}
+              existing={panPath}
+              file={panFile}
+              onChange={setPanFile}
+            />
+          </div>
+          {!isIndividual && (
+            <div style={full}>
+              <FileUpload
+                label={incorporationDocLabel(f.org_type)}
+                required={!isEdit}
+                error={errors.reg_cert}
+                existing={regCertPath}
+                file={regCertFile}
+                onChange={setRegCertFile}
+              />
+            </div>
+          )}
+        </div>
+
+        {isIndividual && (
+          <div style={{ fontSize: '12px', color: '#6B7280', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: '4px', padding: '10px 12px', marginBottom: '4px' }}>
+            No separate registration document is needed for {f.org_type} — the Aadhaar copy above (in Organisation Details) covers this per Finance's requirements.
+          </div>
+        )}
+
+        <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '4px' }}>
+          Accepted formats: PDF, JPG, PNG, JPEG · Max 10 MB per file
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════
           SECTION 3 — Contact & Registration
       ══════════════════════════════════════ */}
       <div style={card}>
@@ -1155,6 +1209,23 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           onClose={() => setShowPanDupModal(false)}
         />
       )}
+
+      {/* Live checklist — lets the submitter see what's still missing before they hit Submit */}
+      <div style={{
+        position: 'fixed', bottom: '24px', right: '24px', zIndex: 40,
+        background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '8px',
+        padding: '14px 16px', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', minWidth: '190px',
+      }}>
+        <div style={{ fontSize: '10px', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
+          Before you submit
+        </div>
+        {checklist.map(c => (
+          <div key={c.label} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', marginBottom: '6px', color: c.done ? '#15803D' : '#9CA3AF' }}>
+            <span>{c.done ? '✓' : '○'}</span>
+            <span>{c.label}</span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

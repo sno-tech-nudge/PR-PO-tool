@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import PanDuplicateModal from './PanDuplicateModal'
 
-const INDIVIDUAL_ORG_TYPE = 'Individual/Freelancer'
+// Sole Proprietorship shares the same Aadhaar-based document requirement as
+// Individual/Freelancer per Finance's Vendor Document Requirements sheet.
+const AADHAAR_REQUIRED_ORG_TYPES = ['Individual/Freelancer', 'Proprietorship']
 
 function fmtDate(d) {
   if (!d) return '—'
@@ -195,7 +197,7 @@ export default function VendorApprovalView({ vendor, user, onBack, onActioned })
           </div>
         </div>
 
-        {vendor.org_type === INDIVIDUAL_ORG_TYPE && (
+        {AADHAAR_REQUIRED_ORG_TYPES.includes(vendor.org_type) && (
           <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '3px', marginBottom: '12px', overflow: 'hidden' }}>
             <div style={{ padding: '12px 20px', background: '#F8F9FA', borderBottom: '1px solid #E3E8EF' }}>
               <span style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Aadhaar Details (Individual Vendor)</span>
