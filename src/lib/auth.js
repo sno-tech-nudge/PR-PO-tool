@@ -37,6 +37,10 @@ const SESSION_KEY = 'nudge_user_email'
 
 export const ALLOWED_EMAILS = Object.keys(ROLE_MAP)
 
+export function getFinanceEmails() {
+  return Object.entries(ROLE_MAP).filter(([, role]) => role === 'finance').map(([email]) => email)
+}
+
 export function getRoleFromEmail(email) {
   return ROLE_MAP[email?.toLowerCase()?.trim()] || null
 }

@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { getFiscalYearPrefix } from '../../lib/formCalc'
 import { NATURE_OF_BUSINESS_OPTIONS } from '../../lib/vendorData'
 import { extractChequeDetails } from '../../lib/claude'
 import { imageFileToJpegBase64, pdfPageToBase64 } from '../../lib/receiptImage'
 import PanDuplicateModal from './PanDuplicateModal'
+import { sendVendorEmail } from '../../lib/vendorEmail'
+import { getFinanceEmails } from '../../lib/auth'
 
 const ORG_TYPES = [
   'Private Limited', 'Public Limited', 'LLP', 'Partnership', 'Proprietorship', 'HUF',
@@ -267,6 +269,9 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
   const [panDuplicates, setPanDuplicates]     = useState([])
   const [showPanDupModal, setShowPanDupModal] = useState(false)
   const [panDupAcknowledged, setPanDupAcknowledged] = useState(false)
+  // Guards against re-alerting Finance on every repeated Submit click while
+  // the form is stuck in the "not linked" state — resets once the answer changes.
+  const financeAlertSentRef = useRef(false)
 
   const [f, setF] = useState({
     org_name: '', org_type: '', nature_of_business: '',
@@ -313,6 +318,8 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
       setF(prev => prev.org_registration_number === '0' ? { ...prev, org_registration_number: '' } : prev)
     }
   }, [isIndividual])
+
+  useEffect(() => { financeAlertSentRef.current = false }, [f.aadhaar_pan_linked])
 
   useEffect(() => {
     if (existingVendor) {
@@ -641,6 +648,19 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
     const e = validate('submit')
     setErrors(e)
     if (Object.keys(e).length) {
+      // Flag Finance when a submission is blocked specifically because the
+      // vendor disclosed their Aadhaar and PAN aren't linked — otherwise this
+      // never surfaces anywhere, since no vendor record gets created.
+      if (isIndividual && f.aadhaar_pan_linked === false && !financeAlertSentRef.current) {
+        financeAlertSentRef.current = true
+        sendVendorEmail({
+          type: 'aadhaar_pan_not_linked',
+          vendorOrgName: f.org_name.trim() || '(organisation name not entered)',
+          recipientEmail: getFinanceEmails(),
+          panNumber: f.pan_number.toUpperCase().trim() || null,
+          submitterEmail: user.email,
+        })
+      }
       // Scroll to first error
       const firstErrEl = document.querySelector('[data-error="true"]')
       if (firstErrEl) firstErrEl.scrollIntoView({ behavior: 'smooth', block: 'center' })

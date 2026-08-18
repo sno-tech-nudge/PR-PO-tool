@@ -8,15 +8,30 @@ function escapeHtml(str) {
   return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
 }
 
-function buildEmail({ type, vendorOrgName, vendorId, actorName, reason, comment }) {
+function buildEmail({ type, vendorOrgName, vendorId, actorName, reason, comment, panNumber, submitterEmail }) {
   const isApproved = type === 'approved'
-  const subject = `Vendor ${isApproved ? 'Approved' : 'Not Approved'}: ${vendorOrgName} (${vendorId})`
-  const headline = isApproved ? 'Vendor Approved' : 'Vendor Not Approved'
-  const bodyLine = isApproved
-    ? `Your vendor <strong>${escapeHtml(vendorOrgName)}</strong> (${escapeHtml(vendorId)}) has been approved by ${escapeHtml(actorName || 'Finance')}. You can now raise purchase requests against them.`
-    : `Your vendor <strong>${escapeHtml(vendorOrgName)}</strong> (${escapeHtml(vendorId)}) was not approved by ${escapeHtml(actorName || 'Finance')}. You can edit and resubmit it.`
-  const noteLabel = isApproved ? 'Comment' : 'Reason'
-  const noteValue = isApproved ? comment : reason
+  const isBlockedKyc = type === 'aadhaar_pan_not_linked'
+  const vendorLabel = vendorId ? `${vendorOrgName} (${vendorId})` : vendorOrgName
+
+  let subject, headline, headlineColor, bodyLine, noteLabel, noteValue
+  if (isBlockedKyc) {
+    subject = `Vendor Registration Blocked — Aadhaar/PAN Not Linked: ${vendorOrgName}`
+    headline = 'Vendor Registration Blocked — Aadhaar/PAN Not Linked'
+    headlineColor = '#B45309'
+    bodyLine = `${escapeHtml(submitterEmail || 'A user')} tried to register vendor <strong>${escapeHtml(vendorOrgName)}</strong>` +
+      `${panNumber ? ` (PAN ${escapeHtml(panNumber)})` : ''} and disclosed that their Aadhaar and PAN are <strong>not linked</strong>. ` +
+      `The submission was blocked and no vendor record was created. Flagging for Finance's awareness in case follow-up is needed.`
+  } else {
+    subject = `Vendor ${isApproved ? 'Approved' : 'Not Approved'}: ${vendorLabel}`
+    headline = isApproved ? 'Vendor Approved' : 'Vendor Not Approved'
+    headlineColor = isApproved ? '#15803D' : '#B91C1C'
+    bodyLine = isApproved
+      ? `Your vendor <strong>${escapeHtml(vendorLabel)}</strong> has been approved by ${escapeHtml(actorName || 'Finance')}. You can now raise purchase requests against them.`
+      : `Your vendor <strong>${escapeHtml(vendorLabel)}</strong> was not approved by ${escapeHtml(actorName || 'Finance')}. You can edit and resubmit it.`
+    noteLabel = isApproved ? 'Comment' : 'Reason'
+    noteValue = isApproved ? comment : reason
+  }
+
   const noteBlock = noteValue
     ? `<tr><td style="padding-top:16px;">
          <div style="font-size:12px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">${noteLabel}</div>
@@ -34,7 +49,7 @@ function buildEmail({ type, vendorOrgName, vendorId, actorName, reason, comment 
             <div style="font-size:14px;font-weight:700;color:#FFFFFF;">The Nudge Institute — Expense Tracker</div>
           </td></tr>
           <tr><td style="padding:24px;">
-            <div style="font-size:17px;font-weight:700;color:${isApproved ? '#15803D' : '#B91C1C'};margin-bottom:12px;">${headline}</div>
+            <div style="font-size:17px;font-weight:700;color:${headlineColor};margin-bottom:12px;">${headline}</div>
             <table cellpadding="0" cellspacing="0"><tr><td style="font-size:14px;color:#374151;line-height:1.6;">${bodyLine}</td></tr>${noteBlock}</table>
           </td></tr>
           <tr><td style="padding:14px 24px;background:#F8F9FA;border-top:1px solid #E3E8EF;">
@@ -64,24 +79,25 @@ export default async function handler(req, res) {
     return
   }
 
-  const { type, vendorOrgName, vendorId, recipientEmail, actorName, reason, comment } = req.body || {}
-  if (type !== 'approved' && type !== 'rejected') {
-    res.status(400).json({ error: 'type must be "approved" or "rejected"' })
+  const { type, vendorOrgName, vendorId, recipientEmail, actorName, reason, comment, panNumber, submitterEmail } = req.body || {}
+  if (!['approved', 'rejected', 'aadhaar_pan_not_linked'].includes(type)) {
+    res.status(400).json({ error: 'type must be "approved", "rejected" or "aadhaar_pan_not_linked"' })
     return
   }
-  if (!recipientEmail || !vendorOrgName || !vendorId) {
-    res.status(400).json({ error: 'recipientEmail, vendorOrgName and vendorId are required' })
+  const recipients = Array.isArray(recipientEmail) ? recipientEmail.filter(Boolean) : [recipientEmail].filter(Boolean)
+  if (recipients.length === 0 || !vendorOrgName || (type !== 'aadhaar_pan_not_linked' && !vendorId)) {
+    res.status(400).json({ error: 'recipientEmail and vendorOrgName are required (vendorId too, unless type is aadhaar_pan_not_linked)' })
     return
   }
 
-  const { subject, html, text } = buildEmail({ type, vendorOrgName, vendorId, actorName, reason, comment })
+  const { subject, html, text } = buildEmail({ type, vendorOrgName, vendorId, actorName, reason, comment, panNumber, submitterEmail })
   const fromAddress = process.env.RESEND_FROM_EMAIL || 'The Nudge Institute <onboarding@resend.dev>'
 
   try {
     const resendRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({ from: fromAddress, to: [recipientEmail], subject, html, text }),
+      body: JSON.stringify({ from: fromAddress, to: recipients, subject, html, text }),
     })
     const data = await resendRes.json()
     if (!resendRes.ok) {
