@@ -42,11 +42,34 @@ function relativeToISO(option) {
   return null
 }
 
+// The button's chosen position — remembered across visits since it's used
+// rarely and shouldn't have to be moved out of the way every time.
+const POS_KEY = 'nudge_feedback_button_pos'
+const DRAG_THRESHOLD = 4 // px of movement before a press counts as a drag, not a click
+
+function loadPos() {
+  try {
+    const raw = localStorage.getItem(POS_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch { /* ignore */ }
+  return null
+}
+
+function clampPos(pos, width, height) {
+  const maxLeft = Math.max(4, window.innerWidth - width - 4)
+  const maxTop = Math.max(4, window.innerHeight - height - 4)
+  return { left: Math.min(Math.max(4, pos.left), maxLeft), top: Math.min(Math.max(4, pos.top), maxTop) }
+}
+
 // Floating "Share feedback" button + slide-in drawer, mounted globally so
 // it's available from every screen. Matches the app's own visual language
 // (plain inline styles, single accent color, no new UI kit).
 export default function FeedbackWidget({ user, moduleName }) {
   const [open, setOpen] = useState(false)
+  const [buttonPos, setButtonPos] = useState(loadPos)
+  const [dragging, setDragging] = useState(false)
+  const buttonRef = useRef(null)
+  const dragRef = useRef({ startX: 0, startY: 0, origTop: 0, origLeft: 0, moved: false })
   const [category, setCategory] = useState(null)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -62,6 +85,48 @@ export default function FeedbackWidget({ user, moduleName }) {
   const [screenshotError, setScreenshotError] = useState(null)
   const fileInputRef = useRef(null)
   const drawerRef = useRef(null)
+
+  // Keep the button on-screen if the window is resized smaller than wherever
+  // it was last dropped.
+  useEffect(() => {
+    function handleResize() {
+      if (!buttonPos || !buttonRef.current) return
+      const rect = buttonRef.current.getBoundingClientRect()
+      setButtonPos(prev => (prev ? clampPos(prev, rect.width, rect.height) : prev))
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [buttonPos])
+
+  function handleButtonPointerDown(e) {
+    const rect = buttonRef.current.getBoundingClientRect()
+    dragRef.current = { startX: e.clientX, startY: e.clientY, origTop: rect.top, origLeft: rect.left, moved: false }
+    setDragging(true)
+    try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* ignore */ }
+  }
+
+  function handleButtonPointerMove(e) {
+    if (!dragging) return
+    const dx = e.clientX - dragRef.current.startX
+    const dy = e.clientY - dragRef.current.startY
+    if (!dragRef.current.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD) return
+    dragRef.current.moved = true
+    const rect = buttonRef.current.getBoundingClientRect()
+    setButtonPos(clampPos({ left: dragRef.current.origLeft + dx, top: dragRef.current.origTop + dy }, rect.width, rect.height))
+  }
+
+  function handleButtonPointerUp(e) {
+    setDragging(false)
+    try { e.currentTarget.releasePointerCapture(e.pointerId) } catch { /* ignore */ }
+    if (dragRef.current.moved) {
+      setButtonPos(current => {
+        if (current) localStorage.setItem(POS_KEY, JSON.stringify(current))
+        return current
+      })
+    } else {
+      setOpen(true)
+    }
+  }
 
   useEffect(() => {
     if (!open) return
@@ -188,14 +253,18 @@ export default function FeedbackWidget({ user, moduleName }) {
     <>
       {!capturing && !open && (
         <div
-          onClick={() => setOpen(true)}
-          title="Share feedback"
+          ref={buttonRef}
+          onPointerDown={handleButtonPointerDown}
+          onPointerMove={handleButtonPointerMove}
+          onPointerUp={handleButtonPointerUp}
+          title="Share feedback — drag to move"
           style={{
-            position: 'fixed', bottom: '20px', right: '20px', zIndex: 150,
+            position: 'fixed', zIndex: 150,
+            ...(buttonPos ? { top: `${buttonPos.top}px`, left: `${buttonPos.left}px` } : { bottom: '20px', right: '20px' }),
             height: '40px', padding: '0 16px', borderRadius: '20px',
             background: '#8C3225', color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '8px',
-            cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.2)', fontSize: '13px', fontWeight: 600,
-            userSelect: 'none',
+            cursor: dragging ? 'grabbing' : 'grab', boxShadow: '0 4px 14px rgba(0,0,0,0.2)', fontSize: '13px', fontWeight: 600,
+            userSelect: 'none', touchAction: 'none',
           }}
         >
           <span style={{ fontSize: '14px' }}>✎</span>
