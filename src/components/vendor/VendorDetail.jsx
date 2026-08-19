@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import VendorStatusBadge from './VendorStatusBadge'
 import PanDuplicateModal from './PanDuplicateModal'
+import VendorPdfTemplate from './VendorPdfTemplate'
+import { generateVendorProfilePDF, downloadVendorProfilePDF } from '../../lib/vendorProfilePdf'
 
 // Sole Proprietorship shares the same Aadhaar-based document requirement as
 // Individual/Freelancer per Finance's Vendor Document Requirements sheet.
@@ -37,10 +39,16 @@ export default function VendorDetail({ vendorId, user, onBack, onEdit, onApprove
   const [loading, setLoading] = useState(true)
   const [chequeUrl, setChequeUrl] = useState(null)
   const [panUrl, setPanUrl]   = useState(null)
+  const [regCertUrl, setRegCertUrl] = useState(null)
+  const [msmeCertUrl, setMsmeCertUrl] = useState(null)
+  const [gstCertUrl, setGstCertUrl] = useState(null)
   const [aadhaarUrl, setAadhaarUrl] = useState(null)
   const [aadhaarProofUrl, setAadhaarProofUrl] = useState(null)
   const [panSiblings, setPanSiblings] = useState([])
   const [showPanModal, setShowPanModal] = useState(false)
+  const [downloading, setDownloading] = useState(false)
+  const [downloadStep, setDownloadStep] = useState(null)
+  const [downloadError, setDownloadError] = useState(null)
 
   async function load() {
     setLoading(true)
@@ -53,6 +61,18 @@ export default function VendorDetail({ vendorId, user, onBack, onEdit, onApprove
     if (data?.pan_copy_path) {
       const { data: s } = await supabase.storage.from('vendor-documents').createSignedUrl(data.pan_copy_path, 3600)
       if (s?.signedUrl) setPanUrl(s.signedUrl)
+    }
+    if (data?.registration_certificate_path) {
+      const { data: s } = await supabase.storage.from('vendor-documents').createSignedUrl(data.registration_certificate_path, 3600)
+      if (s?.signedUrl) setRegCertUrl(s.signedUrl)
+    }
+    if (data?.msme_certificate_path) {
+      const { data: s } = await supabase.storage.from('vendor-documents').createSignedUrl(data.msme_certificate_path, 3600)
+      if (s?.signedUrl) setMsmeCertUrl(s.signedUrl)
+    }
+    if (data?.gst_certificate_path) {
+      const { data: s } = await supabase.storage.from('vendor-documents').createSignedUrl(data.gst_certificate_path, 3600)
+      if (s?.signedUrl) setGstCertUrl(s.signedUrl)
     }
     if (data?.aadhaar_copy_path) {
       const { data: s } = await supabase.storage.from('vendor-documents').createSignedUrl(data.aadhaar_copy_path, 3600)
@@ -74,6 +94,29 @@ export default function VendorDetail({ vendorId, user, onBack, onEdit, onApprove
   }
 
   useEffect(() => { load() }, [vendorId])
+
+  async function handleDownloadPDF() {
+    setDownloading(true); setDownloadError(null); setDownloadStep('Preparing PDF…')
+    try {
+      const documents = [
+        { label: 'Cancelled Cheque / Bank Statement', url: chequeUrl, path: vendor.cancelled_cheque_path },
+        { label: 'PAN Copy', url: panUrl, path: vendor.pan_copy_path },
+        { label: 'Registration Certificate', url: regCertUrl, path: vendor.registration_certificate_path },
+        { label: 'MSME Certificate', url: msmeCertUrl, path: vendor.msme_certificate_path },
+        { label: 'GST Certificate', url: gstCertUrl, path: vendor.gst_certificate_path },
+        { label: 'Aadhaar Copy', url: aadhaarUrl, path: vendor.aadhaar_copy_path },
+        { label: 'Aadhaar-PAN Link Proof', url: aadhaarProofUrl, path: vendor.aadhaar_pan_link_proof_path },
+      ].filter(d => d.url)
+
+      const blob = await generateVendorProfilePDF({ documents, onProgress: setDownloadStep })
+      if (!blob) throw new Error('Could not generate the PDF.')
+      downloadVendorProfilePDF(blob, `${vendor.vendor_id || 'vendor'}-profile.pdf`)
+    } catch (err) {
+      setDownloadError(err.message || 'Failed to generate PDF.')
+    }
+    setDownloading(false)
+    setDownloadStep(null)
+  }
 
   if (loading) return (
     <div style={{ padding: '40px 28px', textAlign: 'center', fontSize: '13px', color: '#6B7280' }}>Loading…</div>
@@ -231,25 +274,44 @@ export default function VendorDetail({ vendorId, user, onBack, onEdit, onApprove
 
         <Section title="Documents">
           <div style={{ padding: '16px 20px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-            {chequeUrl ? (
-              <a href={chequeUrl} target="_blank" rel="noopener noreferrer"
-                style={{ fontSize: '13px', color: '#8C3225', textDecoration: 'underline' }}>
-                View Cancelled Cheque / Bank Statement
-              </a>
-            ) : (
-              <span style={{ fontSize: '13px', color: '#9CA3AF' }}>Cheque not available</span>
-            )}
-            {panUrl ? (
-              <a href={panUrl} target="_blank" rel="noopener noreferrer"
-                style={{ fontSize: '13px', color: '#8C3225', textDecoration: 'underline' }}>
-                View PAN Copy
-              </a>
-            ) : (
-              <span style={{ fontSize: '13px', color: '#9CA3AF' }}>PAN copy not available</span>
-            )}
+            {[
+              ['Cancelled Cheque / Bank Statement', chequeUrl],
+              ['PAN Copy', panUrl],
+              [!AADHAAR_REQUIRED_ORG_TYPES.includes(vendor.org_type) ? 'Registration Certificate' : null, regCertUrl],
+              [vendor.is_msme ? 'MSME Certificate' : null, msmeCertUrl],
+              [vendor.is_gstin_registered ? 'GST Certificate' : null, gstCertUrl],
+              [AADHAAR_REQUIRED_ORG_TYPES.includes(vendor.org_type) ? 'Aadhaar Copy' : null, aadhaarUrl],
+              [AADHAAR_REQUIRED_ORG_TYPES.includes(vendor.org_type) && vendor.aadhaar_pan_linked ? 'Aadhaar-PAN Link Proof' : null, aadhaarProofUrl],
+            ].filter(([label]) => label).map(([label, url]) => (
+              url ? (
+                <a key={label} href={url} target="_blank" rel="noopener noreferrer"
+                  style={{ fontSize: '13px', color: '#8C3225', textDecoration: 'underline' }}>
+                  View {label}
+                </a>
+              ) : (
+                <span key={label} style={{ fontSize: '13px', color: '#9CA3AF' }}>{label} not available</span>
+              )
+            ))}
           </div>
         </Section>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+          {downloadError && <span style={{ fontSize: '12px', color: '#B91C1C' }}>{downloadError}</span>}
+          <button
+            onClick={handleDownloadPDF}
+            disabled={downloading}
+            style={{
+              height: '36px', padding: '0 16px', background: downloading ? '#9CA3AF' : '#FFFFFF',
+              color: downloading ? '#FFFFFF' : '#374151', border: '1px solid #D1D5DB', borderRadius: '3px',
+              fontSize: '12px', fontWeight: 600, cursor: downloading ? 'default' : 'pointer',
+            }}
+          >
+            {downloading ? (downloadStep || 'Preparing PDF…') : 'Download Full Profile (PDF)'}
+          </button>
+        </div>
       </div>
+
+      <VendorPdfTemplate vendor={vendor} panSiblingsCount={panSiblings.length} />
 
       {showPanModal && (
         <PanDuplicateModal
