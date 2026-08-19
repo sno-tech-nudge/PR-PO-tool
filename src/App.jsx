@@ -211,7 +211,9 @@ export default function App() {
 
   const navItems = [
     { key: 'list',    label: 'Home',              icon: '⊞' },
-    { key: 'history', label: 'History',            icon: '☰' },
+    // Finance doesn't submit expenses/reports themselves, so their own
+    // History (of expense submissions) isn't relevant to them.
+    ...(role !== 'finance' ? [{ key: 'history', label: 'History', icon: '☰' }] : []),
     ...(canAccessApprovals(role) ? [{ key: 'approvals', label: 'Approvals', icon: '✓' }] : []),
     ...(canAccessFinance(role)   ? [{ key: 'finance',   label: 'Finance',   icon: '₹' }] : []),
     { key: 'pr-list', label: 'Purchase Requests',  icon: '◫' },

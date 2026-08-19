@@ -83,6 +83,7 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
     setLoading(true)
     let q = supabase.from('vendors').select(
       'id, vendor_id, org_name, org_type, org_registration_number, nature_of_business, pan_number, gstin, aadhaar_number, ' +
+      'is_msme, msme_details, ' +
       'city, state, contact_person, phone, email, bank_name, ifsc_code, status, submitted_by, ' +
       'submitted_at, approved_at, approved_by, rejected_at, rejected_by, rejection_reason, created_at'
     )

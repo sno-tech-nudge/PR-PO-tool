@@ -44,6 +44,7 @@ export const VENDOR_EXPORT_FIELDS = [
   { key: 'nature_of_business', label: 'Nature of Business', value: v => v.nature_of_business || '' },
   { key: 'pan_number', label: 'PAN', value: v => v.pan_number || '' },
   { key: 'gstin', label: 'GSTIN', value: v => v.gstin || '' },
+  { key: 'msme_registration_number', label: 'MSME Registration No.', value: v => v.is_msme ? (v.msme_details || '') : '' },
   { key: 'aadhaar_number', label: 'Aadhaar Number', value: v => maskAadhaar(v.aadhaar_number) },
   { key: 'location', label: 'Location', value: v => [v.city, v.state].filter(Boolean).join(', ') },
   { key: 'contact_person', label: 'Contact Person', value: v => v.contact_person || '' },
