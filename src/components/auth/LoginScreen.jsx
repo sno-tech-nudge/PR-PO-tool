@@ -1,19 +1,20 @@
 import { useState } from 'react'
-import { signIn, getRoleLabel, getRoleFromEmail } from '../../lib/auth'
+import { signIn } from '../../lib/auth'
 
 export default function LoginScreen({ onLogin }) {
   const [email, setEmail]   = useState('')
   const [error, setError]   = useState(null)
+  const [loading, setLoading] = useState(false)
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
     setError(null)
-    const { user, error: err } = signIn(email)
+    setLoading(true)
+    const { user, error: err } = await signIn(email)
+    setLoading(false)
     if (err) { setError(err); return }
     if (onLogin) onLogin(user)
   }
-
-  const role = getRoleFromEmail(email)
 
   return (
     <div style={{
@@ -56,11 +57,6 @@ export default function LoginScreen({ onLogin }) {
                 outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
               }}
             />
-            {role && (
-              <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '6px' }}>
-                Access level: <span style={{ fontWeight: 600, color: '#111827' }}>{getRoleLabel(role)}</span>
-              </div>
-            )}
           </div>
 
           {error && (
@@ -75,17 +71,17 @@ export default function LoginScreen({ onLogin }) {
 
           <button
             type="submit"
-            disabled={!email.includes('@')}
+            disabled={!email.includes('@') || loading}
             style={{
               width: '100%', height: '44px',
-              background: !email.includes('@') ? '#E5E7EB' : '#111827',
-              color: !email.includes('@') ? '#9CA3AF' : '#FFFFFF',
+              background: !email.includes('@') || loading ? '#E5E7EB' : '#111827',
+              color: !email.includes('@') || loading ? '#9CA3AF' : '#FFFFFF',
               border: 'none', borderRadius: '8px',
               fontSize: '14px', fontWeight: 600,
-              cursor: !email.includes('@') ? 'default' : 'pointer',
+              cursor: !email.includes('@') || loading ? 'default' : 'pointer',
             }}
           >
-            Continue
+            {loading ? 'Checking…' : 'Continue'}
           </button>
         </form>
 

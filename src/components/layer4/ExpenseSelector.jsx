@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase'
 import ExpenseDetails from '../layer2/ExpenseDetails'
 import QuickAddDropzone from '../capture/QuickAddDropzone'
 
-export default function ExpenseSelector({ expenses: initialExpenses, results: initialResults, user, reportMeta, onPreview }) {
+export default function ExpenseSelector({ expenses: initialExpenses, results: initialResults, user, reportMeta, onPreview, onBack }) {
   const [expenses, setExpenses] = useState(initialExpenses || [])
   const [loading, setLoading] = useState(!initialExpenses || initialExpenses.length === 0)
   const [selected, setSelected] = useState(new Set())
@@ -231,6 +231,16 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
 
   return (
     <div style={{ maxWidth: '480px', margin: '0 auto', width: '100%', paddingBottom: '80px' }}>
+      {onBack && (
+        <div style={{ padding: '20px 20px 0' }}>
+          <div
+            onClick={onBack}
+            style={{ fontSize: '13px', color: '#4A4A4A', cursor: 'pointer', textDecoration: 'underline', marginBottom: '4px' }}
+          >
+            ← Back
+          </div>
+        </div>
+      )}
       {/* Report workspace header — this draft report's own page */}
       {reportMeta && (
         <div style={{ padding: '20px 20px 0' }}>

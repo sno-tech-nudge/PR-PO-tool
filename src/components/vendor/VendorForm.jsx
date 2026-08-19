@@ -656,7 +656,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         sendVendorEmail({
           type: 'aadhaar_pan_not_linked',
           vendorOrgName: f.org_name.trim() || '(organisation name not entered)',
-          recipientEmail: getFinanceEmails(),
+          recipientEmail: await getFinanceEmails(),
           panNumber: f.pan_number.toUpperCase().trim() || null,
           submitterEmail: user.email,
         })
@@ -1179,7 +1179,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
             <Sel field="org_registration_state" f={f} setF={setF} options={INDIAN_STATES} placeholder="Select state…" />
           </Field>
           <div style={full}>
-            <Field label="Is this vendor related to / connected with the organisation?" required error={errors.is_related_to_org}>
+            <Field label="Is this vendor you are creating related to or connected with you personally?" required error={errors.is_related_to_org}>
               <YesNo
                 value={f.is_related_to_org}
                 onChange={v => setF(p => ({ ...p, is_related_to_org: v }))}

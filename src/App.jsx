@@ -6,6 +6,8 @@ import OfflineBanner from './components/capture/OfflineBanner'
 import NewExpense from './components/capture/NewExpense'
 import QuickAddDropzone from './components/capture/QuickAddDropzone'
 import FeedbackWidget from './components/shared/FeedbackWidget'
+import NotificationBell from './components/shared/NotificationBell'
+import SettingsView from './components/settings/SettingsView'
 import ExpenseDetails from './components/layer2/ExpenseDetails'
 import PolicyCheck from './components/layer3/PolicyCheck'
 import ExpenseSelector from './components/layer4/ExpenseSelector'
@@ -57,7 +59,16 @@ const SCREEN_PARENT = {
 }
 
 export default function App() {
-  const [user, setUser] = useState(() => getSession())
+  const [user, setUser] = useState(null)
+  const [sessionLoading, setSessionLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    getSession().then(u => {
+      if (!cancelled) { setUser(u); setSessionLoading(false) }
+    })
+    return () => { cancelled = true }
+  }, [])
 
   function handleLogin(u) { setUser(u) }
 
@@ -82,6 +93,11 @@ export default function App() {
   const [vendorSubScreen, setVendorSubScreen] = useState('list')
   const [editingVendor, setEditingVendor] = useState(null)
   const [viewingVendorId, setViewingVendorId] = useState(null)
+  // Set when a vendor is opened via a cross-link from a PR (see PRDetail's
+  // onViewVendor below), so VendorDetail's back button returns to that PR
+  // instead of always resetting to the vendor list. null = normal vendor flow.
+  const [vendorBackScreen, setVendorBackScreen] = useState(null)
+  const [financeResetKey, setFinanceResetKey] = useState(0)
   const [approvingVendor, setApprovingVendor] = useState(null)
   const [bankChangeVendor, setBankChangeVendor] = useState(null)
 
@@ -191,6 +207,14 @@ export default function App() {
     setVendorSubScreen('list')
     setEditingVendor(null); setViewingVendorId(null)
     setApprovingVendor(null); setBankChangeVendor(null)
+    setVendorBackScreen(null)
+  }
+  // VendorDetail's onBack when reached via a PR's vendor link — returns to
+  // that PR instead of always resetting to the vendor list.
+  function closeVendorDetail() {
+    const dest = vendorBackScreen
+    openVendorList()
+    if (dest) setAppScreen(dest)
   }
 
   function openPRCreate()   { setEditingPR(null); setPRSubScreen('form') }
@@ -205,6 +229,7 @@ export default function App() {
   function openPODetail(id) { setViewingPOId(id); setPOSubScreen('detail') }
   function openPOList()     { setPOSubScreen('list'); setViewingPOId(null) }
 
+  if (sessionLoading) return null
   if (!user) return <LoginScreen onLogin={handleLogin} />
 
   const role = user.role
@@ -218,7 +243,8 @@ export default function App() {
     ...(canAccessFinance(role)   ? [{ key: 'finance',   label: 'Finance',   icon: '₹' }] : []),
     { key: 'pr-list', label: 'Purchase Requests',  icon: '◫' },
     { key: 'po-list', label: 'Purchase Orders',    icon: '◻' },
-    { key: 'vendors', label: role === 'finance' ? 'Vendor Management' : 'Vendors', icon: '⬡' },
+    { key: 'vendors', label: canAccessFinance(role) ? 'Vendor Management' : 'Vendors', icon: '⬡' },
+    ...(role === 'admin' ? [{ key: 'settings', label: 'Settings', icon: '⚙' }] : []),
   ]
 
   const activeNav = SCREEN_PARENT[appScreen] || appScreen
@@ -228,6 +254,12 @@ export default function App() {
     if (key === 'vendors') openVendorList()
     if (key === 'pr-list') openPRList()
     if (key === 'po-list') openPOList()
+    // FinanceDashboard keeps its own drill-down state internally (tab,
+    // vendor sub-screens, etc.) — App has nothing to reset directly, and
+    // re-clicking "Finance" while already on it is a same-value setAppScreen
+    // no-op (React bails the render). Bumping this key forces a full
+    // remount, resetting all of FinanceDashboard's internal state for free.
+    if (key === 'finance' && appScreen === 'finance') setFinanceResetKey(k => k + 1)
     setAppScreen(key)
   }
 
@@ -314,6 +346,12 @@ export default function App() {
 
         {/* User info + sign out */}
         <div style={{ padding: '14px 16px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+          <NotificationBell
+            user={user}
+            onOpenReport={handleViewReport}
+            onOpenPR={(id) => { setAppScreen('pr-list'); openPRDetail(id) }}
+            onOpenVendor={(id) => { setAppScreen('vendors'); openVendorDetail(id) }}
+          />
           <div style={{
             fontSize: '12px', fontWeight: 600, color: '#FFFFFF',
             marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -542,14 +580,18 @@ export default function App() {
             user={user}
             onBack={() => setAppScreen('approvals')}
             onEdit={(pr) => { setAppScreen('pr-list'); openPREdit(pr) }}
-            onViewVendor={(id) => { setAppScreen('vendors'); openVendorDetail(id) }}
+            onViewVendor={(id) => { setVendorBackScreen('pr-approval-view'); setAppScreen('vendors'); openVendorDetail(id) }}
             showToast={showToast}
             backLabel="PR Approvals"
           />
         )}
 
         {appScreen === 'finance' && (
-          <FinanceDashboard user={user} showToast={showToast} onBack={() => setAppScreen('list')} />
+          <FinanceDashboard key={financeResetKey} user={user} showToast={showToast} onBack={() => setAppScreen('list')} />
+        )}
+
+        {appScreen === 'settings' && (
+          <SettingsView user={user} />
         )}
 
         {appScreen === 'reimbursed' && (
@@ -573,7 +615,7 @@ export default function App() {
           <VendorList user={user} onViewVendor={openVendorDetail} onCreateVendor={openVendorCreate} onResumeDraft={openDraftEdit} />
         )}
         {appScreen === 'vendors' && vendorSubScreen === 'search' && (
-          <VendorSearch onCreateNew={openVendorForm} onSelectExisting={(v) => openVendorDetail(v.id)} />
+          <VendorSearch onCreateNew={openVendorForm} onSelectExisting={(v) => openVendorDetail(v.id)} onBack={openVendorList} />
         )}
         {appScreen === 'vendors' && vendorSubScreen === 'form' && (
           <VendorForm
@@ -591,7 +633,8 @@ export default function App() {
           <VendorDetail
             vendorId={viewingVendorId}
             user={user}
-            onBack={openVendorList}
+            onBack={closeVendorDetail}
+            backLabel={vendorBackScreen ? 'Back to Purchase Request' : 'Vendors'}
             onEdit={(v) => { setEditingVendor(v); setVendorSubScreen('form') }}
             onApprove={openVendorApproval}
             onBankChange={openBankChange}
@@ -649,7 +692,7 @@ export default function App() {
             user={user}
             onBack={openPRList}
             onEdit={openPREdit}
-            onViewVendor={(id) => { setAppScreen('vendors'); openVendorDetail(id) }}
+            onViewVendor={(id) => { setVendorBackScreen('pr-list'); setAppScreen('vendors'); openVendorDetail(id) }}
             showToast={showToast}
           />
         )}

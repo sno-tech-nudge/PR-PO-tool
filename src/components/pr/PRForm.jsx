@@ -389,11 +389,16 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
       // implements .then(), not .catch(), so chaining .catch() on it
       // throws a TypeError instead of suppressing the error).
       const advNote = advFlags.requiresFLEmail ? ' — 100% ADVANCE: email approval required.' : ''
+      // TODO(auth): recipient_id is a single hardcoded test account — once
+      // team_members exists (see src/lib/auth.js), notify every approver
+      // (fl/pr_approver/admin/finance) instead of one fixed address.
       try {
         await supabase.from('expense_notifications').insert({
           recipient_id: 'finance1@test.com',
           type: 'pr_submitted',
           message: `New PR ${prNumber} for ₹${bd.total.toLocaleString('en-IN')} (${category}) requires Functional Leader approval.${advNote}`,
+          related_type: 'pr',
+          related_id: prId,
         })
       } catch { /* non-blocking */ }
 

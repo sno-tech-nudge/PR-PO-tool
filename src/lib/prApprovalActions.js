@@ -84,6 +84,8 @@ export async function approvePO({ po, pr, user, setPOData }) {
         recipient_id: pr.requested_by,
         type: 'pr_approved',
         message: `Purchase Order ${po.po_number} for your request ${pr.pr_number} has been approved and issued.`,
+        related_type: 'pr',
+        related_id: pr.id,
       })
     } catch { /* non-blocking — the PO is already approved above */ }
 
@@ -127,6 +129,8 @@ export async function rejectPRLevel({ prId, approvals, pr, user, reason }) {
       recipient_id: pr.requested_by,
       type: 'pr_rejected',
       message: `Your purchase request ${pr.pr_number} was rejected. Reason: ${reason}. You can edit and resubmit.`,
+      related_type: 'pr',
+      related_id: prId,
     })
   } catch { /* non-blocking — the PR is already rejected above */ }
   return { ok: true }

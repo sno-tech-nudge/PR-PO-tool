@@ -128,11 +128,12 @@ export async function createNotification(
   reportId,
   type,
   message,
-  supabaseClient
+  supabaseClient,
+  { relatedType, relatedId } = {}
 ) {
   const { error } = await supabaseClient
     .from('expense_notifications')
-    .insert({ recipient_id: recipientId, report_id: reportId, type, message })
+    .insert({ recipient_id: recipientId, report_id: reportId, type, message, related_type: relatedType || null, related_id: relatedId || null })
   if (error) console.log('Notification error:', error.message)
 }
 

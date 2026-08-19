@@ -68,11 +68,16 @@ export default function BankChangeRequest({ vendor, user, onBack, onSubmitted })
         status: 'pending',
       })
       if (error) throw error
+      // TODO(auth): recipient_id is a single hardcoded test account — once
+      // team_members exists (see src/lib/auth.js), notify every finance
+      // team member via getFinanceEmails() instead of one fixed address.
       try {
         await supabase.from('expense_notifications').insert({
           recipient_id: 'finance1@test.com',
           type: 'bank_change_request',
           message: `Bank detail change requested for vendor "${vendor.org_name}" (${vendor.vendor_id}). Please review in Vendor Management.`,
+          related_type: 'vendor',
+          related_id: vendor.id,
         })
       } catch { /* non-blocking — the change request is already saved above */ }
       onSubmitted()

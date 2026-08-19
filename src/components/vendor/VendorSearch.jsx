@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import VendorStatusBadge from './VendorStatusBadge'
 
-export default function VendorSearch({ onCreateNew, onSelectExisting }) {
+export default function VendorSearch({ onCreateNew, onSelectExisting, onBack }) {
   const [query, setQuery]     = useState('')
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
@@ -24,6 +24,14 @@ export default function VendorSearch({ onCreateNew, onSelectExisting }) {
 
   return (
     <div style={{ maxWidth: '640px', margin: '0 auto', padding: '24px 20px' }}>
+      {onBack && (
+        <div
+          onClick={onBack}
+          style={{ fontSize: '13px', color: '#8C3225', cursor: 'pointer', marginBottom: '16px' }}
+        >
+          ← Back
+        </div>
+      )}
       <div style={{ marginBottom: '24px' }}>
         <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A1F36', margin: '0 0 4px' }}>Add a Vendor</h2>
         <p style={{ fontSize: '13px', color: '#6B7280', margin: 0 }}>

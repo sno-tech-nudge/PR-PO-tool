@@ -105,26 +105,16 @@ export default function FinanceDashboard({ user, showToast, onBack }) {
     )
   }
 
-  if (viewingPRId) {
-    return (
-      <div style={shellStyle}>
-        <PRDetail
-          prId={viewingPRId}
-          user={user}
-          onBack={() => setViewingPRId(null)}
-          onEdit={() => showToast?.('Edit your own PR from the Purchase Requests screen.', 'info')}
-          onViewVendor={(id) => { setViewingPRId(null); openVendorDetail(id) }}
-          showToast={showToast}
-          backLabel="Purchase Requests"
-        />
-      </div>
-    )
-  }
-
+  // Vendor sub-screens are checked before viewingPRId deliberately: when a
+  // vendor is opened via a PR's vendor link (onViewVendor below), viewingPRId
+  // is deliberately left set (not cleared) so that once the vendor screen
+  // closes back to vendorSubScreen === 'list', this whole guard chain falls
+  // through to the viewingPRId check further down and the same PR reappears
+  // — a "back to the PR I came from" for free, no extra state needed.
   if (vendorSubScreen === 'search') {
     return (
       <div style={shellStyle}>
-        <VendorSearch onCreateNew={openVendorForm} onSelectExisting={(v) => openVendorDetail(v.id)} />
+        <VendorSearch onCreateNew={openVendorForm} onSelectExisting={(v) => openVendorDetail(v.id)} onBack={openVendorList} />
       </div>
     )
   }
@@ -153,6 +143,7 @@ export default function FinanceDashboard({ user, showToast, onBack }) {
           vendorId={viewingVendorId}
           user={user}
           onBack={openVendorList}
+          backLabel={viewingPRId ? 'Back to Purchase Request' : 'Vendors'}
           onEdit={(v) => { setEditingVendor(v); setVendorSubScreen('form') }}
           onApprove={openVendorApproval}
           onBankChange={openBankChange}
@@ -188,6 +179,22 @@ export default function FinanceDashboard({ user, showToast, onBack }) {
             showToast?.('Bank change request submitted for finance review.', 'info')
             setVendorSubScreen('detail')
           }}
+        />
+      </div>
+    )
+  }
+
+  if (viewingPRId) {
+    return (
+      <div style={shellStyle}>
+        <PRDetail
+          prId={viewingPRId}
+          user={user}
+          onBack={() => setViewingPRId(null)}
+          onEdit={() => showToast?.('Edit your own PR from the Purchase Requests screen.', 'info')}
+          onViewVendor={(id) => openVendorDetail(id)}
+          showToast={showToast}
+          backLabel="Purchase Requests"
         />
       </div>
     )

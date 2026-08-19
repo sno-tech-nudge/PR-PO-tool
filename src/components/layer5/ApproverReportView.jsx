@@ -91,11 +91,12 @@ export default function ApproverReportView({ reportId, onBack, showToast }) {
 
       await processApproval(reportId, pendingApproval.approver_level, 'approved', combinedNotes || '', supabase)
       await createNotification(
-        report?.employee_id || reportId,
+        report?.employee_email,
         reportId,
         'approved',
         `Your report ${report?.report_reference} has been approved.`,
-        supabase
+        supabase,
+        { relatedType: 'report', relatedId: reportId }
       )
       setApproveStatus('done')
       if (showToast) showToast(`Report ${report?.report_reference} approved.`, 'approved')
@@ -112,11 +113,12 @@ export default function ApproverReportView({ reportId, onBack, showToast }) {
     try {
       await processApproval(reportId, pendingApproval.approver_level, 'rejected', reason, supabase)
       await createNotification(
-        report?.employee_id || reportId,
+        report?.employee_email,
         reportId,
         'rejected',
         `Your report ${report?.report_reference} has been returned for revision.`,
-        supabase
+        supabase,
+        { relatedType: 'report', relatedId: reportId }
       )
       if (showToast) showToast(`Report returned to employee.`, 'rejected')
       else setToast({ message: 'Report returned to employee.', type: 'rejected' })

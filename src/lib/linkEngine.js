@@ -75,11 +75,16 @@ export async function autoLinkPRToExpense(triggerId, triggerType) {
       await supabase.from('expense_reports').update({ pr_id: triggerId, link_confidence: confidence }).eq('id', best.id)
 
       if (confidence === 'medium') {
+        // TODO(auth): recipient_id is a single hardcoded test account — once
+        // team_members exists (see src/lib/auth.js), notify every finance
+        // team member via getFinanceEmails() instead of one fixed address.
         await supabase.from('expense_notifications').insert({
           recipient_id: 'finance1@test.com',
           report_id: best.id,
           type: 'link_suggestion',
           message: `PR auto-linked to an expense report (medium confidence). Please verify in Finance > All Reports.`,
+          related_type: 'report',
+          related_id: best.id,
         })
       }
 

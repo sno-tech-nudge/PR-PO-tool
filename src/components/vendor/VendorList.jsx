@@ -6,6 +6,7 @@ import VendorExportModal from './VendorExportModal'
 import PanDuplicateModal from './PanDuplicateModal'
 import VendorStatusModal from './VendorStatusModal'
 import { downloadCSV, vendorsToRows } from '../../lib/exportUtils'
+import { canAccessFinance } from '../../lib/auth'
 
 function fmtDate(d) {
   if (!d) return '—'
@@ -67,7 +68,7 @@ function cellValue(v, key) {
 }
 
 export default function VendorList({ user, onViewVendor, onCreateVendor, onResumeDraft }) {
-  const isFinance   = user.role === 'finance'
+  const isFinance   = canAccessFinance(user.role)
   const [vendors, setVendors]   = useState([])
   const [loading, setLoading]   = useState(true)
   const [filter, setFilter]     = useState('all')

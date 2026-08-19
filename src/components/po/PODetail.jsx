@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { approvePO, rejectPO } from '../../lib/prApprovalActions'
+import { canAccessFinance } from '../../lib/auth'
 import POTemplate from '../pr/POTemplate'
 import SubmitPOExpense from './SubmitPOExpense'
 
@@ -118,7 +119,7 @@ export default function PODetail({ poId, user, onBack }) {
   if (!po) return <div style={{ padding: '60px', textAlign: 'center', fontSize: '13px', color: '#9CA3AF' }}>Purchase order not found.</div>
 
   const st = STATUS[po.status] || STATUS.issued
-  const isFinance = user.role === 'finance'
+  const isFinance = canAccessFinance(user.role)
   const totalSubmitted = linkedExpenses.filter(e => e.status !== 'rejected').reduce((sum, e) => sum + (Number(e.total_amount) || 0), 0)
   const pendingAmount = Math.max(0, (Number(po.amount) || 0) - totalSubmitted)
 

@@ -4,6 +4,7 @@ import VendorStatusBadge from './VendorStatusBadge'
 import PanDuplicateModal from './PanDuplicateModal'
 import VendorPdfTemplate from './VendorPdfTemplate'
 import { generateVendorProfilePDF, downloadVendorProfilePDF } from '../../lib/vendorProfilePdf'
+import { canAccessFinance, canApproveVendor, isObserver } from '../../lib/auth'
 
 // Sole Proprietorship shares the same Aadhaar-based document requirement as
 // Individual/Freelancer per Finance's Vendor Document Requirements sheet.
@@ -34,7 +35,7 @@ function Section({ title, children }) {
   )
 }
 
-export default function VendorDetail({ vendorId, user, onBack, onEdit, onApprove, onBankChange }) {
+export default function VendorDetail({ vendorId, user, onBack, onEdit, onApprove, onBankChange, backLabel = 'Vendors' }) {
   const [vendor, setVendor]   = useState(null)
   const [loading, setLoading] = useState(true)
   const [chequeUrl, setChequeUrl] = useState(null)
@@ -125,16 +126,17 @@ export default function VendorDetail({ vendorId, user, onBack, onEdit, onApprove
     <div style={{ padding: '40px 28px', textAlign: 'center', fontSize: '13px', color: '#9CA3AF' }}>Vendor not found.</div>
   )
 
-  const canEdit = user.role !== 'finance' && vendor.submitted_by === user.email && vendor.status !== 'approved'
-  const canApprove = user.role === 'finance' && vendor.status === 'pending'
-  const canRequestBankChange = vendor.status === 'approved' && (user.role === 'finance' || vendor.submitted_by === user.email)
+  const canEdit = !canAccessFinance(user.role) && vendor.submitted_by === user.email && vendor.status !== 'approved'
+  const canApprove = canApproveVendor(user) && vendor.status === 'pending'
+  const canRequestBankChange = vendor.status === 'approved' && !isObserver(user.role) &&
+    (canAccessFinance(user.role) || vendor.submitted_by === user.email)
 
   return (
     <div style={{ background: '#F4F5F7', minHeight: '100vh', paddingBottom: '40px' }}>
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px 28px' }}>
         {/* Breadcrumb */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '20px' }}>
-          <span onClick={onBack} style={{ fontSize: '12px', color: '#8C3225', cursor: 'pointer' }}>Vendors</span>
+          <span onClick={onBack} style={{ fontSize: '12px', color: '#8C3225', cursor: 'pointer' }}>{backLabel}</span>
           <span style={{ fontSize: '12px', color: '#9CA3AF' }}>/</span>
           <span style={{ fontSize: '12px', color: '#6B7280', fontFamily: 'monospace' }}>{vendor.vendor_id}</span>
         </div>

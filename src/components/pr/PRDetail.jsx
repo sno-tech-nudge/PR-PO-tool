@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { createPendingPO, approvePRLevel, rejectPRLevel } from '../../lib/prApprovalActions'
-import { canAccessApprovals } from '../../lib/auth'
+import { canAccessApprovals, canAccessFinance } from '../../lib/auth'
 import PRStatusTimeline from './PRStatusTimeline'
 import PRAttachmentsModal from './PRAttachmentsModal'
 
@@ -77,7 +77,7 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
     .filter(p => p.status !== 'cancelled' && p.status !== 'rejected')
     .reduce((sum, p) => sum + (Number(p.amount) || 0), 0)
   const remaining = Math.max(0, Number(pr?.amount || 0) - allocated)
-  const canCreatePO = user.role === 'finance' && ['approved', 'po_generated'].includes(pr?.status) && remaining > 0
+  const canCreatePO = canAccessFinance(user.role) && ['approved', 'po_generated'].includes(pr?.status) && remaining > 0
 
   async function handleCreateAdditionalPO() {
     const amt = Number(newPOAmount)

@@ -78,6 +78,8 @@ export default function VendorApprovalView({ vendor, user, onBack, onActioned })
         recipient_id: vendor.submitted_by,
         type: 'vendor_approved',
         message: `Your vendor "${vendor.org_name}" has been approved. You can now raise purchase requests against them.${comment ? ` Comment: ${comment}` : ''}`,
+        related_type: 'vendor',
+        related_id: vendor.id,
       })
     } catch { /* non-blocking — the vendor is already approved above */ }
     sendVendorEmail({
@@ -104,6 +106,8 @@ export default function VendorApprovalView({ vendor, user, onBack, onActioned })
         recipient_id: vendor.submitted_by,
         type: 'vendor_rejected',
         message: `Your vendor "${vendor.org_name}" was not approved. Reason: ${reason.trim()}. You can edit and resubmit.`,
+        related_type: 'vendor',
+        related_id: vendor.id,
       })
     } catch { /* non-blocking — the vendor is already rejected above */ }
     sendVendorEmail({
