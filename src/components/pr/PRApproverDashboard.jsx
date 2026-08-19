@@ -28,7 +28,7 @@ function currentStageLabel(pr) {
   return `Approved by ${approved.map(a => a.approver_name).join(', ')}, pending ${pending.approver_name}`
 }
 
-// Approve/reject only happens in the detail view (PRApproverView) — same
+// Approve/reject only happens in the detail view (PRDetail.jsx) — same
 // convention as expense reports (ApproverDashboard.jsx's cards are pure
 // navigation too). This card is informational + a link, nothing more.
 function PRCard({ pr, onClick }) {

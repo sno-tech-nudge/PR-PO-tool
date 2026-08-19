@@ -35,7 +35,6 @@ import PRList from './components/pr/PRList'
 import PRForm from './components/pr/PRForm'
 import PRDetail from './components/pr/PRDetail'
 import PRApproverDashboard from './components/pr/PRApproverDashboard'
-import PRApproverView from './components/pr/PRApproverView'
 
 // PO module
 import POList from './components/po/POList'
@@ -198,6 +197,10 @@ export default function App() {
   function openPRDetail(id) { setViewingPRId(id); setPRSubScreen('detail') }
   function openPRList()     { setPRSubScreen('list'); setEditingPR(null); setViewingPRId(null) }
   function openPREdit(pr)   { setEditingPR(pr); setPRSubScreen('form') }
+  async function openPRDraftEdit(id) {
+    const { data } = await supabase.from('purchase_requests').select('*').eq('id', id).single()
+    if (data) openPREdit(data)
+  }
 
   function openPODetail(id) { setViewingPOId(id); setPOSubScreen('detail') }
   function openPOList()     { setPOSubScreen('list'); setViewingPOId(null) }
@@ -532,16 +535,19 @@ export default function App() {
         )}
 
         {appScreen === 'pr-approval-view' && (
-          <PRApproverView
+          <PRDetail
             prId={approvingPRId}
             user={user}
             onBack={() => setAppScreen('approvals')}
+            onEdit={(pr) => { setAppScreen('pr-list'); openPREdit(pr) }}
+            onViewVendor={(id) => { setAppScreen('vendors'); openVendorDetail(id) }}
             showToast={showToast}
+            backLabel="PR Approvals"
           />
         )}
 
         {appScreen === 'finance' && (
-          <FinanceDashboard onBack={() => setAppScreen('list')} />
+          <FinanceDashboard user={user} showToast={showToast} onBack={() => setAppScreen('list')} />
         )}
 
         {appScreen === 'reimbursed' && (
@@ -622,7 +628,7 @@ export default function App() {
 
         {/* ── PR screens ── */}
         {appScreen === 'pr-list' && prSubScreen === 'list' && (
-          <PRList user={user} onViewPR={openPRDetail} onCreatePR={openPRCreate} />
+          <PRList user={user} onViewPR={openPRDetail} onCreatePR={openPRCreate} onResumeDraft={openPRDraftEdit} />
         )}
         {appScreen === 'pr-list' && prSubScreen === 'form' && (
           <PRForm
@@ -636,7 +642,14 @@ export default function App() {
           />
         )}
         {appScreen === 'pr-list' && prSubScreen === 'detail' && (
-          <PRDetail prId={viewingPRId} user={user} onBack={openPRList} onEdit={openPREdit} />
+          <PRDetail
+            prId={viewingPRId}
+            user={user}
+            onBack={openPRList}
+            onEdit={openPREdit}
+            onViewVendor={(id) => { setAppScreen('vendors'); openVendorDetail(id) }}
+            showToast={showToast}
+          />
         )}
       </div>
 

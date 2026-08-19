@@ -3,9 +3,9 @@ import { generatePOPDF, uploadPDFToSupabase } from './pdfGenerator'
 import { autoLinkPRToExpense } from './linkEngine'
 import { getFiscalYearPrefix } from './formCalc'
 
-// Shared by PRApproverView.jsx (full detail screen) and PRApproverDashboard.jsx
-// (quick accept/reject icons in the list) so both act on a PR's approval chain
-// identically.
+// Shared by PRDetail.jsx (full detail screen, including the action panel) and
+// PRApproverDashboard.jsx (quick accept/reject icons in the list) so both act
+// on a PR's approval chain identically.
 
 export async function generatePONumber() {
   const fy = getFiscalYearPrefix()

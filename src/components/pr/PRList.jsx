@@ -10,7 +10,7 @@ const STATUS_COLOR = {
   rejected:     { color: '#B91C1C', bg: '#FEF2F2' },
 }
 
-export default function PRList({ user, onViewPR, onCreatePR }) {
+export default function PRList({ user, onViewPR, onCreatePR, onResumeDraft }) {
   const [prs, setPRs]       = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
@@ -46,7 +46,7 @@ export default function PRList({ user, onViewPR, onCreatePR }) {
       </div>
 
       <div style={{ display: 'flex', borderBottom: '1px solid #E8E8E8', marginBottom: '16px', gap: '0', overflowX: 'auto' }}>
-        {[['all','All'],['submitted','Pending'],['approved','Approved'],['po_generated','PO Issued'],['rejected','Rejected']].map(([key, label]) => {
+        {[['all','All'],['submitted','Pending'],['approved','Approved'],['po_generated','PO Issued'],['rejected','Rejected'],['draft','Draft']].map(([key, label]) => {
           const count = key === 'all' ? prs.length : prs.filter(p => p.status === key).length
           return (
             <div
@@ -79,7 +79,7 @@ export default function PRList({ user, onViewPR, onCreatePR }) {
         return (
           <div
             key={pr.id}
-            onClick={() => onViewPR(pr.id)}
+            onClick={() => pr.status === 'draft' ? onResumeDraft(pr.id) : onViewPR(pr.id)}
             style={{ border: '1px solid #E8E8E8', borderRadius: '4px', marginBottom: '10px', padding: '14px 16px', cursor: 'pointer', background: '#FFFFFF' }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>

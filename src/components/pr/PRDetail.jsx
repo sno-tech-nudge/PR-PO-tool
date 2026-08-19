@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { createPendingPO } from '../../lib/prApprovalActions'
+import { createPendingPO, approvePRLevel, rejectPRLevel } from '../../lib/prApprovalActions'
+import { canAccessApprovals } from '../../lib/auth'
 import PRStatusTimeline from './PRStatusTimeline'
 import PRAttachmentsModal from './PRAttachmentsModal'
 
@@ -32,7 +33,7 @@ const LINK_CONF = {
   manual: { label: 'Manually linked',   color: '#8C3225', bg: '#fdf0ed' },
 }
 
-export default function PRDetail({ prId, user, onBack, onEdit }) {
+export default function PRDetail({ prId, user, onBack, onEdit, showToast, onViewVendor, backLabel = 'My Requests' }) {
   const [pr, setPR]             = useState(null)
   const [approvals, setApprovals] = useState([])
   const [pos, setPOs]           = useState([])
@@ -42,6 +43,14 @@ export default function PRDetail({ prId, user, onBack, onEdit }) {
   const [creatingPO, setCreatingPO] = useState(false)
   const [newPOAmount, setNewPOAmount] = useState('')
   const [poError, setPoError]   = useState(null)
+
+  // Approve / reject — merged in from the former PRApproverView.jsx so a
+  // PR's own detail page is the one place everyone (requester, manager,
+  // finance) sees the same approval trail and, when applicable, can act.
+  const [rejecting, setRejecting] = useState(false)
+  const [reason, setReason]       = useState('')
+  const [saving, setSaving]       = useState(false)
+  const [error, setError]         = useState(null)
 
   useEffect(() => { load() }, [prId])
 
@@ -81,17 +90,48 @@ export default function PRDetail({ prId, user, onBack, onEdit }) {
     await load()
   }
 
+  async function handleApprove() {
+    setSaving(true); setError(null)
+    const currentPending = approvals.find(a => a.status === 'pending')
+    if (!currentPending) { setError('No pending approval level found.'); setSaving(false); return }
+
+    const result = await approvePRLevel({ prId, approvals, user })
+    if (result.isFinal) {
+      await createPendingPO({ prId, pr, amount: pr.amount })
+      showToast?.('Purchase request fully approved. Purchase Order created, pending Finance approval.', 'approved')
+    } else {
+      showToast?.(`Level ${currentPending.approver_level} approved. Forwarded to ${result.nextWaiting.approver_name}.`, 'info')
+    }
+
+    await load()
+    setSaving(false)
+  }
+
+  async function handleReject() {
+    if (!reason.trim()) { setError('Please enter a rejection reason.'); return }
+    setSaving(true); setError(null)
+    await rejectPRLevel({ prId, approvals, pr, user, reason: reason.trim() })
+    showToast?.('Purchase request rejected.', 'rejected')
+    await load()
+    setRejecting(false)
+    setReason('')
+    setSaving(false)
+  }
+
   if (loading) return <div style={{ padding: '40px', textAlign: 'center', fontSize: '13px', color: '#6B7280' }}>Loading…</div>
   if (!pr) return <div style={{ padding: '40px', textAlign: 'center', fontSize: '13px', color: '#9CA3AF' }}>Request not found.</div>
 
   const canEdit = user.email === pr.requested_by && pr.status === 'rejected'
   const lc = pr.link_confidence ? LINK_CONF[pr.link_confidence] : null
+  const currentPending = approvals.find(a => a.status === 'pending')
+  const canAction = canAccessApprovals(user.role) && pr.status === 'submitted' && !!currentPending
+  const isFullyApproved = pr.status === 'approved' || pr.status === 'po_generated'
 
   return (
     <div style={{ maxWidth: '640px', margin: '0 auto', padding: '24px 20px 60px' }}>
       {/* Breadcrumb */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '20px' }}>
-        <span onClick={onBack} style={{ fontSize: '12px', color: '#8C3225', cursor: 'pointer' }}>My Requests</span>
+        <span onClick={onBack} style={{ fontSize: '12px', color: '#8C3225', cursor: 'pointer' }}>{backLabel}</span>
         <span style={{ fontSize: '12px', color: '#9CA3AF' }}>/</span>
         <span style={{ fontSize: '12px', color: '#6B7280', fontFamily: 'monospace' }}>{pr.pr_number}</span>
       </div>
@@ -104,21 +144,46 @@ export default function PRDetail({ prId, user, onBack, onEdit }) {
             <div style={{ fontSize: '22px', fontWeight: 700, color: '#1A1F36' }}>INR {Number(pr.amount || 0).toLocaleString('en-IN')}</div>
             <div style={{ fontSize: '13px', color: '#6B7280', marginTop: '2px' }}>{pr.vendors?.org_name}</div>
           </div>
-          {canEdit && (
-            <button
-              onClick={() => onEdit(pr)}
-              style={{ height: '32px', padding: '0 14px', background: '#FFFFFF', color: '#374151', border: '1px solid #E3E8EF', borderRadius: '3px', fontSize: '12px', cursor: 'pointer' }}
-            >
-              Edit & Resubmit
-            </button>
-          )}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
+            {user.email !== pr.requested_by && (
+              <div style={{ fontSize: '11px', color: '#6B7280', textAlign: 'right' }}>
+                <div>Requested by</div>
+                <div style={{ fontFamily: 'monospace', color: '#374151' }}>{pr.requested_by}</div>
+              </div>
+            )}
+            {canEdit && (
+              <button
+                onClick={() => onEdit(pr)}
+                style={{ height: '32px', padding: '0 14px', background: '#FFFFFF', color: '#374151', border: '1px solid #E3E8EF', borderRadius: '3px', fontSize: '12px', cursor: 'pointer' }}
+              >
+                Edit & Resubmit
+              </button>
+            )}
+          </div>
         </div>
         <PRStatusTimeline status={pr.status} approvals={approvals} />
 
-        {pr.rejection_reason && (
+        {pr.status === 'rejected' && pr.rejection_reason && (
           <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderLeft: '3px solid #EF4444', borderRadius: '2px', padding: '10px 14px', marginTop: '12px' }}>
             <div style={{ fontSize: '10px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>Rejection Reason</div>
             <div style={{ fontSize: '12px', color: '#B91C1C' }}>{pr.rejection_reason}</div>
+          </div>
+        )}
+
+        {pr.status === 'submitted' && pr.rejection_reason && (
+          <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderLeft: '3px solid #F59E0B', borderRadius: '2px', padding: '10px 14px', marginTop: '12px' }}>
+            <div style={{ fontSize: '10px', color: '#92400E', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>Previously Rejected — Resubmitted</div>
+            <div style={{ fontSize: '12px', color: '#92400E' }}>{pr.rejection_reason}</div>
+          </div>
+        )}
+
+        {Number(pr.advance_percent) >= 100 && (
+          <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderLeft: '4px solid #EF4444', borderRadius: '2px', padding: '10px 14px', marginTop: '12px' }}>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: '#B91C1C', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>100% Advance — FL Email Approval Required</div>
+            <div style={{ fontSize: '12px', color: '#7F1D1D', lineHeight: 1.6 }}>
+              This request asks for full payment in advance. Explicit Functional Leader approval over email is required before it proceeds.
+              {pr.advance_fl_email_ack ? ' Requester has confirmed email approval has been / will be obtained.' : ' Requester has not confirmed email approval.'}
+            </div>
           </div>
         )}
 
@@ -187,11 +252,23 @@ export default function PRDetail({ prId, user, onBack, onEdit }) {
       {pr.vendors && (
         <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '20px', marginBottom: '12px' }}>
           <div style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '14px' }}>Vendor</div>
-          <Row label="Organisation" value={pr.vendors.org_name} />
+          <div
+            onClick={() => onViewVendor?.(pr.vendor_id)}
+            style={onViewVendor ? { cursor: 'pointer' } : undefined}
+          >
+            <Row label="Organisation" value={
+              onViewVendor
+                ? <span style={{ color: '#8C3225', textDecoration: 'underline' }}>{pr.vendors.org_name}</span>
+                : pr.vendors.org_name
+            } />
+          </div>
           <Row label="Type" value={pr.vendors.org_type} />
           <Row label="PAN" value={pr.vendors.pan_number} />
+          {pr.vendors.gstin && <Row label="GSTIN" value={pr.vendors.gstin} />}
           <Row label="Contact" value={pr.vendors.contact_person} />
           <Row label="Bank" value={`${pr.vendors.bank_name} — ${pr.vendors.beneficiary_name}`} />
+          <Row label="Account No." value={pr.vendors.account_number} />
+          <Row label="IFSC" value={pr.vendors.ifsc_code} />
         </div>
       )}
 
@@ -223,6 +300,74 @@ export default function PRDetail({ prId, user, onBack, onEdit }) {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Action panel — Approve / Reject, shown only when the viewer can act */}
+      {canAction && (
+        <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '20px', marginBottom: '12px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '14px' }}>
+            Your Decision — Level {currentPending?.approver_level} ({currentPending?.approver_name})
+          </div>
+
+          {error && (
+            <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '3px', padding: '10px 14px', marginBottom: '12px', fontSize: '13px', color: '#B91C1C' }}>
+              {error}
+            </div>
+          )}
+
+          {!rejecting ? (
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={handleApprove}
+                disabled={saving}
+                style={{ height: '40px', padding: '0 28px', background: saving ? '#9CA3AF' : '#15803D', color: '#FFFFFF', border: 'none', borderRadius: '3px', fontSize: '13px', fontWeight: 600, cursor: saving ? 'default' : 'pointer' }}
+              >
+                {saving ? 'Saving…' : 'Approve'}
+              </button>
+              <button
+                onClick={() => setRejecting(true)}
+                disabled={saving}
+                style={{ height: '40px', padding: '0 24px', background: '#FFFFFF', color: '#B91C1C', border: '1px solid #FECACA', borderRadius: '3px', fontSize: '13px', cursor: 'pointer' }}
+              >
+                Reject
+              </button>
+            </div>
+          ) : (
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>Rejection reason</div>
+              <textarea
+                value={reason}
+                onChange={e => setReason(e.target.value)}
+                rows={3}
+                placeholder="Explain why this purchase request is being rejected…"
+                style={{ width: '100%', border: '1px solid #E3E8EF', borderRadius: '3px', padding: '10px 12px', fontSize: '13px', color: '#1A1F36', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit', marginBottom: '12px' }}
+              />
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={handleReject}
+                  disabled={saving}
+                  style={{ height: '38px', padding: '0 24px', background: saving ? '#9CA3AF' : '#B91C1C', color: '#FFFFFF', border: 'none', borderRadius: '3px', fontSize: '13px', fontWeight: 600, cursor: saving ? 'default' : 'pointer' }}
+                >
+                  {saving ? 'Saving…' : 'Confirm Rejection'}
+                </button>
+                <button
+                  onClick={() => { setRejecting(false); setReason('') }}
+                  style={{ height: '38px', padding: '0 18px', background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '3px', fontSize: '13px', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {isFullyApproved && (
+        <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '6px', padding: '14px 18px', marginBottom: '12px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 600, color: '#15803D' }}>
+            {pr.status === 'po_generated' ? 'Purchase Order issued — see Purchase Orders for details.' : 'Fully approved — Purchase Order pending Finance approval.'}
+          </div>
         </div>
       )}
 

@@ -124,10 +124,15 @@ function YesNoToggle({ value, onChange }) {
 }
 
 export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
-  const isEdit = !!existingPR
+  // A 'draft' record is continued, not "edited" — mirrors VendorForm.jsx's
+  // isEdit/draftId split.
+  const isEdit = !!existingPR && existingPR.status !== 'draft'
+  const [draftId, setDraftId] = useState(existingPR?.status === 'draft' ? existingPR.id : null)
   const [step, setStep]       = useState(0)
   const [errors, setErrors]   = useState({})
   const [saving, setSaving]   = useState(false)
+  const [savingDraft, setSavingDraft] = useState(false)
+  const [draftSavedAt, setDraftSavedAt] = useState(null)
   const [saveError, setSaveError] = useState(null)
   const [showBelowBlock, setShowBelowBlock] = useState(false)
 
@@ -242,6 +247,62 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
     setStep(s => s + 1)
   }
 
+  // Saves whatever's filled in, from any step — no validation gate, mirrors
+  // VendorForm.jsx's Save as Draft. Skips pr_number (assigned only at real
+  // submission, like vendor_id for vendors), AI summary, and pr_approvals —
+  // those only make sense once the request is actually submitted.
+  async function handleSaveDraft() {
+    setSavingDraft(true); setSaveError(null)
+    try {
+      const bd = breakdownTotals(breakdown)
+      const primary = primaryAllocation(allocations) || {}
+      const cleanQuotes = (quoteState.quotes || []).filter(q => q.quote_path || q.vendor_name || q.amount)
+
+      const payload = {
+        vendor_id:                 vendorId || null, // uuid column — never send '', only null or a real id
+        requested_by:              user.email,
+        amount:                    bd.total,
+        base_amount:               bd.base,
+        tax_amount:                bd.tax,
+        gst_amount:                bd.tax,
+        incidental_amount:         bd.incidental,
+        budgeted,
+        category,
+        expense_type:              expenseType,
+        entity:                    primary.entity || null,
+        donor_name:                primary.donor || null,
+        program:                   primary.program || null,
+        subprogram:                primary.subprogram || null,
+        donor_allocations:         allocations,
+        purpose:                   purpose.trim(),
+        is_recurring:              isRecurring,
+        recurring_frequency:       isRecurring ? frequency : null,
+        quotes:                    cleanQuotes,
+        quote_paths:               cleanQuotes.map(q => q.quote_path).filter(Boolean),
+        single_source_justification: quoteState.singleSource ? quoteState.singleSourceJustification.trim() : null,
+        comparative_statement_path: quoteState.singleSource ? null : (quoteState.comparative_statement_path || null),
+        advance_percent:           advFlags.advance,
+        after_delivery_percent:    advFlags.afterDelivery,
+        advance_fl_email_ack:      advFlags.requiresFLEmail ? !!advanceState.flEmailAck : false,
+        status:                    'draft',
+        submitted_at:              null,
+      }
+
+      let result
+      if (draftId) {
+        result = await supabase.from('purchase_requests').update(payload).eq('id', draftId).select().single()
+      } else {
+        result = await supabase.from('purchase_requests').insert(payload).select().single()
+      }
+      if (result.error) throw result.error
+      if (!draftId) setDraftId(result.data.id)
+      setDraftSavedAt(new Date())
+    } catch (err) {
+      setSaveError(err.message || 'Failed to save draft.')
+    }
+    setSavingDraft(false)
+  }
+
   async function handleSubmit() {
     setSaving(true); setSaveError(null)
     try {
@@ -284,10 +345,20 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
 
       let prId
       if (isEdit) {
-        const { data, error } = await supabase.from('purchase_requests').update({ ...payload, rejection_reason: null }).eq('id', existingPR.id).select().single()
+        // Resubmitting a rejected PR — rejection_reason is deliberately kept
+        // (not nulled) so the PR list can show it was previously rejected
+        // and is now resubmitted, until it's next approved or re-rejected.
+        const { data, error } = await supabase.from('purchase_requests').update(payload).eq('id', existingPR.id).select().single()
         if (error) throw error
         prId = data.id
         await supabase.from('pr_approvals').delete().eq('pr_id', prId)
+      } else if (draftId) {
+        // Converting a draft into a real submission — no prior pr_approvals
+        // rows exist yet, so there's nothing to delete before the fresh
+        // insert below.
+        const { data, error } = await supabase.from('purchase_requests').update(payload).eq('id', draftId).select().single()
+        if (error) throw error
+        prId = data.id
       } else {
         const { data, error } = await supabase.from('purchase_requests').insert(payload).select().single()
         if (error) throw error
@@ -362,13 +433,34 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
   return (
     <div style={{ maxWidth: '640px', margin: '0 auto', padding: '24px 20px 80px' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-        <button onClick={onBack} style={{ background: 'none', border: 'none', fontSize: '13px', color: '#8C3225', cursor: 'pointer', padding: 0 }}>Back</button>
-        <span style={{ color: '#9CA3AF' }}>/</span>
-        <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A1F36', margin: 0 }}>
-          {isEdit ? 'Edit Purchase Request' : 'New Purchase Request'}
-        </h2>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginBottom: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button onClick={onBack} style={{ background: 'none', border: 'none', fontSize: '13px', color: '#8C3225', cursor: 'pointer', padding: 0 }}>Back</button>
+          <span style={{ color: '#9CA3AF' }}>/</span>
+          <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A1F36', margin: 0 }}>
+            {isEdit ? 'Edit Purchase Request' : existingPR?.status === 'draft' ? 'Continue Purchase Request Draft' : 'New Purchase Request'}
+          </h2>
+        </div>
+        {!isEdit && (
+          <button
+            onClick={handleSaveDraft}
+            disabled={savingDraft}
+            style={{ height: '32px', padding: '0 14px', background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '12px', fontWeight: 600, cursor: savingDraft ? 'default' : 'pointer' }}
+          >
+            {savingDraft ? 'Saving…' : 'Save as Draft'}
+          </button>
+        )}
       </div>
+      {draftSavedAt && (
+        <div style={{ fontSize: '11px', color: '#15803D', marginBottom: '12px' }}>
+          Draft saved ✓ {draftSavedAt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+        </div>
+      )}
+      {saveError && step < STEPS.length - 1 && (
+        <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '4px', padding: '10px 14px', marginBottom: '12px', fontSize: '13px', color: '#B91C1C' }}>
+          {saveError}
+        </div>
+      )}
 
       <StepIndicator current={step} total={STEPS.length} labels={STEP_LABELS} />
       <div style={{ fontSize: '14px', fontWeight: 700, color: '#1A1F36', marginBottom: '20px' }}>{STEPS[step]}</div>
