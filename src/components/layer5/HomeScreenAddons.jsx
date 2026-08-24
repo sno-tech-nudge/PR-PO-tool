@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import { canAccessApprovals, canAccessFinance, isObserver } from '../../lib/auth'
 
 const POLICY_REMINDERS = [
   { text: 'Submit receipts within 7 days of purchase' },
@@ -18,17 +19,66 @@ const STATUS_BADGE = {
   reimbursed:   { label: 'Reimbursed', color: '#15803D', bg: '#F0FDF4' },
 }
 
-export default function HomeScreenAddons({ user, onViewReport }) {
+function TaskRow({ title, subtitle, badge, badgeColor, badgeBg, last, onClick }) {
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        padding: '13px 16px',
+        borderBottom: last ? 'none' : '1px solid #F3F4F6',
+        background: '#FFFFFF',
+        cursor: onClick ? 'pointer' : 'default',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px',
+      }}
+    >
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827', marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {title}
+        </div>
+        <div style={{ fontSize: '12px', color: '#9CA3AF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {subtitle}
+        </div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+        <span style={{
+          fontSize: '11px', fontWeight: 600,
+          padding: '3px 8px', borderRadius: '5px',
+          background: badgeBg, color: badgeColor,
+        }}>
+          {badge}
+        </span>
+        <span style={{ fontSize: '16px', color: '#D1D5DB' }}>›</span>
+      </div>
+    </div>
+  )
+}
+
+export default function HomeScreenAddons({
+  user, onViewReport,
+  onResumePRDraft, onResumeVendorDraft,
+  onOpenExpenseApprovals, onOpenPRApprovals, onOpenFinance,
+}) {
   const [stats, setStats]                 = useState(null)
   const [recentReports, setRecentReports] = useState([])
+  const [tasks, setTasks]                 = useState(null)
   const [loading, setLoading]             = useState(true)
 
   useEffect(() => { load() }, [user?.email])
 
   async function load() {
     const email = user?.email
+    const canApprove = canAccessApprovals(user?.role) && !isObserver(user?.role)
+    const canFinance = canAccessFinance(user?.role)
 
-    const [{ count: savedCount }, { data: reports }] = await Promise.all([
+    const [
+      { count: savedCount },
+      { data: reports },
+      { data: draftPRs },
+      { data: draftVendors },
+      { count: pendingExpenseReports },
+      { count: pendingPRs },
+      { count: pendingPOs },
+    ] = await Promise.all([
       supabase.from('expense_details')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'saved')
@@ -39,6 +89,27 @@ export default function HomeScreenAddons({ user, onViewReport }) {
         .not('status', 'eq', 'saved')
         .order('created_at', { ascending: false })
         .limit(50),
+      supabase.from('purchase_requests')
+        .select('id, pr_number, amount, vendors(org_name)')
+        .eq('requested_by', email)
+        .eq('status', 'draft')
+        .order('created_at', { ascending: false })
+        .limit(5),
+      supabase.from('vendors')
+        .select('id, org_name, vendor_id')
+        .eq('submitted_by', email)
+        .eq('status', 'draft')
+        .order('created_at', { ascending: false })
+        .limit(5),
+      canApprove
+        ? supabase.from('expense_reports').select('id', { count: 'exact', head: true }).in('status', ['submitted', 'under_review'])
+        : Promise.resolve({ count: 0 }),
+      canApprove
+        ? supabase.from('purchase_requests').select('id', { count: 'exact', head: true }).eq('status', 'submitted')
+        : Promise.resolve({ count: 0 }),
+      canFinance
+        ? supabase.from('purchase_orders').select('id', { count: 'exact', head: true }).eq('status', 'pending_approval')
+        : Promise.resolve({ count: 0 }),
     ])
 
     const reps = reports || []
@@ -52,8 +123,20 @@ export default function HomeScreenAddons({ user, onViewReport }) {
       reimbursed: reimburseTotal,
     })
     setRecentReports(reps.slice(0, 3))
+    setTasks({
+      draftPRs: draftPRs || [],
+      draftVendors: draftVendors || [],
+      pendingExpenseReports: pendingExpenseReports || 0,
+      pendingPRs: pendingPRs || 0,
+      pendingPOs: pendingPOs || 0,
+    })
     setLoading(false)
   }
+
+  const hasTasks = tasks && (
+    tasks.draftPRs.length > 0 || tasks.draftVendors.length > 0 ||
+    tasks.pendingExpenseReports > 0 || tasks.pendingPRs > 0 || tasks.pendingPOs > 0
+  )
 
   if (loading) return (
     <div>
@@ -80,6 +163,71 @@ export default function HomeScreenAddons({ user, onViewReport }) {
               ₹{stats.reimbursed.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
             </div>
             <div style={{ fontSize: '11px', color: '#15803D', opacity: 0.8, marginTop: '5px', lineHeight: 1.3 }}>Reimbursed</div>
+          </div>
+        </div>
+      )}
+
+      {/* Pending tasks — drafts you can resume, plus anything waiting on
+          your role to approve. Only rendered when there's actually
+          something to do, so Home stays uncluttered otherwise. */}
+      {hasTasks && (
+        <div style={{ marginBottom: '24px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
+            Pending Tasks
+          </div>
+          <div style={{ border: '1px solid #E5E7EB', borderRadius: '10px', overflow: 'hidden' }}>
+            {tasks.draftPRs.map((pr, i, arr) => (
+              <TaskRow
+                key={`pr-draft-${pr.id}`}
+                title={pr.vendors?.org_name || pr.pr_number || 'Purchase Request draft'}
+                subtitle={`${pr.pr_number || 'Draft'}${pr.amount ? ` · ₹${Number(pr.amount).toLocaleString('en-IN')}` : ''}`}
+                badge="Draft"
+                badgeColor="#6B7280" badgeBg="#F3F4F6"
+                last={i === arr.length - 1 && tasks.draftVendors.length === 0 && tasks.pendingExpenseReports === 0 && tasks.pendingPRs === 0 && tasks.pendingPOs === 0}
+                onClick={() => onResumePRDraft?.(pr.id)}
+              />
+            ))}
+            {tasks.draftVendors.map((v, i, arr) => (
+              <TaskRow
+                key={`vendor-draft-${v.id}`}
+                title={v.org_name || 'Vendor draft'}
+                subtitle={v.vendor_id || 'Not yet submitted'}
+                badge="Draft"
+                badgeColor="#6B7280" badgeBg="#F3F4F6"
+                last={i === arr.length - 1 && tasks.pendingExpenseReports === 0 && tasks.pendingPRs === 0 && tasks.pendingPOs === 0}
+                onClick={() => onResumeVendorDraft?.(v.id)}
+              />
+            ))}
+            {tasks.pendingExpenseReports > 0 && (
+              <TaskRow
+                title="Expense reports awaiting your review"
+                subtitle={`${tasks.pendingExpenseReports} report${tasks.pendingExpenseReports === 1 ? '' : 's'} pending`}
+                badge={tasks.pendingExpenseReports}
+                badgeColor="#8C3225" badgeBg="#fdf0ed"
+                last={tasks.pendingPRs === 0 && tasks.pendingPOs === 0}
+                onClick={onOpenExpenseApprovals}
+              />
+            )}
+            {tasks.pendingPRs > 0 && (
+              <TaskRow
+                title="Purchase requests awaiting your review"
+                subtitle={`${tasks.pendingPRs} request${tasks.pendingPRs === 1 ? '' : 's'} pending`}
+                badge={tasks.pendingPRs}
+                badgeColor="#8C3225" badgeBg="#fdf0ed"
+                last={tasks.pendingPOs === 0}
+                onClick={onOpenPRApprovals}
+              />
+            )}
+            {tasks.pendingPOs > 0 && (
+              <TaskRow
+                title="Purchase orders awaiting approval"
+                subtitle={`${tasks.pendingPOs} order${tasks.pendingPOs === 1 ? '' : 's'} pending`}
+                badge={tasks.pendingPOs}
+                badgeColor="#8C3225" badgeBg="#fdf0ed"
+                last
+                onClick={onOpenFinance}
+              />
+            )}
           </div>
         </div>
       )}

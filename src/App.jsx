@@ -291,7 +291,7 @@ export default function App() {
         </div>
 
         {/* Nav */}
-        <nav style={{ flex: 1, padding: '10px 0', overflowY: 'auto' }}>
+        <nav className="sidebar-nav" style={{ flex: 1, padding: '10px 0', overflowY: 'auto' }}>
           {navItems.map(({ key, label, icon }) => {
             const active = activeNav === key
             return (
@@ -458,7 +458,15 @@ export default function App() {
               </div>
             </div>
 
-            <HomeScreenAddons user={user} onViewReport={handleViewReport} />
+            <HomeScreenAddons
+              user={user}
+              onViewReport={handleViewReport}
+              onResumePRDraft={(id) => { setAppScreen('pr-list'); openPRDraftEdit(id) }}
+              onResumeVendorDraft={(id) => { setAppScreen('vendors'); openDraftEdit(id) }}
+              onOpenExpenseApprovals={() => { setApprovalsTab('expenses'); setAppScreen('approvals') }}
+              onOpenPRApprovals={() => { setApprovalsTab('prs'); setAppScreen('approvals') }}
+              onOpenFinance={() => setAppScreen('finance')}
+            />
           </div>
         )}
 

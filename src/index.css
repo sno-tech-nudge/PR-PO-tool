@@ -24,3 +24,23 @@ body {
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
+
+/* Thin, on-brand scrollbar for the sidebar nav — the default OS scrollbar
+   is wide and grey, out of place against the dark sidebar. */
+.sidebar-nav {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(196, 130, 111, 0.35) transparent;
+}
+.sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(196, 130, 111, 0.35);
+  border-radius: 3px;
+}
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(196, 130, 111, 0.55);
+}
