@@ -18,6 +18,10 @@ export default function QuoteUpload({ onExtracted, onFileUploaded, skipExtractio
   const [file, setFile]         = useState(null)
   const [extracting, setExtracting] = useState(false)
   const [extracted, setExtracted]   = useState(null)
+  // `notice` is the benign "couldn't auto-read, fill manually" case — kept
+  // separate from `error` (a real failure, e.g. the upload itself failing)
+  // so it doesn't render like something blocking the submission.
+  const [notice, setNotice]         = useState(null)
   const [error, setError]           = useState(null)
   const [uploading, setUploading]   = useState(false)
   const [uploaded, setUploaded]     = useState(false)
@@ -27,10 +31,16 @@ export default function QuoteUpload({ onExtracted, onFileUploaded, skipExtractio
     if (!f) return
     setFile(f)
     setExtracted(null)
+    setNotice(null)
     setError(null)
     // Comparative statements etc. aren't single-vendor quotes — skip the AI extraction call.
     if (skipExtraction) return
     setExtracting(true)
+    // Extraction is a best-effort convenience, never a gate — if it fails for
+    // any reason (model overloaded, unreadable image, network hiccup), the
+    // requester still fills the fields manually and attaches the document
+    // itself via the "Upload to system" button below, which is all
+    // quotesValidity() actually checks before allowing submission.
     try {
       const b64 = await fileToBase64(f)
       const result = await extractVendorQuote(b64)
@@ -38,12 +48,13 @@ export default function QuoteUpload({ onExtracted, onFileUploaded, skipExtractio
         setExtracted(result)
         onExtracted(result)
       } else {
-        setError('Could not extract data from this document. You can still proceed and fill fields manually.')
+        setNotice('Could not read this document automatically — no problem, just fill in the vendor name and amount yourself and upload it below; that still counts as your attached quote.')
       }
-    } catch (err) {
-      setError('Extraction failed: ' + err.message)
+    } catch {
+      setNotice('Could not read this document automatically — no problem, just fill in the vendor name and amount yourself and upload it below; that still counts as your attached quote.')
+    } finally {
+      setExtracting(false)
     }
-    setExtracting(false)
   }
 
   async function handleUpload() {
@@ -81,6 +92,12 @@ export default function QuoteUpload({ onExtracted, onFileUploaded, skipExtractio
       {extracting && (
         <div style={{ background: '#fdf0ed', border: '1px solid #BFDBFE', borderRadius: '4px', padding: '12px 14px', fontSize: '13px', color: '#1E40AF' }}>
           Extracting data from document…
+        </div>
+      )}
+
+      {notice && (
+        <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '4px', padding: '10px 14px', fontSize: '12px', color: '#4B5563', marginBottom: '8px' }}>
+          {notice}
         </div>
       )}
 

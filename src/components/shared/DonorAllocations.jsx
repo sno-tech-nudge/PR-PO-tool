@@ -54,11 +54,21 @@ export default function DonorAllocations({ value = [], onChange, error, lockEnti
     onChange(next)
   }
 
-  function handleEntity(idx, val)     { update(idx, { entity: val, program: '', subprogram: '', donor: '' }) }
+  // Once a PR is split across more than one allocation, every row shares the
+  // same entity — only the first row's entity control stays editable; the
+  // rest are locked to match it (same treatment as the caller-supplied
+  // lockEntity prop, just derived from row 0 instead of a fixed value).
+  function handleEntity(idx, val) {
+    if (idx === 0) {
+      onChange(rows.map(r => ({ ...r, entity: val, program: '', subprogram: '', donor: '' })))
+      return
+    }
+    update(idx, { entity: val, program: '', subprogram: '', donor: '' })
+  }
   function handleProgram(idx, val)    { update(idx, { program: val, subprogram: '', donor: '' }) }
   function handleSubprogram(idx, val) { update(idx, { subprogram: val, donor: '' }) }
 
-  function addRow() { onChange([...rows, emptyRow(lockEntity)]) }
+  function addRow() { onChange([...rows, emptyRow(lockEntity || rows[0]?.entity || '')]) }
   function removeRow(idx) {
     const next = rows.filter((_, i) => i !== idx)
     onChange(next.length ? next : [emptyRow(lockEntity)])
@@ -91,7 +101,7 @@ export default function DonorAllocations({ value = [], onChange, error, lockEnti
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                 <div>
                   <div style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '3px' }}>Entity</div>
-                  {cellSelect(row.entity, v => handleEntity(idx, v), ENTITIES, 'Select entity…', !!lockEntity)}
+                  {cellSelect(row.entity, v => handleEntity(idx, v), ENTITIES, 'Select entity…', !!lockEntity || idx > 0)}
                 </div>
                 <div>
                   <div style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '3px' }}>Programme</div>
@@ -132,13 +142,15 @@ export default function DonorAllocations({ value = [], onChange, error, lockEnti
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
-        <button
-          type="button"
-          onClick={addRow}
-          style={{ background: 'none', border: '1px dashed #C4826F', color: '#8C3225', fontSize: '12px', cursor: 'pointer', borderRadius: '4px', padding: '6px 12px' }}
-        >
-          + Add donor / programme
-        </button>
+        {total < 100 ? (
+          <button
+            type="button"
+            onClick={addRow}
+            style={{ background: 'none', border: '1px dashed #C4826F', color: '#8C3225', fontSize: '12px', cursor: 'pointer', borderRadius: '4px', padding: '6px 12px' }}
+          >
+            + Add donor / programme
+          </button>
+        ) : <span />}
         <span style={{ fontSize: '12px', fontWeight: 600, color: totalColor }}>
           Total: {total}%{total !== 100 && ' (must be 100%)'}
         </span>

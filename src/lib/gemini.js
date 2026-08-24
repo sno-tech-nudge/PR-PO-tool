@@ -9,12 +9,21 @@
 // their current fast model is.
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent'
 
+// A stuck/hung request (dropped connection, no response ever arriving) must
+// never leave a caller's "extracting…" UI state stuck forever — abort after
+// 20s so callers always get a null result back and can fall back to manual
+// entry, per the "extraction can fail, submission must not be blocked" rule.
+const REQUEST_TIMEOUT_MS = 20000
+
 export async function callGemini(base64Image, prompt) {
   const key = import.meta.env.VITE_GEMINI_API_KEY
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
   try {
     const response = await fetch(`${GEMINI_API_URL}?key=${key}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
       body: JSON.stringify({
         contents: [{
           parts: [
@@ -39,7 +48,9 @@ export async function callGemini(base64Image, prompt) {
       .trim()
     return JSON.parse(cleaned)
   } catch (error) {
-    console.log('Gemini call failed:', error.message)
+    console.log('Gemini call failed:', error.name === 'AbortError' ? 'Request timed out' : error.message)
     return null
+  } finally {
+    clearTimeout(timeout)
   }
 }
