@@ -69,11 +69,12 @@ function Field({ label, error, required, hint, children }) {
   )
 }
 
-function sel(value, onChange, options, placeholder) {
+function sel(value, onChange, options, placeholder, onBlur) {
   return (
     <select
       value={value}
       onChange={e => onChange(e.target.value)}
+      onBlur={onBlur}
       style={{
         width: '100%', height: '38px', border: '1px solid #D1D5DB', borderRadius: '4px',
         padding: '0 10px', fontSize: '13px', color: value ? '#1A1F36' : '#9CA3AF',
@@ -257,6 +258,46 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
       }
     }
     return e
+  }
+
+  // Per-field validation, run on blur so a mistake (an empty Purpose, an
+  // invalid date range) surfaces the moment you leave that field instead of
+  // only after clicking Continue/Review — same rules as validateStep, just
+  // scoped to one field so untouched fields below don't light up red too.
+  function validateField(key) {
+    let msg
+    switch (key) {
+      case 'expenseType':
+        if (!expenseType) msg = 'Required'
+        break
+      case 'vendorId':
+        if (!vendorId) msg = 'Please select a vendor'
+        break
+      case 'category':
+        if (!category) msg = 'Required'
+        break
+      case 'fromDate':
+        if (!fromDate) msg = 'Required'
+        break
+      case 'toDate':
+        if (!toDate) msg = 'Required'
+        else if (fromDate && toDate < fromDate) msg = 'End date must be on or after the start date'
+        break
+      case 'purpose':
+        if (!purpose.trim()) msg = 'Required'
+        break
+      case 'frequency':
+        if (isRecurring && !frequency) msg = 'Select a frequency'
+        break
+      default:
+        return
+    }
+    setErrors(prev => {
+      const next = { ...prev }
+      if (msg) next[key] = msg
+      else delete next[key]
+      return next
+    })
   }
 
   function nextStep() {
@@ -519,7 +560,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
 
           {allocationsValid && budgeted !== null && (
             <Field label="Expense Nature" error={errors.expenseType} required hint="Revenue vs capital vs programme classification">
-              {sel(expenseType, setExpenseType, EXPENSE_NATURES, 'Select nature…')}
+              {sel(expenseType, setExpenseType, EXPENSE_NATURES, 'Select nature…', () => validateField('expenseType'))}
             </Field>
           )}
         </div>
@@ -542,7 +583,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
           </Field>
 
           <Field label="Category" error={errors.category} required>
-            {sel(category, setCategory, CATEGORIES, 'Select category…')}
+            {sel(category, setCategory, CATEGORIES, 'Select category…', () => validateField('category'))}
           </Field>
 
           {/* Amount breakdown: quantity × rate per unit (mandatory) + tax (mandatory) + incidentals (optional) */}
@@ -576,6 +617,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
                   setFromDate(v)
                   if (toDate && toDate < v) setToDate('')
                 }}
+                onBlur={() => validateField('fromDate')}
                 style={{ width: '100%', height: '38px', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '0 10px', fontSize: '13px', color: '#1A1F36', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box' }}
               />
             </Field>
@@ -585,6 +627,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
                 value={toDate}
                 min={fromDate || todayStr()}
                 onChange={e => setToDate(e.target.value)}
+                onBlur={() => validateField('toDate')}
                 style={{ width: '100%', height: '38px', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '0 10px', fontSize: '13px', color: '#1A1F36', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box' }}
               />
             </Field>
@@ -594,6 +637,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
             <textarea
               value={purpose}
               onChange={e => setPurpose(e.target.value)}
+              onBlur={() => validateField('purpose')}
               placeholder="Describe what this purchase is for and why it is needed"
               rows={3}
               style={{ width: '100%', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '10px', fontSize: '13px', color: '#1A1F36', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }}
@@ -614,7 +658,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
 
           {isRecurring && (
             <Field label="Frequency" error={errors.frequency} required>
-              {sel(frequency, setFrequency, FREQUENCIES, 'Select frequency…')}
+              {sel(frequency, setFrequency, FREQUENCIES, 'Select frequency…', () => validateField('frequency'))}
             </Field>
           )}
         </div>

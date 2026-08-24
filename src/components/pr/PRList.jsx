@@ -15,6 +15,7 @@ export default function PRList({ user, onViewPR, onCreatePR, onResumeDraft }) {
   const [prs, setPRs]       = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     load()
@@ -35,7 +36,18 @@ export default function PRList({ user, onViewPR, onCreatePR, onResumeDraft }) {
     setLoading(false)
   }
 
-  const filtered = filter === 'all' ? prs : prs.filter(p => p.status === filter)
+  const byFilter = filter === 'all' ? prs : prs.filter(p => p.status === filter)
+  const filtered = search.trim()
+    ? byFilter.filter(p => {
+        const s = search.trim().toLowerCase()
+        return (
+          p.pr_number?.toLowerCase().includes(s) ||
+          p.vendors?.org_name?.toLowerCase().includes(s) ||
+          p.purpose?.toLowerCase().includes(s) ||
+          p.category?.toLowerCase().includes(s)
+        )
+      })
+    : byFilter
 
   return (
     <div style={{ maxWidth: '480px', margin: '0 auto', padding: '20px', width: '100%' }}>
@@ -53,6 +65,18 @@ export default function PRList({ user, onViewPR, onCreatePR, onResumeDraft }) {
           </button>
         )}
       </div>
+
+      <input
+        type="text"
+        placeholder="Search by PR number, vendor, or purpose…"
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        style={{
+          width: '100%', height: '36px', border: '1px solid #E8E8E8', borderRadius: '4px',
+          padding: '0 12px', fontSize: '13px', color: '#1A1A1A', outline: 'none',
+          background: '#FFFFFF', boxSizing: 'border-box', marginBottom: '14px',
+        }}
+      />
 
       <div style={{ display: 'flex', borderBottom: '1px solid #E8E8E8', marginBottom: '16px', gap: '0', overflowX: 'auto' }}>
         {[['all','All'],['submitted','Pending'],['approved','Approved'],['po_generated','PO Issued'],['rejected','Rejected'],['draft','Draft']].map(([key, label]) => {
@@ -79,7 +103,11 @@ export default function PRList({ user, onViewPR, onCreatePR, onResumeDraft }) {
 
       {!loading && filtered.length === 0 && (
         <div style={{ fontSize: '14px', color: '#4A4A4A', textAlign: 'center', padding: '40px 0' }}>
-          {prs.length === 0 ? 'No purchase requests yet.' : 'No requests match this filter.'}
+          {prs.length === 0
+            ? 'No purchase requests yet.'
+            : search.trim()
+              ? 'No requests match your search.'
+              : 'No requests match this filter.'}
         </div>
       )}
 

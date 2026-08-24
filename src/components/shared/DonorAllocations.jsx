@@ -1,5 +1,5 @@
 import { ENTITIES, getPrograms, getSubprograms, getDonors, validateAllocations } from '../../lib/donorData'
-import { blockNonNumericKey, sanitizeNumericPaste, sanitizeNumericValue } from '../../lib/numericInput'
+import PercentInput from './PercentInput'
 
 // Multi-donor allocation editor. Each row splits the spend across a
 // entity → programme → sub-programme → donor with a percentage.
@@ -125,19 +125,13 @@ export default function DonorAllocations({ value = [], onChange, error, lockEnti
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '10px', color: '#9CA3AF' }}>Allocation %</span>
-                <input
-                  type="number"
+                <span style={{ fontSize: '10px', color: '#9CA3AF' }}>Allocation</span>
+                <PercentInput
                   value={row.percent}
-                  onChange={e => update(idx, { percent: sanitizeNumericValue(e.target.value) })}
-                  onKeyDown={blockNonNumericKey}
-                  onPaste={sanitizeNumericPaste}
-                  placeholder="0"
-                  min="0"
-                  max="100"
-                  style={{ width: '90px', height: '32px', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '0 8px', fontSize: '12px', color: '#1A1F36', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box' }}
+                  onChange={v => update(idx, { percent: v })}
+                  style={{ width: '90px' }}
+                  inputStyle={{ height: '32px', fontSize: '12px' }}
                 />
-                <span style={{ fontSize: '12px', color: '#6B7280' }}>%</span>
               </div>
             </div>
           )

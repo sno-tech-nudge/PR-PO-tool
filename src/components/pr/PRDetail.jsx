@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { createPendingPO, approvePRLevel, rejectPRLevel } from '../../lib/prApprovalActions'
 import { canAccessApprovals, canAccessFinance } from '../../lib/auth'
-import { blockNonNumericKey, sanitizeNumericPaste, sanitizeNumericValue } from '../../lib/numericInput'
+import AmountInput from '../shared/AmountInput'
 import PRStatusTimeline from './PRStatusTimeline'
 import PRAttachmentsModal from './PRAttachmentsModal'
 
@@ -452,16 +452,12 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
                 <div>
                   {poError && <div style={{ fontSize: '12px', color: '#B91C1C', marginBottom: '8px' }}>{poError}</div>}
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <input
-                      type="number"
-                      min="0"
-                      max={remaining}
+                    <AmountInput
                       value={newPOAmount}
-                      onChange={e => setNewPOAmount(sanitizeNumericValue(e.target.value))}
-                      onKeyDown={blockNonNumericKey}
-                      onPaste={sanitizeNumericPaste}
-                      placeholder={`Up to ₹${remaining.toLocaleString('en-IN')}`}
-                      style={{ height: '34px', width: '160px', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '0 10px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                      onChange={setNewPOAmount}
+                      placeholder={`Up to ${remaining.toLocaleString('en-IN')}`}
+                      style={{ width: '170px' }}
+                      inputStyle={{ height: '34px' }}
                     />
                     <button
                       onClick={handleCreateAdditionalPO}

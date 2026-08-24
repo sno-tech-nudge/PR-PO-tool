@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { determineApprovalRoute } from '../../lib/policyEngine'
 import { createApprovalRecords } from '../../lib/approvalEngine'
 import AttachmentDropzone from '../shared/AttachmentDropzone'
-import { blockNonNumericKey, sanitizeNumericPaste, sanitizeNumericValue } from '../../lib/numericInput'
+import AmountInput from '../shared/AmountInput'
 
 function fmtAmt(n) {
   if (n == null) return '—'
@@ -125,18 +125,11 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
 
         <div style={{ marginBottom: '14px' }}>
           <div style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>Invoice amount</div>
-          <input
-            type="number"
+          <AmountInput
             value={amount}
-            onChange={e => setAmount(sanitizeNumericValue(e.target.value))}
-            onKeyDown={blockNonNumericKey}
-            onPaste={sanitizeNumericPaste}
-            placeholder="0"
-            style={{
-              width: '100%', height: '40px', border: `1px solid ${overPending ? '#FECACA' : '#E3E8EF'}`,
-              borderRadius: '4px', padding: '0 12px', fontSize: '14px', color: '#1A1F36',
-              outline: 'none', boxSizing: 'border-box',
-            }}
+            onChange={setAmount}
+            error={overPending}
+            inputStyle={{ height: '40px', fontSize: '14px' }}
           />
           {overPending && (
             <div style={{ fontSize: '11px', color: '#B91C1C', marginTop: '4px' }}>

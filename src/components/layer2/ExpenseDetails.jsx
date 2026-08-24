@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { suggestCategory } from '../../lib/claude'
 import { ENTITIES, EXPENSE_NATURES, getPrograms, getSubprograms, getDonors } from '../../lib/donorData'
-import { blockNonNumericKey, sanitizeNumericPaste, sanitizeNumericValue } from '../../lib/numericInput'
+import AmountInput from '../shared/AmountInput'
 
 const CATEGORIES = [
   'Travel Fare', 'Lodging and Boarding', 'Food', 'Bike Fare',
@@ -339,15 +339,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
         </div>
 
         {!itemized && (
-          <input
-            type="number"
-            value={amount}
-            onChange={e => setAmount(sanitizeNumericValue(e.target.value))}
-            onKeyDown={blockNonNumericKey}
-            onPaste={sanitizeNumericPaste}
-            placeholder="0"
-            style={inputStyle}
-          />
+          <AmountInput value={amount} onChange={setAmount} inputStyle={{ height: inputStyle.height, fontSize: inputStyle.fontSize }} />
         )}
 
         {itemized && (
@@ -362,14 +354,11 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
                   <option value="">Select category</option>
                   {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
-                <input
-                  type="number"
+                <AmountInput
                   value={line.amount}
-                  onChange={e => updateItemLine(idx, 'amount', sanitizeNumericValue(e.target.value))}
-                  onKeyDown={blockNonNumericKey}
-                  onPaste={sanitizeNumericPaste}
-                  placeholder="0"
-                  style={{ ...inputStyle, flex: 1 }}
+                  onChange={v => updateItemLine(idx, 'amount', v)}
+                  style={{ flex: 1 }}
+                  inputStyle={{ height: inputStyle.height, fontSize: inputStyle.fontSize }}
                 />
                 <div
                   onClick={() => removeItemLine(idx)}

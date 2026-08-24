@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { blockNonNumericKey, sanitizeNumericPaste, sanitizeNumericValue } from '../../lib/numericInput'
+import AmountInput from '../shared/AmountInput'
 
 export default function CrossValidation({ receiptExtracted, paymentData, onConfirm, onRetakeReceipt, onRetakePayment }) {
   const [phase, setPhase] = useState('loading')
@@ -88,17 +88,11 @@ export default function CrossValidation({ receiptExtracted, paymentData, onConfi
         </div>
         {showManualInput && (
           <div style={{ marginBottom: '12px' }}>
-            <input
-              type="number"
+            <AmountInput
               placeholder="Enter amount"
               value={manualAmount}
-              onChange={(e) => setManualAmount(sanitizeNumericValue(e.target.value))}
-              onKeyDown={blockNonNumericKey}
-              onPaste={sanitizeNumericPaste}
-              style={{
-                width: '100%', height: '44px', border: '1px solid #E8E8E8',
-                fontSize: '14px', padding: '0 12px', borderRadius: '4px', outline: 'none',
-              }}
+              onChange={setManualAmount}
+              inputStyle={{ height: '44px', fontSize: '14px' }}
             />
           </div>
         )}

@@ -1,5 +1,6 @@
 import { breakdownTotals } from '../../lib/formCalc'
 import { blockNonNumericKey, sanitizeNumericPaste, sanitizeNumericValue } from '../../lib/numericInput'
+import AmountInput from './AmountInput'
 
 // Amount breakdown: Quantity × Rate per Unit → computed Base, + Tax
 // (mandatory) + Incidentals (optional) → computed Total.
@@ -8,8 +9,10 @@ import { blockNonNumericKey, sanitizeNumericPaste, sanitizeNumericValue } from '
 // to onChange, so callers deriving total/valid via breakdownTotals() from
 // lib/formCalc need no changes. Rate per Unit only appears once a quantity has
 // been entered, matching the source Zoho form's reveal-on-input behaviour.
+// Quantity is a plain count (no currency styling); Rate/Tax/Incidentals are
+// real money, so they get the ₹-prefixed, thousands-grouped AmountInput.
 
-function money(val, onChange, placeholder, invalid) {
+function countField(val, onChange, placeholder, invalid) {
   return (
     <input
       type="number"
@@ -47,14 +50,14 @@ export default function AmountBreakdown({ value = {}, onChange, errors = {} }) {
           <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '5px' }}>
             Quantity<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
           </label>
-          {money(quantity, v => set({ quantity: v }), '1', !!errors.base)}
+          {countField(quantity, v => set({ quantity: v }), '1', !!errors.base)}
         </div>
         {quantity !== '' && (
           <div>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '5px' }}>
               Rate per Unit (without tax)<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
             </label>
-            {money(ratePerUnit, v => set({ ratePerUnit: v }), '0', !!errors.base)}
+            <AmountInput value={ratePerUnit} onChange={v => set({ ratePerUnit: v })} error={!!errors.base} />
           </div>
         )}
       </div>
@@ -70,13 +73,13 @@ export default function AmountBreakdown({ value = {}, onChange, errors = {} }) {
           <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '5px' }}>
             Tax (GST)<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
           </label>
-          {money(value.tax ?? '', v => set({ tax: v }), '0', !!errors.tax)}
+          <AmountInput value={value.tax ?? ''} onChange={v => set({ tax: v })} error={!!errors.tax} />
         </div>
         <div>
           <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '5px' }}>
             Incidentals
           </label>
-          {money(value.incidental ?? '', v => set({ incidental: v }), 'Optional', false)}
+          <AmountInput value={value.incidental ?? ''} onChange={v => set({ incidental: v })} placeholder="Optional" />
         </div>
       </div>
 

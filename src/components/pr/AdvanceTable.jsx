@@ -1,5 +1,5 @@
 import { advanceValidity, todayStr } from '../../lib/formCalc'
-import { blockNonNumericKey, sanitizeNumericPaste, sanitizeNumericValue } from '../../lib/numericInput'
+import PercentInput from '../shared/PercentInput'
 import QuoteUpload from './QuoteUpload'
 
 const CREDIT_TERM_OPTIONS = ['Net 15 Days', 'Net 30 Days', 'Net 45 Days', 'Net 60 Days', 'Net 90 Days']
@@ -38,16 +38,11 @@ export default function AdvanceTable({ value = {}, onChange, error }) {
           <tr style={{ borderTop: '1px solid #F3F4F6' }}>
             <td style={{ padding: '10px 12px', fontSize: '13px', color: '#374151' }}>Advance (on PO)</td>
             <td style={{ padding: '8px 12px', textAlign: 'right' }}>
-              <input
-                type="number"
+              <PercentInput
                 value={value.advancePercent ?? ''}
-                onChange={e => set({ advancePercent: sanitizeNumericValue(e.target.value) })}
-                onKeyDown={blockNonNumericKey}
-                onPaste={sanitizeNumericPaste}
-                placeholder="0"
-                min="0"
-                max="100"
-                style={{ width: '80px', height: '32px', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '0 8px', fontSize: '13px', color: '#1A1F36', textAlign: 'right', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box' }}
+                onChange={v => set({ advancePercent: v })}
+                style={{ width: '90px', marginLeft: 'auto' }}
+                inputStyle={{ height: '32px' }}
               />
             </td>
           </tr>
