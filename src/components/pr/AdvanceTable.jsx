@@ -1,18 +1,25 @@
 import { advanceValidity } from '../../lib/formCalc'
 import QuoteUpload from './QuoteUpload'
 
+const CREDIT_TERM_OPTIONS = ['Net 15 Days', 'Net 30 Days', 'Net 45 Days', 'Net 60 Days', 'Net 90 Days']
+
 // Advance-payment split: advance % (a) + after-delivery % (b) = 100%.
 // after-delivery auto-complements to 100. > 30% advance is flagged (warn, allowed).
 // 100% advance requires FL approval over email → notice + required
 // acknowledgement + an attached screenshot of that approval email.
+// Credit term (frequency + due date, covering the after-delivery portion)
+// is a single mandatory field pair shown right under the Total row, not a
+// separate/optional payment method — it reveals as soon as an advance % has
+// been entered (which is immediately, since the field defaults to 30).
 // Callers derive validity via advanceValidity() from lib/formCalc.
 //
-// value:    { advancePercent, flEmailAck, screenshotPath }
+// value:    { advancePercent, flEmailAck, screenshotPath, creditTermFrequency, creditTermDate }
 // onChange: (nextValue) => void
 
 export default function AdvanceTable({ value = {}, onChange, error }) {
   const { advance, afterDelivery, flaggedOver30, requiresFLEmail } = advanceValidity(value)
   const set = patch => onChange({ ...value, ...patch })
+  const advanceEntered = value.advancePercent !== '' && value.advancePercent != null
 
   return (
     <div>
@@ -51,6 +58,42 @@ export default function AdvanceTable({ value = {}, onChange, error }) {
           </tr>
         </tbody>
       </table>
+
+      {advanceEntered && (
+        <div style={{ marginTop: '14px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>Credit Term</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', color: '#6B7280', marginBottom: '5px' }}>
+                Frequency<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
+              </label>
+              <select
+                value={value.creditTermFrequency || ''}
+                onChange={e => set({ creditTermFrequency: e.target.value })}
+                style={{
+                  width: '100%', height: '36px', border: '1px solid #D1D5DB', borderRadius: '4px',
+                  padding: '0 10px', fontSize: '13px', color: value.creditTermFrequency ? '#1A1F36' : '#9CA3AF',
+                  background: '#FFFFFF', outline: 'none', boxSizing: 'border-box',
+                }}
+              >
+                <option value="">Select credit term…</option>
+                {CREDIT_TERM_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', color: '#6B7280', marginBottom: '5px' }}>
+                Due Date<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
+              </label>
+              <input
+                type="date"
+                value={value.creditTermDate || ''}
+                onChange={e => set({ creditTermDate: e.target.value })}
+                style={{ width: '100%', height: '36px', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '0 10px', fontSize: '13px', color: '#1A1F36', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {flaggedOver30 && !requiresFLEmail && (
         <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '6px', padding: '10px 14px', marginTop: '12px' }}>

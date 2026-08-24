@@ -234,18 +234,14 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
           </div>
         )}
 
-        {/* Payment terms — advance split or credit term */}
-        {pr.payment_terms === 'credit' ? (
-          <div style={{ marginTop: '12px', borderTop: '1px solid #F3F4F6', paddingTop: '12px' }}>
-            <div style={{ fontSize: '10px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Payment Terms</div>
-            <Row label="Credit Term" value={pr.credit_term_frequency} />
-            <Row label="Due Date" value={fmtDate(pr.credit_term_date)} />
-          </div>
-        ) : pr.advance_percent != null && (
+        {/* Payment terms — advance split plus the mandatory credit term covering the after-delivery portion */}
+        {pr.advance_percent != null && (
           <div style={{ marginTop: '12px', borderTop: '1px solid #F3F4F6', paddingTop: '12px' }}>
             <div style={{ fontSize: '10px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Payment Terms</div>
             <Row label="Advance" value={`${Number(pr.advance_percent)}%`} />
             <Row label="After delivery" value={`${pr.after_delivery_percent != null ? Number(pr.after_delivery_percent) : 100 - Number(pr.advance_percent)}%`} />
+            {pr.credit_term_frequency && <Row label="Credit Term" value={pr.credit_term_frequency} />}
+            {pr.credit_term_date && <Row label="Due Date" value={fmtDate(pr.credit_term_date)} />}
             {Number(pr.advance_percent) >= 100 && (
               <div style={{ fontSize: '11px', color: '#B91C1C', marginTop: '4px' }}>
                 100% advance — FL email approval required{pr.advance_fl_email_ack ? ' (acknowledged)' : ''}.

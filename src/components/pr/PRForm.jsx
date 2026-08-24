@@ -21,7 +21,6 @@ const CATEGORIES = [
   'Subscription / Software', 'Other',
 ]
 const FREQUENCIES = ['One-time', 'Monthly', 'Quarterly', 'Annually']
-const CREDIT_TERM_OPTIONS = ['Net 15 Days', 'Net 30 Days', 'Net 45 Days', 'Net 60 Days', 'Net 90 Days']
 
 const PR_MIN = 25000
 const PR_CONTRACT_THRESHOLD = 2500000  // 25 lacs
@@ -125,30 +124,6 @@ function YesNoToggle({ value, onChange }) {
   )
 }
 
-function OptionToggle({ value, onChange, options }) {
-  return (
-    <div style={{ display: 'flex', gap: '8px' }}>
-      {options.map(([key, label]) => {
-        const active = key === value
-        return (
-          <div
-            key={key}
-            onClick={() => onChange(key)}
-            style={{
-              flex: 1, padding: '10px 12px', cursor: 'pointer', textAlign: 'center',
-              border: `1.5px solid ${active ? '#8C3225' : '#E5E7EB'}`,
-              background: active ? '#fdf0ed' : '#FFFFFF', borderRadius: '4px',
-              fontSize: '13px', fontWeight: active ? 600 : 400, color: active ? '#8C3225' : '#374151',
-            }}
-          >
-            {label}
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
 export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
   // A 'draft' record is continued, not "edited" — mirrors VendorForm.jsx's
   // isEdit/draftId split.
@@ -195,17 +170,15 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
     singleSourceJustification: existingPR?.single_source_justification || '',
     comparative_statement_path: existingPR?.comparative_statement_path || '',
   })
-  // Payment Terms: either an Advance split (default 30%, editable) or a
-  // Credit Term (frequency + due date) — mutually exclusive.
-  const [paymentTerms, setPaymentTerms] = useState(existingPR?.payment_terms || 'advance')
+  // Payment Terms — one combined section: an Advance split (default 30%,
+  // editable) plus a mandatory Credit Term (frequency + due date) covering
+  // the after-delivery portion. Not a choice between the two.
   const [advanceState, setAdvanceState] = useState({
     advancePercent: existingPR?.advance_percent != null ? String(existingPR.advance_percent) : '30',
     flEmailAck: existingPR?.advance_fl_email_ack || false,
     screenshotPath: existingPR?.advance_approval_screenshot_path || '',
-  })
-  const [creditTerm, setCreditTerm] = useState({
-    frequency: existingPR?.credit_term_frequency || '',
-    date: existingPR?.credit_term_date || '',
+    creditTermFrequency: existingPR?.credit_term_frequency || '',
+    creditTermDate: existingPR?.credit_term_date || '',
   })
 
   const { total: numericAmount } = breakdownTotals(breakdown)
@@ -219,13 +192,11 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
   const STEP_LABELS = ['Program', 'Details', 'Review']
 
   const allocationsValid = validateAllocations(allocations).valid
-  const creditTermValid = !!(creditTerm.frequency && creditTerm.date)
-  const paymentTermsValid = paymentTerms === 'credit' ? creditTermValid : advFlags.valid
   const checklist = [
     { label: 'Budget confirmed', done: budgeted !== null },
     { label: 'Vendor approved',  done: !!vendorId },
     { label: 'Quotes attached',  done: requiredQuotes === 0 ? true : quotesValidity(quoteState, requiredQuotes).valid },
-    { label: 'Payment terms set', done: paymentTermsValid },
+    { label: 'Payment terms set', done: advFlags.valid },
   ]
 
   async function handleVendorSelect(id, v) {
@@ -273,14 +244,16 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
           ? 'You must explain why only one vendor is available, and attach that quotation.'
           : `Upload ${requiredQuotes} quotes, mark the selected vendor, and attach the comparative statement.`
       }
-      if (paymentTerms === 'credit') {
-        if (!creditTermValid) e.creditTerm = 'Select a credit term frequency and due date'
-      } else if (!advFlags.valid) {
-        e.advance = advFlags.requiresFLEmail
-          ? (!advanceState.flEmailAck
-              ? 'Confirm Functional Leader email approval for the 100% advance.'
-              : 'Attach a screenshot of the Functional Leader approval email.')
-          : 'Enter a valid advance percentage (0–100).'
+      if (!advFlags.valid) {
+        if (advFlags.requiresFLEmail && !advanceState.flEmailAck) {
+          e.advance = 'Confirm Functional Leader email approval for the 100% advance.'
+        } else if (advFlags.requiresFLEmail && !advanceState.screenshotPath) {
+          e.advance = 'Attach a screenshot of the Functional Leader approval email.'
+        } else if (!advFlags.creditTermOk) {
+          e.advance = 'Select a credit term frequency and due date.'
+        } else {
+          e.advance = 'Enter a valid advance percentage (0–100).'
+        }
       }
     }
     return e
@@ -332,13 +305,13 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
         quote_paths:               cleanQuotes.map(q => q.quote_path).filter(Boolean),
         single_source_justification: quoteState.singleSource ? quoteState.singleSourceJustification.trim() : null,
         comparative_statement_path: quoteState.singleSource ? null : (quoteState.comparative_statement_path || null),
-        payment_terms:             paymentTerms,
-        advance_percent:           paymentTerms === 'advance' ? advFlags.advance : null,
-        after_delivery_percent:    paymentTerms === 'advance' ? advFlags.afterDelivery : null,
-        advance_fl_email_ack:      paymentTerms === 'advance' && advFlags.requiresFLEmail ? !!advanceState.flEmailAck : false,
-        advance_approval_screenshot_path: paymentTerms === 'advance' && advFlags.requiresFLEmail ? (advanceState.screenshotPath || null) : null,
-        credit_term_frequency:     paymentTerms === 'credit' ? (creditTerm.frequency || null) : null,
-        credit_term_date:          paymentTerms === 'credit' ? (creditTerm.date || null) : null,
+        payment_terms:             'advance',
+        advance_percent:           advFlags.advance,
+        after_delivery_percent:    advFlags.afterDelivery,
+        advance_fl_email_ack:      advFlags.requiresFLEmail ? !!advanceState.flEmailAck : false,
+        advance_approval_screenshot_path: advFlags.requiresFLEmail ? (advanceState.screenshotPath || null) : null,
+        credit_term_frequency:     advanceState.creditTermFrequency || null,
+        credit_term_date:          advanceState.creditTermDate || null,
         status:                    'draft',
         submitted_at:              null,
       }
@@ -395,13 +368,13 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
         quote_paths:               cleanQuotes.map(q => q.quote_path).filter(Boolean),
         single_source_justification: quoteState.singleSource ? quoteState.singleSourceJustification.trim() : null,
         comparative_statement_path: quoteState.singleSource ? null : (quoteState.comparative_statement_path || null),
-        payment_terms:             paymentTerms,
-        advance_percent:           paymentTerms === 'advance' ? advFlags.advance : null,
-        after_delivery_percent:    paymentTerms === 'advance' ? advFlags.afterDelivery : null,
-        advance_fl_email_ack:      paymentTerms === 'advance' && advFlags.requiresFLEmail ? !!advanceState.flEmailAck : false,
-        advance_approval_screenshot_path: paymentTerms === 'advance' && advFlags.requiresFLEmail ? (advanceState.screenshotPath || null) : null,
-        credit_term_frequency:     paymentTerms === 'credit' ? (creditTerm.frequency || null) : null,
-        credit_term_date:          paymentTerms === 'credit' ? (creditTerm.date || null) : null,
+        payment_terms:             'advance',
+        advance_percent:           advFlags.advance,
+        after_delivery_percent:    advFlags.afterDelivery,
+        advance_fl_email_ack:      advFlags.requiresFLEmail ? !!advanceState.flEmailAck : false,
+        advance_approval_screenshot_path: advFlags.requiresFLEmail ? (advanceState.screenshotPath || null) : null,
+        credit_term_frequency:     advanceState.creditTermFrequency || null,
+        credit_term_date:          advanceState.creditTermDate || null,
         status:                    'submitted',
         submitted_at:              now,
       }
@@ -453,7 +426,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
       // successful submission (the postgrest-js query builder only
       // implements .then(), not .catch(), so chaining .catch() on it
       // throws a TypeError instead of suppressing the error).
-      const advNote = paymentTerms === 'advance' && advFlags.requiresFLEmail ? ' — 100% ADVANCE: email approval required.' : ''
+      const advNote = advFlags.requiresFLEmail ? ' — 100% ADVANCE: email approval required.' : ''
       try {
         const flEmails = await getEmailsByRole('fl')
         await Promise.all(flEmails.map(email => supabase.from('expense_notifications').insert({
@@ -652,34 +625,8 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
             </div>
 
             <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '24px' }}>
-              <Field label="Payment Terms" required>
-                <OptionToggle
-                  value={paymentTerms}
-                  onChange={setPaymentTerms}
-                  options={[['advance', 'Advance'], ['credit', 'Credit Term']]}
-                />
-              </Field>
-
-              {paymentTerms === 'advance' ? (
-                <AdvanceTable value={advanceState} onChange={setAdvanceState} error={errors.advance} />
-              ) : (
-                <div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    <Field label="Credit Term Frequency" required>
-                      {sel(creditTerm.frequency, v => setCreditTerm(c => ({ ...c, frequency: v })), CREDIT_TERM_OPTIONS, 'Select credit term…')}
-                    </Field>
-                    <Field label="Due Date" required>
-                      <input
-                        type="date"
-                        value={creditTerm.date}
-                        onChange={e => setCreditTerm(c => ({ ...c, date: e.target.value }))}
-                        style={{ width: '100%', height: '38px', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '0 10px', fontSize: '13px', color: '#1A1F36', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box' }}
-                      />
-                    </Field>
-                  </div>
-                  {errors.creditTerm && <div style={{ fontSize: '11px', color: '#DC2626', marginTop: '-8px', marginBottom: '8px' }}>{errors.creditTerm}</div>}
-                </div>
-              )}
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#1A1F36', marginBottom: '4px' }}>Payment Terms</div>
+              <AdvanceTable value={advanceState} onChange={setAdvanceState} error={errors.advance} />
             </div>
           </div>
         )}
@@ -713,10 +660,9 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
               ['To Date',       toDate || '—'],
               ['Purpose',       purpose],
               isRecurring ? ['Recurring', frequency || 'Yes'] : null,
-              paymentTerms === 'credit'
-                ? ['Payment Terms', `Credit — ${creditTerm.frequency || '—'}, due ${creditTerm.date || '—'}`]
-                : ['Payment Terms', `Advance — ${advFlags.advance}% advance · ${advFlags.afterDelivery}% after delivery`],
-              paymentTerms === 'advance' && advFlags.requiresFLEmail
+              ['Payment Terms', `${advFlags.advance}% advance · ${advFlags.afterDelivery}% after delivery`],
+              ['Credit Term', `${advanceState.creditTermFrequency || '—'}, due ${advanceState.creditTermDate || '—'}`],
+              advFlags.requiresFLEmail
                 ? ['FL Approval Email', advanceState.screenshotPath ? 'Screenshot attached' : 'Not attached']
                 : null,
               quoteState.singleSource
@@ -741,14 +687,14 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
             </div>
           </div>
 
-          {paymentTerms === 'advance' && advFlags.requiresFLEmail && (
+          {advFlags.requiresFLEmail && (
             <PolicyBanner type="error">
               <strong>100% advance:</strong> Functional Leader approval over email is required before this PR proceeds.
               {advanceState.flEmailAck ? ' Acknowledged by requester.' : ''}
               {advanceState.screenshotPath ? ' Approval screenshot attached.' : ' Approval screenshot not yet attached.'}
             </PolicyBanner>
           )}
-          {paymentTerms === 'advance' && advFlags.flaggedOver30 && !advFlags.requiresFLEmail && (
+          {advFlags.flaggedOver30 && !advFlags.requiresFLEmail && (
             <PolicyBanner type="warning">
               <strong>Advance over 30%:</strong> This advance ({advFlags.advance}%) exceeds the guideline and may attract additional scrutiny.
             </PolicyBanner>

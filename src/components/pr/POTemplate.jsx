@@ -163,10 +163,8 @@ export default function POTemplate({ po, pr, vendor }) {
           <div style={{ fontSize: '10.5px', color: '#374151', lineHeight: 1.7 }}>
             Refer to standard terms and conditions attached to this PO<br />
             PO will be valid for 90 days<br />
-            {pr.payment_terms === 'credit'
-              ? <>Payment terms: For {entity} — Credit Term {pr.credit_term_frequency || ''}{pr.credit_term_date ? `, due ${fmtDate(pr.credit_term_date)}` : ''}<br /></>
-              : <>Payment terms: For {entity} — Advance {pr.advance_percent != null ? Number(pr.advance_percent) : 0}%<br /></>
-            }
+            Payment terms: For {entity} — Advance {pr.advance_percent != null ? Number(pr.advance_percent) : 0}%
+            {pr.credit_term_frequency ? `, Credit Term ${pr.credit_term_frequency}${pr.credit_term_date ? ` due ${fmtDate(pr.credit_term_date)}` : ''}` : ''}<br />
             This is a system generated document, and it does not require the signature.
           </div>
         </div>

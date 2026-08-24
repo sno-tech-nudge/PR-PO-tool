@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { ROLES, getRoleLabel } from '../../lib/auth'
+import MyProfile from './MyProfile'
 
 const EMPTY_FORM = { name: '', email: '', role: 'employee', can_approve_vendors: false }
 
 export default function SettingsView({ user }) {
+  const isAdmin = user.role === 'admin'
+  const [tab, setTab] = useState('profile')
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
@@ -22,10 +25,25 @@ export default function SettingsView({ user }) {
     setLoading(false)
   }
 
-  if (user.role !== 'admin') {
+  // Non-admins only ever see their own read-only profile — no tab bar needed
+  // since there's nothing else for them here.
+  if (!isAdmin) {
     return (
-      <div style={{ padding: '60px', textAlign: 'center', fontSize: '13px', color: '#9CA3AF' }}>
-        Access restricted to admins.
+      <div style={{ background: '#F4F5F7', minHeight: '100vh' }}>
+        <div style={{ background: '#FFFFFF', borderBottom: '1px solid #E3E8EF', padding: '0 28px' }}>
+          <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '14px 0' }}>
+            <h1 style={{ fontSize: '18px', fontWeight: 700, color: '#1A1F36', margin: 0 }}>My Profile</h1>
+          </div>
+        </div>
+        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 28px' }}>
+          {loading ? (
+            <div style={{ fontSize: '13px', color: '#6B7280', padding: '40px 0', textAlign: 'center' }}>Loading…</div>
+          ) : (
+            <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '28px' }}>
+              <MyProfile user={user} members={members} />
+            </div>
+          )}
+        </div>
       </div>
     )
   }
@@ -76,11 +94,41 @@ export default function SettingsView({ user }) {
   return (
     <div style={{ background: '#F4F5F7', minHeight: '100vh' }}>
       <div style={{ background: '#FFFFFF', borderBottom: '1px solid #E3E8EF', padding: '0 28px' }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '14px 0' }}>
-          <h1 style={{ fontSize: '18px', fontWeight: 700, color: '#1A1F36', margin: 0 }}>Team & Roles</h1>
+        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '14px 0 0' }}>
+          <h1 style={{ fontSize: '18px', fontWeight: 700, color: '#1A1F36', margin: '0 0 8px' }}>Settings</h1>
+          <div style={{ display: 'flex', gap: '4px' }}>
+            {[['profile', 'My Profile'], ['team', 'Team & Roles']].map(([key, label]) => (
+              <div
+                key={key}
+                onClick={() => setTab(key)}
+                style={{
+                  padding: '10px 16px', fontSize: '13px', cursor: 'pointer',
+                  fontWeight: tab === key ? 600 : 400,
+                  color: tab === key ? '#8C3225' : '#6B7280',
+                  borderBottom: tab === key ? '2px solid #8C3225' : '2px solid transparent',
+                  marginBottom: '-1px',
+                }}
+              >
+                {label}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
+      {tab === 'profile' && (
+        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 28px' }}>
+          {loading ? (
+            <div style={{ fontSize: '13px', color: '#6B7280', padding: '40px 0', textAlign: 'center' }}>Loading…</div>
+          ) : (
+            <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '28px' }}>
+              <MyProfile user={user} members={members} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'team' && (
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 28px' }}>
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
           <button
@@ -215,6 +263,7 @@ export default function SettingsView({ user }) {
           </div>
         )}
       </div>
+      )}
     </div>
   )
 }

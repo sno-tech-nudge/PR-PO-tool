@@ -37,15 +37,19 @@ export function quotesValidity(value = {}, requiredQuotes = 0) {
   return { valid: uploaded >= requiredQuotes && hasSelected && !!value.comparative_statement_path, uploaded }
 }
 
-// Advance split validity. value = { advancePercent, flEmailAck, screenshotPath }
+// Payment terms validity — one combined section, not an either/or choice.
+// value = { advancePercent, flEmailAck, screenshotPath, creditTermFrequency, creditTermDate }
 // A 100% advance requires both the acknowledgement checkbox AND an attached
-// screenshot of the Functional Leader's email approval.
+// screenshot of the Functional Leader's email approval. Credit term
+// (frequency + due date, covering the after-delivery portion) is always
+// mandatory alongside the advance split, not an alternative to it.
 export function advanceValidity(value = {}) {
   const advance = Number(value.advancePercent)
   const entered = value.advancePercent !== '' && value.advancePercent != null
   const { flaggedOver30, requiresFLEmail } = getAdvanceFlags(advance)
   const inRange = entered && advance >= 0 && advance <= 100
   const ackOk = !requiresFLEmail || (!!value.flEmailAck && !!value.screenshotPath)
-  const valid = inRange && ackOk
-  return { advance: entered ? advance : 0, afterDelivery: entered ? 100 - advance : 100, flaggedOver30, requiresFLEmail, valid }
+  const creditTermOk = !!value.creditTermFrequency && !!value.creditTermDate
+  const valid = inRange && ackOk && creditTermOk
+  return { advance: entered ? advance : 0, afterDelivery: entered ? 100 - advance : 100, flaggedOver30, requiresFLEmail, creditTermOk, valid }
 }

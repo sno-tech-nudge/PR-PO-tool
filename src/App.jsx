@@ -244,7 +244,9 @@ export default function App() {
     { key: 'pr-list', label: 'Purchase Requests',  icon: '◫' },
     { key: 'po-list', label: 'Purchase Orders',    icon: '◻' },
     { key: 'vendors', label: canAccessFinance(role) ? 'Vendor Management' : 'Vendors', icon: '⬡' },
-    ...(role === 'admin' ? [{ key: 'settings', label: 'Settings', icon: '⚙' }] : []),
+    // Everyone gets Settings now — admins see Team & Roles plus their own
+    // profile there; everyone else just sees their own read-only profile.
+    { key: 'settings', label: 'Settings', icon: '⚙' },
   ]
 
   const activeNav = SCREEN_PARENT[appScreen] || appScreen
