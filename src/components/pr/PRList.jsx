@@ -16,10 +16,16 @@ export default function PRList({ user, onViewPR, onCreatePR, onResumeDraft }) {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+    // Status changes made by an approver elsewhere (FL/PR Approver/Finance)
+    // should show up here without the requester needing to leave and come back.
+    const interval = setInterval(() => load({ silent: true }), 15000)
+    return () => clearInterval(interval)
+  }, [])
 
-  async function load() {
-    setLoading(true)
+  async function load({ silent = false } = {}) {
+    if (!silent) setLoading(true)
     const { data } = await supabase
       .from('purchase_requests')
       .select('id, pr_number, amount, category, entity, purpose, status, submitted_at, created_at, vendors(org_name)')

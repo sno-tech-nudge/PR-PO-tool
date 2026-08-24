@@ -59,10 +59,16 @@ export default function FinancePRsView({ onViewPR }) {
   const [tab, setTab] = useState('pending')
   const [search, setSearch] = useState('')
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+    // Same reasoning as PRApproverDashboard.jsx — a new/advanced PR should
+    // show up here without Finance needing to navigate away and back.
+    const interval = setInterval(() => load({ silent: true }), 15000)
+    return () => clearInterval(interval)
+  }, [])
 
-  async function load() {
-    setLoading(true)
+  async function load({ silent = false } = {}) {
+    if (!silent) setLoading(true)
     const { data } = await supabase
       .from('purchase_requests')
       .select('*, vendors(org_name), pr_approvals(*)')

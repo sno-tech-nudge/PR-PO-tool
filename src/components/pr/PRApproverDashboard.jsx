@@ -80,10 +80,18 @@ export default function PRApproverDashboard({ onViewPR, onBack }) {
   const [loading, setLoading] = useState(true)
   const [search, setSearch]   = useState('')
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+    // New PRs (or approvals actioned by someone else) should show up without
+    // the approver needing to navigate away and back — poll like
+    // NotificationBell does, silently so the list doesn't flash "Loading…"
+    // every cycle.
+    const interval = setInterval(() => load({ silent: true }), 15000)
+    return () => clearInterval(interval)
+  }, [])
 
-  async function load() {
-    setLoading(true)
+  async function load({ silent = false } = {}) {
+    if (!silent) setLoading(true)
     const cols = '*, vendors(*), pr_approvals(*)'
     const [{ data: pend }, { data: rev }] = await Promise.all([
       supabase

@@ -1,17 +1,18 @@
 import { useState } from 'react'
 import { extractVendorQuote } from '../../lib/claude'
 import { supabase } from '../../lib/supabase'
+import { imageFileToJpegBase64, pdfPageToBase64 } from '../../lib/receiptImage'
 
-async function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => {
-      const b64 = reader.result.split(',')[1]
-      resolve(b64)
-    }
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
+// Route through the same JPEG-normalizing, downscaling converters the
+// receipt-capture flow uses — a raw FileReader dataURL used to send whatever
+// format/resolution the file happened to be (including full-res phone
+// photos, or a PDF's raw bytes mislabeled as image/jpeg) straight to Gemini,
+// which was slow and, for PDFs, often simply unreadable.
+async function fileToJpegBase64(file) {
+  const { base64 } = file.type === 'application/pdf'
+    ? await pdfPageToBase64(file)
+    : await imageFileToJpegBase64(file)
+  return base64
 }
 
 export default function QuoteUpload({ onExtracted, onFileUploaded, skipExtraction }) {
@@ -42,7 +43,7 @@ export default function QuoteUpload({ onExtracted, onFileUploaded, skipExtractio
     // itself via the "Upload to system" button below, which is all
     // quotesValidity() actually checks before allowing submission.
     try {
-      const b64 = await fileToBase64(f)
+      const b64 = await fileToJpegBase64(f)
       const result = await extractVendorQuote(b64)
       if (result) {
         setExtracted(result)

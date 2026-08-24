@@ -10,10 +10,12 @@
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent'
 
 // A stuck/hung request (dropped connection, no response ever arriving) must
-// never leave a caller's "extracting…" UI state stuck forever — abort after
-// 20s so callers always get a null result back and can fall back to manual
-// entry, per the "extraction can fail, submission must not be blocked" rule.
-const REQUEST_TIMEOUT_MS = 20000
+// never leave a caller's "extracting…" UI state stuck forever — abort so
+// callers always get a null result back and can fall back to manual entry,
+// per the "extraction can fail, submission must not be blocked" rule. Kept
+// short: a normal call on a properly-downscaled image finishes in a few
+// seconds, so this is a safety net, not the expected wait.
+const REQUEST_TIMEOUT_MS = 10000
 
 export async function callGemini(base64Image, prompt) {
   const key = import.meta.env.VITE_GEMINI_API_KEY
