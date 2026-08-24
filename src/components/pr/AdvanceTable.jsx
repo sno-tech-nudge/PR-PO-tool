@@ -1,11 +1,13 @@
 import { advanceValidity } from '../../lib/formCalc'
+import QuoteUpload from './QuoteUpload'
 
 // Advance-payment split: advance % (a) + after-delivery % (b) = 100%.
 // after-delivery auto-complements to 100. > 30% advance is flagged (warn, allowed).
-// 100% advance requires FL approval over email → notice + required acknowledgement.
+// 100% advance requires FL approval over email → notice + required
+// acknowledgement + an attached screenshot of that approval email.
 // Callers derive validity via advanceValidity() from lib/formCalc.
 //
-// value:    { advancePercent, flEmailAck }
+// value:    { advancePercent, flEmailAck, screenshotPath }
 // onChange: (nextValue) => void
 
 export default function AdvanceTable({ value = {}, onChange, error }) {
@@ -14,7 +16,8 @@ export default function AdvanceTable({ value = {}, onChange, error }) {
 
   return (
     <div>
-      <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>Payment Terms — Advance Split</div>
+      <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>Advance Split</div>
+      <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '10px' }}>Defaults to 30% — adjust if needed.</div>
 
       <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #E3E8EF', borderRadius: '6px', overflow: 'hidden' }}>
         <thead>
@@ -73,6 +76,16 @@ export default function AdvanceTable({ value = {}, onChange, error }) {
             />
             I confirm Functional Leader email approval has been / will be obtained for this 100% advance.
           </label>
+
+          <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #FECACA' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: '#7F1D1D', marginBottom: '8px' }}>
+              Attach screenshot of FL approval email<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
+            </div>
+            <QuoteUpload skipExtraction onFileUploaded={path => set({ screenshotPath: path })} />
+            <div style={{ fontSize: '11px', color: value.screenshotPath ? '#15803D' : '#B91C1C', marginTop: '6px' }}>
+              {value.screenshotPath ? '✓ Screenshot uploaded' : 'Screenshot not uploaded'}
+            </div>
+          </div>
         </div>
       )}
 

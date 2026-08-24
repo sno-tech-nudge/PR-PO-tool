@@ -1,16 +1,12 @@
-// PR approval matrix per Procurement Policy v3.0 (Apr 2024)
-// ₹25k–₹2L → Functional Leader only
-// >₹2L      → Functional Leader + COO
-// <₹25k     → No PR needed (direct expense claim)
-export function getPRApprovalLevels(amount) {
-  if (amount >= 200000) {
-    return [
-      { level: 1, role: 'functional_lead', label: 'Functional Leader' },
-      { level: 2, role: 'coo',             label: 'Chief Operating Officer (COO)' },
-    ]
-  }
+// PR approval chain — fixed for every PR regardless of amount:
+// Functional Leader → PR Approver → PO Approver (Finance issues the PO;
+// handled as a separate stage in prApprovalActions.js/PODetail.jsx, not a
+// pr_approvals row). `role` here is persisted as pr_approvals.required_role
+// so PRDetail.jsx can gate each level to the matching team_members role.
+export function getPRApprovalLevels() {
   return [
-    { level: 1, role: 'functional_lead', label: 'Functional Leader' },
+    { level: 1, role: 'fl',          label: 'Functional Leader' },
+    { level: 2, role: 'pr_approver', label: 'PR Approver' },
   ]
 }
 

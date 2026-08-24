@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { getPRApprovalLevels, getRequiredQuotes } from '../../lib/approvalEngine'
+import { getEmailsByRole } from '../../lib/auth'
 import { generatePRSummary } from '../../lib/claude'
 import { EXPENSE_NATURES, validateAllocations, primaryAllocation } from '../../lib/donorData'
 import { quotesValidity, advanceValidity, breakdownTotals, getFiscalYearPrefix } from '../../lib/formCalc'
@@ -20,6 +21,7 @@ const CATEGORIES = [
   'Subscription / Software', 'Other',
 ]
 const FREQUENCIES = ['One-time', 'Monthly', 'Quarterly', 'Annually']
+const CREDIT_TERM_OPTIONS = ['Net 15 Days', 'Net 30 Days', 'Net 45 Days', 'Net 60 Days', 'Net 90 Days']
 
 const PR_MIN = 25000
 const PR_CONTRACT_THRESHOLD = 2500000  // 25 lacs
@@ -123,6 +125,30 @@ function YesNoToggle({ value, onChange }) {
   )
 }
 
+function OptionToggle({ value, onChange, options }) {
+  return (
+    <div style={{ display: 'flex', gap: '8px' }}>
+      {options.map(([key, label]) => {
+        const active = key === value
+        return (
+          <div
+            key={key}
+            onClick={() => onChange(key)}
+            style={{
+              flex: 1, padding: '10px 12px', cursor: 'pointer', textAlign: 'center',
+              border: `1.5px solid ${active ? '#8C3225' : '#E5E7EB'}`,
+              background: active ? '#fdf0ed' : '#FFFFFF', borderRadius: '4px',
+              fontSize: '13px', fontWeight: active ? 600 : 400, color: active ? '#8C3225' : '#374151',
+            }}
+          >
+            {label}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
   // A 'draft' record is continued, not "edited" — mirrors VendorForm.jsx's
   // isEdit/draftId split.
@@ -150,29 +176,41 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
   const [vendorData, setVendorData] = useState(null)
   const [category, setCategory]     = useState(existingPR?.category || '')
   const [breakdown, setBreakdown]   = useState({
+    quantity:    existingPR?.quantity != null ? String(existingPR.quantity) : '',
+    ratePerUnit: existingPR?.rate_per_unit != null ? String(existingPR.rate_per_unit) : '',
     base:       existingPR?.base_amount != null ? String(existingPR.base_amount) : '',
     tax:        existingPR?.tax_amount != null ? String(existingPR.tax_amount) : (existingPR?.gst_amount != null ? String(existingPR.gst_amount) : ''),
     incidental: existingPR?.incidental_amount != null ? String(existingPR.incidental_amount) : '',
   })
+  const [fromDate, setFromDate]       = useState(existingPR?.from_date || '')
+  const [toDate, setToDate]           = useState(existingPR?.to_date || '')
   const [purpose, setPurpose]         = useState(existingPR?.purpose || '')
   const [isRecurring, setIsRecurring] = useState(existingPR?.is_recurring || false)
   const [frequency, setFrequency]     = useState(existingPR?.recurring_frequency || '')
 
-  // ── Section 3: Quotes & Advance ──
+  // ── Section 3: Quotes & Payment Terms ──
   const [quoteState, setQuoteState] = useState({
     quotes: existingPR?.quotes || (existingPR?.quote_paths || []).map(p => ({ vendor_name: '', amount: '', quote_path: p, selected: false })),
     singleSource: !!existingPR?.single_source_justification,
     singleSourceJustification: existingPR?.single_source_justification || '',
     comparative_statement_path: existingPR?.comparative_statement_path || '',
   })
+  // Payment Terms: either an Advance split (default 30%, editable) or a
+  // Credit Term (frequency + due date) — mutually exclusive.
+  const [paymentTerms, setPaymentTerms] = useState(existingPR?.payment_terms || 'advance')
   const [advanceState, setAdvanceState] = useState({
-    advancePercent: existingPR?.advance_percent != null ? String(existingPR.advance_percent) : '',
+    advancePercent: existingPR?.advance_percent != null ? String(existingPR.advance_percent) : '30',
     flEmailAck: existingPR?.advance_fl_email_ack || false,
+    screenshotPath: existingPR?.advance_approval_screenshot_path || '',
+  })
+  const [creditTerm, setCreditTerm] = useState({
+    frequency: existingPR?.credit_term_frequency || '',
+    date: existingPR?.credit_term_date || '',
   })
 
   const { total: numericAmount } = breakdownTotals(breakdown)
   const requiredQuotes  = numericAmount >= PR_MIN ? getRequiredQuotes(numericAmount) : 0
-  const approvalLevels  = numericAmount >= PR_MIN ? getPRApprovalLevels(numericAmount) : []
+  const approvalLevels  = numericAmount >= PR_MIN ? getPRApprovalLevels() : []
   const needsContract   = numericAmount >= PR_CONTRACT_THRESHOLD
   const belowThreshold  = numericAmount > 0 && numericAmount < PR_MIN
   const advFlags        = advanceValidity(advanceState)
@@ -181,11 +219,13 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
   const STEP_LABELS = ['Program', 'Details', 'Review']
 
   const allocationsValid = validateAllocations(allocations).valid
+  const creditTermValid = !!(creditTerm.frequency && creditTerm.date)
+  const paymentTermsValid = paymentTerms === 'credit' ? creditTermValid : advFlags.valid
   const checklist = [
     { label: 'Budget confirmed', done: budgeted !== null },
     { label: 'Vendor approved',  done: !!vendorId },
     { label: 'Quotes attached',  done: requiredQuotes === 0 ? true : quotesValidity(quoteState, requiredQuotes).valid },
-    { label: 'Advance terms set', done: advFlags.valid },
+    { label: 'Payment terms set', done: paymentTermsValid },
   ]
 
   async function handleVendorSelect(id, v) {
@@ -220,9 +260,12 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
     if (s === 1) {
       if (!vendorId) e.vendorId = 'Please select a vendor'
       if (!category) e.category = 'Required'
-      if (!breakdownTotals(breakdown).valid) e.amount = 'Enter a base amount and tax'
+      if (!breakdownTotals(breakdown).valid) e.amount = 'Enter quantity, rate per unit, and tax'
       if (numericAmount > 0 && numericAmount < PR_MIN)
         e.amount = `Purchases under ₹25,000 don't need a PR — submit as an expense claim instead.`
+      if (!fromDate) e.fromDate = 'Required'
+      if (!toDate) e.toDate = 'Required'
+      if (fromDate && toDate && toDate < fromDate) e.toDate = 'End date must be on or after the start date'
       if (!purpose.trim()) e.purpose = 'Required'
       if (isRecurring && !frequency) e.frequency = 'Select a frequency'
       if (!quotesValidity(quoteState, requiredQuotes).valid) {
@@ -230,9 +273,13 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
           ? 'You must explain why only one vendor is available, and attach that quotation.'
           : `Upload ${requiredQuotes} quotes, mark the selected vendor, and attach the comparative statement.`
       }
-      if (!advFlags.valid) {
+      if (paymentTerms === 'credit') {
+        if (!creditTermValid) e.creditTerm = 'Select a credit term frequency and due date'
+      } else if (!advFlags.valid) {
         e.advance = advFlags.requiresFLEmail
-          ? 'Confirm Functional Leader email approval for the 100% advance.'
+          ? (!advanceState.flEmailAck
+              ? 'Confirm Functional Leader email approval for the 100% advance.'
+              : 'Attach a screenshot of the Functional Leader approval email.')
           : 'Enter a valid advance percentage (0–100).'
       }
     }
@@ -262,6 +309,8 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
         vendor_id:                 vendorId || null, // uuid column — never send '', only null or a real id
         requested_by:              user.email,
         amount:                    bd.total,
+        quantity:                  Number(breakdown.quantity) || null,
+        rate_per_unit:             Number(breakdown.ratePerUnit) || null,
         base_amount:               bd.base,
         tax_amount:                bd.tax,
         gst_amount:                bd.tax,
@@ -274,6 +323,8 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
         program:                   primary.program || null,
         subprogram:                primary.subprogram || null,
         donor_allocations:         allocations,
+        from_date:                 fromDate || null,
+        to_date:                   toDate || null,
         purpose:                   purpose.trim(),
         is_recurring:              isRecurring,
         recurring_frequency:       isRecurring ? frequency : null,
@@ -281,9 +332,13 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
         quote_paths:               cleanQuotes.map(q => q.quote_path).filter(Boolean),
         single_source_justification: quoteState.singleSource ? quoteState.singleSourceJustification.trim() : null,
         comparative_statement_path: quoteState.singleSource ? null : (quoteState.comparative_statement_path || null),
-        advance_percent:           advFlags.advance,
-        after_delivery_percent:    advFlags.afterDelivery,
-        advance_fl_email_ack:      advFlags.requiresFLEmail ? !!advanceState.flEmailAck : false,
+        payment_terms:             paymentTerms,
+        advance_percent:           paymentTerms === 'advance' ? advFlags.advance : null,
+        after_delivery_percent:    paymentTerms === 'advance' ? advFlags.afterDelivery : null,
+        advance_fl_email_ack:      paymentTerms === 'advance' && advFlags.requiresFLEmail ? !!advanceState.flEmailAck : false,
+        advance_approval_screenshot_path: paymentTerms === 'advance' && advFlags.requiresFLEmail ? (advanceState.screenshotPath || null) : null,
+        credit_term_frequency:     paymentTerms === 'credit' ? (creditTerm.frequency || null) : null,
+        credit_term_date:          paymentTerms === 'credit' ? (creditTerm.date || null) : null,
         status:                    'draft',
         submitted_at:              null,
       }
@@ -317,6 +372,8 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
         vendor_id:                 vendorId,
         requested_by:              user.email,
         amount:                    bd.total,
+        quantity:                  Number(breakdown.quantity) || null,
+        rate_per_unit:             Number(breakdown.ratePerUnit) || null,
         base_amount:               bd.base,
         tax_amount:                bd.tax,
         gst_amount:                bd.tax,               // mirror for back-compat
@@ -329,6 +386,8 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
         program:                   primary.program || null,
         subprogram:                primary.subprogram || null,
         donor_allocations:         allocations,
+        from_date:                 fromDate || null,
+        to_date:                   toDate || null,
         purpose:                   purpose.trim(),
         is_recurring:              isRecurring,
         recurring_frequency:       isRecurring ? frequency : null,
@@ -336,9 +395,13 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
         quote_paths:               cleanQuotes.map(q => q.quote_path).filter(Boolean),
         single_source_justification: quoteState.singleSource ? quoteState.singleSourceJustification.trim() : null,
         comparative_statement_path: quoteState.singleSource ? null : (quoteState.comparative_statement_path || null),
-        advance_percent:           advFlags.advance,
-        after_delivery_percent:    advFlags.afterDelivery,
-        advance_fl_email_ack:      advFlags.requiresFLEmail ? !!advanceState.flEmailAck : false,
+        payment_terms:             paymentTerms,
+        advance_percent:           paymentTerms === 'advance' ? advFlags.advance : null,
+        after_delivery_percent:    paymentTerms === 'advance' ? advFlags.afterDelivery : null,
+        advance_fl_email_ack:      paymentTerms === 'advance' && advFlags.requiresFLEmail ? !!advanceState.flEmailAck : false,
+        advance_approval_screenshot_path: paymentTerms === 'advance' && advFlags.requiresFLEmail ? (advanceState.screenshotPath || null) : null,
+        credit_term_frequency:     paymentTerms === 'credit' ? (creditTerm.frequency || null) : null,
+        credit_term_date:          paymentTerms === 'credit' ? (creditTerm.date || null) : null,
         status:                    'submitted',
         submitted_at:              now,
       }
@@ -373,13 +436,15 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
       )
       if (aiSummary) await supabase.from('purchase_requests').update({ ai_summary: aiSummary }).eq('id', prId)
 
-      // Approval records per policy matrix
-      const levels = getPRApprovalLevels(bd.total)
+      // Approval records — fixed FL → PR Approver chain (required_role is
+      // what PRDetail.jsx checks against the acting user's role).
+      const levels = getPRApprovalLevels()
       const approvalRecords = levels.map((l, idx) => ({
         pr_id:          prId,
         approver_level: l.level,
         approver_name:  l.label,
         approver_email: '',
+        required_role:  l.role,
         status:         idx === 0 ? 'pending' : 'waiting',
       }))
       await supabase.from('pr_approvals').insert(approvalRecords)
@@ -388,18 +453,16 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
       // successful submission (the postgrest-js query builder only
       // implements .then(), not .catch(), so chaining .catch() on it
       // throws a TypeError instead of suppressing the error).
-      const advNote = advFlags.requiresFLEmail ? ' — 100% ADVANCE: email approval required.' : ''
-      // TODO(auth): recipient_id is a single hardcoded test account — once
-      // team_members exists (see src/lib/auth.js), notify every approver
-      // (fl/pr_approver/admin/finance) instead of one fixed address.
+      const advNote = paymentTerms === 'advance' && advFlags.requiresFLEmail ? ' — 100% ADVANCE: email approval required.' : ''
       try {
-        await supabase.from('expense_notifications').insert({
-          recipient_id: 'finance1@test.com',
+        const flEmails = await getEmailsByRole('fl')
+        await Promise.all(flEmails.map(email => supabase.from('expense_notifications').insert({
+          recipient_id: email,
           type: 'pr_submitted',
           message: `New PR ${prNumber} for ₹${bd.total.toLocaleString('en-IN')} (${category}) requires Functional Leader approval.${advNote}`,
           related_type: 'pr',
           related_id: prId,
-        })
+        })))
       } catch { /* non-blocking */ }
 
       onSaved({ prId, prNumber })
@@ -425,7 +488,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
             ⚠ Splitting expenses across multiple requests to stay below the ₹25,000 threshold is <u>strictly prohibited</u> and will invite disciplinary action per the Procurement Policy.
           </div>
           <button
-            onClick={() => { setBreakdown({ base: '', tax: '', incidental: '' }); setShowBelowBlock(false) }}
+            onClick={() => { setBreakdown({ quantity: '', ratePerUnit: '', base: '', tax: '', incidental: '' }); setShowBelowBlock(false) }}
             style={{ marginTop: '20px', height: '38px', padding: '0 20px', background: '#FFFFFF', color: '#B91C1C', border: '1px solid #FECACA', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}
           >
             Change amount
@@ -438,23 +501,12 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
   return (
     <div style={{ maxWidth: '640px', margin: '0 auto', padding: '24px 20px 80px' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginBottom: '8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button onClick={onBack} style={{ background: 'none', border: 'none', fontSize: '13px', color: '#8C3225', cursor: 'pointer', padding: 0 }}>Back</button>
-          <span style={{ color: '#9CA3AF' }}>/</span>
-          <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A1F36', margin: 0 }}>
-            {isEdit ? 'Edit Purchase Request' : existingPR?.status === 'draft' ? 'Continue Purchase Request Draft' : 'New Purchase Request'}
-          </h2>
-        </div>
-        {!isEdit && (
-          <button
-            onClick={handleSaveDraft}
-            disabled={savingDraft}
-            style={{ height: '32px', padding: '0 14px', background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '12px', fontWeight: 600, cursor: savingDraft ? 'default' : 'pointer' }}
-          >
-            {savingDraft ? 'Saving…' : 'Save as Draft'}
-          </button>
-        )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+        <button onClick={onBack} style={{ background: 'none', border: 'none', fontSize: '13px', color: '#8C3225', cursor: 'pointer', padding: 0 }}>Back</button>
+        <span style={{ color: '#9CA3AF' }}>/</span>
+        <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A1F36', margin: 0 }}>
+          {isEdit ? 'Edit Purchase Request' : existingPR?.status === 'draft' ? 'Continue Purchase Request Draft' : 'New Purchase Request'}
+        </h2>
       </div>
       {draftSavedAt && (
         <div style={{ fontSize: '11px', color: '#15803D', marginBottom: '12px' }}>
@@ -511,7 +563,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
             {sel(category, setCategory, CATEGORIES, 'Select category…')}
           </Field>
 
-          {/* Amount breakdown: base + tax (mandatory) + incidentals (optional) */}
+          {/* Amount breakdown: quantity × rate per unit (mandatory) + tax (mandatory) + incidentals (optional) */}
           <div style={{ marginBottom: '18px' }}>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '5px' }}>
               Amount (INR)<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
@@ -521,7 +573,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
 
           {numericAmount >= PR_MIN && (
             <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '16px', background: '#F9FAFB', borderRadius: '4px', padding: '8px 12px' }}>
-              Approval route: {approvalLevels.map(l => l.label).join(' → ')} &nbsp;·&nbsp; {requiredQuotes} quote{requiredQuotes > 1 ? 's' : ''} required
+              Approval route: {approvalLevels.map(l => l.label).join(' → ')} → PO Approver &nbsp;·&nbsp; {requiredQuotes} quote{requiredQuotes > 1 ? 's' : ''} required
             </div>
           )}
 
@@ -530,6 +582,26 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
               <strong>Contract Required:</strong> This purchase exceeds ₹25 lacs. A signed contract must be in place before goods or services are delivered. Contact accounts@thenudge.org for the contracting process. A vendor selection document with selection criteria is also required.
             </PolicyBanner>
           )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <Field label="From Date" error={errors.fromDate} required>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={e => setFromDate(e.target.value)}
+                style={{ width: '100%', height: '38px', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '0 10px', fontSize: '13px', color: '#1A1F36', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box' }}
+              />
+            </Field>
+            <Field label="To Date" error={errors.toDate} required>
+              <input
+                type="date"
+                value={toDate}
+                min={fromDate || undefined}
+                onChange={e => setToDate(e.target.value)}
+                style={{ width: '100%', height: '38px', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '0 10px', fontSize: '13px', color: '#1A1F36', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box' }}
+              />
+            </Field>
+          </div>
 
           <Field label="Purpose / Description" error={errors.purpose} required>
             <textarea
@@ -560,7 +632,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
           )}
         </div>
 
-        {/* Quotes & Advance — reveals once the core purchase details above are filled */}
+        {/* Quotes & Payment Terms — reveals once the core purchase details above are filled */}
         {vendorId && category && breakdownTotals(breakdown).valid && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
             <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '24px' }}>
@@ -571,7 +643,34 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
             </div>
 
             <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '24px' }}>
-              <AdvanceTable value={advanceState} onChange={setAdvanceState} error={errors.advance} />
+              <Field label="Payment Terms" required>
+                <OptionToggle
+                  value={paymentTerms}
+                  onChange={setPaymentTerms}
+                  options={[['advance', 'Advance'], ['credit', 'Credit Term']]}
+                />
+              </Field>
+
+              {paymentTerms === 'advance' ? (
+                <AdvanceTable value={advanceState} onChange={setAdvanceState} error={errors.advance} />
+              ) : (
+                <div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <Field label="Credit Term Frequency" required>
+                      {sel(creditTerm.frequency, v => setCreditTerm(c => ({ ...c, frequency: v })), CREDIT_TERM_OPTIONS, 'Select credit term…')}
+                    </Field>
+                    <Field label="Due Date" required>
+                      <input
+                        type="date"
+                        value={creditTerm.date}
+                        onChange={e => setCreditTerm(c => ({ ...c, date: e.target.value }))}
+                        style={{ width: '100%', height: '38px', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '0 10px', fontSize: '13px', color: '#1A1F36', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box' }}
+                      />
+                    </Field>
+                  </div>
+                  {errors.creditTerm && <div style={{ fontSize: '11px', color: '#DC2626', marginTop: '-8px', marginBottom: '8px' }}>{errors.creditTerm}</div>}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -596,15 +695,25 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
               ['Budgeted',      budgeted === null ? '—' : budgeted ? 'Budgeted' : 'Not Budgeted'],
               ['Expense Nature', expenseType],
               ['Category',      category],
+              ['Quantity',      breakdown.quantity || '—'],
+              ['Rate per Unit', `₹${(Number(breakdown.ratePerUnit) || 0).toLocaleString('en-IN')}`],
               ['Base Amount',   `₹${(Number(breakdown.base) || 0).toLocaleString('en-IN')}`],
               ['Tax (GST)',     `₹${(Number(breakdown.tax) || 0).toLocaleString('en-IN')}`],
               (Number(breakdown.incidental) || 0) > 0 ? ['Incidentals', `₹${Number(breakdown.incidental).toLocaleString('en-IN')}`] : null,
+              ['From Date',     fromDate || '—'],
+              ['To Date',       toDate || '—'],
               ['Purpose',       purpose],
               isRecurring ? ['Recurring', frequency || 'Yes'] : null,
-              ['Advance Split', `${advFlags.advance}% advance · ${advFlags.afterDelivery}% after delivery`],
+              paymentTerms === 'credit'
+                ? ['Payment Terms', `Credit — ${creditTerm.frequency || '—'}, due ${creditTerm.date || '—'}`]
+                : ['Payment Terms', `Advance — ${advFlags.advance}% advance · ${advFlags.afterDelivery}% after delivery`],
+              paymentTerms === 'advance' && advFlags.requiresFLEmail
+                ? ['FL Approval Email', advanceState.screenshotPath ? 'Screenshot attached' : 'Not attached']
+                : null,
               quoteState.singleSource
                 ? ['Quotes', `Single source — ${quoteState.singleSourceJustification.substring(0, 60)}…`]
                 : ['Quotes', `${quotesValidity(quoteState, requiredQuotes).uploaded} of ${requiredQuotes} uploaded`],
+              ['Submission Timestamp', new Date().toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })],
             ].filter(Boolean).map(([label, val]) => (
               <div key={label} style={{ display: 'flex', gap: '12px', marginBottom: '8px', fontSize: '13px' }}>
                 <span style={{ color: '#9CA3AF', width: '140px', flexShrink: 0, fontSize: '12px' }}>{label}</span>
@@ -623,13 +732,14 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
             </div>
           </div>
 
-          {advFlags.requiresFLEmail && (
+          {paymentTerms === 'advance' && advFlags.requiresFLEmail && (
             <PolicyBanner type="error">
               <strong>100% advance:</strong> Functional Leader approval over email is required before this PR proceeds.
               {advanceState.flEmailAck ? ' Acknowledged by requester.' : ''}
+              {advanceState.screenshotPath ? ' Approval screenshot attached.' : ' Approval screenshot not yet attached.'}
             </PolicyBanner>
           )}
-          {advFlags.flaggedOver30 && !advFlags.requiresFLEmail && (
+          {paymentTerms === 'advance' && advFlags.flaggedOver30 && !advFlags.requiresFLEmail && (
             <PolicyBanner type="warning">
               <strong>Advance over 30%:</strong> This advance ({advFlags.advance}%) exceeds the guideline and may attract additional scrutiny.
             </PolicyBanner>
@@ -668,16 +778,36 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
           >
             {step === 1 ? 'Review' : 'Continue'}
           </button>
+          {!isEdit && (
+            <button
+              onClick={handleSaveDraft}
+              disabled={savingDraft}
+              style={{ height: '40px', padding: '0 18px', background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '13px', fontWeight: 600, cursor: savingDraft ? 'default' : 'pointer' }}
+            >
+              {savingDraft ? 'Saving…' : 'Save as Draft'}
+            </button>
+          )}
         </div>
       )}
 
       {step === STEPS.length - 1 && (
-        <button
-          onClick={() => setStep(s => s - 1)}
-          style={{ marginTop: '12px', height: '38px', padding: '0 20px', background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '13px', cursor: 'pointer' }}
-        >
-          ← Edit
-        </button>
+        <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
+          <button
+            onClick={() => setStep(s => s - 1)}
+            style={{ height: '38px', padding: '0 20px', background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '13px', cursor: 'pointer' }}
+          >
+            ← Edit
+          </button>
+          {!isEdit && (
+            <button
+              onClick={handleSaveDraft}
+              disabled={savingDraft}
+              style={{ height: '38px', padding: '0 18px', background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '13px', fontWeight: 600, cursor: savingDraft ? 'default' : 'pointer' }}
+            >
+              {savingDraft ? 'Saving…' : 'Save as Draft'}
+            </button>
+          )}
+        </div>
       )}
 
       {/* Live checklist — lets requesters see what's still missing before they hit Continue/Submit */}

@@ -71,6 +71,13 @@ export async function getFinanceEmails() {
   return (data || []).map(r => r.email)
 }
 
+// Every team member holding a given role — used to notify a whole approval
+// step (e.g. all 'fl' members) rather than one hardcoded address.
+export async function getEmailsByRole(role) {
+  const { data } = await supabase.from('team_members').select('email').eq('role', role)
+  return (data || []).map(r => r.email)
+}
+
 // ─── Permission helpers ──────────────────────────────────────────────────
 // admin bypasses every restriction below — "admin has both finance & employee
 // view... can access & do anything."
@@ -83,3 +90,9 @@ export const isObserver         = (role) => role === 'observer'
 // else (including other finance members) can only view.
 export const canApproveVendor = (user) =>
   !!user && (user.role === 'admin' || (user.role === 'finance' && user.can_approve_vendors))
+
+// Raising a PR is a requester action — people who sit somewhere in the
+// approval chain (fl, pr_approver, finance/PO approver) shouldn't also be
+// able to submit requests for themselves to approve. Employees always can;
+// admin always can, per "admin can access & do anything."
+export const canCreatePR = (role) => role === 'admin' || role === 'employee'

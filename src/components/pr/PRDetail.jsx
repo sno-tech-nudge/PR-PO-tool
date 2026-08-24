@@ -124,7 +124,13 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
   const canEdit = user.email === pr.requested_by && pr.status === 'rejected'
   const lc = pr.link_confidence ? LINK_CONF[pr.link_confidence] : null
   const currentPending = approvals.find(a => a.status === 'pending')
-  const canAction = canAccessApprovals(user.role) && pr.status === 'submitted' && !!currentPending
+  // Each level only actionable by its assigned role (FL, then PR Approver) —
+  // admin always bypasses. required_role is null on PRs submitted before this
+  // gate existed, so those legacy rows fall back to the old any-approver rule.
+  const roleMatches = !currentPending?.required_role || user.role === currentPending.required_role
+  const canAction = user.role === 'admin'
+    ? pr.status === 'submitted' && !!currentPending
+    : canAccessApprovals(user.role) && roleMatches && pr.status === 'submitted' && !!currentPending
   const isFullyApproved = pr.status === 'approved' || pr.status === 'po_generated'
 
   return (
@@ -183,6 +189,7 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
             <div style={{ fontSize: '12px', color: '#7F1D1D', lineHeight: 1.6 }}>
               This request asks for full payment in advance. Explicit Functional Leader approval over email is required before it proceeds.
               {pr.advance_fl_email_ack ? ' Requester has confirmed email approval has been / will be obtained.' : ' Requester has not confirmed email approval.'}
+              {pr.advance_approval_screenshot_path ? ' Approval screenshot attached.' : ' No approval screenshot attached.'}
             </div>
           </div>
         )}
@@ -207,12 +214,16 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
         <Row label="Impact Stream" value={pr.impact_stream} />
         <Row label="Purpose" value={pr.purpose} />
         <Row label="Recurring" value={pr.is_recurring ? `Yes — ${pr.recurring_frequency || ''}` : 'No'} />
+        <Row label="From Date" value={fmtDate(pr.from_date)} />
+        <Row label="To Date" value={fmtDate(pr.to_date)} />
         <Row label="Submitted" value={fmtDate(pr.submitted_at)} />
 
         {/* Amount breakdown */}
         {(pr.base_amount != null || pr.tax_amount != null || pr.incidental_amount != null) && (
           <div style={{ marginTop: '12px', borderTop: '1px solid #F3F4F6', paddingTop: '12px' }}>
             <div style={{ fontSize: '10px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Amount Breakdown</div>
+            {pr.quantity != null && <Row label="Quantity" value={pr.quantity} />}
+            {pr.rate_per_unit != null && <Row label="Rate per Unit" value={`₹${Number(pr.rate_per_unit).toLocaleString('en-IN')}`} />}
             <Row label="Base" value={pr.base_amount != null ? `₹${Number(pr.base_amount).toLocaleString('en-IN')}` : '—'} />
             <Row label="Tax (GST)" value={pr.tax_amount != null ? `₹${Number(pr.tax_amount).toLocaleString('en-IN')}` : '—'} />
             {Number(pr.incidental_amount) > 0 && <Row label="Incidentals" value={`₹${Number(pr.incidental_amount).toLocaleString('en-IN')}`} />}
@@ -220,8 +231,14 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
           </div>
         )}
 
-        {/* Advance split */}
-        {pr.advance_percent != null && (
+        {/* Payment terms — advance split or credit term */}
+        {pr.payment_terms === 'credit' ? (
+          <div style={{ marginTop: '12px', borderTop: '1px solid #F3F4F6', paddingTop: '12px' }}>
+            <div style={{ fontSize: '10px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Payment Terms</div>
+            <Row label="Credit Term" value={pr.credit_term_frequency} />
+            <Row label="Due Date" value={fmtDate(pr.credit_term_date)} />
+          </div>
+        ) : pr.advance_percent != null && (
           <div style={{ marginTop: '12px', borderTop: '1px solid #F3F4F6', paddingTop: '12px' }}>
             <div style={{ fontSize: '10px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Payment Terms</div>
             <Row label="Advance" value={`${Number(pr.advance_percent)}%`} />
@@ -229,6 +246,7 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
             {Number(pr.advance_percent) >= 100 && (
               <div style={{ fontSize: '11px', color: '#B91C1C', marginTop: '4px' }}>
                 100% advance — FL email approval required{pr.advance_fl_email_ack ? ' (acknowledged)' : ''}.
+                {pr.advance_approval_screenshot_path ? ' Approval screenshot attached.' : ' No approval screenshot attached.'}
               </div>
             )}
           </div>

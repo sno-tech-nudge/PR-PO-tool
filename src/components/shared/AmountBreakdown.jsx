@@ -1,8 +1,12 @@
 import { breakdownTotals } from '../../lib/formCalc'
 
-// Amount breakdown: Base + Tax (mandatory) + Incidentals (optional) → computed Total.
-// Controlled component. value = { base, tax, incidental }; onChange gets the next value.
-// Callers derive total/valid via breakdownTotals() from lib/formCalc.
+// Amount breakdown: Quantity × Rate per Unit → computed Base, + Tax
+// (mandatory) + Incidentals (optional) → computed Total.
+// Controlled component. value = { quantity, ratePerUnit, base, tax, incidental };
+// base is derived here (quantity * ratePerUnit) and included in what's emitted
+// to onChange, so callers deriving total/valid via breakdownTotals() from
+// lib/formCalc need no changes. Rate per Unit only appears once a quantity has
+// been entered, matching the source Zoho form's reveal-on-input behaviour.
 
 function money(val, onChange, placeholder, invalid) {
   return (
@@ -22,18 +26,43 @@ function money(val, onChange, placeholder, invalid) {
 }
 
 export default function AmountBreakdown({ value = {}, onChange, errors = {} }) {
-  const { total } = breakdownTotals(value)
-  const set = patch => onChange({ ...value, ...patch })
+  const quantity = value.quantity ?? ''
+  const ratePerUnit = value.ratePerUnit ?? ''
+  const computedBase = (Number(quantity) || 0) * (Number(ratePerUnit) || 0)
+  const { total } = breakdownTotals({ ...value, base: computedBase })
+  const set = patch => {
+    const next = { ...value, ...patch }
+    const q = Number(next.quantity) || 0
+    const r = Number(next.ratePerUnit) || 0
+    onChange({ ...next, base: q * r })
+  }
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: quantity !== '' ? '1fr 1fr' : '1fr', gap: '12px', marginBottom: '12px' }}>
         <div>
           <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '5px' }}>
-            Base Amount<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
+            Quantity<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
           </label>
-          {money(value.base ?? '', v => set({ base: v }), '0', !!errors.base)}
+          {money(quantity, v => set({ quantity: v }), '1', !!errors.base)}
         </div>
+        {quantity !== '' && (
+          <div>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '5px' }}>
+              Rate per Unit (without tax)<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
+            </label>
+            {money(ratePerUnit, v => set({ ratePerUnit: v }), '0', !!errors.base)}
+          </div>
+        )}
+      </div>
+
+      {quantity !== '' && ratePerUnit !== '' && (
+        <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '12px' }}>
+          Base Amount: <strong style={{ color: '#1A1F36' }}>₹{computedBase.toLocaleString('en-IN')}</strong> ({quantity} × ₹{Number(ratePerUnit).toLocaleString('en-IN')})
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
         <div>
           <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '5px' }}>
             Tax (GST)<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>

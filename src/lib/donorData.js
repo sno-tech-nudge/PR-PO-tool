@@ -72,7 +72,6 @@ export function getDonors(entity, program, subprogram) {
 export const EXPENSE_NATURES = [
   'Revenue Expenditure',
   'Capital Expenditure (CAPEX)',
-  'Program Expenditure',
 ]
 
 // Validate a multi-donor allocation list. Each row: { entity, program, subprogram, donor, percent }.

@@ -37,12 +37,15 @@ export function quotesValidity(value = {}, requiredQuotes = 0) {
   return { valid: uploaded >= requiredQuotes && hasSelected && !!value.comparative_statement_path, uploaded }
 }
 
-// Advance split validity. value = { advancePercent, flEmailAck }
+// Advance split validity. value = { advancePercent, flEmailAck, screenshotPath }
+// A 100% advance requires both the acknowledgement checkbox AND an attached
+// screenshot of the Functional Leader's email approval.
 export function advanceValidity(value = {}) {
   const advance = Number(value.advancePercent)
   const entered = value.advancePercent !== '' && value.advancePercent != null
   const { flaggedOver30, requiresFLEmail } = getAdvanceFlags(advance)
   const inRange = entered && advance >= 0 && advance <= 100
-  const valid = inRange && (!requiresFLEmail || !!value.flEmailAck)
+  const ackOk = !requiresFLEmail || (!!value.flEmailAck && !!value.screenshotPath)
+  const valid = inRange && ackOk
   return { advance: entered ? advance : 0, afterDelivery: entered ? 100 - advance : 100, flaggedOver30, requiresFLEmail, valid }
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import { canCreatePR } from '../../lib/auth'
 import PRStatusTimeline from './PRStatusTimeline'
 
 const STATUS_COLOR = {
@@ -37,12 +38,14 @@ export default function PRList({ user, onViewPR, onCreatePR, onResumeDraft }) {
           <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '4px' }}>Procurement</div>
           <div style={{ fontSize: '20px', fontWeight: 500, color: '#1A1A1A' }}>My Requests</div>
         </div>
-        <button
-          onClick={onCreatePR}
-          style={{ height: '36px', padding: '0 16px', background: '#8C3225', color: '#FFFFFF', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
-        >
-          + New PR
-        </button>
+        {canCreatePR(user.role) && (
+          <button
+            onClick={onCreatePR}
+            style={{ height: '36px', padding: '0 16px', background: '#8C3225', color: '#FFFFFF', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+          >
+            + New PR
+          </button>
+        )}
       </div>
 
       <div style={{ display: 'flex', borderBottom: '1px solid #E8E8E8', marginBottom: '16px', gap: '0', overflowX: 'auto' }}>
