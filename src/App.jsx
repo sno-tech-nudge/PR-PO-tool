@@ -351,6 +351,7 @@ export default function App() {
             onOpenReport={handleViewReport}
             onOpenPR={(id) => { setAppScreen('pr-list'); openPRDetail(id) }}
             onOpenVendor={(id) => { setAppScreen('vendors'); openVendorDetail(id) }}
+            onOpenPO={(id) => { setAppScreen('po-list'); openPODetail(id) }}
           />
           <div style={{
             fontSize: '12px', fontWeight: 600, color: '#FFFFFF',

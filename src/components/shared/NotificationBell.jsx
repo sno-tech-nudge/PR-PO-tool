@@ -21,7 +21,7 @@ const TYPE_COLOR = {
 // every approve/reject action already writes to, but that nothing in the UI
 // used to read). Polls rather than subscribing in realtime, matching this
 // app's existing async-job-queue polling convention elsewhere.
-export default function NotificationBell({ user, onOpenReport, onOpenPR, onOpenVendor }) {
+export default function NotificationBell({ user, onOpenReport, onOpenPR, onOpenVendor, onOpenPO }) {
   const [notifications, setNotifications] = useState([])
   const [open, setOpen] = useState(false)
   const containerRef = useRef(null)
@@ -68,6 +68,7 @@ export default function NotificationBell({ user, onOpenReport, onOpenPR, onOpenV
     if (n.related_type === 'report' && n.related_id) onOpenReport?.(n.related_id)
     else if (n.related_type === 'pr' && n.related_id) onOpenPR?.(n.related_id)
     else if (n.related_type === 'vendor' && n.related_id) onOpenVendor?.(n.related_id)
+    else if (n.related_type === 'po' && n.related_id) onOpenPO?.(n.related_id)
   }
 
   return (

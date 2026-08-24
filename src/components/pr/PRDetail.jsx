@@ -95,7 +95,7 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
     const currentPending = approvals.find(a => a.status === 'pending')
     if (!currentPending) { setError('No pending approval level found.'); setSaving(false); return }
 
-    const result = await approvePRLevel({ prId, approvals, user })
+    const result = await approvePRLevel({ prId, approvals, user, pr })
     if (result.isFinal) {
       await createPendingPO({ prId, pr, amount: pr.amount })
       showToast?.('Purchase request fully approved. Purchase Order created, pending Finance approval.', 'approved')

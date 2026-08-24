@@ -2,6 +2,7 @@ import { supabase } from './supabase'
 import { generatePOPDF, uploadPDFToSupabase } from './pdfGenerator'
 import { autoLinkPRToExpense } from './linkEngine'
 import { getFiscalYearPrefix } from './formCalc'
+import { getEmailsByRole } from './auth'
 
 // Shared by PRDetail.jsx (full detail screen, including the action panel) and
 // PRApproverDashboard.jsx (quick accept/reject icons in the list) so both act
@@ -13,12 +14,26 @@ export async function generatePONumber() {
   return `${fy}-PO-07-${((count || 0) + 1).toString().padStart(4, '0')}`
 }
 
+// Notifies every team member holding `role` that a PR/PO needs their
+// review — best-effort, must never block the approval action that
+// triggered it. Without this, the next approver in the chain has no way to
+// know it's their turn short of manually checking the Approvals page.
+async function notifyRole(role, { type, message, relatedType, relatedId }) {
+  try {
+    const emails = await getEmailsByRole(role)
+    await Promise.all(emails.map(email => supabase.from('expense_notifications').insert({
+      recipient_id: email, type, message, related_type: relatedType, related_id: relatedId,
+    })))
+  } catch { /* non-blocking */ }
+}
+
 // Approves whichever pr_approvals row is currently 'pending' for this PR.
-// If another level is 'waiting', advances it to 'pending' and keeps the PR
-// 'submitted'. Otherwise this was the final level — marks the PR 'approved'.
-// Returns { isFinal, currentPending, nextWaiting } — callers should follow up
-// with createPendingPO() when isFinal is true.
-export async function approvePRLevel({ prId, approvals, user }) {
+// If another level is 'waiting', advances it to 'pending', keeps the PR
+// 'submitted', and notifies whoever holds that level's required_role that
+// it's now their turn. Otherwise this was the final level — marks the PR
+// 'approved'. Returns { isFinal, currentPending, nextWaiting } — callers
+// should follow up with createPendingPO() when isFinal is true.
+export async function approvePRLevel({ prId, approvals, user, pr }) {
   const now = new Date().toISOString()
   const currentPending = approvals.find(a => a.status === 'pending')
   if (!currentPending) return { ok: false, error: 'No pending approval level found.' }
@@ -31,6 +46,14 @@ export async function approvePRLevel({ prId, approvals, user }) {
   if (nextWaiting) {
     await supabase.from('pr_approvals').update({ status: 'pending' }).eq('id', nextWaiting.id)
     await supabase.from('purchase_requests').update({ status: 'submitted' }).eq('id', prId)
+    if (nextWaiting.required_role) {
+      notifyRole(nextWaiting.required_role, {
+        type: 'pr_pending_review',
+        message: `PR ${pr?.pr_number || ''} for ₹${Number(pr?.amount || 0).toLocaleString('en-IN')} is now pending your review as ${nextWaiting.approver_name}.`,
+        relatedType: 'pr',
+        relatedId: prId,
+      })
+    }
     return { ok: true, isFinal: false, currentPending, nextWaiting }
   }
 
@@ -43,15 +66,23 @@ export async function approvePRLevel({ prId, approvals, user }) {
 // legitimacy/documentation and explicitly Approve PO before it's issued
 // (see approvePO below). `amount` defaults to the PR's full amount for the
 // first PO against a PR; pass a smaller sub-amount for additional POs when
-// a PR is being split across multiple purchase orders.
+// a PR is being split across multiple purchase orders. Notifies the Finance
+// (PO Approver) role that a new PO is waiting on them.
 export async function createPendingPO({ prId, pr, amount }) {
   try {
     const poNumber = await generatePONumber()
+    const poAmount = amount != null ? amount : pr.amount
     const { data: newPO, error } = await supabase.from('purchase_orders').insert({
       po_number: poNumber, pr_id: prId, vendor_id: pr.vendor_id,
-      amount: amount != null ? amount : pr.amount, entity: pr.entity, status: 'pending_approval',
+      amount: poAmount, entity: pr.entity, status: 'pending_approval',
     }).select().single()
     if (error) throw error
+    notifyRole('finance', {
+      type: 'po_pending_review',
+      message: `Purchase Order ${poNumber} for ₹${Number(poAmount || 0).toLocaleString('en-IN')} (PR ${pr?.pr_number || ''}) is pending your approval.`,
+      relatedType: 'po',
+      relatedId: newPO.id,
+    })
     return newPO
   } catch (err) {
     console.error('PO creation error:', err.message)
