@@ -519,6 +519,15 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
         </div>
       )}
 
+      {/* Slim progress bar — purely cosmetic, tucked above the step circles
+          rather than anywhere near the form fields themselves. */}
+      <div style={{ height: '4px', background: '#F3F4F6', borderRadius: '2px', marginBottom: '18px', overflow: 'hidden' }}>
+        <div style={{
+          height: '100%', width: `${((step + 1) / STEPS.length) * 100}%`,
+          background: '#8C3225', borderRadius: '2px', transition: 'width 0.25s ease',
+        }} />
+      </div>
+
       <StepIndicator current={step} total={STEPS.length} labels={STEP_LABELS} />
       <div style={{ fontSize: '14px', fontWeight: 700, color: '#1A1F36', marginBottom: '20px' }}>{STEPS[step]}</div>
 

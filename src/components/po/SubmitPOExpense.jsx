@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { determineApprovalRoute } from '../../lib/policyEngine'
 import { createApprovalRecords } from '../../lib/approvalEngine'
+import AttachmentDropzone from '../shared/AttachmentDropzone'
 
 function fmtAmt(n) {
   if (n == null) return '—'
@@ -143,12 +144,7 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
 
         <div style={{ marginBottom: '14px' }}>
           <div style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>Invoice<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span></div>
-          <input
-            type="file"
-            accept="image/*,.pdf"
-            onChange={e => setFile(e.target.files?.[0] || null)}
-            style={{ fontSize: '13px' }}
-          />
+          <AttachmentDropzone accept="image/*,.pdf" file={file} onChange={setFile} />
         </div>
 
         <div style={{ marginBottom: '18px' }}>

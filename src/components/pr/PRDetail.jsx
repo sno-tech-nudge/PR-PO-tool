@@ -293,6 +293,23 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
         </div>
       )}
 
+      {/* Attachments — shown before the approval trail/action panel so
+          whoever is about to approve or reject has already seen the
+          underlying quotations, not just a link buried below the decision. */}
+      <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '16px 20px', marginBottom: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+            Quotations & Attachments
+          </div>
+          <button
+            onClick={() => setShowAttachments(true)}
+            style={{ height: '30px', padding: '0 14px', background: '#FFFFFF', color: '#8C3225', border: '1px solid #E3E8EF', borderRadius: '3px', fontSize: '12px', cursor: 'pointer' }}
+          >
+            View Attachments
+          </button>
+        </div>
+      </div>
+
       {/* Approvals */}
       {approvals.length > 0 && (
         <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', overflow: 'hidden', marginBottom: '12px' }}>
@@ -473,21 +490,6 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
         ) : (
           <div style={{ fontSize: '13px', color: '#9CA3AF' }}>No expense report linked yet. Finance can manually link one if needed.</div>
         )}
-      </div>
-
-      {/* Attachments */}
-      <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '16px 20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-            Attachments
-          </div>
-          <button
-            onClick={() => setShowAttachments(true)}
-            style={{ height: '30px', padding: '0 14px', background: '#FFFFFF', color: '#8C3225', border: '1px solid #E3E8EF', borderRadius: '3px', fontSize: '12px', cursor: 'pointer' }}
-          >
-            View Attachments
-          </button>
-        </div>
       </div>
 
       {showAttachments && (

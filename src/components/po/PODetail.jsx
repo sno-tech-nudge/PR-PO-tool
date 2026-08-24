@@ -4,6 +4,7 @@ import { approvePO, rejectPO } from '../../lib/prApprovalActions'
 import { canAccessFinance } from '../../lib/auth'
 import POTemplate from '../pr/POTemplate'
 import SubmitPOExpense from './SubmitPOExpense'
+import PRAttachmentsModal from '../pr/PRAttachmentsModal'
 
 function fmtDate(d) {
   if (!d) return '—'
@@ -46,6 +47,7 @@ export default function PODetail({ poId, user, onBack }) {
   const [poTemplateData, setPoTemplateData] = useState(null)
   const [linkedExpenses, setLinkedExpenses] = useState([])
   const [showSubmitExpense, setShowSubmitExpense] = useState(false)
+  const [showAttachments, setShowAttachments] = useState(false)
 
   useEffect(() => { load() }, [poId])
 
@@ -235,6 +237,29 @@ export default function PODetail({ poId, user, onBack }) {
           </div>
           <div style={{ fontSize: '13px', color: '#374151', lineHeight: 1.6 }}>{pr.purpose}</div>
         </div>
+      )}
+
+      {/* Quotations & Attachments — shown before the approve/reject panel so
+          Finance has already seen the underlying quotes, not just a link
+          that used to not exist on this page at all. */}
+      {pr && (
+        <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '8px', padding: '16px 20px', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontSize: '11px', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Quotations & Attachments
+            </div>
+            <button
+              onClick={() => setShowAttachments(true)}
+              style={{ height: '30px', padding: '0 14px', background: '#FFFFFF', color: '#8C3225', border: '1px solid #E3E8EF', borderRadius: '5px', fontSize: '12px', cursor: 'pointer' }}
+            >
+              View Attachments
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showAttachments && pr && (
+        <PRAttachmentsModal pr={pr} onClose={() => setShowAttachments(false)} />
       )}
 
       {/* PO approval — vendor legitimacy, quotation selection rationale, documentation

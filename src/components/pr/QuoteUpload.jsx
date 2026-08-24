@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { extractVendorQuote } from '../../lib/claude'
 import { supabase } from '../../lib/supabase'
 import { imageFileToJpegBase64, pdfPageToBase64 } from '../../lib/receiptImage'
+import AttachmentDropzone from '../shared/AttachmentDropzone'
 
 // Route through the same JPEG-normalizing, downscaling converters the
 // receipt-capture flow uses — a raw FileReader dataURL used to send whatever
@@ -27,8 +28,7 @@ export default function QuoteUpload({ onExtracted, onFileUploaded, skipExtractio
   const [uploading, setUploading]   = useState(false)
   const [uploaded, setUploaded]     = useState(false)
 
-  async function handleFile(e) {
-    const f = e.target.files?.[0]
+  async function handleFile(f) {
     if (!f) return
     setFile(f)
     setExtracted(null)
@@ -82,12 +82,7 @@ export default function QuoteUpload({ onExtracted, onFileUploaded, skipExtractio
   return (
     <div>
       <div style={{ marginBottom: '12px' }}>
-        <input
-          type="file"
-          accept="image/*,.pdf"
-          onChange={handleFile}
-          style={{ fontSize: '13px', color: '#374151' }}
-        />
+        <AttachmentDropzone accept="image/*,.pdf" file={file} onChange={handleFile} />
       </div>
 
       {extracting && (
