@@ -81,11 +81,11 @@ export default function PODetail({ poId, user, onBack }) {
 
   async function handleApprovePO() {
     setApprovingPO(true); setPoError(null)
-    const ok = await approvePO({ po, pr, user, setPOData: setPoTemplateData })
-    if (ok) {
+    const result = await approvePO({ po, pr, user, setPOData: setPoTemplateData })
+    if (result === true) {
       await load()
     } else {
-      setPoError('Could not approve this purchase order. Please try again.')
+      setPoError(result?.error ? `Could not approve this purchase order: ${result.error}` : 'Could not approve this purchase order. Please try again.')
     }
     setApprovingPO(false)
   }
@@ -120,6 +120,12 @@ export default function PODetail({ poId, user, onBack }) {
 
   const st = STATUS[po.status] || STATUS.issued
   const isFinance = canAccessFinance(user.role)
+  // PO issuance is the last step of the fixed FL -> PR Approver -> PO
+  // Approver chain — enforced the same way for everyone, admin included, so
+  // no one can approve/reject their own request's PO by holding a broader
+  // role. Other Finance-area actions on this page (marking a PO completed,
+  // etc.) stay gated to the broader isFinance/admin access.
+  const isPOApprover = user.role === 'finance'
   const totalSubmitted = linkedExpenses.filter(e => e.status !== 'rejected').reduce((sum, e) => sum + (Number(e.total_amount) || 0), 0)
   const pendingAmount = Math.max(0, (Number(po.amount) || 0) - totalSubmitted)
 
@@ -240,7 +246,7 @@ export default function PODetail({ poId, user, onBack }) {
         </div>
       )}
 
-      {isFinance && po.status === 'pending_approval' && (
+      {isPOApprover && po.status === 'pending_approval' && (
         <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '8px', padding: '20px', marginBottom: '16px' }}>
           <div style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '14px' }}>
             Purchase Order Approval

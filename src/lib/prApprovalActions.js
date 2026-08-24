@@ -64,15 +64,25 @@ export async function createPendingPO({ prId, pr, amount }) {
 // for the html2canvas screenshot to work), generates + uploads the PDF,
 // flips the PO to 'issued', links the PR to any matching expense report,
 // and notifies the requester.
+//
+// The PDF step is best-effort and isolated in its own try/catch — a flaky
+// html2canvas render or a storage hiccup must never block the actual
+// approval (the status flip below), only mean this PO issues without a PDF
+// attached (pdf_storage_path stays null, retried on nothing since there's no
+// re-approve action once issued).
 export async function approvePO({ po, pr, user, setPOData }) {
+  let pdfPath = null
   try {
     setPOData(po)
     // Give POTemplate time to render before screenshotting it.
     await new Promise(resolve => setTimeout(resolve, 500))
     const pdf = await generatePOPDF()
-    let pdfPath = null
-    if (pdf) pdfPath = await uploadPDFToSupabase(pdf, `${po.po_number}.pdf`, supabase)
+    if (pdf) pdfPath = await uploadPDFToSupabase(pdf, `${po.po_number}.pdf`, supabase, 'po-pdfs', { upsert: true })
+  } catch (err) {
+    console.error('PO PDF generation/upload failed (non-blocking):', err.message)
+  }
 
+  try {
     const now = new Date().toISOString()
     await supabase.from('purchase_orders').update({
       status: 'issued', pdf_storage_path: pdfPath || null, approved_by: user.email, approved_at: now,
@@ -92,7 +102,7 @@ export async function approvePO({ po, pr, user, setPOData }) {
     return true
   } catch (err) {
     console.error('PO approval error:', err.message)
-    return false
+    return { error: err.message }
   }
 }
 

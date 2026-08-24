@@ -124,13 +124,16 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
   const canEdit = user.email === pr.requested_by && pr.status === 'rejected'
   const lc = pr.link_confidence ? LINK_CONF[pr.link_confidence] : null
   const currentPending = approvals.find(a => a.status === 'pending')
-  // Each level only actionable by its assigned role (FL, then PR Approver) —
-  // admin always bypasses. required_role is null on PRs submitted before this
-  // gate existed, so those legacy rows fall back to the old any-approver rule.
-  const roleMatches = !currentPending?.required_role || user.role === currentPending.required_role
-  const canAction = user.role === 'admin'
-    ? pr.status === 'submitted' && !!currentPending
-    : canAccessApprovals(user.role) && roleMatches && pr.status === 'submitted' && !!currentPending
+  // Each level is only actionable by its assigned role (FL, then PR
+  // Approver) — the same rule applies to every account, admin included, so
+  // no one can approve/reject out of turn or approve their own request just
+  // by holding the admin role. required_role is null on PRs submitted before
+  // this gate existed, so those legacy rows fall back to the old
+  // any-approver-role rule.
+  const roleMatches = currentPending?.required_role
+    ? user.role === currentPending.required_role
+    : canAccessApprovals(user.role)
+  const canAction = pr.status === 'submitted' && !!currentPending && roleMatches
   const isFullyApproved = pr.status === 'approved' || pr.status === 'po_generated'
 
   return (

@@ -96,7 +96,7 @@ export function downloadPDF(pdf, filename) {
   pdf.save(filename)
 }
 
-export async function uploadPDFToSupabase(pdf, filename, supabaseClient) {
+export async function uploadPDFToSupabase(pdf, filename, supabaseClient, bucket = 'expense-reports', { upsert = false } = {}) {
   if (!pdf) return null
 
   try {
@@ -104,10 +104,10 @@ export async function uploadPDFToSupabase(pdf, filename, supabaseClient) {
 
     const { data, error } = await supabaseClient
       .storage
-      .from('expense-reports')
+      .from(bucket)
       .upload(filename, pdfBlob, {
         contentType: 'application/pdf',
-        upsert: false,
+        upsert,
       })
 
     if (error) {
