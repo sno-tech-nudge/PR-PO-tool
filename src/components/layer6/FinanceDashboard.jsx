@@ -193,6 +193,7 @@ export default function FinanceDashboard({ user, showToast, onBack }) {
           onBack={() => setViewingPRId(null)}
           onEdit={() => showToast?.('Edit your own PR from the Purchase Requests screen.', 'info')}
           onViewVendor={(id) => openVendorDetail(id)}
+          onViewPO={setViewingPOId}
           showToast={showToast}
           backLabel="Purchase Requests"
         />

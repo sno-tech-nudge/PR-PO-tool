@@ -82,7 +82,10 @@ export default function NotificationBell({ user, onOpenReport, onOpenPR, onOpenV
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '13px' }}>🔔</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#c4826f', flexShrink: 0 }}>
+            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+          </svg>
           <span style={{ fontSize: '12px', color: '#FFFFFF' }}>Notifications</span>
         </div>
         {unreadCount > 0 && (

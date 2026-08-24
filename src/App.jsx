@@ -582,6 +582,7 @@ export default function App() {
             onBack={() => setAppScreen('approvals')}
             onEdit={(pr) => { setAppScreen('pr-list'); openPREdit(pr) }}
             onViewVendor={(id) => { setVendorBackScreen('pr-approval-view'); setAppScreen('vendors'); openVendorDetail(id) }}
+            onViewPO={(id) => { setAppScreen('po-list'); openPODetail(id) }}
             showToast={showToast}
             backLabel="PR Approvals"
           />
@@ -694,6 +695,7 @@ export default function App() {
             onBack={openPRList}
             onEdit={openPREdit}
             onViewVendor={(id) => { setVendorBackScreen('pr-list'); setAppScreen('vendors'); openVendorDetail(id) }}
+            onViewPO={(id) => { setAppScreen('po-list'); openPODetail(id) }}
             showToast={showToast}
           />
         )}

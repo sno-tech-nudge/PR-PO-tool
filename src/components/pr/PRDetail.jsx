@@ -33,7 +33,7 @@ const LINK_CONF = {
   manual: { label: 'Manually linked',   color: '#8C3225', bg: '#fdf0ed' },
 }
 
-export default function PRDetail({ prId, user, onBack, onEdit, showToast, onViewVendor, backLabel = 'My Requests' }) {
+export default function PRDetail({ prId, user, onBack, onEdit, showToast, onViewVendor, onViewPO, backLabel = 'My Requests' }) {
   const [pr, setPR]             = useState(null)
   const [approvals, setApprovals] = useState([])
   const [pos, setPOs]           = useState([])
@@ -417,8 +417,20 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
           </div>
 
           {pos.map((p, i) => (
-            <div key={p.id} style={{ marginBottom: i < pos.length - 1 ? '10px' : 0, paddingBottom: i < pos.length - 1 ? '10px' : 0, borderBottom: i < pos.length - 1 ? '1px solid rgba(30,64,175,0.15)' : 'none' }}>
-              <Row label="PO Number" value={p.po_number} />
+            <div
+              key={p.id}
+              onClick={() => onViewPO?.(p.id)}
+              style={{
+                marginBottom: i < pos.length - 1 ? '10px' : 0, paddingBottom: i < pos.length - 1 ? '10px' : 0,
+                borderBottom: i < pos.length - 1 ? '1px solid rgba(30,64,175,0.15)' : 'none',
+                cursor: onViewPO ? 'pointer' : 'default',
+              }}
+            >
+              <Row label="PO Number" value={
+                onViewPO
+                  ? <span style={{ fontWeight: 700, color: '#1E40AF', textDecoration: 'underline' }}>{p.po_number}</span>
+                  : p.po_number
+              } />
               <Row label="Amount" value={`₹${Number(p.amount || 0).toLocaleString('en-IN')}`} />
               <Row label="Status" value={PO_STATUS_LABEL[p.status] || p.status} />
             </div>

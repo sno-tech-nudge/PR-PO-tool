@@ -1,127 +1,209 @@
+import { getEntityAddress, getEntityCity } from '../../lib/orgEntities'
+import { amountInWords } from '../../lib/numberToWords'
+import { PO_TERMS_INTRO, PO_TERMS_CLAUSES } from '../../lib/poTermsAndConditions'
+
+const BROWN = '#8C3225'
+const BORDER = '#D9C2BB'
+
 function fmtDate(d) {
   if (!d) return '—'
-  return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+  return new Date(d).toISOString().slice(0, 10)
+}
+
+function fmtAmt(n) {
+  return Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function quoteReferenceText(pr) {
+  if (pr?.single_source_justification) {
+    const name = pr.quotes?.[0]?.vendor_name
+    return name ? `Single source — ${name}` : 'Single source procurement'
+  }
+  const names = (pr?.quotes || []).map(q => q.vendor_name).filter(Boolean)
+  if (!names.length) return '—'
+  return names.map((n, i) => (i === 0 ? `From ${n}` : `Quotation from ${n}`)).join(', ')
+}
+
+function vendorAddressLines(vendor) {
+  return [
+    vendor.address_line1,
+    vendor.address_line2,
+    [vendor.city, vendor.state].filter(Boolean).join(', ') + (vendor.pincode ? `, ${vendor.pincode}` : ''),
+  ].filter(Boolean)
+}
+
+// Field-labelled cell used throughout the cover page's info table.
+function Cell({ label, children, style }) {
+  return (
+    <td style={{ border: `1px solid ${BORDER}`, padding: '10px 12px', verticalAlign: 'top', fontSize: '11px', color: '#374151', ...style }}>
+      <div style={{ fontWeight: 700, color: BROWN, marginBottom: '4px' }}>{label}</div>
+      <div style={{ whiteSpace: 'pre-line', lineHeight: 1.5 }}>{children}</div>
+    </td>
+  )
 }
 
 export default function POTemplate({ po, pr, vendor }) {
   if (!po || !pr || !vendor) return null
+
+  const entity = pr.entity || ''
+  const entityAddress = getEntityAddress(entity) || '—'
+  const entityCity = getEntityCity(entity) || '—'
+  const quantity = pr.quantity != null ? pr.quantity : 1
+  const ratePerUnit = pr.rate_per_unit != null ? pr.rate_per_unit : pr.base_amount
+  const taxAmount = pr.tax_amount != null ? pr.tax_amount : pr.gst_amount
+  const subTotal = po.amount
+
   return (
-    <div
-      id="po-template"
-      style={{
-        width: '794px', background: '#FFFFFF', padding: '48px',
-        fontFamily: 'system-ui, -apple-system, sans-serif', boxSizing: 'border-box',
-        position: 'absolute', left: '-9999px', top: 0, display: 'block',
-      }}
-    >
-      {/* Top bar */}
-      <div style={{ height: '4px', background: '#1565C0', marginBottom: '32px' }} />
+    <>
+      {/* ── Page 1: PO cover / details ── */}
+      <div
+        id="po-template-cover"
+        style={{
+          width: '794px', background: '#FFFFFF', padding: '40px',
+          fontFamily: 'system-ui, -apple-system, sans-serif', boxSizing: 'border-box',
+          position: 'absolute', left: '-9999px', top: 0, display: 'block', color: '#1A1F36',
+        }}
+      >
+        <div style={{ height: '5px', background: BROWN, marginBottom: '20px' }} />
 
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
-        <div>
-          <div style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', letterSpacing: '0.15em', marginBottom: '6px' }}>
-            THE/NUDGE INSTITUTE
-          </div>
-          <div style={{ fontSize: '28px', fontFamily: 'Georgia, serif', fontWeight: 400, color: '#1A1F36' }}>
-            Purchase Order
+        <div style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '4px' }}>
+          THE/NUDGE INSTITUTE
+        </div>
+        <div style={{ fontSize: '26px', fontFamily: 'Georgia, serif', fontWeight: 700, color: BROWN, textAlign: 'center', marginBottom: '18px' }}>
+          Purchase Order
+        </div>
+
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '0' }}>
+          <tbody>
+            <tr>
+              <Cell label="Entity Name & Address :" style={{ width: '50%' }}>
+                {entity}{entityAddress ? `\n${entityAddress}` : ''}
+              </Cell>
+              <td style={{ border: `1px solid ${BORDER}`, padding: '0', verticalAlign: 'top' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <tbody>
+                    <tr>
+                      <td style={{ padding: '10px 12px', fontSize: '11px', borderBottom: `1px solid ${BORDER}` }}>
+                        <div style={{ fontWeight: 700, color: BROWN, marginBottom: '4px' }}>PO Number:</div>
+                        <div style={{ fontFamily: 'monospace' }}>{po.po_number}</div>
+                      </td>
+                      <td style={{ padding: '10px 12px', fontSize: '11px', borderBottom: `1px solid ${BORDER}`, borderLeft: `1px solid ${BORDER}` }}>
+                        <div style={{ fontWeight: 700, color: BROWN, marginBottom: '4px' }}>Date:</div>
+                        <div>{fmtDate(po.generated_at)}</div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td colSpan={2} style={{ padding: '10px 12px', fontSize: '11px' }}>
+                        <div style={{ fontWeight: 700, color: BROWN, marginBottom: '4px' }}>Quote Reference Number:</div>
+                        <div style={{ lineHeight: 1.5 }}>{quoteReferenceText(pr)}</div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <Cell label="Billing Address:">
+                {entity}{entityAddress ? `\n${entityAddress}` : ''}
+              </Cell>
+              <Cell label="Place of Delivery:">
+                {entityCity}
+              </Cell>
+            </tr>
+            <tr>
+              <Cell label="Name & Address of Supplier:">
+                {vendor.org_name}
+                {vendorAddressLines(vendor).length ? `\n${vendorAddressLines(vendor).join('\n')}` : ''}
+              </Cell>
+              <Cell label="Shipping Address:">
+                {entity}{entityAddress ? `\n${entityAddress}` : ''}
+              </Cell>
+            </tr>
+            <tr>
+              <Cell label="Dispatch/ Delivery through:">—</Cell>
+              <Cell label=" "> </Cell>
+            </tr>
+          </tbody>
+        </table>
+
+        {/* Line items */}
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '16px' }}>
+          <thead>
+            <tr style={{ background: '#fdf0ed' }}>
+              {['Sl. No.', 'Description of goods/ services', 'Quantity', 'Rate per unit (in INR)', 'Tax', 'Sub Total'].map(h => (
+                <th key={h} style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '10px', fontWeight: 700, color: BROWN, textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style={{ border: `1px solid ${BORDER}`, padding: '10px', fontSize: '12px', textAlign: 'center' }}>1</td>
+              <td style={{ border: `1px solid ${BORDER}`, padding: '10px', fontSize: '12px' }}>{pr.purpose || pr.category || '—'}</td>
+              <td style={{ border: `1px solid ${BORDER}`, padding: '10px', fontSize: '12px', textAlign: 'center' }}>{quantity}</td>
+              <td style={{ border: `1px solid ${BORDER}`, padding: '10px', fontSize: '12px', textAlign: 'right', fontFamily: 'monospace' }}>{fmtAmt(ratePerUnit)}</td>
+              <td style={{ border: `1px solid ${BORDER}`, padding: '10px', fontSize: '12px', textAlign: 'right', fontFamily: 'monospace' }}>{fmtAmt(taxAmount)}</td>
+              <td style={{ border: `1px solid ${BORDER}`, padding: '10px', fontSize: '12px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>{fmtAmt(subTotal)}</td>
+            </tr>
+            <tr>
+              <td colSpan={5} style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '12px', fontWeight: 700, textAlign: 'right', background: '#F8F9FA' }}>Total:</td>
+              <td style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '12px', fontWeight: 700, textAlign: 'right', fontFamily: 'monospace', background: '#F8F9FA' }}>{fmtAmt(subTotal)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style={{ fontSize: '11px', color: '#374151', marginTop: '12px' }}>
+          <strong>Amount in words:</strong> {amountInWords(subTotal)} Rupees Only
+        </div>
+
+        {/* Short terms block */}
+        <div style={{ marginTop: '20px', paddingTop: '14px', borderTop: `1px solid ${BORDER}` }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: BROWN, marginBottom: '6px' }}>Terms & Conditions:</div>
+          <div style={{ fontSize: '10.5px', color: '#374151', lineHeight: 1.7 }}>
+            Refer to standard terms and conditions attached to this PO<br />
+            PO will be valid for 90 days<br />
+            {pr.payment_terms === 'credit'
+              ? <>Payment terms: For {entity} — Credit Term {pr.credit_term_frequency || ''}{pr.credit_term_date ? `, due ${fmtDate(pr.credit_term_date)}` : ''}<br /></>
+              : <>Payment terms: For {entity} — Advance {pr.advance_percent != null ? Number(pr.advance_percent) : 0}%<br /></>
+            }
+            This is a system generated document, and it does not require the signature.
           </div>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '3px' }}>PO Number</div>
-          <div style={{ fontSize: '18px', fontWeight: 700, color: '#1565C0', fontFamily: 'monospace' }}>{po.po_number}</div>
-          <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '8px' }}>{fmtDate(po.generated_at)}</div>
-        </div>
+
+        <div style={{ height: '5px', background: BROWN, marginTop: '24px' }} />
       </div>
 
-      <div style={{ height: '1px', background: '#E8E8E8', marginBottom: '28px' }} />
-
-      {/* Vendor and PR info side by side */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', marginBottom: '32px' }}>
-        <div>
-          <div style={{ fontSize: '10px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>Vendor</div>
-          <div style={{ fontSize: '14px', fontWeight: 700, color: '#1A1F36', marginBottom: '4px' }}>{vendor.org_name}</div>
-          <div style={{ fontSize: '12px', color: '#374151', marginBottom: '2px' }}>{vendor.org_type}</div>
-          <div style={{ fontSize: '12px', color: '#374151', marginBottom: '2px' }}>PAN: {vendor.pan_number}</div>
-          {vendor.gstin && <div style={{ fontSize: '12px', color: '#374151', marginBottom: '2px' }}>GSTIN: {vendor.gstin}</div>}
-          <div style={{ fontSize: '12px', color: '#374151', marginTop: '8px' }}>{vendor.address_line1}</div>
-          {vendor.address_line2 && <div style={{ fontSize: '12px', color: '#374151' }}>{vendor.address_line2}</div>}
-          <div style={{ fontSize: '12px', color: '#374151' }}>{vendor.city}, {vendor.state} — {vendor.pincode}</div>
-          <div style={{ marginTop: '8px', fontSize: '12px', color: '#374151' }}>Contact: {vendor.contact_person}</div>
-          <div style={{ fontSize: '12px', color: '#374151' }}>{vendor.phone} · {vendor.email}</div>
+      {/* ── Page 2+: Terms and Conditions (Appendix A), verbatim, our layout ── */}
+      <div
+        id="po-template-terms"
+        style={{
+          width: '794px', background: '#FFFFFF', padding: '40px',
+          fontFamily: 'system-ui, -apple-system, sans-serif', boxSizing: 'border-box',
+          position: 'absolute', left: '-9999px', top: 0, display: 'block', color: '#1A1F36',
+        }}
+      >
+        <div style={{ height: '5px', background: BROWN, marginBottom: '20px' }} />
+        <div style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '4px' }}>
+          APPENDIX A
         </div>
-        <div>
-          <div style={{ fontSize: '10px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>Purchase Request</div>
-          {[
-            ['PR Number', pr.pr_number],
-            ['Entity', pr.entity],
-            ['Category', pr.category],
-            ['Program', pr.program],
-            ['Purpose', pr.purpose],
-            ['Requested By', pr.requested_by],
-          ].filter(([, v]) => v).map(([label, val]) => (
-            <div key={label} style={{ display: 'flex', gap: '8px', marginBottom: '6px', fontSize: '12px' }}>
-              <span style={{ color: '#9CA3AF', width: '110px', flexShrink: 0 }}>{label}</span>
-              <span style={{ color: '#374151' }}>{val}</span>
-            </div>
-          ))}
+        <div style={{ fontSize: '20px', fontFamily: 'Georgia, serif', fontWeight: 700, color: BROWN, textAlign: 'center', marginBottom: '18px' }}>
+          Terms and Conditions
         </div>
-      </div>
 
-      {/* Amount */}
-      <div style={{ background: '#F8F9FA', border: '1px solid #E3E8EF', borderRadius: '4px', padding: '20px 24px', marginBottom: '28px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontSize: '13px', color: '#374151' }}>Total Order Value</div>
-          <div style={{ fontSize: '24px', fontWeight: 700, color: '#1A1F36', fontFamily: 'monospace' }}>
-            INR {Number(po.amount || 0).toLocaleString('en-IN')}
-          </div>
+        <div style={{ fontSize: '11px', color: '#374151', lineHeight: 1.7, marginBottom: '16px' }}>
+          {PO_TERMS_INTRO}
         </div>
-        {(pr.base_amount != null || pr.tax_amount != null) && (
-          <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid #E3E8EF' }}>
-            {[
-              ['Base Amount', pr.base_amount],
-              ['Tax (GST)', pr.tax_amount != null ? pr.tax_amount : pr.gst_amount],
-              ['Incidentals', Number(pr.incidental_amount) > 0 ? pr.incidental_amount : null],
-            ].filter(([, v]) => v != null).map(([label, val]) => (
-              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#374151', marginBottom: '4px' }}>
-                <span style={{ color: '#9CA3AF' }}>{label}</span>
-                <span style={{ fontFamily: 'monospace' }}>INR {Number(val).toLocaleString('en-IN')}</span>
-              </div>
-            ))}
-          </div>
-        )}
-        {pr.advance_percent != null && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#374151', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #E3E8EF' }}>
-            <span style={{ color: '#9CA3AF' }}>Payment Terms</span>
-            <span>{Number(pr.advance_percent)}% advance · {pr.after_delivery_percent != null ? Number(pr.after_delivery_percent) : 100 - Number(pr.advance_percent)}% after delivery</span>
-          </div>
-        )}
-      </div>
 
-      {/* Bank details */}
-      <div style={{ marginBottom: '28px' }}>
-        <div style={{ fontSize: '10px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>Payment to</div>
-        {[
-          ['Beneficiary', vendor.beneficiary_name],
-          ['Account No.', vendor.account_number],
-          ['IFSC', vendor.ifsc_code],
-          ['Bank', vendor.bank_name + ' — ' + vendor.branch],
-        ].map(([label, val]) => (
-          <div key={label} style={{ display: 'flex', gap: '8px', marginBottom: '5px', fontSize: '12px' }}>
-            <span style={{ color: '#9CA3AF', width: '110px', flexShrink: 0 }}>{label}</span>
-            <span style={{ color: '#374151', fontFamily: label === 'Account No.' || label === 'IFSC' ? 'monospace' : 'inherit' }}>{val}</span>
+        {PO_TERMS_CLAUSES.map((text, i) => (
+          <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '10px', fontSize: '10.5px', color: '#374151', lineHeight: 1.6 }}>
+            <span style={{ fontWeight: 700, color: BROWN, flexShrink: 0, width: '20px' }}>{i + 1}.</span>
+            <span>{text}</span>
           </div>
         ))}
-      </div>
 
-      <div style={{ height: '1px', background: '#E8E8E8', marginBottom: '20px' }} />
-
-      {/* Footer */}
-      <div style={{ fontSize: '10px', color: '#9CA3AF', lineHeight: 1.6 }}>
-        This purchase order is issued by The/Nudge Institute. Payment will be processed upon receipt of goods/services as per agreed terms.
-        For queries, contact the Finance team. This is a computer-generated document.
+        <div style={{ height: '5px', background: BROWN, marginTop: '24px' }} />
       </div>
-      <div style={{ height: '4px', background: '#1565C0', marginTop: '28px' }} />
-    </div>
+    </>
   )
 }
