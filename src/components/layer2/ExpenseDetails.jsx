@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { suggestCategory } from '../../lib/claude'
 import { ENTITIES, EXPENSE_NATURES, getPrograms, getSubprograms, getDonors } from '../../lib/donorData'
+import { blockNonNumericKey, sanitizeNumericPaste, sanitizeNumericValue } from '../../lib/numericInput'
 
 const CATEGORIES = [
   'Travel Fare', 'Lodging and Boarding', 'Food', 'Bike Fare',
@@ -341,7 +342,9 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
           <input
             type="number"
             value={amount}
-            onChange={e => setAmount(e.target.value)}
+            onChange={e => setAmount(sanitizeNumericValue(e.target.value))}
+            onKeyDown={blockNonNumericKey}
+            onPaste={sanitizeNumericPaste}
             placeholder="0"
             style={inputStyle}
           />
@@ -362,7 +365,9 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
                 <input
                   type="number"
                   value={line.amount}
-                  onChange={e => updateItemLine(idx, 'amount', e.target.value)}
+                  onChange={e => updateItemLine(idx, 'amount', sanitizeNumericValue(e.target.value))}
+                  onKeyDown={blockNonNumericKey}
+                  onPaste={sanitizeNumericPaste}
                   placeholder="0"
                   style={{ ...inputStyle, flex: 1 }}
                 />

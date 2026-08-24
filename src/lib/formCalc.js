@@ -1,5 +1,13 @@
 import { getAdvanceFlags } from './approvalEngine'
 
+// Today as a YYYY-MM-DD string, for use as a date input's `min` — blocks
+// picking a past date without needing a separate validity check.
+export function todayStr() {
+  const now = new Date()
+  const pad = n => String(n).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
+
 // Indian fiscal year prefix (Apr–Mar), e.g. "26/27" — used in ID numbering
 // (vendor/PR/PO) so all three share one convention: `{fy}-{TYPE}-07-{NNNN}`.
 export function getFiscalYearPrefix() {

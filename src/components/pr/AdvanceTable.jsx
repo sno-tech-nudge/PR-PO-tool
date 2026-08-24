@@ -1,4 +1,5 @@
-import { advanceValidity } from '../../lib/formCalc'
+import { advanceValidity, todayStr } from '../../lib/formCalc'
+import { blockNonNumericKey, sanitizeNumericPaste, sanitizeNumericValue } from '../../lib/numericInput'
 import QuoteUpload from './QuoteUpload'
 
 const CREDIT_TERM_OPTIONS = ['Net 15 Days', 'Net 30 Days', 'Net 45 Days', 'Net 60 Days', 'Net 90 Days']
@@ -40,7 +41,9 @@ export default function AdvanceTable({ value = {}, onChange, error }) {
               <input
                 type="number"
                 value={value.advancePercent ?? ''}
-                onChange={e => set({ advancePercent: e.target.value })}
+                onChange={e => set({ advancePercent: sanitizeNumericValue(e.target.value) })}
+                onKeyDown={blockNonNumericKey}
+                onPaste={sanitizeNumericPaste}
                 placeholder="0"
                 min="0"
                 max="100"
@@ -87,6 +90,7 @@ export default function AdvanceTable({ value = {}, onChange, error }) {
               <input
                 type="date"
                 value={value.creditTermDate || ''}
+                min={todayStr()}
                 onChange={e => set({ creditTermDate: e.target.value })}
                 style={{ width: '100%', height: '36px', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '0 10px', fontSize: '13px', color: '#1A1F36', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box' }}
               />

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { createPendingPO, approvePRLevel, rejectPRLevel } from '../../lib/prApprovalActions'
 import { canAccessApprovals, canAccessFinance } from '../../lib/auth'
+import { blockNonNumericKey, sanitizeNumericPaste, sanitizeNumericValue } from '../../lib/numericInput'
 import PRStatusTimeline from './PRStatusTimeline'
 import PRAttachmentsModal from './PRAttachmentsModal'
 
@@ -456,7 +457,9 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
                       min="0"
                       max={remaining}
                       value={newPOAmount}
-                      onChange={e => setNewPOAmount(e.target.value)}
+                      onChange={e => setNewPOAmount(sanitizeNumericValue(e.target.value))}
+                      onKeyDown={blockNonNumericKey}
+                      onPaste={sanitizeNumericPaste}
                       placeholder={`Up to ₹${remaining.toLocaleString('en-IN')}`}
                       style={{ height: '34px', width: '160px', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '0 10px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
                     />

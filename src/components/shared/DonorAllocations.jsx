@@ -1,4 +1,5 @@
 import { ENTITIES, getPrograms, getSubprograms, getDonors, validateAllocations } from '../../lib/donorData'
+import { blockNonNumericKey, sanitizeNumericPaste, sanitizeNumericValue } from '../../lib/numericInput'
 
 // Multi-donor allocation editor. Each row splits the spend across a
 // entity → programme → sub-programme → donor with a percentage.
@@ -128,7 +129,9 @@ export default function DonorAllocations({ value = [], onChange, error, lockEnti
                 <input
                   type="number"
                   value={row.percent}
-                  onChange={e => update(idx, { percent: e.target.value })}
+                  onChange={e => update(idx, { percent: sanitizeNumericValue(e.target.value) })}
+                  onKeyDown={blockNonNumericKey}
+                  onPaste={sanitizeNumericPaste}
                   placeholder="0"
                   min="0"
                   max="100"

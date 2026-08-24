@@ -1,3 +1,4 @@
+import { blockNonNumericKey, sanitizeNumericPaste, sanitizeNumericValue } from '../../lib/numericInput'
 import QuoteUpload from './QuoteUpload'
 
 // Quotes captured as rows (Zoho-style): each row = one vendor quote with
@@ -118,7 +119,9 @@ export default function QuoteRows({ value = {}, onChange, requiredQuotes = 2, er
                   <input
                     type="number"
                     value={q.amount}
-                    onChange={e => updateQuote(idx, { amount: e.target.value })}
+                    onChange={e => updateQuote(idx, { amount: sanitizeNumericValue(e.target.value) })}
+                    onKeyDown={blockNonNumericKey}
+                    onPaste={sanitizeNumericPaste}
                     placeholder="0"
                     min="0"
                     style={{ width: '100%', height: '34px', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '0 8px', fontSize: '12px', color: '#1A1F36', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box' }}

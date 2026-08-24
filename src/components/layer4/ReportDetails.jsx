@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { blockNonNumericKey, sanitizeNumericPaste, sanitizeNumericValue } from '../../lib/numericInput'
 
 const ENTITIES = [
   { key: 'AIC NCORE', label: 'AIC NCORE', sub: 'Atal Incubation Centre' },
@@ -203,7 +204,9 @@ export default function ReportDetails({ expenses, reportMeta, onContinue, onBack
               <input
                 type="number"
                 value={customCount}
-                onChange={e => setCustomCount(e.target.value)}
+                onChange={e => setCustomCount(sanitizeNumericValue(e.target.value))}
+                onKeyDown={blockNonNumericKey}
+                onPaste={sanitizeNumericPaste}
                 placeholder="Enter number"
                 style={{ ...inputStyle, width: '140px' }}
               />

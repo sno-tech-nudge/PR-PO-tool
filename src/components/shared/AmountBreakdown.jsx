@@ -1,4 +1,5 @@
 import { breakdownTotals } from '../../lib/formCalc'
+import { blockNonNumericKey, sanitizeNumericPaste, sanitizeNumericValue } from '../../lib/numericInput'
 
 // Amount breakdown: Quantity × Rate per Unit → computed Base, + Tax
 // (mandatory) + Incidentals (optional) → computed Total.
@@ -13,7 +14,9 @@ function money(val, onChange, placeholder, invalid) {
     <input
       type="number"
       value={val}
-      onChange={e => onChange(e.target.value)}
+      onChange={e => onChange(sanitizeNumericValue(e.target.value))}
+      onKeyDown={blockNonNumericKey}
+      onPaste={sanitizeNumericPaste}
       placeholder={placeholder}
       min="0"
       style={{

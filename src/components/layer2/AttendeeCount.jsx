@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import QuestionScreen from './QuestionScreen'
+import { blockNonNumericKey, sanitizeNumericPaste, sanitizeNumericValue } from '../../lib/numericInput'
 
 const COUNTS = ['2', '3', '4', '5', '6', '7+']
 
@@ -37,7 +38,9 @@ export default function AttendeeCount({ amount, onContinue, onBack }) {
           type="number"
           placeholder="Enter number"
           value={exactCount}
-          onChange={(e) => setExactCount(e.target.value)}
+          onChange={(e) => setExactCount(sanitizeNumericValue(e.target.value))}
+          onKeyDown={blockNonNumericKey}
+          onPaste={sanitizeNumericPaste}
           style={{
             width: '100%', height: '44px', border: '1px solid #E8E8E8',
             fontSize: '14px', padding: '0 12px', borderRadius: '4px',

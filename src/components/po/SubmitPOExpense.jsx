@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { determineApprovalRoute } from '../../lib/policyEngine'
 import { createApprovalRecords } from '../../lib/approvalEngine'
 import AttachmentDropzone from '../shared/AttachmentDropzone'
+import { blockNonNumericKey, sanitizeNumericPaste, sanitizeNumericValue } from '../../lib/numericInput'
 
 function fmtAmt(n) {
   if (n == null) return '—'
@@ -127,7 +128,9 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
           <input
             type="number"
             value={amount}
-            onChange={e => setAmount(e.target.value)}
+            onChange={e => setAmount(sanitizeNumericValue(e.target.value))}
+            onKeyDown={blockNonNumericKey}
+            onPaste={sanitizeNumericPaste}
             placeholder="0"
             style={{
               width: '100%', height: '40px', border: `1px solid ${overPending ? '#FECACA' : '#E3E8EF'}`,

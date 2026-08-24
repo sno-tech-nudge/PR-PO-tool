@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { blockNonNumericKey, sanitizeNumericPaste, sanitizeNumericValue } from '../../lib/numericInput'
 
 const CATEGORIES = [
   'Travel Fare', 'Lodging and Boarding', 'Food', 'Bike Fare',
@@ -119,7 +120,7 @@ export default function BulkAddExpenses({ user, onSaved, onBack }) {
                   </select>
                 </td>
                 <td style={{ padding: '8px' }}>
-                  <input type="number" value={r.amount} onChange={e => updateRow(i, { amount: e.target.value })} placeholder="0.00" style={inputStyle} />
+                  <input type="number" value={r.amount} onChange={e => updateRow(i, { amount: sanitizeNumericValue(e.target.value) })} onKeyDown={blockNonNumericKey} onPaste={sanitizeNumericPaste} placeholder="0.00" style={inputStyle} />
                 </td>
                 <td style={{ padding: '8px', textAlign: 'center' }}>
                   <input type="checkbox" checked={r.reimbursable} onChange={e => updateRow(i, { reimbursable: e.target.checked })} style={{ width: '16px', height: '16px' }} />
