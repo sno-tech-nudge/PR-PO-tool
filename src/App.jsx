@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase'
-import { getSession, canAccessApprovals, canAccessFinance, signOut } from './lib/auth'
+import { getSession, canAccessApprovals, canAccessFinance, canCreatePR, isObserver, signOut } from './lib/auth'
 import LoginScreen from './components/auth/LoginScreen'
 import OfflineBanner from './components/capture/OfflineBanner'
 import NewExpense from './components/capture/NewExpense'
@@ -233,6 +233,11 @@ export default function App() {
   if (!user) return <LoginScreen onLogin={handleLogin} />
 
   const role = user.role
+  // Roles that approve PRs at some step but never raise their own (fl,
+  // pr_approver, finance) get the approver-facing pending/reviewed view
+  // under "Purchase Requests" instead of an always-empty "My Requests"
+  // list. Admin can both create and approve, so it keeps "My Requests".
+  const isPRApproverOnly = canAccessApprovals(role) && !isObserver(role) && !canCreatePR(role)
 
   const navItems = [
     { key: 'list',    label: 'Home',              icon: '⊞' },
@@ -685,7 +690,9 @@ export default function App() {
 
         {/* ── PR screens ── */}
         {appScreen === 'pr-list' && prSubScreen === 'list' && (
-          <PRList user={user} onViewPR={openPRDetail} onCreatePR={openPRCreate} onResumeDraft={openPRDraftEdit} />
+          isPRApproverOnly
+            ? <PRApproverDashboard onViewPR={openPRDetail} />
+            : <PRList user={user} onViewPR={openPRDetail} onCreatePR={openPRCreate} onResumeDraft={openPRDraftEdit} />
         )}
         {appScreen === 'pr-list' && prSubScreen === 'form' && (
           <PRForm
