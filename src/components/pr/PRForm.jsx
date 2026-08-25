@@ -4,7 +4,7 @@ import { getPRApprovalLevels, getRequiredQuotes } from '../../lib/approvalEngine
 import { getEmailsByRole } from '../../lib/auth'
 import { generatePRSummary } from '../../lib/claude'
 import { EXPENSE_NATURES, validateAllocations, primaryAllocation } from '../../lib/donorData'
-import { quotesValidity, advanceValidity, breakdownTotals, getFiscalYearPrefix, todayStr } from '../../lib/formCalc'
+import { quotesValidity, advanceValidity, breakdownTotals, getFiscalYearPrefix, fiscalYearStartStr } from '../../lib/formCalc'
 import VendorSelector from './VendorSelector'
 import QuoteRows from './QuoteRows'
 import AdvanceTable from './AdvanceTable'
@@ -611,7 +611,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
               <input
                 type="date"
                 value={fromDate}
-                min={todayStr()}
+                min={fiscalYearStartStr()}
                 onChange={e => {
                   const v = e.target.value
                   setFromDate(v)
@@ -625,7 +625,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
               <input
                 type="date"
                 value={toDate}
-                min={fromDate || todayStr()}
+                min={fromDate || fiscalYearStartStr()}
                 onChange={e => setToDate(e.target.value)}
                 onBlur={() => validateField('toDate')}
                 style={{ width: '100%', height: '38px', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '0 10px', fontSize: '13px', color: '#1A1F36', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box' }}

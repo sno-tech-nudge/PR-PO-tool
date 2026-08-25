@@ -8,6 +8,17 @@ export function todayStr() {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
 }
 
+// Start of the current Indian fiscal year (Apr–Mar) as a YYYY-MM-DD string,
+// for use as the PR form's "From Date" minimum — a purchase period can
+// start anywhere within the current FY, not just from today onwards.
+export function fiscalYearStartStr() {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = now.getMonth() + 1
+  const fyStartYear = m >= 4 ? y : y - 1
+  return `${fyStartYear}-04-01`
+}
+
 // Indian fiscal year prefix (Apr–Mar), e.g. "26/27" — used in ID numbering
 // (vendor/PR/PO) so all three share one convention: `{fy}-{TYPE}-07-{NNNN}`.
 export function getFiscalYearPrefix() {
