@@ -559,7 +559,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
           )}
 
           {allocationsValid && budgeted !== null && (
-            <Field label="Expense Nature" error={errors.expenseType} required hint="Revenue vs capital vs programme classification">
+            <Field label="Expense Nature" error={errors.expenseType} required hint="Revenue vs capital classification">
               {sel(expenseType, setExpenseType, EXPENSE_NATURES, 'Select nature…', () => validateField('expenseType'))}
             </Field>
           )}
