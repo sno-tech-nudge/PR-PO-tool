@@ -148,11 +148,29 @@ export default function QuoteRows({ value = {}, onChange, requiredQuotes = 2, er
             + Add another quote
           </button>
 
-          {/* Comparing multiple vendors requires a comparative statement */}
+          {/* Comparing multiple vendors requires a comparative statement, in the
+              org's own uniform format — the boilerplate below is a static
+              Word doc shipped with the app (public/), not user data. */}
           <div style={{ border: '1px solid #E3E8EF', borderRadius: '6px', padding: '14px', background: '#FFFFFF' }}>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '10px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>
               Comparative Statement<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
             </div>
+            <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '10px', lineHeight: 1.5 }}>
+              Download the format, fill in the details, and upload it back here as a PDF.
+            </div>
+            <a
+              href="/comparative-statement-boilerplate.docx"
+              download="Comparative Statement - Boilerplate.docx"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                fontSize: '12px', fontWeight: 600, color: '#8C3225',
+                border: '1px solid #f9c5b7', background: '#fdf0ed',
+                borderRadius: '4px', padding: '7px 12px', textDecoration: 'none',
+                marginBottom: '10px',
+              }}
+            >
+              ↓ Download comparative statement format (.docx)
+            </a>
             <QuoteUpload
               skipExtraction
               onFileUploaded={path => set({ comparative_statement_path: path })}
