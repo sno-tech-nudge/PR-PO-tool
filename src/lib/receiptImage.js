@@ -1,8 +1,11 @@
-// Vision models read a ~1800px image just as accurately as a 4000px phone
+// Vision models read a ~2000px image about as accurately as a 4000px phone
 // photo, but the bigger payload costs real seconds in base64 encoding +
 // upload + model processing — capping dimensions here is what actually makes
-// OCR feel fast, not just prompt tuning.
-const MAX_DIMENSION = 1800
+// OCR feel fast, not just prompt tuning. Nudged up from 1800: a receipt's
+// large single total is forgiving of downscaling, but a real vendor
+// quotation/invoice is a dense table of small print, where losing a little
+// resolution costs real extraction accuracy.
+const MAX_DIMENSION = 2000
 
 // Converts any image file (PNG, HEIC, WebP, JPEG…) to a JPEG base64 via canvas
 // so Groq/Gemini always receives a clean JPEG regardless of source format,
@@ -37,7 +40,7 @@ export async function pdfPageToBase64(file) {
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
   const page = await pdf.getPage(1)
   const baseViewport = page.getViewport({ scale: 1 })
-  const scale = Math.min(2.0, MAX_DIMENSION / Math.max(baseViewport.width, baseViewport.height))
+  const scale = Math.min(2.5, MAX_DIMENSION / Math.max(baseViewport.width, baseViewport.height))
   const viewport = page.getViewport({ scale })
 
   const canvas = document.createElement('canvas')

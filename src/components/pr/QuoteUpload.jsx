@@ -42,17 +42,30 @@ export default function QuoteUpload({ onExtracted, onFileUploaded, skipExtractio
     // requester still fills the fields manually and attaches the document
     // itself via the "Upload to system" button below, which is all
     // quotesValidity() actually checks before allowing submission.
+    const cannotReadNotice = 'Could not read this document automatically — no problem, just fill in the vendor name and amount yourself and upload it below; that still counts as your attached quote.'
+    let b64
     try {
-      const b64 = await fileToJpegBase64(f)
+      b64 = await fileToJpegBase64(f)
+    } catch (err) {
+      // Logged distinctly from an extraction failure below — this means the
+      // PDF/image itself couldn't even be converted to a page image (e.g. a
+      // corrupt or password-protected PDF), before Gemini was ever called.
+      console.error('Quote file could not be converted to an image:', err)
+      setNotice(cannotReadNotice)
+      setExtracting(false)
+      return
+    }
+    try {
       const result = await extractVendorQuote(b64)
       if (result) {
         setExtracted(result)
         onExtracted(result)
       } else {
-        setNotice('Could not read this document automatically — no problem, just fill in the vendor name and amount yourself and upload it below; that still counts as your attached quote.')
+        setNotice(cannotReadNotice)
       }
-    } catch {
-      setNotice('Could not read this document automatically — no problem, just fill in the vendor name and amount yourself and upload it below; that still counts as your attached quote.')
+    } catch (err) {
+      console.error('Quote extraction failed:', err)
+      setNotice(cannotReadNotice)
     } finally {
       setExtracting(false)
     }
