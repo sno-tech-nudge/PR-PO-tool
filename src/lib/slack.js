@@ -1,19 +1,14 @@
-// Slack notifications via a single Incoming Webhook — posts into one shared
-// channel (whatever channel the webhook was created for in Slack), using
-// Slack's mrkdwn link syntax (<url|label>) in the plain `text` field so the
-// message body itself is a clickable hyperlink straight back into the app.
-// Same posture as this app's existing client-side AI calls (Groq/Gemini):
-// no backend layer here, so the webhook URL ships in the client bundle like
-// those keys do — acceptable for an internal tool, but anyone with the built
-// JS can extract it and post into the channel, so treat it accordingly.
-const WEBHOOK_URL = import.meta.env.VITE_SLACK_WEBHOOK_URL
-
-// Best-effort — a missing webhook, a Slack outage, or a network hiccup must
-// never block the action (submit/approve/reject) that triggered the message.
+// Slack notifications, routed through api/notify-slack.js — Slack's
+// Incoming Webhook endpoint doesn't send CORS headers, so a browser-side
+// fetch() directly to hooks.slack.com fails silently (caught by this
+// function's own non-blocking try/catch, which is exactly why calling it
+// directly never actually reached Slack). The serverless proxy makes the
+// server-to-server call instead, where CORS doesn't apply, and is also
+// where the real webhook URL now lives — it no longer needs to ship in the
+// client bundle at all.
 export async function notifySlack(text) {
-  if (!WEBHOOK_URL) return
   try {
-    await fetch(WEBHOOK_URL, {
+    await fetch('/api/notify-slack', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text }),
