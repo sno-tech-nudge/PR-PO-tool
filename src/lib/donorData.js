@@ -71,6 +71,14 @@ export const DONOR_MAP = {
       'People & Culture': ['Unrestricted / Overheads'],
     },
   },
+  // Not part of the "PRPO module - mapping.pdf" source above — kept as its
+  // own entity from the prior mapping, unchanged, alongside it.
+  'TNF': {
+    'EIP': {
+      'EIP - AK - P2': ['BMGF AK TNF'],
+      'EIP - UdGram':  ['LIF'],
+    },
+  },
 }
 
 export const ENTITIES = Object.keys(DONOR_MAP)
