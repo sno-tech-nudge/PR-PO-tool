@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { canCreatePR } from '../../lib/auth'
 import PRStatusTimeline from './PRStatusTimeline'
+import PRStatusModal from './PRStatusModal'
 
 const STATUS_COLOR = {
   draft:        { color: '#6B7280', bg: '#F9FAFB' },
@@ -16,6 +17,7 @@ export default function PRList({ user, onViewPR, onCreatePR, onResumeDraft }) {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
+  const [statusPR, setStatusPR] = useState(null)
 
   useEffect(() => {
     load()
@@ -29,7 +31,7 @@ export default function PRList({ user, onViewPR, onCreatePR, onResumeDraft }) {
     if (!silent) setLoading(true)
     const { data } = await supabase
       .from('purchase_requests')
-      .select('id, pr_number, amount, category, entity, purpose, status, submitted_at, created_at, vendors(org_name)')
+      .select('id, pr_number, amount, category, entity, purpose, status, submitted_at, created_at, requested_by, rejection_reason, vendors(org_name)')
       .eq('requested_by', user.email)
       .order('created_at', { ascending: false })
     setPRs(data || [])
@@ -126,9 +128,20 @@ export default function PRList({ user, onViewPR, onCreatePR, onResumeDraft }) {
             <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '6px' }}>{pr.purpose?.substring(0, 80)}{pr.purpose?.length > 80 ? '…' : ''}</div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ fontSize: '11px', color: '#9CA3AF', fontFamily: 'monospace' }}>{pr.pr_number}</div>
-              <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 7px', borderRadius: '3px', background: sc.bg, color: sc.color }}>
-                {pr.status === 'po_generated' ? 'PO Issued' : (pr.status || '').replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 7px', borderRadius: '3px', background: sc.bg, color: sc.color }}>
+                  {pr.status === 'po_generated' ? 'PO Issued' : (pr.status || '').replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                </span>
+                <button
+                  onClick={e => { e.stopPropagation(); setStatusPR(pr) }}
+                  style={{
+                    height: '24px', padding: '0 10px', background: '#FFFFFF', color: '#8C3225',
+                    border: '1px solid #f9c5b7', borderRadius: '3px', fontSize: '10px', fontWeight: 600, cursor: 'pointer',
+                  }}
+                >
+                  View Status
+                </button>
+              </div>
             </div>
             {pr.submitted_at && (
               <div style={{ marginTop: '8px' }}>
@@ -138,6 +151,8 @@ export default function PRList({ user, onViewPR, onCreatePR, onResumeDraft }) {
           </div>
         )
       })}
+
+      {statusPR && <PRStatusModal pr={statusPR} onClose={() => setStatusPR(null)} />}
     </div>
   )
 }

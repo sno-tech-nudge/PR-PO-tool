@@ -105,7 +105,10 @@ export default function QuoteUpload({ onExtracted, onFileUploaded, skipExtractio
 
       {extracted && (
         <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '4px', padding: '14px', marginBottom: '10px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: '#15803D', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>Extracted from document</div>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: '#15803D', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Extracted from document</div>
+          <div style={{ fontSize: '11px', color: '#4B5563', marginBottom: '10px', lineHeight: 1.5 }}>
+            ⚠ Auto-filled from the document — double check the fields below against it before submitting.
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
             {[
               ['Vendor', extracted.vendor_name],

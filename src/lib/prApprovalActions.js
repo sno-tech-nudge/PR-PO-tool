@@ -174,7 +174,7 @@ export async function rejectPRLevel({ prId, approvals, pr, user, reason }) {
       status: 'rejected', actioned_at: now, approver_email: user.email, rejection_reason: reason,
     }).eq('id', currentPending.id)
   }
-  await supabase.from('purchase_requests').update({ status: 'rejected', rejection_reason: reason }).eq('id', prId)
+  await supabase.from('purchase_requests').update({ status: 'rejected', rejection_reason: reason, rejected_at: now }).eq('id', prId)
   try {
     await supabase.from('expense_notifications').insert({
       recipient_id: pr.requested_by,
