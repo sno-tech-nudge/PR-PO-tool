@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import { getDisplayName } from '../../lib/directory'
 
 // Same visual language as VendorStatusModal.jsx (horizontal tracker + a
 // vertical timeline card on the brand accent background) — kept as its own
@@ -43,7 +44,7 @@ function buildSteps(pr, approvals, po) {
       : 'waiting'
     return {
       key: `level-${level}`, label, state,
-      date: a.actioned_at, actor: state === 'waiting' ? null : (a.approver_email || a.approver_name),
+      date: a.actioned_at, actor: state === 'waiting' ? null : (a.approver_email ? getDisplayName(a.approver_email) : a.approver_name),
       role: label, note: a.status === 'rejected' ? pr.rejection_reason : null,
     }
   }
@@ -56,12 +57,12 @@ function buildSteps(pr, approvals, po) {
     {
       key: 'draft', label: 'Draft',
       state: isDraft ? 'current' : 'done',
-      date: pr.created_at, actor: pr.requested_by, role: 'Requester',
+      date: pr.created_at, actor: getDisplayName(pr.requested_by), role: 'Requester',
     },
     {
       key: 'submitted', label: 'Submitted',
       state: isDraft ? 'waiting' : 'done',
-      date: pr.submitted_at, actor: pr.requested_by, role: 'Requester',
+      date: pr.submitted_at, actor: getDisplayName(pr.requested_by), role: 'Requester',
     },
     isDraft
       ? { key: 'level-1', label: 'Functional Leader', state: 'waiting', date: null, actor: null }
@@ -73,7 +74,7 @@ function buildSteps(pr, approvals, po) {
       key: 'po', label: po?.status === 'issued' ? 'PO Issued' : po?.status === 'rejected' ? 'PO Rejected' : 'PO / Finance',
       state: isRejected && !po ? 'waiting' : poState,
       date: po?.approved_at || po?.generated_at || null,
-      actor: po?.status === 'issued' ? (po.approved_by || 'Finance') : po ? 'Finance' : null,
+      actor: po?.status === 'issued' ? (po.approved_by ? getDisplayName(po.approved_by) : 'Finance') : po ? 'Finance' : null,
       role: 'Finance', note: po?.status === 'rejected' ? po.rejection_reason : null,
     },
   ]

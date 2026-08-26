@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { createPendingPO, approvePRLevel, rejectPRLevel } from '../../lib/prApprovalActions'
 import { canAccessApprovals, canAccessFinance } from '../../lib/auth'
+import { getDisplayName } from '../../lib/directory'
 import AmountInput from '../shared/AmountInput'
 import PRStatusTimeline from './PRStatusTimeline'
 import PRAttachmentsModal from './PRAttachmentsModal'
@@ -203,7 +204,7 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
             {user.email !== pr.requested_by && (
               <div style={{ fontSize: '11px', color: '#6B7280', textAlign: 'right' }}>
                 <div>Requested by</div>
-                <div style={{ fontFamily: 'monospace', color: '#374151' }}>{pr.requested_by}</div>
+                <div style={{ color: '#374151', fontWeight: 600 }}>{getDisplayName(pr.requested_by)}</div>
               </div>
             )}
             {canEdit && (
@@ -372,7 +373,7 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
                 return (
                   <tr key={a.id} style={{ borderBottom: i < approvals.length - 1 ? '1px solid #F3F4F6' : 'none' }}>
                     <td style={{ padding: '10px 14px', fontSize: '12px', color: '#374151', fontWeight: 600 }}>{a.approver_name}</td>
-                    <td style={{ padding: '10px 14px', fontSize: '11px', color: '#6B7280', fontFamily: 'monospace' }}>{a.approver_email || '—'}</td>
+                    <td style={{ padding: '10px 14px', fontSize: '11px', color: '#6B7280' }}>{a.approver_email ? getDisplayName(a.approver_email) : '—'}</td>
                     <td style={{ padding: '10px 14px', fontSize: '11px', fontWeight: 600, color: statusColor }}>{a.status.charAt(0).toUpperCase() + a.status.slice(1)}</td>
                     <td style={{ padding: '10px 14px', fontSize: '12px', color: '#9CA3AF' }}>{fmtDate(a.actioned_at)}</td>
                   </tr>

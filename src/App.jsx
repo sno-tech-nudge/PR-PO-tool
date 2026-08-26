@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase'
 import { getSession, canAccessApprovals, canAccessFinance, canCreatePR, isObserver, signOut } from './lib/auth'
+import { preloadDirectory } from './lib/directory'
 import LoginScreen from './components/auth/LoginScreen'
 import OfflineBanner from './components/capture/OfflineBanner'
 import NewExpense from './components/capture/NewExpense'
@@ -64,6 +65,7 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false
+    preloadDirectory()
     getSession().then(u => {
       if (!cancelled) { setUser(u); setSessionLoading(false) }
     })

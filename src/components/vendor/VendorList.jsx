@@ -7,6 +7,7 @@ import PanDuplicateModal from './PanDuplicateModal'
 import VendorStatusModal from './VendorStatusModal'
 import { downloadCSV, vendorsToRows } from '../../lib/exportUtils'
 import { canAccessFinance } from '../../lib/auth'
+import { getDisplayName } from '../../lib/directory'
 
 function fmtDate(d) {
   if (!d) return '—'
@@ -63,6 +64,7 @@ function cellValue(v, key) {
     case 'location': return [v.city, v.state].filter(Boolean).join(', ') || '—'
     case 'status': return <VendorStatusBadge status={v.status} />
     case 'created_at': return fmtDate(v.created_at)
+    case 'submitted_by': return getDisplayName(v.submitted_by) || '—'
     default: return v[key] || '—'
   }
 }
@@ -269,7 +271,7 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
                             padding: '11px 14px', fontSize: c.key === 'vendor_id' ? '11px' : '12px',
                             color: c.key === 'vendor_id' ? '#8C3225' : c.key === 'org_name' ? '#1A1F36' : '#374151',
                             fontWeight: c.key === 'vendor_id' || c.key === 'org_name' ? 500 : 400,
-                            fontFamily: c.key === 'vendor_id' || c.key === 'submitted_by' ? 'monospace' : 'inherit',
+                            fontFamily: c.key === 'vendor_id' ? 'monospace' : 'inherit',
                             whiteSpace: c.key === 'created_at' ? 'nowrap' : 'normal',
                           }}>
                             {cellValue(v, c.key)}

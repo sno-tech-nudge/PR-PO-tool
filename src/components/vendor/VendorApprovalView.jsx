@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import PanDuplicateModal from './PanDuplicateModal'
 import { sendVendorEmail } from '../../lib/vendorEmail'
+import { getDisplayName } from '../../lib/directory'
 
 // Sole Proprietorship shares the same Aadhaar-based document requirement as
 // Individual/Freelancer per Finance's Vendor Document Requirements sheet.
@@ -133,7 +134,7 @@ export default function VendorApprovalView({ vendor, user, onBack, onActioned })
           <div style={{ padding: '16px 20px', background: '#F8F9FA', borderBottom: '1px solid #E3E8EF' }}>
             <div style={{ fontSize: '11px', color: '#9CA3AF', fontFamily: 'monospace', marginBottom: '4px' }}>{vendor.vendor_id}</div>
             <div style={{ fontSize: '20px', fontWeight: 700, color: '#1A1F36' }}>{vendor.org_name}</div>
-            <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px' }}>{vendor.org_type} · Submitted by {vendor.submitted_by}</div>
+            <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px' }}>{vendor.org_type} · Submitted by {getDisplayName(vendor.submitted_by)}</div>
           </div>
         </div>
 

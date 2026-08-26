@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { avgTAT, prApprovedAt, daysBetween } from '../../lib/tat'
+import { getDisplayName } from '../../lib/directory'
 
 function fmtDate(d) {
   if (!d) return '—'
@@ -173,7 +174,7 @@ export default function ApprovalHistoryView({ onViewVendor, onViewPR, onViewPO }
         columns={[
           { key: 'org_name', label: 'Organisation' },
           { key: 'pan_number', label: 'PAN' },
-          { key: 'approved_by', label: 'Approved By' },
+          { key: 'approved_by', label: 'Approved By', render: r => getDisplayName(r.approved_by) },
           { key: 'approved_at', label: 'Approved On', render: r => fmtDate(r.approved_at) },
         ]}
       />
@@ -250,8 +251,8 @@ export default function ApprovalHistoryView({ onViewVendor, onViewPR, onViewPO }
                   <td style={{ padding: '11px 14px', fontSize: '13px', fontWeight: 700, color: '#1A1F36', textAlign: 'right', fontFamily: 'monospace' }}>
                     {Number(report.total_amount || 0).toLocaleString('en-IN')}
                   </td>
-                  <td style={{ padding: '11px 14px', fontSize: '11px', color: '#374151', fontFamily: 'monospace' }}>
-                    {report.employee_email || '—'}
+                  <td style={{ padding: '11px 14px', fontSize: '11px', color: '#374151' }}>
+                    {getDisplayName(report.employee_email) || '—'}
                   </td>
                   <td style={{ padding: '11px 14px', fontSize: '12px', color: '#374151' }}>
                     {(() => {

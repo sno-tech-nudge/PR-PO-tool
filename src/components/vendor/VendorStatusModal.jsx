@@ -1,3 +1,5 @@
+import { getDisplayName } from '../../lib/directory'
+
 if (typeof document !== 'undefined' && !document.getElementById('vendor-status-style')) {
   const s = document.createElement('style')
   s.id = 'vendor-status-style'
@@ -32,18 +34,18 @@ function buildSteps(vendor) {
 
   const finalLabel = isRejected ? 'Rejected' : 'Approved'
   const finalDate  = isRejected ? vendor.rejected_at : vendor.approved_at
-  const finalActor = isRejected ? (vendor.rejected_by || 'Finance') : (vendor.approved_by || 'Finance')
+  const finalActor = isRejected ? (vendor.rejected_by ? getDisplayName(vendor.rejected_by) : 'Finance') : (vendor.approved_by ? getDisplayName(vendor.approved_by) : 'Finance')
 
   return [
     {
       key: 'draft', label: 'Draft',
       state: isDraft ? 'current' : 'done',
-      date: vendor.created_at, actor: vendor.submitted_by, role: 'Submitter',
+      date: vendor.created_at, actor: getDisplayName(vendor.submitted_by), role: 'Submitter',
     },
     {
       key: 'submitted', label: 'Submitted',
       state: isDraft ? 'waiting' : 'done',
-      date: vendor.submitted_at, actor: vendor.submitted_by, role: 'Submitter',
+      date: vendor.submitted_at, actor: getDisplayName(vendor.submitted_by), role: 'Submitter',
     },
     {
       key: 'accepted', label: 'Accepted by Finance',

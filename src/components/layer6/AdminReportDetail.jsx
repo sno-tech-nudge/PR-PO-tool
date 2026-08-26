@@ -4,6 +4,7 @@ import { downloadCSV, reportsToRows } from '../../lib/exportUtils'
 import { runAIVouchCheck } from '../../lib/claude'
 import ReportChat from '../shared/ReportChat'
 import { manualLinkPRToExpense } from '../../lib/linkEngine'
+import { getDisplayName } from '../../lib/directory'
 
 const STATUS_CONFIG = {
   submitted:    { label: 'Submitted',     color: '#B45309', bg: '#FFFBEB' },
@@ -658,7 +659,7 @@ function PRLinkSection({ reportId, report, onLinked }) {
                 <div>
                   <span style={{ fontSize: '12px', fontWeight: 600, color: '#8C3225', fontFamily: 'monospace' }}>{pr.pr_number}</span>
                   <span style={{ fontSize: '12px', color: '#374151', marginLeft: '10px' }}>{pr.vendors?.org_name} · INR {Number(pr.amount || 0).toLocaleString('en-IN')}</span>
-                  <div style={{ fontSize: '11px', color: '#9CA3AF', fontFamily: 'monospace', marginTop: '2px' }}>{pr.requested_by}</div>
+                  <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '2px' }}>{getDisplayName(pr.requested_by)}</div>
                 </div>
                 <button
                   onClick={() => handleLink(pr.id)}

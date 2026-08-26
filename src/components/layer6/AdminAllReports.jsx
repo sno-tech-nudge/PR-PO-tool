@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { downloadCSV, reportsToRows } from '../../lib/exportUtils'
+import { getDisplayName } from '../../lib/directory'
 
 const STATUS_CONFIG = {
   submitted:    { label: 'Submitted',     color: '#B45309', bg: '#FFFBEB' },
@@ -369,7 +370,7 @@ export default function AdminAllReports({ onViewDetail }) {
                       {Number(report.total_amount || 0).toLocaleString('en-IN')}
                     </td>
                     <td style={{ padding: '11px 14px', fontSize: '12px', color: '#374151' }}>
-                      {report.employee_email ? <span style={{ fontFamily: 'monospace', fontSize: '11px' }}>{report.employee_email}</span> : '—'}
+                      {report.employee_email ? getDisplayName(report.employee_email) : '—'}
                     </td>
                     <td style={{ padding: '11px 14px', fontSize: '12px', color: '#374151' }}>
                       {(() => {

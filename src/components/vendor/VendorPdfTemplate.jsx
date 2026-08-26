@@ -1,3 +1,5 @@
+import { getDisplayName } from '../../lib/directory'
+
 const AADHAAR_REQUIRED_ORG_TYPES = ['Individual/Freelancer', 'Proprietorship']
 
 function fmtDate(d) {
@@ -103,9 +105,9 @@ export default function VendorPdfTemplate({ vendor, panSiblingsCount = 0 }) {
       </PdfSection>
 
       <PdfSection title="Approval">
-        <PdfRow label="Submitted By" value={vendor.submitted_by} />
+        <PdfRow label="Submitted By" value={getDisplayName(vendor.submitted_by)} />
         <PdfRow label="Submitted On" value={fmtDate(vendor.submitted_at)} />
-        {vendor.approved_at && <PdfRow label="Approved By" value={vendor.approved_by} />}
+        {vendor.approved_at && <PdfRow label="Approved By" value={getDisplayName(vendor.approved_by)} />}
         {vendor.approved_at && <PdfRow label="Approved On" value={fmtDate(vendor.approved_at)} />}
         {vendor.status === 'rejected' && <PdfRow label="Rejection Reason" value={vendor.rejection_reason} />}
         {vendor.status === 'approved' && vendor.notes && <PdfRow label="Finance Comment" value={vendor.notes} />}

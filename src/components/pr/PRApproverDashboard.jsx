@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import { getDisplayName } from '../../lib/directory'
 
 function timeAgo(dateStr) {
   if (!dateStr) return ''
@@ -49,7 +50,7 @@ function PRCard({ pr, onClick }) {
         <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>{pr.purpose?.substring(0, 70)}{pr.purpose?.length > 70 ? '…' : ''}</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontSize: '11px', color: '#9CA3AF' }}>
-            <span style={{ fontFamily: 'monospace' }}>{pr.pr_number}</span> · {pr.requested_by?.split('@')[0]} · {timeAgo(pr.submitted_at)}
+            <span style={{ fontFamily: 'monospace' }}>{pr.pr_number}</span> · {getDisplayName(pr.requested_by)} · {timeAgo(pr.submitted_at)}
           </div>
           <div style={{ fontSize: '11px', color: '#6B7280', background: '#F3F4F6', padding: '2px 8px', borderRadius: '2px' }}>
             {pr.category}

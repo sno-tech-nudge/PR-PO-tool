@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import VendorStatusBadge from './VendorStatusBadge'
+import { getDisplayName } from '../../lib/directory'
 
 export default function PanDuplicateModal({ vendors, onAcknowledge, onClose, readOnly = false }) {
   const [activeIndex, setActiveIndex] = useState(0)
@@ -56,7 +57,7 @@ export default function PanDuplicateModal({ vendors, onAcknowledge, onClose, rea
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
             <span style={{ fontSize: '12px', color: '#6B7280' }}>Submitted By</span>
-            <span style={{ fontSize: '13px', color: '#1A1F36' }}>{active.submitted_by || '—'}</span>
+            <span style={{ fontSize: '13px', color: '#1A1F36' }}>{getDisplayName(active.submitted_by) || '—'}</span>
           </div>
         </div>
 

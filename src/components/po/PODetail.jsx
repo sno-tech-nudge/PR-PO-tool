@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { approvePO, rejectPO } from '../../lib/prApprovalActions'
 import { canAccessFinance } from '../../lib/auth'
+import { getDisplayName } from '../../lib/directory'
 import POTemplate from '../pr/POTemplate'
 import SubmitPOExpense from './SubmitPOExpense'
 import PRAttachmentsModal from '../pr/PRAttachmentsModal'
@@ -188,7 +189,7 @@ export default function PODetail({ poId, user, onBack }) {
           </div>
           <div>
             <Row label="Linked PR"  value={pr?.pr_number} mono />
-            <Row label="Requested By" value={pr?.requested_by} />
+            <Row label="Requested By" value={getDisplayName(pr?.requested_by)} />
             <Row label="Category"   value={pr?.category} />
           </div>
         </div>

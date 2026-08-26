@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import { getDisplayName } from '../../lib/directory'
 import VendorStatusBadge from './VendorStatusBadge'
 import PanDuplicateModal from './PanDuplicateModal'
 import VendorPdfTemplate from './VendorPdfTemplate'
@@ -182,9 +183,9 @@ export default function VendorDetail({ vendorId, user, onBack, onEdit, onApprove
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0' }}>
             {[
-              { label: 'Submitted By', value: vendor.submitted_by },
+              { label: 'Submitted By', value: getDisplayName(vendor.submitted_by) },
               { label: 'Submitted', value: fmtDate(vendor.submitted_at) },
-              vendor.approved_at ? { label: 'Approved By', value: vendor.approved_by } : null,
+              vendor.approved_at ? { label: 'Approved By', value: getDisplayName(vendor.approved_by) } : null,
               vendor.approved_at ? { label: 'Approved On', value: fmtDate(vendor.approved_at) } : null,
             ].filter(Boolean).map((f, i) => (
               <div key={i} style={{ padding: '12px 20px', borderRight: '1px solid #F3F4F6', borderBottom: '1px solid #F3F4F6' }}>
