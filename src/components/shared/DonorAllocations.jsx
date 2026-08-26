@@ -108,13 +108,13 @@ export default function DonorAllocations({ value = [], onChange, error, lockEnti
                   <div style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '3px' }}>Programme</div>
                   {programs.length > 0
                     ? cellSelect(row.program, v => handleProgram(idx, v), programs, 'Select…')
-                    : cellInput(row.program, v => handleProgram(idx, v), 'e.g. CSI, EIP')}
+                    : cellInput(row.program, v => handleProgram(idx, v), 'e.g. Livelihood Program, Central')}
                 </div>
                 <div>
                   <div style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '3px' }}>Sub-Programme</div>
                   {subprograms.length > 0
                     ? cellSelect(row.subprogram, v => handleSubprogram(idx, v), subprograms, 'Select…')
-                    : cellInput(row.subprogram, v => handleSubprogram(idx, v), 'e.g. CSI - Prize')}
+                    : cellInput(row.subprogram, v => handleSubprogram(idx, v), 'e.g. PMU, Prize')}
                 </div>
                 <div>
                   <div style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '3px' }}>Donor</div>
