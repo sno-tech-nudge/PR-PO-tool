@@ -329,7 +329,7 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
           <Row label="PAN" value={pr.vendors.pan_number} />
           {pr.vendors.gstin && <Row label="GSTIN" value={pr.vendors.gstin} />}
           <Row label="Contact" value={pr.vendors.contact_person} />
-          <Row label="Bank" value={`${pr.vendors.bank_name} — ${pr.vendors.beneficiary_name}`} />
+          <Row label="Bank" value={pr.vendors.bank_name || pr.vendors.beneficiary_name ? `${pr.vendors.bank_name || '—'} — ${pr.vendors.beneficiary_name || '—'}` : null} />
           <Row label="Account No." value={pr.vendors.account_number} />
           <Row label="IFSC" value={pr.vendors.ifsc_code} />
         </div>
