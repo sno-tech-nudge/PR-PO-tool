@@ -5,6 +5,7 @@ import { getEmailsByRole } from '../../lib/auth'
 import { generatePRSummary } from '../../lib/claude'
 import { EXPENSE_NATURES, validateAllocations, primaryAllocation } from '../../lib/donorData'
 import { quotesValidity, advanceValidity, breakdownTotals, getFiscalYearPrefix, fiscalYearStartStr } from '../../lib/formCalc'
+import { notifySlack, recordUrl } from '../../lib/slack'
 import VendorSelector from './VendorSelector'
 import QuoteRows from './QuoteRows'
 import AdvanceTable from './AdvanceTable'
@@ -478,6 +479,8 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
           related_id: prId,
         })))
       } catch { /* non-blocking */ }
+
+      notifySlack(`📝 New PR raised: <${recordUrl('pr', prId)}|${prNumber}> — ₹${bd.total.toLocaleString('en-IN')} (${category}) by ${user.name}. Awaiting *Functional Leader* approval.${advNote}`)
 
       onSaved({ prId, prNumber })
     } catch (err) {

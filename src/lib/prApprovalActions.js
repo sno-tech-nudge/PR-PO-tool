@@ -3,6 +3,9 @@ import { generatePOPDF, uploadPDFToSupabase } from './pdfGenerator'
 import { autoLinkPRToExpense } from './linkEngine'
 import { getFiscalYearPrefix } from './formCalc'
 import { getEmailsByRole } from './auth'
+import { notifySlack, recordUrl } from './slack'
+
+function fmtAmt(n) { return `₹${Number(n || 0).toLocaleString('en-IN')}` }
 
 // Shared by PRDetail.jsx (full detail screen, including the action panel) and
 // PRApproverDashboard.jsx (quick accept/reject icons in the list) so both act
@@ -54,10 +57,12 @@ export async function approvePRLevel({ prId, approvals, user, pr }) {
         relatedId: prId,
       })
     }
+    notifySlack(`✅ PR <${recordUrl('pr', prId)}|${pr?.pr_number || prId}> approved by ${currentPending.approver_name} (${user.name}) — now awaiting *${nextWaiting.approver_name}* approval.`)
     return { ok: true, isFinal: false, currentPending, nextWaiting }
   }
 
   await supabase.from('purchase_requests').update({ status: 'approved' }).eq('id', prId)
+  notifySlack(`✅ PR <${recordUrl('pr', prId)}|${pr?.pr_number || prId}> fully approved by ${currentPending.approver_name} (${user.name}) — ${fmtAmt(pr?.amount)}, ready for PO.`)
   return { ok: true, isFinal: true, currentPending, nextWaiting: null }
 }
 
@@ -83,6 +88,7 @@ export async function createPendingPO({ prId, pr, amount }) {
       relatedType: 'po',
       relatedId: newPO.id,
     })
+    notifySlack(`📦 PO <${recordUrl('po', newPO.id)}|${poNumber}> created for PR ${pr?.pr_number || ''} — ${fmtAmt(poAmount)} — awaiting *Finance* approval.`)
     return newPO
   } catch (err) {
     console.error('PO creation error:', err.message)
@@ -129,6 +135,7 @@ export async function approvePO({ po, pr, user, setPOData }) {
         related_id: pr.id,
       })
     } catch { /* non-blocking — the PO is already approved above */ }
+    notifySlack(`✅ PO <${recordUrl('po', po.id)}|${po.po_number}> approved & issued by ${user.name} — ${fmtAmt(po.amount)} (PR ${pr.pr_number}).`)
 
     return true
   } catch (err) {
@@ -140,8 +147,11 @@ export async function approvePO({ po, pr, user, setPOData }) {
 // Finance rejects a pending PO — it's cancelled with a reason, but the
 // underlying PR stays approved so Finance can create a corrected
 // replacement PO against the same PR without re-running PR approval.
-export async function rejectPO({ poId, reason }) {
+export async function rejectPO({ poId, reason, po, user }) {
   await supabase.from('purchase_orders').update({ status: 'rejected', rejection_reason: reason }).eq('id', poId)
+  if (po && user) {
+    notifySlack(`❌ PO <${recordUrl('po', poId)}|${po.po_number}> rejected by ${user.name}. Reason: ${reason}`)
+  }
   return { ok: true }
 }
 
@@ -174,5 +184,6 @@ export async function rejectPRLevel({ prId, approvals, pr, user, reason }) {
       related_id: prId,
     })
   } catch { /* non-blocking — the PR is already rejected above */ }
+  notifySlack(`❌ PR <${recordUrl('pr', prId)}|${pr?.pr_number || prId}> rejected by ${user.name}. Reason: ${reason}`)
   return { ok: true }
 }

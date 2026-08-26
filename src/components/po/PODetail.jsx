@@ -95,7 +95,7 @@ export default function PODetail({ poId, user, onBack }) {
   async function handleRejectPO() {
     if (!poRejectReason.trim()) { setPoError('Please enter a rejection reason.'); return }
     setApprovingPO(true); setPoError(null)
-    await rejectPO({ poId, reason: poRejectReason.trim() })
+    await rejectPO({ poId, reason: poRejectReason.trim(), po, user })
     setPO(prev => ({ ...prev, status: 'rejected', rejection_reason: poRejectReason.trim() }))
     setRejectingPO(false)
     setPoRejectReason('')

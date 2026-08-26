@@ -53,7 +53,52 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
   const [saving, setSaving]       = useState(false)
   const [error, setError]         = useState(null)
 
+  // Advisory-only "someone else is already reviewing this" indicator —
+  // while this viewer can act on the PR (same rule as canAction below,
+  // recomputed here since hooks can't run after the early-return checks),
+  // heartbeat a presence row and poll for any other eligible approver
+  // doing the same, so two people holding the same role don't both approve
+  // at once without knowing. Never blocks the actual approve/reject action.
+  const [reviewingBy, setReviewingBy] = useState(null)
+
   useEffect(() => { load() }, [prId])
+
+  useEffect(() => {
+    if (!pr) return
+    const pending = approvals.find(a => a.status === 'pending')
+    const matches = pending?.required_role ? user.role === pending.required_role : canAccessApprovals(user.role)
+    // Not eligible to act right now — skip presence entirely. No need to
+    // reset reviewingBy here since the badge only ever renders inside the
+    // canAction block below, so a stale value here is simply never shown.
+    if (!(pr.status === 'submitted' && pending && matches)) return
+
+    let cancelled = false
+    async function heartbeat() {
+      await supabase.from('pr_review_presence').upsert(
+        { pr_id: prId, viewer_email: user.email, viewer_name: user.name, updated_at: new Date().toISOString() },
+        { onConflict: 'pr_id,viewer_email' }
+      )
+    }
+    async function pollOthers() {
+      const cutoff = new Date(Date.now() - 60000).toISOString()
+      const { data } = await supabase
+        .from('pr_review_presence')
+        .select('viewer_email, viewer_name, updated_at')
+        .eq('pr_id', prId)
+        .neq('viewer_email', user.email)
+        .gt('updated_at', cutoff)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+      if (!cancelled) setReviewingBy(data?.[0] || null)
+    }
+    heartbeat(); pollOthers()
+    const interval = setInterval(() => { heartbeat(); pollOthers() }, 15000)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+      supabase.from('pr_review_presence').delete().eq('pr_id', prId).eq('viewer_email', user.email).then(() => {})
+    }
+  }, [pr?.id, pr?.status, approvals, user.role, user.email])
 
   async function load() {
     setLoading(true)
@@ -344,6 +389,12 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
           <div style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '14px' }}>
             Your Decision — Level {currentPending?.approver_level} ({currentPending?.approver_name})
           </div>
+
+          {reviewingBy && (
+            <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '3px', padding: '8px 12px', marginBottom: '12px', fontSize: '12px', color: '#92400E' }}>
+              ⚠ This PR is already being reviewed by <strong>{reviewingBy.viewer_name || reviewingBy.viewer_email}</strong>. Check with them before acting to avoid a duplicate decision.
+            </div>
+          )}
 
           {error && (
             <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '3px', padding: '10px 14px', marginBottom: '12px', fontSize: '13px', color: '#B91C1C' }}>

@@ -129,6 +129,19 @@ export default function App() {
     return () => { supabase.removeChannel(channel) }
   }, [currentReportId])
 
+  // Deep link support — Slack notifications link back with ?type=pr|po&id=...
+  // so a click lands directly on that record instead of just opening the app.
+  useEffect(() => {
+    if (!user) return
+    const params = new URLSearchParams(window.location.search)
+    const type = params.get('type')
+    const id = params.get('id')
+    if (!type || !id) return
+    if (type === 'pr') { setAppScreen('pr-list'); setViewingPRId(id); setPRSubScreen('detail') }
+    if (type === 'po') { setAppScreen('po-list'); setViewingPOId(id); setPOSubScreen('detail') }
+    window.history.replaceState({}, '', window.location.pathname)
+  }, [user])
+
   function showToast(msg, type = 'info') { setToast({ message: msg, type }) }
 
   function handleContinueToDetails(data) { setLayer1Data(data); setAppScreen('details') }
