@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { approvePO, rejectPO } from '../../lib/prApprovalActions'
 import { canAccessFinance } from '../../lib/auth'
 import { getDisplayName } from '../../lib/directory'
+import { downloadPOBundle } from '../../lib/poBundle'
 import POTemplate from '../pr/POTemplate'
 import SubmitPOExpense from './SubmitPOExpense'
 import PRAttachmentsModal from '../pr/PRAttachmentsModal'
@@ -39,7 +40,6 @@ export default function PODetail({ poId, user, onBack }) {
   const [pr, setPR]         = useState(null)
   const [vendor, setVendor] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [pdfUrl, setPdfUrl] = useState(null)
   const [markingDone, setMarkingDone] = useState(false)
   const [approvingPO, setApprovingPO] = useState(false)
   const [rejectingPO, setRejectingPO] = useState(false)
@@ -49,6 +49,8 @@ export default function PODetail({ poId, user, onBack }) {
   const [linkedExpenses, setLinkedExpenses] = useState([])
   const [showSubmitExpense, setShowSubmitExpense] = useState(false)
   const [showAttachments, setShowAttachments] = useState(false)
+  const [bundling, setBundling] = useState(false)
+  const [bundleError, setBundleError] = useState(null)
 
   useEffect(() => { load() }, [poId])
 
@@ -71,13 +73,6 @@ export default function PODetail({ poId, user, onBack }) {
     setPR(prData)
     setVendor(vendorData)
     setLinkedExpenses(expenseData || [])
-
-    if (poData.pdf_storage_path) {
-      const { data: signed } = await supabase.storage
-        .from('po-pdfs')
-        .createSignedUrl(poData.pdf_storage_path, 3600)
-      if (signed?.signedUrl) setPdfUrl(signed.signedUrl)
-    }
 
     setLoading(false)
   }
@@ -108,6 +103,17 @@ export default function PODetail({ poId, user, onBack }) {
     await supabase.from('purchase_orders').update({ status: 'completed' }).eq('id', poId)
     setPO(prev => ({ ...prev, status: 'completed' }))
     setMarkingDone(false)
+  }
+
+  async function handleDownloadBundle() {
+    setBundling(true); setBundleError(null)
+    try {
+      const result = await downloadPOBundle({ po, pr })
+      if (result.missingPdf) setBundleError('PO PDF not available yet — the download includes attachments and the approval flow only.')
+    } catch (err) {
+      setBundleError(err.message || 'Failed to prepare the download. Please try again.')
+    }
+    setBundling(false)
   }
 
   async function handleMarkCancelled() {
@@ -161,20 +167,20 @@ export default function PODetail({ poId, user, onBack }) {
             }}>
               {st.label}
             </span>
-            {pdfUrl && (
-              <a
-                href={pdfUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  padding: '6px 14px', fontSize: '12px', fontWeight: 600,
-                  background: '#8C3225', color: '#FFFFFF',
-                  border: 'none', borderRadius: '5px', cursor: 'pointer',
-                  textDecoration: 'none', display: 'inline-block',
-                }}
-              >
-                ↓ Download PO PDF
-              </a>
+            <button
+              onClick={handleDownloadBundle}
+              disabled={bundling}
+              title="Downloads the PO PDF, all quotation/comparative attachments, and the approval flow as one ZIP"
+              style={{
+                padding: '6px 14px', fontSize: '12px', fontWeight: 600,
+                background: bundling ? '#9CA3AF' : '#8C3225', color: '#FFFFFF',
+                border: 'none', borderRadius: '5px', cursor: bundling ? 'default' : 'pointer',
+              }}
+            >
+              {bundling ? 'Preparing…' : '↓ Download PO + Attachments + Approval Flow'}
+            </button>
+            {bundleError && (
+              <div style={{ fontSize: '11px', color: '#B91C1C', textAlign: 'right', maxWidth: '220px' }}>{bundleError}</div>
             )}
           </div>
         </div>

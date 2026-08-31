@@ -272,8 +272,21 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
         {(pr.base_amount != null || pr.tax_amount != null || pr.incidental_amount != null) && (
           <div style={{ marginTop: '12px', borderTop: '1px solid #F3F4F6', paddingTop: '12px' }}>
             <div style={{ fontSize: '10px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Amount Breakdown</div>
-            {pr.quantity != null && <Row label="Quantity" value={pr.quantity} />}
-            {pr.rate_per_unit != null && <Row label="Rate per Unit" value={`₹${Number(pr.rate_per_unit).toLocaleString('en-IN')}`} />}
+            {pr.line_items?.length > 0 ? (
+              <div style={{ marginBottom: '8px' }}>
+                {pr.line_items.map((it, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
+                    <span style={{ color: '#1A1F36' }}>{it.description || `Item ${i + 1}`} — {it.quantity} × ₹{Number(it.rate_per_unit || 0).toLocaleString('en-IN')}</span>
+                    <span style={{ color: '#1A1F36', fontWeight: 600 }}>₹{((Number(it.quantity) || 0) * (Number(it.rate_per_unit) || 0)).toLocaleString('en-IN')}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <>
+                {pr.quantity != null && <Row label="Quantity" value={pr.quantity} />}
+                {pr.rate_per_unit != null && <Row label="Rate per Unit" value={`₹${Number(pr.rate_per_unit).toLocaleString('en-IN')}`} />}
+              </>
+            )}
             <Row label="Base" value={pr.base_amount != null ? `₹${Number(pr.base_amount).toLocaleString('en-IN')}` : '—'} />
             <Row label="Tax (GST)" value={pr.tax_amount != null ? `₹${Number(pr.tax_amount).toLocaleString('en-IN')}` : '—'} />
             {Number(pr.incidental_amount) > 0 && <Row label="Incidentals" value={`₹${Number(pr.incidental_amount).toLocaleString('en-IN')}`} />}

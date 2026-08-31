@@ -22,7 +22,7 @@ export default function VendorSelector({ value, onChange }) {
   }, [])
 
   const filtered = query.trim()
-    ? vendors.filter(v => v.org_name.toLowerCase().includes(query.toLowerCase()) || v.vendor_id.toLowerCase().includes(query.toLowerCase()) || v.pan_number.toLowerCase().includes(query.toLowerCase()))
+    ? vendors.filter(v => (v.org_name || '').toLowerCase().includes(query.toLowerCase()) || (v.vendor_id || '').toLowerCase().includes(query.toLowerCase()) || (v.pan_number || '').toLowerCase().includes(query.toLowerCase()))
     : vendors
 
   const selected = vendors.find(v => v.id === value)

@@ -14,16 +14,6 @@ function fmtAmt(n) {
   return Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-function quoteReferenceText(pr) {
-  if (pr?.single_source_justification) {
-    const name = pr.quotes?.[0]?.vendor_name
-    return name ? `Single source — ${name}` : 'Single source procurement'
-  }
-  const names = (pr?.quotes || []).map(q => q.vendor_name).filter(Boolean)
-  if (!names.length) return '—'
-  return names.map((n, i) => (i === 0 ? `From ${n}` : `Quotation from ${n}`)).join(', ')
-}
-
 function vendorAddressLines(vendor) {
   return [
     vendor.address_line1,
@@ -48,10 +38,12 @@ export default function POTemplate({ po, pr, vendor }) {
   const entity = pr.entity || ''
   const entityAddress = getEntityAddress(entity) || '—'
   const entityCity = getEntityCity(entity) || '—'
-  const quantity = pr.quantity != null ? pr.quantity : 1
-  const ratePerUnit = pr.rate_per_unit != null ? pr.rate_per_unit : pr.base_amount
   const taxAmount = pr.tax_amount != null ? pr.tax_amount : pr.gst_amount
   const subTotal = po.amount
+  const lineItems = pr.line_items?.length
+    ? pr.line_items
+    : [{ description: pr.purpose || pr.category || '', quantity: pr.quantity != null ? pr.quantity : 1, rate_per_unit: pr.rate_per_unit != null ? pr.rate_per_unit : pr.base_amount }]
+  const itemsSubtotal = lineItems.reduce((sum, it) => sum + (Number(it.quantity) || 0) * (Number(it.rate_per_unit) || 0), 0)
 
   return (
     <>
@@ -83,19 +75,13 @@ export default function POTemplate({ po, pr, vendor }) {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <tbody>
                     <tr>
-                      <td style={{ padding: '10px 12px', fontSize: '11px', borderBottom: `1px solid ${BORDER}` }}>
+                      <td style={{ padding: '10px 12px', fontSize: '11px' }}>
                         <div style={{ fontWeight: 700, color: BROWN, marginBottom: '4px' }}>PO Number:</div>
                         <div style={{ fontFamily: 'monospace' }}>{po.po_number}</div>
                       </td>
-                      <td style={{ padding: '10px 12px', fontSize: '11px', borderBottom: `1px solid ${BORDER}`, borderLeft: `1px solid ${BORDER}` }}>
+                      <td style={{ padding: '10px 12px', fontSize: '11px', borderLeft: `1px solid ${BORDER}` }}>
                         <div style={{ fontWeight: 700, color: BROWN, marginBottom: '4px' }}>Date:</div>
                         <div>{fmtDate(po.generated_at)}</div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td colSpan={2} style={{ padding: '10px 12px', fontSize: '11px' }}>
-                        <div style={{ fontWeight: 700, color: BROWN, marginBottom: '4px' }}>Quote Reference Number:</div>
-                        <div style={{ lineHeight: 1.5 }}>{quoteReferenceText(pr)}</div>
                       </td>
                     </tr>
                   </tbody>
@@ -130,7 +116,7 @@ export default function POTemplate({ po, pr, vendor }) {
         <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '16px' }}>
           <thead>
             <tr style={{ background: '#fdf0ed' }}>
-              {['Sl. No.', 'Description of goods/ services', 'Quantity', 'Rate per unit (in INR)', 'Tax', 'Sub Total'].map(h => (
+              {['Sl. No.', 'Description of goods/ services', 'Quantity', 'Rate per unit (in INR)', 'Amount'].map(h => (
                 <th key={h} style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '10px', fontWeight: 700, color: BROWN, textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
                   {h}
                 </th>
@@ -138,16 +124,25 @@ export default function POTemplate({ po, pr, vendor }) {
             </tr>
           </thead>
           <tbody>
+            {lineItems.map((it, i) => (
+              <tr key={i}>
+                <td style={{ border: `1px solid ${BORDER}`, padding: '10px', fontSize: '12px', textAlign: 'center' }}>{i + 1}</td>
+                <td style={{ border: `1px solid ${BORDER}`, padding: '10px', fontSize: '12px' }}>{it.description || pr.purpose || pr.category || '—'}</td>
+                <td style={{ border: `1px solid ${BORDER}`, padding: '10px', fontSize: '12px', textAlign: 'center' }}>{it.quantity}</td>
+                <td style={{ border: `1px solid ${BORDER}`, padding: '10px', fontSize: '12px', textAlign: 'right', fontFamily: 'monospace' }}>{fmtAmt(it.rate_per_unit)}</td>
+                <td style={{ border: `1px solid ${BORDER}`, padding: '10px', fontSize: '12px', textAlign: 'right', fontFamily: 'monospace' }}>{fmtAmt((Number(it.quantity) || 0) * (Number(it.rate_per_unit) || 0))}</td>
+              </tr>
+            ))}
             <tr>
-              <td style={{ border: `1px solid ${BORDER}`, padding: '10px', fontSize: '12px', textAlign: 'center' }}>1</td>
-              <td style={{ border: `1px solid ${BORDER}`, padding: '10px', fontSize: '12px' }}>{pr.purpose || pr.category || '—'}</td>
-              <td style={{ border: `1px solid ${BORDER}`, padding: '10px', fontSize: '12px', textAlign: 'center' }}>{quantity}</td>
-              <td style={{ border: `1px solid ${BORDER}`, padding: '10px', fontSize: '12px', textAlign: 'right', fontFamily: 'monospace' }}>{fmtAmt(ratePerUnit)}</td>
-              <td style={{ border: `1px solid ${BORDER}`, padding: '10px', fontSize: '12px', textAlign: 'right', fontFamily: 'monospace' }}>{fmtAmt(taxAmount)}</td>
-              <td style={{ border: `1px solid ${BORDER}`, padding: '10px', fontSize: '12px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>{fmtAmt(subTotal)}</td>
+              <td colSpan={4} style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '12px', fontWeight: 600, textAlign: 'right', background: '#F8F9FA' }}>Subtotal:</td>
+              <td style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '12px', fontWeight: 600, textAlign: 'right', fontFamily: 'monospace', background: '#F8F9FA' }}>{fmtAmt(itemsSubtotal)}</td>
             </tr>
             <tr>
-              <td colSpan={5} style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '12px', fontWeight: 700, textAlign: 'right', background: '#F8F9FA' }}>Total:</td>
+              <td colSpan={4} style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '12px', fontWeight: 600, textAlign: 'right', background: '#F8F9FA' }}>Tax:</td>
+              <td style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '12px', fontWeight: 600, textAlign: 'right', fontFamily: 'monospace', background: '#F8F9FA' }}>{fmtAmt(taxAmount)}</td>
+            </tr>
+            <tr>
+              <td colSpan={4} style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '12px', fontWeight: 700, textAlign: 'right', background: '#F8F9FA' }}>Total:</td>
               <td style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '12px', fontWeight: 700, textAlign: 'right', fontFamily: 'monospace', background: '#F8F9FA' }}>{fmtAmt(subTotal)}</td>
             </tr>
           </tbody>

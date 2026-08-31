@@ -1,16 +1,11 @@
-import { breakdownTotals } from '../../lib/formCalc'
+import { lineItemsBase, breakdownTotals } from '../../lib/formCalc'
 import { blockNonNumericKey, sanitizeNumericPaste, sanitizeNumericValue } from '../../lib/numericInput'
 import AmountInput from './AmountInput'
 
-// Amount breakdown: Quantity × Rate per Unit → computed Base, + Tax
-// (mandatory) + Incidentals (optional) → computed Total.
-// Controlled component. value = { quantity, ratePerUnit, base, tax, incidental };
-// base is derived here (quantity * ratePerUnit) and included in what's emitted
-// to onChange, so callers deriving total/valid via breakdownTotals() from
-// lib/formCalc need no changes. Rate per Unit only appears once a quantity has
-// been entered, matching the source Zoho form's reveal-on-input behaviour.
-// Quantity is a plain count (no currency styling); Rate/Tax/Incidentals are
-// real money, so they get the ₹-prefixed, thousands-grouped AmountInput.
+// Amount breakdown: one or more line items (Description x Quantity x Rate
+// per Unit) → summed Base, + Tax (mandatory) + Incidentals (optional) →
+// computed Total. Controlled component.
+// value = { items: [{ description, quantity, ratePerUnit }], tax, incidental }
 
 function countField(val, onChange, placeholder, invalid) {
   return (
@@ -31,40 +26,90 @@ function countField(val, onChange, placeholder, invalid) {
   )
 }
 
+const EMPTY_ITEM = { description: '', quantity: '', ratePerUnit: '' }
+
 export default function AmountBreakdown({ value = {}, onChange, errors = {} }) {
-  const quantity = value.quantity ?? ''
-  const ratePerUnit = value.ratePerUnit ?? ''
-  const computedBase = (Number(quantity) || 0) * (Number(ratePerUnit) || 0)
+  const items = value.items?.length ? value.items : [EMPTY_ITEM]
+  const computedBase = lineItemsBase(items)
   const { total } = breakdownTotals({ ...value, base: computedBase })
-  const set = patch => {
-    const next = { ...value, ...patch }
-    const q = Number(next.quantity) || 0
-    const r = Number(next.ratePerUnit) || 0
-    onChange({ ...next, base: q * r })
+
+  function setItems(nextItems) {
+    onChange({ ...value, items: nextItems })
+  }
+  function updateItem(i, patch) {
+    setItems(items.map((it, idx) => (idx === i ? { ...it, ...patch } : it)))
+  }
+  function addItem() {
+    setItems([...items, EMPTY_ITEM])
+  }
+  function removeItem(i) {
+    setItems(items.filter((_, idx) => idx !== i))
+  }
+  function set(patch) {
+    onChange({ ...value, ...patch })
   }
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: quantity !== '' ? '1fr 1fr' : '1fr', gap: '12px', marginBottom: '12px' }}>
-        <div>
-          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '5px' }}>
-            Quantity<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
-          </label>
-          {countField(quantity, v => set({ quantity: v }), '1', !!errors.base)}
-        </div>
-        {quantity !== '' && (
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '5px' }}>
-              Rate per Unit (without tax)<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
-            </label>
-            <AmountInput value={ratePerUnit} onChange={v => set({ ratePerUnit: v })} error={!!errors.base} />
-          </div>
-        )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '10px' }}>
+        {items.map((it, i) => {
+          const rowAmount = (Number(it.quantity) || 0) * (Number(it.ratePerUnit) || 0)
+          return (
+            <div key={i} style={{ border: '1px solid #E3E8EF', borderRadius: '4px', padding: '10px 12px', background: '#FAFBFC' }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+                <input
+                  type="text"
+                  value={it.description}
+                  onChange={e => updateItem(i, { description: e.target.value })}
+                  placeholder={`Item ${i + 1} description (optional)`}
+                  style={{ flex: 1, height: '34px', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '0 10px', fontSize: '13px', color: '#1A1F36', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box' }}
+                />
+                {items.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeItem(i)}
+                    title="Remove this line item"
+                    style={{ height: '34px', width: '34px', flexShrink: 0, background: '#FFFFFF', color: '#B91C1C', border: '1px solid #FECACA', borderRadius: '4px', fontSize: '15px', cursor: 'pointer', lineHeight: 1 }}
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#6B7280', marginBottom: '4px' }}>
+                    Quantity<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
+                  </label>
+                  {countField(it.quantity, v => updateItem(i, { quantity: v }), '1', !!errors.base)}
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#6B7280', marginBottom: '4px' }}>
+                    Rate per Unit (without tax)<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
+                  </label>
+                  <AmountInput value={it.ratePerUnit} onChange={v => updateItem(i, { ratePerUnit: v })} error={!!errors.base} />
+                </div>
+              </div>
+              {it.quantity !== '' && it.ratePerUnit !== '' && (
+                <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '6px' }}>
+                  Amount: <strong style={{ color: '#1A1F36' }}>₹{rowAmount.toLocaleString('en-IN')}</strong>
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
 
-      {quantity !== '' && ratePerUnit !== '' && (
+      <button
+        type="button"
+        onClick={addItem}
+        style={{ height: '32px', padding: '0 14px', marginBottom: '14px', background: '#FFFFFF', color: '#8C3225', border: '1px solid #8C3225', borderRadius: '4px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+      >
+        + Add Line Item
+      </button>
+
+      {computedBase > 0 && (
         <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '12px' }}>
-          Base Amount: <strong style={{ color: '#1A1F36' }}>₹{computedBase.toLocaleString('en-IN')}</strong> ({quantity} × ₹{Number(ratePerUnit).toLocaleString('en-IN')})
+          Base Amount ({items.length} item{items.length > 1 ? 's' : ''}): <strong style={{ color: '#1A1F36' }}>₹{computedBase.toLocaleString('en-IN')}</strong>
         </div>
       )}
 

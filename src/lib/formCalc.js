@@ -30,6 +30,20 @@ export function getFiscalYearPrefix() {
     : `${String(y - 1).slice(2)}/${String(y).slice(2)}`
 }
 
+// Line items: [{ description, quantity, ratePerUnit }] — a PR can have more
+// than one quantity x rate pair (e.g. 3 different items on one purchase).
+// Base amount is the sum of quantity x rate across every row.
+export function lineItemsBase(items = []) {
+  return items.reduce((sum, it) => sum + (Number(it.quantity) || 0) * (Number(it.ratePerUnit) || 0), 0)
+}
+
+// Valid once every row has both a quantity and a rate entered (empty/blank
+// rows are dropped before this is called from the form's submit path).
+export function lineItemsValid(items = []) {
+  const rows = items.filter(it => it.quantity !== '' && it.quantity != null || it.ratePerUnit !== '' && it.ratePerUnit != null || it.description)
+  return rows.length > 0 && rows.every(it => (Number(it.quantity) || 0) > 0 && (Number(it.ratePerUnit) || 0) > 0)
+}
+
 // Amount breakdown: Base + Tax (mandatory) + Incidentals (optional) → computed Total.
 // value = { base, tax, incidental }
 export function breakdownTotals(value = {}) {
