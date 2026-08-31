@@ -644,6 +644,33 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
     setSavingDraft(false)
   }
 
+  // Periodic autosave — every 45s, silently save a draft if there's enough
+  // filled in to be worth keeping and nothing else is already saving. Uses
+  // a ref so the interval always calls the latest handleSaveDraft (which
+  // closes over current form state) without needing to be torn down and
+  // recreated on every keystroke. validate('draft') never actually blocks
+  // this (every check inside it is gated on submit mode), so it's safe to
+  // fire in the background without risking the scroll-to-error side effect.
+  // Skips the write if org_name/pan_number haven't changed since the last
+  // autosave (an approximation, not a full-form diff, but it stops
+  // re-saving an identical draft every 45s while idle).
+  const saveDraftRef = useRef(handleSaveDraft)
+  useEffect(() => { saveDraftRef.current = handleSaveDraft })
+  const lastAutosaveKeyRef = useRef(null)
+  useEffect(() => {
+    if (isEdit) return
+    const hasContent = !!(f.org_name.trim() || f.pan_number.trim())
+    if (!hasContent) return
+    const key = `${f.org_name}|${f.pan_number}`
+    const interval = setInterval(() => {
+      if (saving || savingDraft) return
+      if (key === lastAutosaveKeyRef.current) return
+      lastAutosaveKeyRef.current = key
+      saveDraftRef.current()
+    }, 45000)
+    return () => clearInterval(interval)
+  }, [isEdit, f.org_name, f.pan_number, saving, savingDraft])
+
   async function handleSubmit() {
     const e = validate('submit')
     setErrors(e)

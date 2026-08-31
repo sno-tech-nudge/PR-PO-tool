@@ -26,7 +26,7 @@ function SummaryRow({ label, value, alt }) {
   )
 }
 
-export default function ApproverReportView({ reportId, onBack, showToast }) {
+export default function ApproverReportView({ reportId, user, onBack, showToast }) {
   const [report, setReport] = useState(null)
   const [expenses, setExpenses] = useState([])
   const [pendingApproval, setPendingApproval] = useState(null)
@@ -89,7 +89,7 @@ export default function ApproverReportView({ reportId, onBack, showToast }) {
         .map(([id, note]) => `[${id.slice(-6)}]: ${note}`)
         .join('; ')
 
-      await processApproval(reportId, pendingApproval.approver_level, 'approved', combinedNotes || '', supabase)
+      await processApproval(reportId, pendingApproval.approver_level, 'approved', combinedNotes || '', supabase, user?.email)
       await createNotification(
         report?.employee_email,
         reportId,
@@ -111,7 +111,7 @@ export default function ApproverReportView({ reportId, onBack, showToast }) {
   async function handleReject(reason) {
     if (!pendingApproval) return
     try {
-      await processApproval(reportId, pendingApproval.approver_level, 'rejected', reason, supabase)
+      await processApproval(reportId, pendingApproval.approver_level, 'rejected', reason, supabase, user?.email)
       await createNotification(
         report?.employee_email,
         reportId,

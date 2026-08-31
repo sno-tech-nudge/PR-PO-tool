@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { getPRApprovalLevels, getRequiredQuotes } from '../../lib/approvalEngine'
 import { getEmailsByRole } from '../../lib/auth'
@@ -367,6 +367,33 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
     }
     setSavingDraft(false)
   }
+
+  // Periodic autosave — every 45s, silently save a draft if there's enough
+  // filled in to be worth keeping and nothing else is already saving. Uses
+  // a ref so the interval always calls the latest handleSaveDraft (which
+  // closes over current form state) without needing to be torn down and
+  // recreated on every keystroke. Skips the write entirely if nothing has
+  // changed since the last autosave (e.g. the requester stepped away) —
+  // this only re-checks the fields that actually matter most (vendor,
+  // amount, purpose), so it's an approximation, not a full diff, but it
+  // stops the common case of re-saving an identical draft every 45s while
+  // idle, which was pure wasted writes.
+  const saveDraftRef = useRef(handleSaveDraft)
+  useEffect(() => { saveDraftRef.current = handleSaveDraft })
+  const lastAutosaveKeyRef = useRef(null)
+  useEffect(() => {
+    if (isEdit) return
+    const hasContent = !!(vendorId || purpose.trim() || (breakdown.items || []).some(it => it.quantity || it.ratePerUnit || it.category))
+    if (!hasContent) return
+    const key = JSON.stringify({ vendorId, purpose, breakdown })
+    const interval = setInterval(() => {
+      if (saving || savingDraft) return
+      if (key === lastAutosaveKeyRef.current) return
+      lastAutosaveKeyRef.current = key
+      saveDraftRef.current()
+    }, 45000)
+    return () => clearInterval(interval)
+  }, [isEdit, vendorId, purpose, breakdown, saving, savingDraft])
 
   async function handleSubmit() {
     setSaving(true); setSaveError(null)

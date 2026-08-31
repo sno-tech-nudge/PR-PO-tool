@@ -41,7 +41,7 @@ function fmtDate(d) {
   return dt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-export default function AdminReportDetail({ reportId, onBack }) {
+export default function AdminReportDetail({ reportId, user, onBack, onViewAuditTrail }) {
   const [report, setReport]         = useState(null)
   const [approvals, setApprovals]   = useState([])
   const [loading, setLoading]       = useState(true)
@@ -65,7 +65,7 @@ export default function AdminReportDetail({ reportId, onBack }) {
         .select(`
           id, report_reference, status, brand, total_amount, expense_count,
           approval_route, created_at, approved_at, rejected_at, reimbursed_at,
-          rejection_reason, vouched_at, vouched_by, finance_notes, pdf_storage_path,
+          rejection_reason, vouched_at, vouched_by, finance_notes, pdf_storage_path, po_id,
           report_expenses (
             expense_details (
               id, vendor, category, amount, date, payment_method,
@@ -78,7 +78,7 @@ export default function AdminReportDetail({ reportId, onBack }) {
         .single(),
       supabase
         .from('report_approvals')
-        .select('approver_level, status, action, notes, acted_at, due_at')
+        .select('approver_level, approver_name, approver_email, status, notes, actioned_at, due_at')
         .eq('report_id', reportId)
         .order('approver_level'),
     ])
@@ -201,6 +201,19 @@ export default function AdminReportDetail({ reportId, onBack }) {
               style={{ height: '30px', padding: '0 12px', background: '#FFFFFF', color: '#8C3225', border: '1px solid #E3E8EF', fontSize: '12px', cursor: 'pointer', borderRadius: '3px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
               View PDF
             </a>
+          )}
+          {user?.role === 'admin' && onViewAuditTrail && (
+            <button
+              onClick={() => onViewAuditTrail(report.po_id, report.id)}
+              disabled={!report.po_id}
+              title={report.po_id ? 'Admin only — full Vendor → PR → PO → Expense Report audit trail' : 'This report is not linked to a Purchase Order — no audit trail available'}
+              style={{
+                height: '30px', padding: '0 12px', fontSize: '12px', cursor: report.po_id ? 'pointer' : 'not-allowed',
+                background: '#FFFFFF', color: report.po_id ? '#374151' : '#D1D5DB', border: '1px solid #E3E8EF', borderRadius: '3px',
+              }}
+            >
+              Audit Trail
+            </button>
           )}
         </div>
       </div>
@@ -384,28 +397,29 @@ export default function AdminReportDetail({ reportId, onBack }) {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: '#F8F9FA', borderBottom: '1px solid #E3E8EF' }}>
-                {['Level', 'Status', 'Notes', 'Date'].map(h => (
+                {['Level', 'Approver', 'Status', 'Notes', 'Date'].map(h => (
                   <th key={h} style={{ padding: '8px 14px', fontSize: '10px', fontWeight: 600, color: '#6B7280', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {approvals.map((a, i) => {
-                const isPending  = !a.acted_at
-                const isApproved = a.action === 'approved'
-                const isRejected = a.action === 'rejected' || a.action === 'returned'
+                const isPending  = !a.actioned_at
+                const isApproved = a.status === 'approved'
+                const isRejected = a.status === 'rejected' || a.status === 'returned'
                 const statusColor = isPending ? '#6B7280' : isApproved ? '#15803D' : isRejected ? '#B91C1C' : '#374151'
                 return (
                   <tr key={i} style={{ borderBottom: i < approvals.length - 1 ? '1px solid #F3F4F6' : 'none', background: i % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}>
-                    <td style={{ padding: '10px 14px', fontSize: '12px', color: '#374151', fontWeight: 600 }}>Level {a.approver_level}</td>
+                    <td style={{ padding: '10px 14px', fontSize: '12px', color: '#374151', fontWeight: 600 }}>{a.approver_name || a.approver_level}</td>
+                    <td style={{ padding: '10px 14px', fontSize: '11px', color: '#6B7280' }}>{a.approver_email ? getDisplayName(a.approver_email) : '—'}</td>
                     <td style={{ padding: '10px 14px' }}>
                       <span style={{ fontSize: '11px', fontWeight: 600, color: statusColor }}>
-                        {a.action ? a.action.charAt(0).toUpperCase() + a.action.slice(1) : 'Pending'}
+                        {a.status ? a.status.charAt(0).toUpperCase() + a.status.slice(1) : 'Pending'}
                       </span>
                     </td>
                     <td style={{ padding: '10px 14px', fontSize: '12px', color: '#6B7280' }}>{a.notes || '—'}</td>
                     <td style={{ padding: '10px 14px', fontSize: '12px', color: '#9CA3AF' }}>
-                      {a.acted_at ? fmtDate(a.acted_at) : 'Pending'}
+                      {a.actioned_at ? fmtDate(a.actioned_at) : 'Pending'}
                       {a.due_at && isPending && (
                         <div style={{ fontSize: '11px', color: new Date(a.due_at) < new Date() ? '#B91C1C' : '#B45309' }}>
                           Due {fmtDate(a.due_at)}

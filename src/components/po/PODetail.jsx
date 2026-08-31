@@ -36,7 +36,7 @@ const STATUS = {
   rejected:         { label: 'Rejected',         color: '#B91C1C', bg: '#FEF2F2' },
 }
 
-export default function PODetail({ poId, user, onBack }) {
+export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
   const [po, setPO]         = useState(null)
   const [pr, setPR]         = useState(null)
   const [vendor, setVendor] = useState(null)
@@ -205,6 +205,18 @@ export default function PODetail({ poId, user, onBack }) {
                 }}
               >
                 {bundling ? 'Preparing…' : '↓ Download PO + Attachments + Approval Flow'}
+              </button>
+            )}
+            {user.role === 'admin' && onViewAuditTrail && (
+              <button
+                onClick={() => onViewAuditTrail(po.id)}
+                title="Admin only — full Vendor → PR → PO → Expense Report audit trail"
+                style={{
+                  padding: '6px 14px', fontSize: '12px', fontWeight: 600,
+                  background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '5px', cursor: 'pointer',
+                }}
+              >
+                Audit Trail
               </button>
             )}
             {bundleError && (

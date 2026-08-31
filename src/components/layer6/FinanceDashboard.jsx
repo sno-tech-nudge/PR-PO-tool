@@ -6,6 +6,7 @@ import AdminReportDetail from './AdminReportDetail'
 import ReimbursementBatch from './ReimbursementBatch'
 import FinancePRsView from './FinancePRsView'
 import ApprovalHistoryView from './ApprovalHistoryView'
+import AnalyticsView from './AnalyticsView'
 import PRDetail from '../pr/PRDetail'
 import VendorList from '../vendor/VendorList'
 import VendorSearch from '../vendor/VendorSearch'
@@ -14,6 +15,7 @@ import VendorDetail from '../vendor/VendorDetail'
 import VendorApprovalView from '../vendor/VendorApprovalView'
 import BankChangeRequest from '../vendor/BankChangeRequest'
 import PODetail from '../po/PODetail'
+import AuditTrail from '../audit/AuditTrail'
 
 const TABS = [
   { key: 'overview', label: 'Overview' },
@@ -22,6 +24,7 @@ const TABS = [
   { key: 'prs',      label: 'PRs' },
   { key: 'vendors',  label: 'Vendors' },
   { key: 'approval-history', label: 'Approval History' },
+  { key: 'analytics', label: 'Analytics' },
 ]
 
 const shellStyle = { background: '#F4F5F7', minHeight: '100vh' }
@@ -36,6 +39,7 @@ export default function FinanceDashboard({ user, showToast, onBack }) {
 
   const [viewingPRId, setViewingPRId] = useState(null)
   const [viewingPOId, setViewingPOId] = useState(null)
+  const [auditTrail, setAuditTrail] = useState(null) // { poId, reportId }
 
   // Vendor sub-screen state — a local mirror of App.jsx's own vendor
   // navigation (list/search/form/detail/approval/bank-change), kept fully
@@ -85,11 +89,35 @@ export default function FinanceDashboard({ user, showToast, onBack }) {
 
   // ── Drill-downs — each fully replaces the tab bar, same pattern as the
   // pre-existing detailReportId guard (kept first for minimal diff).
+  // Audit trail is checked first, before detailReportId/viewingPOId,
+  // deliberately without clearing them — clicking "Back" out of the audit
+  // trail falls straight back through to whichever of those was already
+  // open, the same "return to where you came from" pattern already used
+  // for the vendor-from-PR link below.
+  if (auditTrail) {
+    return (
+      <div style={shellStyle}>
+        <div style={shellInnerStyle}>
+          <AuditTrail
+            poId={auditTrail.poId}
+            reportId={auditTrail.reportId}
+            user={user}
+            onBack={() => setAuditTrail(null)}
+            onViewVendor={(id) => { setAuditTrail(null); openVendorDetail(id) }}
+            onViewPR={(id) => { setAuditTrail(null); setViewingPRId(id) }}
+            onViewPO={(id) => { setAuditTrail(null); setViewingPOId(id) }}
+            onViewReport={(id) => { setAuditTrail(null); setDetailReportId(id) }}
+          />
+        </div>
+      </div>
+    )
+  }
+
   if (detailReportId) {
     return (
       <div style={shellStyle}>
         <div style={shellInnerStyle}>
-          <AdminReportDetail reportId={detailReportId} onBack={() => setDetailReportId(null)} />
+          <AdminReportDetail reportId={detailReportId} user={user} onBack={() => setDetailReportId(null)} onViewAuditTrail={(poId, reportId) => setAuditTrail({ poId, reportId })} />
         </div>
       </div>
     )
@@ -99,7 +127,7 @@ export default function FinanceDashboard({ user, showToast, onBack }) {
     return (
       <div style={shellStyle}>
         <div style={shellInnerStyle}>
-          <PODetail poId={viewingPOId} user={user} onBack={() => setViewingPOId(null)} />
+          <PODetail poId={viewingPOId} user={user} onBack={() => setViewingPOId(null)} onViewAuditTrail={(poId) => setAuditTrail({ poId })} />
         </div>
       </div>
     )
@@ -317,6 +345,15 @@ export default function FinanceDashboard({ user, showToast, onBack }) {
 
         {tab === 'approval-history' && (
           <ApprovalHistoryView
+            onViewVendor={openVendorDetail}
+            onViewPR={setViewingPRId}
+            onViewPO={setViewingPOId}
+          />
+        )}
+
+        {tab === 'analytics' && (
+          <AnalyticsView
+            user={user}
             onViewVendor={openVendorDetail}
             onViewPR={setViewingPRId}
             onViewPO={setViewingPOId}

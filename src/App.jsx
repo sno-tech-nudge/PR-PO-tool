@@ -43,6 +43,9 @@ import PRApproverDashboard from './components/pr/PRApproverDashboard'
 import POList from './components/po/POList'
 import PODetail from './components/po/PODetail'
 
+// Audit module
+import AuditTrail from './components/audit/AuditTrail'
+
 const SIDEBAR_W = 220
 
 // Sub-screens map to their parent nav key for sidebar highlight
@@ -112,6 +115,12 @@ export default function App() {
   const [viewingPOId, setViewingPOId] = useState(null)
   const [poSubScreen, setPOSubScreen] = useState('list')
   const [approvalsTab, setApprovalsTab] = useState('expenses')
+
+  // Audit trail — entry point is always a PO id (a report's own audit
+  // trail is just that PO's trail, resolved via the report's po_id), plus
+  // the screen to return to when the admin clicks "Back".
+  const [auditTrailPOId, setAuditTrailPOId] = useState(null)
+  const [auditTrailReturnScreen, setAuditTrailReturnScreen] = useState('po-list')
 
   const [toast, setToast] = useState(null)
 
@@ -243,6 +252,16 @@ export default function App() {
 
   function openPODetail(id) { setViewingPOId(id); setPOSubScreen('detail') }
   function openPOList()     { setPOSubScreen('list'); setViewingPOId(null) }
+
+  function openAuditTrail(poId) {
+    setAuditTrailReturnScreen(appScreen)
+    setAuditTrailPOId(poId)
+    setAppScreen('audit-trail')
+  }
+  function closeAuditTrail() {
+    setAppScreen(auditTrailReturnScreen)
+    setAuditTrailPOId(null)
+  }
 
   if (sessionLoading) return null
   if (!user) return <LoginScreen onLogin={handleLogin} />
@@ -600,6 +619,7 @@ export default function App() {
         {appScreen === 'approval-view' && (
           <ApproverReportView
             reportId={approvalReportId}
+            user={user}
             onBack={() => setAppScreen('approvals')}
             showToast={showToast}
           />
@@ -700,7 +720,20 @@ export default function App() {
           <POList user={user} onViewPO={openPODetail} />
         )}
         {appScreen === 'po-list' && poSubScreen === 'detail' && (
-          <PODetail poId={viewingPOId} user={user} onBack={openPOList} />
+          <PODetail poId={viewingPOId} user={user} onBack={openPOList} onViewAuditTrail={openAuditTrail} />
+        )}
+
+        {/* ── Audit trail (admin only) ── */}
+        {appScreen === 'audit-trail' && (
+          <AuditTrail
+            poId={auditTrailPOId}
+            user={user}
+            onBack={closeAuditTrail}
+            onViewVendor={(id) => { setAppScreen('vendors'); openVendorDetail(id) }}
+            onViewPR={(id) => { setAppScreen('pr-list'); openPRDetail(id) }}
+            onViewPO={(id) => { setAppScreen('po-list'); openPODetail(id) }}
+            onViewReport={() => setAppScreen('finance')}
+          />
         )}
 
         {/* ── PR screens ── */}

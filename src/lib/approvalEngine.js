@@ -67,13 +67,14 @@ export async function processApproval(
   approverLevel,
   action,
   notes,
-  supabaseClient
+  supabaseClient,
+  approverEmail
 ) {
   const now = new Date().toISOString()
 
   await supabaseClient
     .from('report_approvals')
-    .update({ status: action, notes, actioned_at: now })
+    .update({ status: action, notes, actioned_at: now, approver_email: approverEmail || null })
     .eq('report_id', reportId)
     .eq('approver_level', approverLevel)
 
