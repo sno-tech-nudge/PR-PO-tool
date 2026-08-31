@@ -107,7 +107,7 @@ export default function ApproverDashboard({ onViewReport, onBack }) {
         .from('expense_reports')
         .select('*')
         .in('status', ['submitted', 'under_review'])
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false })
 
       const { data: rev } = await supabase
         .from('expense_reports')

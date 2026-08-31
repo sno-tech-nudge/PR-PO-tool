@@ -99,7 +99,7 @@ export default function PRApproverDashboard({ onViewPR, onBack }) {
         .from('purchase_requests')
         .select(cols)
         .eq('status', 'submitted')
-        .order('submitted_at', { ascending: true }),
+        .order('submitted_at', { ascending: false }),
       supabase
         .from('purchase_requests')
         .select(cols)
