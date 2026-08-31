@@ -7,6 +7,7 @@ import { downloadPOBundle } from '../../lib/poBundle'
 import POTemplate from '../pr/POTemplate'
 import SubmitPOExpense from './SubmitPOExpense'
 import PRAttachmentsModal from '../pr/PRAttachmentsModal'
+import PRRequestDetailsCard from '../pr/PRRequestDetailsCard'
 
 function fmtDate(d) {
   if (!d) return '—'
@@ -46,6 +47,7 @@ export default function PODetail({ poId, user, onBack }) {
   const [poRejectReason, setPoRejectReason] = useState('')
   const [poError, setPoError] = useState(null)
   const [poTemplateData, setPoTemplateData] = useState(null)
+  const [pdfUrl, setPdfUrl] = useState(null)
   const [linkedExpenses, setLinkedExpenses] = useState([])
   const [showSubmitExpense, setShowSubmitExpense] = useState(false)
   const [showAttachments, setShowAttachments] = useState(false)
@@ -73,6 +75,15 @@ export default function PODetail({ poId, user, onBack }) {
     setPR(prData)
     setVendor(vendorData)
     setLinkedExpenses(expenseData || [])
+
+    if (poData.pdf_storage_path) {
+      const { data: signed } = await supabase.storage
+        .from('po-pdfs')
+        .createSignedUrl(poData.pdf_storage_path, 3600)
+      if (signed?.signedUrl) setPdfUrl(signed.signedUrl)
+    } else {
+      setPdfUrl(null)
+    }
 
     setLoading(false)
   }
@@ -167,18 +178,35 @@ export default function PODetail({ poId, user, onBack }) {
             }}>
               {st.label}
             </span>
-            <button
-              onClick={handleDownloadBundle}
-              disabled={bundling}
-              title="Downloads the PO PDF, all quotation/comparative attachments, and the approval flow as one ZIP"
-              style={{
-                padding: '6px 14px', fontSize: '12px', fontWeight: 600,
-                background: bundling ? '#9CA3AF' : '#8C3225', color: '#FFFFFF',
-                border: 'none', borderRadius: '5px', cursor: bundling ? 'default' : 'pointer',
-              }}
-            >
-              {bundling ? 'Preparing…' : '↓ Download PO + Attachments + Approval Flow'}
-            </button>
+            {pdfUrl && (
+              <a
+                href={pdfUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  padding: '6px 14px', fontSize: '12px', fontWeight: 600,
+                  background: '#FFFFFF', color: '#8C3225',
+                  border: '1px solid #8C3225', borderRadius: '5px',
+                  textDecoration: 'none', display: 'inline-block',
+                }}
+              >
+                ↓ Download PO PDF
+              </a>
+            )}
+            {isFinance && (
+              <button
+                onClick={handleDownloadBundle}
+                disabled={bundling}
+                title="Finance/admin only — downloads the PO PDF, all quotation/comparative attachments, and the approval flow as one ZIP"
+                style={{
+                  padding: '6px 14px', fontSize: '12px', fontWeight: 600,
+                  background: bundling ? '#9CA3AF' : '#8C3225', color: '#FFFFFF',
+                  border: 'none', borderRadius: '5px', cursor: bundling ? 'default' : 'pointer',
+                }}
+              >
+                {bundling ? 'Preparing…' : '↓ Download PO + Attachments + Approval Flow'}
+              </button>
+            )}
             {bundleError && (
               <div style={{ fontSize: '11px', color: '#B91C1C', textAlign: 'right', maxWidth: '220px' }}>{bundleError}</div>
             )}
@@ -200,6 +228,12 @@ export default function PODetail({ poId, user, onBack }) {
           </div>
         </div>
       </div>
+
+      {/* Full PR form, exactly as submitted — everything the approver needs
+          to see (budget/expense nature, categories, full amount breakdown,
+          payment terms, donor allocation, single-source justification if
+          any) without having to go find the PR's own detail page. */}
+      {pr && <PRRequestDetailsCard pr={pr} />}
 
       {/* Vendor card */}
       {vendor && (
@@ -233,16 +267,6 @@ export default function PODetail({ poId, user, onBack }) {
           <Row label="Account No."   value={vendor.account_number} mono />
           <Row label="IFSC"          value={vendor.ifsc_code} mono />
           <Row label="Bank"          value={`${vendor.bank_name}${vendor.branch ? ' — ' + vendor.branch : ''}`} />
-        </div>
-      )}
-
-      {/* PR purpose */}
-      {pr?.purpose && (
-        <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '8px', padding: '20px', marginBottom: '16px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
-            Purpose
-          </div>
-          <div style={{ fontSize: '13px', color: '#374151', lineHeight: 1.6 }}>{pr.purpose}</div>
         </div>
       )}
 

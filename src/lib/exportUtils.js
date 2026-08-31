@@ -67,6 +67,56 @@ export function vendorsToRows(vendors, fieldKeys) {
   })
 }
 
+// Purchase Order export field superset — po is the row from POList.jsx's
+// query, joined with its linked purchase_requests and vendors rows so both
+// the PO's own fields and the underlying request's full details can be
+// exported together (a PO on its own is mostly just a number/amount/status;
+// almost everything useful is on the PR it was generated from).
+export const PO_EXPORT_FIELDS = [
+  { key: 'po_number', label: 'PO Number', value: po => po.po_number || '' },
+  { key: 'status', label: 'Status', value: po => po.status || '' },
+  { key: 'entity', label: 'Entity', value: po => po.entity || '' },
+  { key: 'amount', label: 'Amount (INR)', value: po => fmtAmount(po.amount) },
+  { key: 'generated_at', label: 'Created Date', value: po => fmtDate(po.generated_at) },
+  { key: 'approved_at', label: 'Approved / Issued Date', value: po => fmtDate(po.approved_at) },
+  { key: 'approved_by', label: 'Approved By', value: po => po.approved_by || '' },
+  { key: 'rejection_reason', label: 'Rejection Reason', value: po => po.rejection_reason || '' },
+  { key: 'pr_number', label: 'Linked PR Number', value: po => po.purchase_requests?.pr_number || '' },
+  { key: 'requested_by', label: 'Requested By', value: po => po.purchase_requests?.requested_by || '' },
+  { key: 'purpose', label: 'Purpose', value: po => po.purchase_requests?.purpose || '' },
+  { key: 'category', label: 'Categories', value: po => po.purchase_requests?.category || '' },
+  { key: 'budgeted', label: 'Budgeted', value: po => po.purchase_requests?.budgeted == null ? '' : po.purchase_requests.budgeted ? 'Budgeted' : 'Not Budgeted' },
+  { key: 'expense_type', label: 'Expense Nature', value: po => po.purchase_requests?.expense_type || '' },
+  { key: 'program', label: 'Program', value: po => po.purchase_requests?.program || '' },
+  { key: 'subprogram', label: 'Subprogram', value: po => po.purchase_requests?.subprogram || '' },
+  { key: 'donor_name', label: 'Donor', value: po => po.purchase_requests?.donor_name || '' },
+  { key: 'from_date', label: 'From Date', value: po => fmtDate(po.purchase_requests?.from_date) },
+  { key: 'to_date', label: 'To Date', value: po => fmtDate(po.purchase_requests?.to_date) },
+  { key: 'is_recurring', label: 'Recurring', value: po => po.purchase_requests?.is_recurring ? `Yes — ${po.purchase_requests.recurring_frequency || ''}` : 'No' },
+  { key: 'base_amount', label: 'Base Amount (INR)', value: po => fmtAmount(po.purchase_requests?.base_amount) },
+  { key: 'tax_amount', label: 'Tax (INR)', value: po => fmtAmount(po.purchase_requests?.tax_amount) },
+  { key: 'incidental_amount', label: 'Incidentals (INR)', value: po => fmtAmount(po.purchase_requests?.incidental_amount) },
+  { key: 'advance_percent', label: 'Advance %', value: po => po.purchase_requests?.advance_percent != null ? String(po.purchase_requests.advance_percent) : '' },
+  { key: 'credit_term_frequency', label: 'Credit Term', value: po => Number(po.purchase_requests?.advance_percent) >= 100 ? 'N/A — 100% advance' : (po.purchase_requests?.credit_term_frequency || '') },
+  { key: 'credit_term_date', label: 'Credit Term Due Date', value: po => fmtDate(po.purchase_requests?.credit_term_date) },
+  { key: 'vendor_id', label: 'Vendor ID', value: po => po.vendors?.vendor_id || '' },
+  { key: 'vendor_org_name', label: 'Vendor Name', value: po => po.vendors?.org_name || '' },
+  { key: 'vendor_org_type', label: 'Vendor Type', value: po => po.vendors?.org_type || '' },
+  { key: 'vendor_pan', label: 'Vendor PAN', value: po => po.vendors?.pan_number || '' },
+  { key: 'vendor_gstin', label: 'Vendor GSTIN', value: po => po.vendors?.gstin || '' },
+  { key: 'vendor_bank_name', label: 'Vendor Bank', value: po => po.vendors?.bank_name || '' },
+  { key: 'vendor_ifsc', label: 'Vendor IFSC', value: po => po.vendors?.ifsc_code || '' },
+]
+
+export function posToRows(pos, fieldKeys) {
+  const fields = PO_EXPORT_FIELDS.filter(f => fieldKeys.includes(f.key))
+  return pos.map(po => {
+    const row = {}
+    for (const f of fields) row[f.label] = f.value(po)
+    return row
+  })
+}
+
 export function reportsToRows(reports) {
   const rows = []
   for (const r of reports) {

@@ -90,13 +90,25 @@ export default function PRAttachmentsModal({ pr, onClose }) {
             {pr.comparative_statement_path && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #E3E8EF', borderRadius: '4px', padding: '10px 14px' }}>
                 <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>Comparative Statement</div>
-                {comparativeUrl ? (
-                  <a href={comparativeUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: '#8C3225', textDecoration: 'underline', flexShrink: 0, marginLeft: '12px' }}>
-                    View
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0, marginLeft: '12px' }}>
+                  <a
+                    href="/comparative-statement-boilerplate.docx"
+                    download="Comparative Statement - Sample.docx"
+                    style={{
+                      fontSize: '12px', fontWeight: 600, color: '#8C3225', textDecoration: 'none',
+                      border: '1px solid #f9c5b7', background: '#fdf0ed', borderRadius: '4px', padding: '5px 10px',
+                    }}
+                  >
+                    ↓ Sample Comparative Statement
                   </a>
-                ) : (
-                  <span style={{ fontSize: '12px', color: '#9CA3AF', flexShrink: 0, marginLeft: '12px' }}>Not attached</span>
-                )}
+                  {comparativeUrl ? (
+                    <a href={comparativeUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: '#8C3225', textDecoration: 'underline' }}>
+                      View
+                    </a>
+                  ) : (
+                    <span style={{ fontSize: '12px', color: '#9CA3AF' }}>Not attached</span>
+                  )}
+                </div>
               </div>
             )}
 

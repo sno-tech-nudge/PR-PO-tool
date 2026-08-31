@@ -42,7 +42,7 @@ export default function POTemplate({ po, pr, vendor }) {
   const subTotal = po.amount
   const lineItems = pr.line_items?.length
     ? pr.line_items
-    : [{ description: pr.purpose || pr.category || '', quantity: pr.quantity != null ? pr.quantity : 1, rate_per_unit: pr.rate_per_unit != null ? pr.rate_per_unit : pr.base_amount }]
+    : [{ description: pr.purpose || pr.category || '', quantity: pr.quantity != null ? pr.quantity : 1, category: pr.category, rate_per_unit: pr.rate_per_unit != null ? pr.rate_per_unit : pr.base_amount }]
   const itemsSubtotal = lineItems.reduce((sum, it) => sum + (Number(it.quantity) || 0) * (Number(it.rate_per_unit) || 0), 0)
 
   return (
@@ -116,7 +116,7 @@ export default function POTemplate({ po, pr, vendor }) {
         <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '16px' }}>
           <thead>
             <tr style={{ background: '#fdf0ed' }}>
-              {['Sl. No.', 'Description of goods/ services', 'Quantity', 'Rate per unit (in INR)', 'Amount'].map(h => (
+              {['Sl. No.', 'Description of goods/ services', 'Quantity', 'Category of Service', 'Rate per unit (in INR)', 'Amount'].map(h => (
                 <th key={h} style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '10px', fontWeight: 700, color: BROWN, textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
                   {h}
                 </th>
@@ -129,20 +129,21 @@ export default function POTemplate({ po, pr, vendor }) {
                 <td style={{ border: `1px solid ${BORDER}`, padding: '10px', fontSize: '12px', textAlign: 'center' }}>{i + 1}</td>
                 <td style={{ border: `1px solid ${BORDER}`, padding: '10px', fontSize: '12px' }}>{it.description || pr.purpose || pr.category || '—'}</td>
                 <td style={{ border: `1px solid ${BORDER}`, padding: '10px', fontSize: '12px', textAlign: 'center' }}>{it.quantity}</td>
+                <td style={{ border: `1px solid ${BORDER}`, padding: '10px', fontSize: '12px' }}>{it.category || '—'}</td>
                 <td style={{ border: `1px solid ${BORDER}`, padding: '10px', fontSize: '12px', textAlign: 'right', fontFamily: 'monospace' }}>{fmtAmt(it.rate_per_unit)}</td>
                 <td style={{ border: `1px solid ${BORDER}`, padding: '10px', fontSize: '12px', textAlign: 'right', fontFamily: 'monospace' }}>{fmtAmt((Number(it.quantity) || 0) * (Number(it.rate_per_unit) || 0))}</td>
               </tr>
             ))}
             <tr>
-              <td colSpan={4} style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '12px', fontWeight: 600, textAlign: 'right', background: '#F8F9FA' }}>Subtotal:</td>
+              <td colSpan={5} style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '12px', fontWeight: 600, textAlign: 'right', background: '#F8F9FA' }}>Subtotal:</td>
               <td style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '12px', fontWeight: 600, textAlign: 'right', fontFamily: 'monospace', background: '#F8F9FA' }}>{fmtAmt(itemsSubtotal)}</td>
             </tr>
             <tr>
-              <td colSpan={4} style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '12px', fontWeight: 600, textAlign: 'right', background: '#F8F9FA' }}>Tax:</td>
+              <td colSpan={5} style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '12px', fontWeight: 600, textAlign: 'right', background: '#F8F9FA' }}>Tax:</td>
               <td style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '12px', fontWeight: 600, textAlign: 'right', fontFamily: 'monospace', background: '#F8F9FA' }}>{fmtAmt(taxAmount)}</td>
             </tr>
             <tr>
-              <td colSpan={4} style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '12px', fontWeight: 700, textAlign: 'right', background: '#F8F9FA' }}>Total:</td>
+              <td colSpan={5} style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '12px', fontWeight: 700, textAlign: 'right', background: '#F8F9FA' }}>Total:</td>
               <td style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '12px', fontWeight: 700, textAlign: 'right', fontFamily: 'monospace', background: '#F8F9FA' }}>{fmtAmt(subTotal)}</td>
             </tr>
           </tbody>

@@ -4,7 +4,7 @@ import { getPRApprovalLevels, getRequiredQuotes } from '../../lib/approvalEngine
 import { getEmailsByRole } from '../../lib/auth'
 import { generatePRSummary } from '../../lib/claude'
 import { EXPENSE_NATURES, validateAllocations, primaryAllocation } from '../../lib/donorData'
-import { quotesValidity, advanceValidity, breakdownTotals, lineItemsBase, lineItemsValid, getFiscalYearPrefix, fiscalYearStartStr } from '../../lib/formCalc'
+import { quotesValidity, advanceValidity, breakdownTotals, lineItemsBase, lineItemsValid, distinctCategories, getFiscalYearPrefix, fiscalYearStartStr } from '../../lib/formCalc'
 import { notifySlack, recordUrl } from '../../lib/slack'
 import VendorSelector from './VendorSelector'
 import QuoteRows from './QuoteRows'
@@ -12,15 +12,6 @@ import AdvanceTable from './AdvanceTable'
 import DonorAllocations from '../shared/DonorAllocations'
 import AmountBreakdown from '../shared/AmountBreakdown'
 
-// TODO(finance): category list is pending final input from the Finance team.
-const CATEGORIES = [
-  'Travel Fare', 'Lodging and Boarding', 'Food', 'Bike Fare',
-  'Consultant Fee', 'Professional Fee', 'Retainership / Consultancy',
-  'Legal Fees', 'Courier', 'Service', 'Staff Welfare', 'Filing Fees',
-  'Furniture and Fixtures', 'Housekeeping', 'Leasehold Improvements',
-  'Medicine', 'Relocation Allowance', 'Repairs and Maintenance',
-  'Subscription / Software', 'Other',
-]
 const FREQUENCIES = ['One-time', 'Monthly', 'Quarterly', 'Annually']
 
 const PR_MIN = 25000
@@ -151,13 +142,15 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
   // ── Section 2: Expense Details ──
   const [vendorId, setVendorId]     = useState(existingPR?.vendor_id || '')
   const [vendorData, setVendorData] = useState(null)
-  const [category, setCategory]     = useState(existingPR?.category || '')
   const [breakdown, setBreakdown]   = useState({
+    // Category used to be one field for the whole PR — for a PR saved
+    // before per-item categories existed, seed every item's category from
+    // that old single value so re-editing/resubmitting doesn't blank it out.
     items: existingPR?.line_items?.length
-      ? existingPR.line_items.map(it => ({ description: it.description || '', quantity: it.quantity != null ? String(it.quantity) : '', ratePerUnit: it.rate_per_unit != null ? String(it.rate_per_unit) : '' }))
+      ? existingPR.line_items.map(it => ({ description: it.description || '', quantity: it.quantity != null ? String(it.quantity) : '', category: it.category || existingPR?.category || '', ratePerUnit: it.rate_per_unit != null ? String(it.rate_per_unit) : '' }))
       : existingPR?.quantity != null || existingPR?.rate_per_unit != null
-        ? [{ description: '', quantity: existingPR?.quantity != null ? String(existingPR.quantity) : '', ratePerUnit: existingPR?.rate_per_unit != null ? String(existingPR.rate_per_unit) : '' }]
-        : [{ description: '', quantity: '', ratePerUnit: '' }],
+        ? [{ description: '', quantity: existingPR?.quantity != null ? String(existingPR.quantity) : '', category: existingPR?.category || '', ratePerUnit: existingPR?.rate_per_unit != null ? String(existingPR.rate_per_unit) : '' }]
+        : [{ description: '', quantity: '', category: '', ratePerUnit: '' }],
     tax:        existingPR?.tax_amount != null ? String(existingPR.tax_amount) : (existingPR?.gst_amount != null ? String(existingPR.gst_amount) : ''),
     incidental: existingPR?.incidental_amount != null ? String(existingPR.incidental_amount) : '',
   })
@@ -235,8 +228,8 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
     }
     if (s === 1) {
       if (!vendorId) e.vendorId = 'Please select a vendor'
-      if (!category) e.category = 'Required'
-      if (!lineItemsValid(breakdown.items || []) || !breakdownTotals({ ...breakdown, base: itemsBase }).valid) e.amount = 'Enter quantity, rate per unit for every line item, and tax'
+      if (!lineItemsValid(breakdown.items || [])) { e.amount = 'Enter quantity, category, and rate per unit for every line item.'; e.itemFields = true }
+      else if (!breakdownTotals({ ...breakdown, base: itemsBase }).valid) e.amount = 'Enter tax for this purchase.'
       if (numericAmount > 0 && numericAmount < PR_MIN)
         e.amount = `Purchases under ₹25,000 don't need a PR — submit as an expense claim instead.`
       if (!fromDate) e.fromDate = 'Required'
@@ -277,9 +270,6 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
       case 'vendorId':
         if (!vendorId) msg = 'Please select a vendor'
         break
-      case 'category':
-        if (!category) msg = 'Required'
-        break
       case 'fromDate':
         if (!fromDate) msg = 'Required'
         break
@@ -319,7 +309,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
   async function handleSaveDraft() {
     setSavingDraft(true); setSaveError(null)
     try {
-      const cleanItems = (breakdown.items || []).filter(it => it.description || it.quantity !== '' || it.ratePerUnit !== '')
+      const cleanItems = (breakdown.items || []).filter(it => it.description || it.quantity !== '' || it.category || it.ratePerUnit !== '')
       const bd = breakdownTotals({ ...breakdown, base: lineItemsBase(cleanItems) })
       const primary = primaryAllocation(allocations) || {}
       const cleanQuotes = (quoteState.quotes || []).filter(q => q.quote_path || q.vendor_name || q.amount)
@@ -331,12 +321,12 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
         quantity:                  cleanItems.length === 1 ? Number(cleanItems[0].quantity) || null : null,
         rate_per_unit:             cleanItems.length === 1 ? Number(cleanItems[0].ratePerUnit) || null : null,
         base_amount:               bd.base,
-        line_items:                cleanItems.map(it => ({ description: it.description || '', quantity: Number(it.quantity) || 0, rate_per_unit: Number(it.ratePerUnit) || 0 })),
+        line_items:                cleanItems.map(it => ({ description: it.description || '', quantity: Number(it.quantity) || 0, category: it.category || null, rate_per_unit: Number(it.ratePerUnit) || 0 })),
         tax_amount:                bd.tax,
         gst_amount:                bd.tax,
         incidental_amount:         bd.incidental,
         budgeted,
-        category,
+        category:                  distinctCategories(cleanItems).join(', ') || null,
         expense_type:              expenseType,
         entity:                    primary.entity || null,
         donor_name:                primary.donor || null,
@@ -383,7 +373,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
     try {
       const prNumber = isEdit ? existingPR.pr_number : await generatePRNumber()
       const now = new Date().toISOString()
-      const cleanItems = (breakdown.items || []).filter(it => it.description || it.quantity !== '' || it.ratePerUnit !== '')
+      const cleanItems = (breakdown.items || []).filter(it => it.description || it.quantity !== '' || it.category || it.ratePerUnit !== '')
       const bd = breakdownTotals({ ...breakdown, base: lineItemsBase(cleanItems) })
       const primary = primaryAllocation(allocations) || {}
       const cleanQuotes = (quoteState.quotes || []).filter(q => q.quote_path || q.vendor_name || q.amount)
@@ -396,12 +386,12 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
         quantity:                  cleanItems.length === 1 ? Number(cleanItems[0].quantity) || null : null,
         rate_per_unit:             cleanItems.length === 1 ? Number(cleanItems[0].ratePerUnit) || null : null,
         base_amount:               bd.base,
-        line_items:                cleanItems.map(it => ({ description: it.description || '', quantity: Number(it.quantity) || 0, rate_per_unit: Number(it.ratePerUnit) || 0 })),
+        line_items:                cleanItems.map(it => ({ description: it.description || '', quantity: Number(it.quantity) || 0, category: it.category || null, rate_per_unit: Number(it.ratePerUnit) || 0 })),
         tax_amount:                bd.tax,
         gst_amount:                bd.tax,               // mirror for back-compat
         incidental_amount:         bd.incidental,
         budgeted,
-        category,
+        category:                  distinctCategories(cleanItems).join(', ') || null,
         expense_type:              expenseType,
         entity:                    primary.entity || null,
         donor_name:                primary.donor || null,
@@ -453,7 +443,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
       // AI summary
       const vd = vendorData || (await supabase.from('vendors').select('org_name').eq('id', vendorId).single()).data
       const aiSummary = await generatePRSummary(
-        { amount: bd.total, purpose, category, entity: primary.entity, donor_name: primary.donor, expense_type: expenseType, is_recurring: isRecurring, recurring_frequency: frequency },
+        { amount: bd.total, purpose, category: distinctCategories(cleanItems).join(', '), entity: primary.entity, donor_name: primary.donor, expense_type: expenseType, is_recurring: isRecurring, recurring_frequency: frequency },
         vd
       )
       if (aiSummary) await supabase.from('purchase_requests').update({ ai_summary: aiSummary }).eq('id', prId)
@@ -476,18 +466,19 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
       // implements .then(), not .catch(), so chaining .catch() on it
       // throws a TypeError instead of suppressing the error).
       const advNote = advFlags.requiresFLEmail ? ' — 100% ADVANCE: email approval required.' : ''
+      const categoriesLabel = distinctCategories(cleanItems).join(', ')
       try {
         const flEmails = await getEmailsByRole('fl')
         await Promise.all(flEmails.map(email => supabase.from('expense_notifications').insert({
           recipient_id: email,
           type: 'pr_submitted',
-          message: `New PR ${prNumber} for ₹${bd.total.toLocaleString('en-IN')} (${category}) requires Functional Leader approval.${advNote}`,
+          message: `New PR ${prNumber} for ₹${bd.total.toLocaleString('en-IN')} (${categoriesLabel}) requires Functional Leader approval.${advNote}`,
           related_type: 'pr',
           related_id: prId,
         })))
       } catch { /* non-blocking */ }
 
-      notifySlack(`📝 New PR raised: <${recordUrl('pr', prId)}|${prNumber}> — ₹${bd.total.toLocaleString('en-IN')} (${category}) by ${user.name}. Awaiting *Functional Leader* approval.${advNote}`)
+      notifySlack(`📝 New PR raised: <${recordUrl('pr', prId)}|${prNumber}> — ₹${bd.total.toLocaleString('en-IN')} (${categoriesLabel}) by ${user.name}. Awaiting *Functional Leader* approval.${advNote}`)
 
       onSaved({ prId, prNumber })
     } catch (err) {
@@ -512,7 +503,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
             ⚠ Splitting expenses across multiple requests to stay below the ₹25,000 threshold is <u>strictly prohibited</u> and will invite disciplinary action per the Procurement Policy.
           </div>
           <button
-            onClick={() => { setBreakdown({ items: [{ description: '', quantity: '', ratePerUnit: '' }], tax: '', incidental: '' }); setShowBelowBlock(false) }}
+            onClick={() => { setBreakdown({ items: [{ description: '', quantity: '', category: '', ratePerUnit: '' }], tax: '', incidental: '' }); setShowBelowBlock(false) }}
             style={{ marginTop: '20px', height: '38px', padding: '0 20px', background: '#FFFFFF', color: '#B91C1C', border: '1px solid #FECACA', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}
           >
             Change amount
@@ -592,16 +583,16 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
             <VendorSelector value={vendorId} onChange={handleVendorSelect} />
           </Field>
 
-          <Field label="Category" error={errors.category} required>
-            {sel(category, setCategory, CATEGORIES, 'Select category…', () => validateField('category'))}
-          </Field>
-
-          {/* Amount breakdown: quantity × rate per unit (mandatory) + tax (mandatory) + incidentals (optional) */}
+          {/* Amount breakdown: per-line-item quantity × category × rate per unit (mandatory) + tax (mandatory) + incidentals (optional) */}
           <div style={{ marginBottom: '18px' }}>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '5px' }}>
               Amount (INR)<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
             </label>
-            <AmountBreakdown value={breakdown} onChange={setBreakdown} errors={errors.amount ? { base: errors.amount } : {}} />
+            <AmountBreakdown
+              value={breakdown}
+              onChange={setBreakdown}
+              errors={{ ...(errors.amount ? { base: errors.amount } : {}), ...(errors.itemFields ? { category: true } : {}) }}
+            />
           </div>
 
           {numericAmount >= PR_MIN && (
@@ -674,7 +665,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
         </div>
 
         {/* Quotes & Payment Terms — reveals once the core purchase details above are filled */}
-        {vendorId && category && lineItemsValid(breakdown.items || []) && breakdownTotals({ ...breakdown, base: itemsBase }).valid && (
+        {vendorId && lineItemsValid(breakdown.items || []) && breakdownTotals({ ...breakdown, base: itemsBase }).valid && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
             <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '24px' }}>
               <PolicyBanner type="info">
@@ -710,9 +701,9 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
             {/* Line items */}
             <div style={{ marginBottom: '16px' }}>
               <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '6px' }}>Line Items</div>
-              {(breakdown.items || []).filter(it => it.quantity !== '' || it.ratePerUnit !== '' || it.description).map((it, i) => (
+              {(breakdown.items || []).filter(it => it.quantity !== '' || it.ratePerUnit !== '' || it.category || it.description).map((it, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#374151', marginBottom: '3px' }}>
-                  <span>{it.description || `Item ${i + 1}`} — {it.quantity || 0} × ₹{(Number(it.ratePerUnit) || 0).toLocaleString('en-IN')}</span>
+                  <span>{it.description || `Item ${i + 1}`} — {it.category || 'No category'} — {it.quantity || 0} × ₹{(Number(it.ratePerUnit) || 0).toLocaleString('en-IN')}</span>
                   <span style={{ fontWeight: 600 }}>₹{((Number(it.quantity) || 0) * (Number(it.ratePerUnit) || 0)).toLocaleString('en-IN')}</span>
                 </div>
               ))}
@@ -721,7 +712,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
             {[
               ['Budgeted',      budgeted === null ? '—' : budgeted ? 'Budgeted' : 'Not Budgeted'],
               ['Expense Nature', expenseType],
-              ['Category',      category],
+              ['Categories',    distinctCategories(breakdown.items || []).join(', ') || '—'],
               ['Base Amount',   `₹${itemsBase.toLocaleString('en-IN')}`],
               ['Tax (GST)',     `₹${(Number(breakdown.tax) || 0).toLocaleString('en-IN')}`],
               (Number(breakdown.incidental) || 0) > 0 ? ['Incidentals', `₹${Number(breakdown.incidental).toLocaleString('en-IN')}`] : null,
@@ -730,7 +721,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
               ['Purpose',       purpose],
               isRecurring ? ['Recurring', frequency || 'Yes'] : null,
               ['Payment Terms', `${advFlags.advance}% advance · ${advFlags.afterDelivery}% after delivery`],
-              ['Credit Term', `${advanceState.creditTermFrequency || '—'}, due ${advanceState.creditTermDate || '—'}`],
+              ['Credit Term', advFlags.creditTermApplicable ? `${advanceState.creditTermFrequency || '—'}, due ${advanceState.creditTermDate || '—'}` : 'Not applicable — 100% advance'],
               advFlags.requiresFLEmail
                 ? ['FL Approval Email', advanceState.screenshotPath ? 'Screenshot attached' : 'Not attached']
                 : null,

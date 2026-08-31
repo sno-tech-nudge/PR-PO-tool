@@ -257,7 +257,7 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
         <div style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '14px' }}>Request Details</div>
         <Row label="Budgeted" value={pr.budgeted == null ? '—' : pr.budgeted ? 'Budgeted' : 'Not Budgeted'} />
         <Row label="Expense Nature" value={pr.expense_type} />
-        <Row label="Category" value={pr.category} />
+        <Row label="Categories" value={pr.category} />
         <Row label="Entity" value={pr.entity} />
         <Row label="Program" value={pr.program} />
         <Row label="Subprogram" value={pr.subprogram} />
@@ -276,7 +276,7 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
               <div style={{ marginBottom: '8px' }}>
                 {pr.line_items.map((it, i) => (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
-                    <span style={{ color: '#1A1F36' }}>{it.description || `Item ${i + 1}`} — {it.quantity} × ₹{Number(it.rate_per_unit || 0).toLocaleString('en-IN')}</span>
+                    <span style={{ color: '#1A1F36' }}>{it.description || `Item ${i + 1}`}{it.category ? ` (${it.category})` : ''} — {it.quantity} × ₹{Number(it.rate_per_unit || 0).toLocaleString('en-IN')}</span>
                     <span style={{ color: '#1A1F36', fontWeight: 600 }}>₹{((Number(it.quantity) || 0) * (Number(it.rate_per_unit) || 0)).toLocaleString('en-IN')}</span>
                   </div>
                 ))}
@@ -300,8 +300,14 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
             <div style={{ fontSize: '10px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Payment Terms</div>
             <Row label="Advance" value={`${Number(pr.advance_percent)}%`} />
             <Row label="After delivery" value={`${pr.after_delivery_percent != null ? Number(pr.after_delivery_percent) : 100 - Number(pr.advance_percent)}%`} />
-            {pr.credit_term_frequency && <Row label="Credit Term" value={pr.credit_term_frequency} />}
-            {pr.credit_term_date && <Row label="Due Date" value={fmtDate(pr.credit_term_date)} />}
+            {Number(pr.advance_percent) >= 100 ? (
+              <Row label="Credit Term" value="Not applicable — 100% advance" />
+            ) : (
+              <>
+                {pr.credit_term_frequency && <Row label="Credit Term" value={pr.credit_term_frequency} />}
+                {pr.credit_term_date && <Row label="Due Date" value={fmtDate(pr.credit_term_date)} />}
+              </>
+            )}
             {Number(pr.advance_percent) >= 100 && (
               <div style={{ fontSize: '11px', color: '#B91C1C', marginTop: '4px' }}>
                 100% advance — FL email approval required{pr.advance_fl_email_ack ? ' (acknowledged)' : ''}.

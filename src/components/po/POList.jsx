@@ -1,5 +1,20 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import { canAccessFinance } from '../../lib/auth'
+import { downloadCSV, posToRows } from '../../lib/exportUtils'
+import POExportModal from './POExportModal'
+
+const EXPORT_KEY = 'nudge_po_export_fields'
+const DEFAULT_EXPORT_FIELDS = ['po_number', 'status', 'entity', 'amount', 'generated_at', 'approved_at', 'pr_number', 'requested_by', 'purpose', 'category', 'vendor_org_name']
+
+function loadExportFields() {
+  try {
+    const raw = localStorage.getItem(EXPORT_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch { /* ignore */ }
+  return DEFAULT_EXPORT_FIELDS
+}
+function saveExportFields(keys) { localStorage.setItem(EXPORT_KEY, JSON.stringify(keys)) }
 
 function fmtDate(d) {
   if (!d) return '—'
@@ -33,6 +48,9 @@ export default function POList({ user, onViewPO }) {
   const [loading, setLoading] = useState(true)
   const [tab, setTab]     = useState('all')
   const [search, setSearch] = useState('')
+  const [showExportModal, setShowExportModal] = useState(false)
+
+  const isFinance = canAccessFinance(user.role)
 
   useEffect(() => { load() }, [])
 
@@ -40,7 +58,7 @@ export default function POList({ user, onViewPO }) {
     setLoading(true)
     let q = supabase
       .from('purchase_orders')
-      .select('id, po_number, amount, entity, status, generated_at, vendor_id, pr_id, purchase_requests(pr_number, requested_by, purpose, category), vendors(org_name)')
+      .select('*, purchase_requests(*), vendors(*)')
       .order('generated_at', { ascending: false })
 
     // Employees only see their own POs
@@ -69,6 +87,14 @@ export default function POList({ user, onViewPO }) {
 
   const tabCount = (key) => key === 'all' ? pos.length : pos.filter(p => p.status === key).length
 
+  function handleExport(fieldKeys) {
+    saveExportFields(fieldKeys)
+    setShowExportModal(false)
+    const rows = posToRows(filtered, fieldKeys)
+    const date = new Date().toISOString().slice(0, 10)
+    downloadCSV(rows, `nudge-purchase-orders-${tab}-${date}.csv`)
+  }
+
   return (
     <div style={{ padding: '28px 24px' }}>
       {/* Header */}
@@ -77,6 +103,18 @@ export default function POList({ user, onViewPO }) {
           <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Procurement</div>
           <div style={{ fontSize: '22px', fontWeight: 700, color: '#111827' }}>Purchase Orders</div>
         </div>
+        {isFinance && (
+          <button
+            onClick={() => setShowExportModal(true)}
+            style={{
+              height: '36px', padding: '0 16px', fontSize: '13px', fontWeight: 600,
+              background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB',
+              borderRadius: '6px', cursor: 'pointer',
+            }}
+          >
+            Export CSV
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
@@ -203,6 +241,14 @@ export default function POList({ user, onViewPO }) {
             </table>
           </div>
         </div>
+      )}
+
+      {showExportModal && (
+        <POExportModal
+          selectedKeys={loadExportFields()}
+          onExport={handleExport}
+          onClose={() => setShowExportModal(false)}
+        />
       )}
     </div>
   )

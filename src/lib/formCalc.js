@@ -30,18 +30,30 @@ export function getFiscalYearPrefix() {
     : `${String(y - 1).slice(2)}/${String(y).slice(2)}`
 }
 
-// Line items: [{ description, quantity, ratePerUnit }] — a PR can have more
-// than one quantity x rate pair (e.g. 3 different items on one purchase).
-// Base amount is the sum of quantity x rate across every row.
+// Line items: [{ description, quantity, category, ratePerUnit }] — a PR can
+// have more than one quantity x rate pair (e.g. 3 different items on one
+// purchase), each under its own category of service. Base amount is the
+// sum of quantity x rate across every row.
 export function lineItemsBase(items = []) {
   return items.reduce((sum, it) => sum + (Number(it.quantity) || 0) * (Number(it.ratePerUnit) || 0), 0)
 }
 
-// Valid once every row has both a quantity and a rate entered (empty/blank
-// rows are dropped before this is called from the form's submit path).
+// Valid once every row has a quantity, a category, and a rate entered
+// (empty/blank rows are dropped before this is called from the form's
+// submit path).
 export function lineItemsValid(items = []) {
-  const rows = items.filter(it => it.quantity !== '' && it.quantity != null || it.ratePerUnit !== '' && it.ratePerUnit != null || it.description)
-  return rows.length > 0 && rows.every(it => (Number(it.quantity) || 0) > 0 && (Number(it.ratePerUnit) || 0) > 0)
+  const rows = items.filter(it => it.quantity !== '' && it.quantity != null || it.ratePerUnit !== '' && it.ratePerUnit != null || it.category || it.description)
+  return rows.length > 0 && rows.every(it => (Number(it.quantity) || 0) > 0 && (Number(it.ratePerUnit) || 0) > 0 && !!it.category)
+}
+
+// Distinct, non-empty categories across every line item, in first-seen
+// order — used to derive the PR-level `category` column (kept for every
+// existing single-value reader: PR list/dashboard filters, PO template
+// fallback, AI summary prompt, etc.) as a joined string, e.g.
+// "Travel Fare, Consultant Fee", so a multi-category PR still shows/searches
+// correctly everywhere that only ever expected one category.
+export function distinctCategories(items = []) {
+  return [...new Set(items.map(it => it.category).filter(Boolean))]
 }
 
 // Amount breakdown: Base + Tax (mandatory) + Incidentals (optional) → computed Total.
@@ -74,15 +86,18 @@ export function quotesValidity(value = {}, requiredQuotes = 0) {
 // value = { advancePercent, flEmailAck, screenshotPath, creditTermFrequency, creditTermDate }
 // A 100% advance requires both the acknowledgement checkbox AND an attached
 // screenshot of the Functional Leader's email approval. Credit term
-// (frequency + due date, covering the after-delivery portion) is always
-// mandatory alongside the advance split, not an alternative to it.
+// (frequency + due date, covering the after-delivery portion) is mandatory
+// alongside the advance split UNLESS the advance is 100% — at 100% advance
+// there is no after-delivery portion left for a credit term to cover, so it
+// doesn't apply and isn't required.
 export function advanceValidity(value = {}) {
   const advance = Number(value.advancePercent)
   const entered = value.advancePercent !== '' && value.advancePercent != null
   const { flaggedOver30, requiresFLEmail } = getAdvanceFlags(advance)
   const inRange = entered && advance >= 0 && advance <= 100
   const ackOk = !requiresFLEmail || (!!value.flEmailAck && !!value.screenshotPath)
-  const creditTermOk = !!value.creditTermFrequency && !!value.creditTermDate
+  const creditTermApplicable = entered && advance < 100
+  const creditTermOk = !creditTermApplicable || (!!value.creditTermFrequency && !!value.creditTermDate)
   const valid = inRange && ackOk && creditTermOk
-  return { advance: entered ? advance : 0, afterDelivery: entered ? 100 - advance : 100, flaggedOver30, requiresFLEmail, creditTermOk, valid }
+  return { advance: entered ? advance : 0, afterDelivery: entered ? 100 - advance : 100, flaggedOver30, requiresFLEmail, creditTermApplicable, creditTermOk, valid }
 }

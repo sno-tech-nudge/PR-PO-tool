@@ -1,11 +1,14 @@
 import { lineItemsBase, breakdownTotals } from '../../lib/formCalc'
 import { blockNonNumericKey, sanitizeNumericPaste, sanitizeNumericValue } from '../../lib/numericInput'
+import { PR_CATEGORIES } from '../../lib/prConstants'
 import AmountInput from './AmountInput'
 
-// Amount breakdown: one or more line items (Description x Quantity x Rate
-// per Unit) → summed Base, + Tax (mandatory) + Incidentals (optional) →
-// computed Total. Controlled component.
-// value = { items: [{ description, quantity, ratePerUnit }], tax, incidental }
+// Amount breakdown: one or more line items (Description x Quantity x
+// Category x Rate per Unit) → summed Base, + Tax (mandatory) + Incidentals
+// (optional) → computed Total. Category lives per line item (not once for
+// the whole PR) since different items on the same request can fall under
+// different categories of service. Controlled component.
+// value = { items: [{ description, quantity, category, ratePerUnit }], tax, incidental }
 
 function countField(val, onChange, placeholder, invalid) {
   return (
@@ -26,7 +29,7 @@ function countField(val, onChange, placeholder, invalid) {
   )
 }
 
-const EMPTY_ITEM = { description: '', quantity: '', ratePerUnit: '' }
+const EMPTY_ITEM = { description: '', quantity: '', category: '', ratePerUnit: '' }
 
 export default function AmountBreakdown({ value = {}, onChange, errors = {} }) {
   const items = value.items?.length ? value.items : [EMPTY_ITEM]
@@ -75,12 +78,29 @@ export default function AmountBreakdown({ value = {}, onChange, errors = {} }) {
                   </button>
                 )}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#6B7280', marginBottom: '4px' }}>
                     Quantity<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
                   </label>
                   {countField(it.quantity, v => updateItem(i, { quantity: v }), '1', !!errors.base)}
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#6B7280', marginBottom: '4px' }}>
+                    Category of Service<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
+                  </label>
+                  <select
+                    value={it.category || ''}
+                    onChange={e => updateItem(i, { category: e.target.value })}
+                    style={{
+                      width: '100%', height: '38px', border: `1px solid ${errors.category && !it.category ? '#DC2626' : '#D1D5DB'}`,
+                      borderRadius: '4px', padding: '0 8px', fontSize: '13px', color: it.category ? '#1A1F36' : '#9CA3AF',
+                      background: '#FFFFFF', outline: 'none', boxSizing: 'border-box',
+                    }}
+                  >
+                    <option value="">Select…</option>
+                    {PR_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#6B7280', marginBottom: '4px' }}>

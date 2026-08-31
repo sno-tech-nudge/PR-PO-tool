@@ -18,9 +18,18 @@ const CREDIT_TERM_OPTIONS = ['Net 15 Days', 'Net 30 Days', 'Net 45 Days', 'Net 6
 // onChange: (nextValue) => void
 
 export default function AdvanceTable({ value = {}, onChange, error }) {
-  const { advance, afterDelivery, flaggedOver30, requiresFLEmail } = advanceValidity(value)
+  const { advance, afterDelivery, flaggedOver30, requiresFLEmail, creditTermApplicable } = advanceValidity(value)
   const set = patch => onChange({ ...value, ...patch })
   const advanceEntered = value.advancePercent !== '' && value.advancePercent != null
+
+  // 100% advance leaves nothing for a credit term to cover — clear any
+  // previously-entered credit term as soon as the advance reaches 100 so a
+  // stale frequency/date can't linger unseen behind the greyed-out fields.
+  function setAdvancePercent(v) {
+    const patch = { advancePercent: v }
+    if (Number(v) === 100) { patch.creditTermFrequency = ''; patch.creditTermDate = '' }
+    set(patch)
+  }
 
   return (
     <div>
@@ -40,7 +49,7 @@ export default function AdvanceTable({ value = {}, onChange, error }) {
             <td style={{ padding: '8px 12px', textAlign: 'right' }}>
               <PercentInput
                 value={value.advancePercent ?? ''}
-                onChange={v => set({ advancePercent: v })}
+                onChange={setAdvancePercent}
                 style={{ width: '90px', marginLeft: 'auto' }}
                 inputStyle={{ height: '32px' }}
               />
@@ -59,19 +68,23 @@ export default function AdvanceTable({ value = {}, onChange, error }) {
 
       {advanceEntered && (
         <div style={{ marginTop: '14px' }}>
-          <div style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>Credit Term</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: creditTermApplicable ? '#374151' : '#9CA3AF', marginBottom: '8px' }}>
+            Credit Term{!creditTermApplicable && <span style={{ fontWeight: 400, fontStyle: 'italic' }}> — not applicable at 100% advance</span>}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', opacity: creditTermApplicable ? 1 : 0.5 }}>
             <div>
               <label style={{ display: 'block', fontSize: '11px', color: '#6B7280', marginBottom: '5px' }}>
-                Frequency<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
+                Frequency{creditTermApplicable && <span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>}
               </label>
               <select
                 value={value.creditTermFrequency || ''}
                 onChange={e => set({ creditTermFrequency: e.target.value })}
+                disabled={!creditTermApplicable}
                 style={{
                   width: '100%', height: '36px', border: '1px solid #D1D5DB', borderRadius: '4px',
                   padding: '0 10px', fontSize: '13px', color: value.creditTermFrequency ? '#1A1F36' : '#9CA3AF',
-                  background: '#FFFFFF', outline: 'none', boxSizing: 'border-box',
+                  background: creditTermApplicable ? '#FFFFFF' : '#F3F4F6', outline: 'none', boxSizing: 'border-box',
+                  cursor: creditTermApplicable ? 'auto' : 'not-allowed',
                 }}
               >
                 <option value="">Select credit term…</option>
@@ -80,14 +93,19 @@ export default function AdvanceTable({ value = {}, onChange, error }) {
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '11px', color: '#6B7280', marginBottom: '5px' }}>
-                Due Date<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
+                Due Date{creditTermApplicable && <span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>}
               </label>
               <input
                 type="date"
                 value={value.creditTermDate || ''}
                 min={todayStr()}
                 onChange={e => set({ creditTermDate: e.target.value })}
-                style={{ width: '100%', height: '36px', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '0 10px', fontSize: '13px', color: '#1A1F36', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box' }}
+                disabled={!creditTermApplicable}
+                style={{
+                  width: '100%', height: '36px', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '0 10px',
+                  fontSize: '13px', color: '#1A1F36', background: creditTermApplicable ? '#FFFFFF' : '#F3F4F6',
+                  outline: 'none', boxSizing: 'border-box', cursor: creditTermApplicable ? 'auto' : 'not-allowed',
+                }}
               />
             </div>
           </div>
