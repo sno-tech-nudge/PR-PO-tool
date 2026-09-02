@@ -41,7 +41,7 @@ function fmtDate(d) {
   return dt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-export default function AdminReportDetail({ reportId, user, onBack, onViewAuditTrail }) {
+export default function AdminReportDetail({ reportId, user, onBack, onViewAuditTrail, onViewPO }) {
   const [report, setReport]         = useState(null)
   const [approvals, setApprovals]   = useState([])
   const [loading, setLoading]       = useState(true)
@@ -70,7 +70,8 @@ export default function AdminReportDetail({ reportId, user, onBack, onViewAuditT
             expense_details (
               id, vendor, category, amount, date, payment_method,
               invoice_number, gstin, description, policy_status,
-              expense_type, reimbursement_type, submitted_at, capture_id
+              expense_type, reimbursement_type, submitted_at, capture_id,
+              supporting_attachments
             )
           )
         `)
@@ -486,6 +487,9 @@ export default function AdminReportDetail({ reportId, user, onBack, onViewAuditT
         </div>
       </div>
 
+      {/* PO Link */}
+      {report.po_id && <POLinkSection poId={report.po_id} onViewPO={onViewPO} />}
+
       {/* PR Link */}
       <PRLinkSection reportId={reportId} report={report} onLinked={load} />
 
@@ -562,6 +566,9 @@ function ExpenseTableRow({ exp, av, aiV, pc, i, total }) {
             {exp.capture_id && <ReceiptLink captureId={exp.capture_id} />}
             {!exp.capture_id && (
               <div style={{ marginTop: '8px', fontSize: '11px', color: '#9CA3AF' }}>No receipt linked</div>
+            )}
+            {exp.supporting_attachments?.length > 0 && (
+              <SupportingAttachments attachments={exp.supporting_attachments} />
             )}
           </td>
         </tr>
@@ -686,6 +693,79 @@ function PRLinkSection({ reportId, report, onLinked }) {
             ))}
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+function SupportingAttachments({ attachments }) {
+  const [urls, setUrls]       = useState(null)
+  const [loading, setLoading] = useState(false)
+
+  async function load() {
+    if (urls || loading) return
+    setLoading(true)
+    const signed = {}
+    for (const a of attachments) {
+      const { data: s } = await supabase.storage.from('expense-documents').createSignedUrl(a.path, 3600)
+      if (s?.signedUrl) signed[a.path] = s.signedUrl
+    }
+    setUrls(signed)
+    setLoading(false)
+  }
+
+  if (!urls && !loading) {
+    return (
+      <button onClick={load} style={{ marginTop: '8px', height: '26px', padding: '0 10px', borderRadius: '2px', border: '1px solid #E3E8EF', background: '#FFFFFF', color: '#374151', fontSize: '11px', cursor: 'pointer' }}>
+        View other attachments ({attachments.length})
+      </button>
+    )
+  }
+  if (loading) return <div style={{ marginTop: '8px', fontSize: '11px', color: '#9CA3AF' }}>Loading…</div>
+
+  return (
+    <div style={{ marginTop: '8px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+      {attachments.map((a, i) => (
+        urls[a.path] ? (
+          <a key={i} href={urls[a.path]} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', color: '#8C3225', textDecoration: 'underline' }}>
+            View {a.label}
+          </a>
+        ) : (
+          <span key={i} style={{ fontSize: '12px', color: '#9CA3AF' }}>{a.label} not found</span>
+        )
+      ))}
+    </div>
+  )
+}
+
+function POLinkSection({ poId, onViewPO }) {
+  const [po, setPo] = useState(null)
+
+  useEffect(() => {
+    supabase.from('purchase_orders').select('id, po_number, amount, status, vendors(org_name)').eq('id', poId).single()
+      .then(({ data }) => setPo(data))
+  }, [poId])
+
+  if (!po) return null
+
+  return (
+    <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '3px', marginBottom: '12px', overflow: 'hidden' }}>
+      <div style={{ padding: '12px 20px', borderBottom: '1px solid #E3E8EF', background: '#F8F9FA', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Linked Purchase Order</span>
+        {onViewPO && (
+          <button
+            onClick={() => onViewPO(po.id)}
+            style={{ height: '26px', padding: '0 12px', background: '#FFFFFF', color: '#8C3225', border: '1px solid #E3E8EF', borderRadius: '3px', fontSize: '11px', cursor: 'pointer' }}
+          >
+            View PO
+          </button>
+        )}
+      </div>
+      <div style={{ padding: '16px 20px' }}>
+        <div style={{ fontSize: '13px', fontWeight: 600, color: '#8C3225', fontFamily: 'monospace', marginBottom: '6px' }}>{po.po_number}</div>
+        <div style={{ fontSize: '12px', color: '#374151' }}>
+          {po.vendors?.org_name} · INR {Number(po.amount || 0).toLocaleString('en-IN')} · {po.status}
+        </div>
       </div>
     </div>
   )

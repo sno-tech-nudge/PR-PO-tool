@@ -63,6 +63,10 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
       : [{ category: '', amount: '' }, { category: '', amount: '' }]
   )
 
+  const [poId, setPoId] = useState('')
+  const [poOptions, setPoOptions] = useState([])
+  const [poLoading, setPoLoading] = useState(false)
+
   const [entity, setEntity] = useState(existingExpense?.entity || '')
   const [program, setProgram] = useState(existingExpense?.program || '')
   const [subprogram, setSubprogram] = useState(existingExpense?.subprogram || '')
@@ -109,6 +113,55 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
     }
     loadMerchants()
   }, [])
+
+  useEffect(() => {
+    async function loadPOs() {
+      const { data } = await supabase
+        .from('purchase_orders')
+        .select('id, po_number, vendors(org_name)')
+        .eq('status', 'issued')
+        .order('created_at', { ascending: false })
+        .limit(200)
+      setPoOptions(data || [])
+    }
+    loadPOs()
+  }, [])
+
+  // Attaching a PO pulls in the same classification the PO's own PR was
+  // approved under (entity/program/subprogram/donor/nature/category) plus
+  // its vendor — same "fill once" convenience as applyVendorHistory below,
+  // so it only fills fields still empty rather than overwriting anything
+  // the receipt's OCR or the person already typed.
+  async function handlePOSelect(id) {
+    setPoId(id)
+    if (!id) return
+    setPoLoading(true)
+    const { data: po } = await supabase.from('purchase_orders').select('po_number, pr_id, vendor_id').eq('id', id).single()
+    if (po) {
+      setPoNumber(prev => prev || po.po_number || '')
+      const [{ data: pr }, { data: v }] = await Promise.all([
+        po.pr_id
+          ? supabase.from('purchase_requests').select('entity, program, subprogram, donor_name, expense_type, category').eq('id', po.pr_id).single()
+          : Promise.resolve({ data: null }),
+        po.vendor_id
+          ? supabase.from('vendors').select('org_name, gstin').eq('id', po.vendor_id).single()
+          : Promise.resolve({ data: null }),
+      ])
+      if (pr) {
+        setEntity(prev => prev || pr.entity || '')
+        setProgram(prev => prev || pr.program || '')
+        setSubprogram(prev => prev || pr.subprogram || '')
+        setDonorName(prev => prev || pr.donor_name || '')
+        setNatureOfExpense(prev => prev || pr.expense_type || '')
+        setCategory(prev => prev || pr.category?.split(',')[0]?.trim() || '')
+      }
+      if (v) {
+        setVendor(prev => prev || v.org_name || '')
+        setGstin(prev => prev || v.gstin || '')
+      }
+    }
+    setPoLoading(false)
+  }
 
   useEffect(() => {
     async function loadReports() {
@@ -264,6 +317,24 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
         {isEdit ? 'Edit expense' : 'Quick details before saving'}
       </div>
       <div style={{ height: '1px', background: '#E8E8E8', marginBottom: '20px' }} />
+
+      {/* Attach PO — optional, pulls in that PO's entity/programme/donor/category so the rest of the form arrives filled in */}
+      <div style={fieldWrap}>
+        <label style={labelStyle}>Attach PO</label>
+        <select
+          value={poId}
+          onChange={e => handlePOSelect(e.target.value)}
+          style={{ ...inputStyle, paddingLeft: '10px' }}
+        >
+          <option value="">No PO — personal expense</option>
+          {poOptions.map(po => (
+            <option key={po.id} value={po.id}>
+              {po.po_number}{po.vendors?.org_name ? ` — ${po.vendors.org_name}` : ''}
+            </option>
+          ))}
+        </select>
+        {poLoading && <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '4px' }}>Filling in details from this PO…</div>}
+      </div>
 
       {/* Report — optional link to an existing report by this employee */}
       <div style={fieldWrap}>

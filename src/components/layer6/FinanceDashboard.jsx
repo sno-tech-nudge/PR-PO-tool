@@ -40,6 +40,7 @@ export default function FinanceDashboard({ user, showToast, onBack }) {
   const [viewingPRId, setViewingPRId] = useState(null)
   const [viewingPOId, setViewingPOId] = useState(null)
   const [auditTrail, setAuditTrail] = useState(null) // { poId, reportId }
+  const [returnToReportId, setReturnToReportId] = useState(null) // set when "View PO" is opened from a report's detail, so Back restores it
 
   // Vendor sub-screen state — a local mirror of App.jsx's own vendor
   // navigation (list/search/form/detail/approval/bank-change), kept fully
@@ -117,7 +118,13 @@ export default function FinanceDashboard({ user, showToast, onBack }) {
     return (
       <div style={shellStyle}>
         <div style={shellInnerStyle}>
-          <AdminReportDetail reportId={detailReportId} user={user} onBack={() => setDetailReportId(null)} onViewAuditTrail={(poId, reportId) => setAuditTrail({ poId, reportId })} />
+          <AdminReportDetail
+            reportId={detailReportId}
+            user={user}
+            onBack={() => setDetailReportId(null)}
+            onViewAuditTrail={(poId, reportId) => setAuditTrail({ poId, reportId })}
+            onViewPO={(id) => { setReturnToReportId(detailReportId); setDetailReportId(null); setViewingPOId(id) }}
+          />
         </div>
       </div>
     )
@@ -127,7 +134,15 @@ export default function FinanceDashboard({ user, showToast, onBack }) {
     return (
       <div style={shellStyle}>
         <div style={shellInnerStyle}>
-          <PODetail poId={viewingPOId} user={user} onBack={() => setViewingPOId(null)} onViewAuditTrail={(poId) => setAuditTrail({ poId })} />
+          <PODetail
+            poId={viewingPOId}
+            user={user}
+            onBack={() => {
+              if (returnToReportId) { setDetailReportId(returnToReportId); setReturnToReportId(null); setViewingPOId(null) }
+              else setViewingPOId(null)
+            }}
+            onViewAuditTrail={(poId) => setAuditTrail({ poId })}
+          />
         </div>
       </div>
     )

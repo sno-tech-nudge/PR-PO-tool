@@ -44,10 +44,11 @@ function ActivityItem({ text, timestamp }) {
   )
 }
 
-export default function ReportStatus({ reportId, onBack, onStartNew }) {
+export default function ReportStatus({ reportId, onBack, onStartNew, onViewPO }) {
   const [report, setReport] = useState(null)
   const [expenses, setExpenses] = useState([])
   const [approvals, setApprovals] = useState([])
+  const [linkedPO, setLinkedPO] = useState(null)
   const [showAll, setShowAll] = useState(false)
   const [polling, setPolling] = useState(false)
   const [, setRealtimeConnected] = useState(false)
@@ -70,6 +71,10 @@ export default function ReportStatus({ reportId, onBack, onStartNew }) {
         .single()
 
       if (rep) setReport(rep)
+      if (rep?.po_id) {
+        const { data: po } = await supabase.from('purchase_orders').select('id, po_number, status').eq('id', rep.po_id).single()
+        setLinkedPO(po)
+      }
 
       const { data: re } = await supabase
         .from('report_expenses')
@@ -180,6 +185,23 @@ export default function ReportStatus({ reportId, onBack, onStartNew }) {
           {report?.report_reference || '—'} · {report?.created_at ? new Date(report.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
         </div>
       </div>
+
+      {linkedPO && (
+        <div style={{ border: '1px solid #E8E8E8', marginBottom: '16px', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '2px' }}>Purchase Order</div>
+            <div style={{ fontSize: '13px', color: '#1A1A1A' }}>{linkedPO.po_number}</div>
+          </div>
+          {onViewPO && (
+            <div
+              onClick={() => onViewPO(linkedPO.id)}
+              style={{ fontSize: '13px', color: '#8C3225', cursor: 'pointer', textDecoration: 'underline' }}
+            >
+              View PO
+            </div>
+          )}
+        </div>
+      )}
 
       {(report?.business_purpose || report?.duration_start || report?.duration_end) && (
         <div style={{ border: '1px solid #E8E8E8', marginBottom: '16px', overflow: 'hidden' }}>

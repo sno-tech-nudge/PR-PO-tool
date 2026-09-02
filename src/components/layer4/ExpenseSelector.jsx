@@ -34,6 +34,7 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
     return supabase
       .from('expense_details')
       .select('*')
+      .eq('user_email', user?.email ?? '')
       .in('status', ['saved', 'flagged'])
       .order('created_at', { ascending: false })
       .then(({ data }) => setExpenses(data || []))

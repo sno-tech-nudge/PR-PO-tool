@@ -573,6 +573,7 @@ export default function App() {
             user={user}
             onBack={() => setAppScreen('list')}
             onStartNew={handleAddAnother}
+            onViewPO={(id) => { setAppScreen('po-list'); openPODetail(id) }}
           />
         )}
 
