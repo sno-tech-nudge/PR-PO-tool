@@ -11,7 +11,16 @@ import QuoteUpload from './QuoteUpload'
 
 const blankQuote = () => ({ vendor_name: '', amount: '', quote_path: '', selected: false })
 
-export default function QuoteRows({ value = {}, onChange, requiredQuotes = 2, error }) {
+// AIC uses its own comparative statement format — same functionality
+// (download, fill in, upload back as PDF), just a different boilerplate.
+const AIC_ENTITY = 'AIC Developmental Foundation'
+const BOILERPLATE = {
+  default: { href: '/comparative-statement-boilerplate.docx', download: 'Comparative Statement - Boilerplate.docx' },
+  aic:     { href: '/comparative-statement-boilerplate-aic.docx', download: 'AIC - Comparative Statement - Boilerplate.docx' },
+}
+
+export default function QuoteRows({ value = {}, onChange, requiredQuotes = 2, error, entity }) {
+  const boilerplate = entity === AIC_ENTITY ? BOILERPLATE.aic : BOILERPLATE.default
   // Single source still needs exactly one attached quotation; normal mode
   // needs at least `requiredQuotes` rows.
   const quotes = (() => {
@@ -150,7 +159,9 @@ export default function QuoteRows({ value = {}, onChange, requiredQuotes = 2, er
 
           {/* Comparing multiple vendors requires a comparative statement, in the
               org's own uniform format — the boilerplate below is a static
-              Word doc shipped with the app (public/), not user data. */}
+              Word doc shipped with the app (public/), not user data. AIC has
+              its own format, swapped in purely by which link/filename is
+              shown; the upload/attach step itself is unchanged either way. */}
           <div style={{ border: '1px solid #E3E8EF', borderRadius: '6px', padding: '14px', background: '#FFFFFF' }}>
             <div style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>
               Comparative Statement<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
@@ -158,19 +169,36 @@ export default function QuoteRows({ value = {}, onChange, requiredQuotes = 2, er
             <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '10px', lineHeight: 1.5 }}>
               Download the format, fill in the details, and upload it back here as a PDF.
             </div>
-            <a
-              href="/comparative-statement-boilerplate.docx"
-              download="Comparative Statement - Boilerplate.docx"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: '6px',
-                fontSize: '12px', fontWeight: 600, color: '#8C3225',
-                border: '1px solid #f9c5b7', background: '#fdf0ed',
-                borderRadius: '4px', padding: '7px 12px', textDecoration: 'none',
-                marginBottom: '10px',
-              }}
-            >
-              ↓ Download comparative statement format (.docx)
-            </a>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '10px' }}>
+              <a
+                href={boilerplate.href}
+                download={boilerplate.download}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '6px',
+                  fontSize: '12px', fontWeight: 600, color: '#8C3225',
+                  border: '1px solid #f9c5b7', background: '#fdf0ed',
+                  borderRadius: '4px', padding: '7px 12px', textDecoration: 'none',
+                }}
+              >
+                ↓ Download comparative statement format (.docx){entity === AIC_ENTITY ? ' — AIC' : ''}
+              </a>
+              {/* A filled-in reference example — always shown, regardless of
+                  entity, so the person filling the blank format above can
+                  see what a finished one looks like. */}
+              <a
+                href="/comparative-statement-sample.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '6px',
+                  fontSize: '12px', fontWeight: 600, color: '#374151',
+                  border: '1px solid #D1D5DB', background: '#FFFFFF',
+                  borderRadius: '4px', padding: '7px 12px', textDecoration: 'none',
+                }}
+              >
+                ↗ View sample comparative statement
+              </a>
+            </div>
             <QuoteUpload
               skipExtraction
               onFileUploaded={path => set({ comparative_statement_path: path })}

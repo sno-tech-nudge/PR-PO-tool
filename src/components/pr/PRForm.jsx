@@ -698,7 +698,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
               <PolicyBanner type="info">
                 <strong>Policy requirement:</strong> {requiredQuotes} quote{requiredQuotes > 1 ? 's are' : ' is'} required for this purchase (₹{numericAmount.toLocaleString('en-IN')}). Quotes ensure the organisation gets the best price.
               </PolicyBanner>
-              <QuoteRows value={quoteState} onChange={setQuoteState} requiredQuotes={requiredQuotes} error={errors.quotes} />
+              <QuoteRows value={quoteState} onChange={setQuoteState} requiredQuotes={requiredQuotes} error={errors.quotes} entity={primaryAllocation(allocations)?.entity} />
             </div>
 
             <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '24px' }}>
