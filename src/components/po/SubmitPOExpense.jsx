@@ -1,7 +1,5 @@
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
-import { determineApprovalRoute } from '../../lib/policyEngine'
-import { createApprovalRecords } from '../../lib/approvalEngine'
 import { EXPENSE_NATURES } from '../../lib/donorData'
 import { PR_CATEGORIES } from '../../lib/prConstants'
 import AttachmentDropzone from '../shared/AttachmentDropzone'
@@ -17,11 +15,6 @@ const ATTACHMENT_LABELS = ['Invoice', 'Receipt', 'Quotation', 'Other']
 function fmtAmt(n) {
   if (n == null) return '—'
   return '₹' + Number(n).toLocaleString('en-IN')
-}
-
-function generateReference() {
-  const year = new Date().getFullYear()
-  return 'TNI' + year + Math.floor(1000 + Math.random() * 9000)
 }
 
 function Field({ label, required, children }) {
@@ -49,19 +42,21 @@ function SectionCard({ title, sub, children }) {
 const inputStyle = { width: '100%', height: '38px', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '0 10px', fontSize: '13px', color: '#1A1F36', outline: 'none', boxSizing: 'border-box' }
 const textareaStyle = { width: '100%', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '10px', fontSize: '13px', color: '#1A1F36', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }
 
-// Two-stage tranche/invoice submission against an already-issued PO.
-// Stage 1 is a quick popup for the core invoice numbers; Stage 2 is a
-// full-screen review that pre-fills everything already known from the
-// approved Purchase Request (entity, program, subprogram, donor, category,
-// expense nature, purpose) — editable, since one specific invoice can
-// differ slightly from what was originally requested — plus attachments
-// and the final report name/description. Deliberately not the full
-// 4-layer capture flow (no OCR, no policy checks) — the PR/PO were
-// already approved; this only needs to confirm/adjust that context,
-// attach supporting documents, and enter this submission into the same
-// report_approvals chain any other expense report uses. Submitting here
-// never touches the PR/PO's own status — only the resulting
-// expense_reports row goes through approval.
+// Two-stage tranche/invoice capture against an already-issued PO. Stage 1
+// is a quick popup for the core invoice numbers; Stage 2 is a full-screen
+// review that pre-fills everything already known from the approved
+// Purchase Request (entity, program, subprogram, donor, category, expense
+// nature, purpose) — editable, since one specific invoice can differ
+// slightly from what was originally requested — plus attachments.
+//
+// This only *captures* the invoice as a saved expense_details row (same
+// shape ExpenseDetails.jsx writes, same 'saved' pool the Unreported count
+// and ExpenseSelector already read from) — it does not create or submit a
+// report. That mirrors how PO-tranche invoices are meant to be handled:
+// capture now, then separately bundle it into a report (any time, possibly
+// alongside other expenses) via the normal "New Report" flow, where the
+// report gets its date range/name and is submitted for approval on its
+// own. Never touches the PR/PO's own status.
 export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose, onSubmitted }) {
   const [stage, setStage] = useState(1)
 
@@ -83,10 +78,6 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
 
   // Stage 2 — attachments (first row is the primary invoice document).
   const [attachments, setAttachments] = useState([{ label: 'Invoice', file: null }])
-
-  // Stage 2 — final report identity, asked right before submitting.
-  const [reportName, setReportName] = useState(generateReference())
-  const [reportDescription, setReportDescription] = useState('')
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -111,11 +102,9 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
     setAttachments(prev => prev.filter((_, idx) => idx !== i))
   }
 
-  async function handleSubmit() {
-    if (!amount || amt <= 0 || overPending) { setError('Check the invoice amount before submitting.'); return }
+  async function handleSave() {
+    if (!amount || amt <= 0 || overPending) { setError('Check the invoice amount before saving.'); return }
     if (!attachments[0]?.file) { setError('Attach the invoice for this payment.'); return }
-    if (!reportDescription.trim()) { setError('Add a short description of this report.'); return }
-    if (!reportName.trim()) { setError('Enter a report name.'); return }
 
     setSaving(true)
     setError(null)
@@ -163,36 +152,13 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
           user_email: user?.email ?? null,
           status: 'saved',
         })
-        .select('id')
+        .select()
         .single()
       if (detailErr) throw detailErr
 
-      const route = determineApprovalRoute([{ amount: amt }])
-
-      const { data: report, error: reportErr } = await supabase
-        .from('expense_reports')
-        .insert({
-          report_reference: reportName.trim(),
-          brand: vendor?.org_name || null,
-          business_purpose: reportDescription.trim(),
-          total_amount: amt,
-          expense_count: 1,
-          approval_route: route.route,
-          status: 'submitted',
-          employee_email: user?.email ?? null,
-          pr_id: pr?.id ?? null,
-          po_id: po.id,
-        })
-        .select()
-        .single()
-      if (reportErr) throw reportErr
-
-      await supabase.from('report_expenses').insert({ report_id: report.id, expense_id: detail.id })
-      await createApprovalRecords(report.id, amt, supabase)
-
-      onSubmitted(report)
+      onSubmitted(detail)
     } catch (err) {
-      setError(err.message || 'Could not submit this invoice. Please try again.')
+      setError(err.message || 'Could not save this invoice. Please try again.')
     } finally {
       setSaving(false)
     }
@@ -270,7 +236,7 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
           <span style={{ fontSize: '12px', color: '#9CA3AF' }}>/</span>
           <span onClick={onClose} style={{ fontSize: '12px', color: '#9CA3AF', cursor: 'pointer' }}>Cancel</span>
         </div>
-        <div style={{ fontSize: '20px', fontWeight: 700, color: '#1A1F36', marginBottom: '4px' }}>New Expense Report</div>
+        <div style={{ fontSize: '20px', fontWeight: 700, color: '#1A1F36', marginBottom: '4px' }}>Capture Invoice</div>
         <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '20px' }}>
           <span style={{ fontFamily: 'monospace' }}>{po.po_number}</span>
           {pr?.pr_number ? ` · ${pr.pr_number}` : ''}
@@ -353,24 +319,14 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
           </button>
         </SectionCard>
 
-        <SectionCard title="Report Details" sub="Before you submit">
-          <Field label="Report Name" required>
-            <input value={reportName} onChange={e => setReportName(e.target.value)} style={inputStyle} />
-          </Field>
-          <Field label="Description" required>
-            <textarea
-              value={reportDescription}
-              onChange={e => setReportDescription(e.target.value)}
-              rows={2}
-              placeholder="A short line on what this report covers, e.g. 'Tranche 2 of 4 for venue booking'"
-              style={textareaStyle}
-            />
-          </Field>
-        </SectionCard>
+        <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '14px', lineHeight: 1.5 }}>
+          This saves the invoice — it won't be submitted for approval yet. Add it to a report
+          (any time, on its own or alongside other expenses) from Home whenever you're ready.
+        </div>
 
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
-            onClick={handleSubmit}
+            onClick={handleSave}
             disabled={saving}
             style={{
               height: '42px', padding: '0 28px', borderRadius: '4px', fontSize: '13px', fontWeight: 600,
@@ -378,7 +334,7 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
               cursor: saving ? 'default' : 'pointer',
             }}
           >
-            {saving ? 'Submitting…' : 'Submit for Approval'}
+            {saving ? 'Saving…' : 'Save Invoice'}
           </button>
           <button
             onClick={() => setStage(1)}

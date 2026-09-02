@@ -49,6 +49,7 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
   const [poTemplateData, setPoTemplateData] = useState(null)
   const [pdfUrl, setPdfUrl] = useState(null)
   const [linkedExpenses, setLinkedExpenses] = useState([])
+  const [savedExpenses, setSavedExpenses] = useState([])
   const [showSubmitExpense, setShowSubmitExpense] = useState(false)
   const [showAttachments, setShowAttachments] = useState(false)
   const [bundling, setBundling] = useState(false)
@@ -67,14 +68,21 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
     if (!poData) { setLoading(false); return }
     setPO(poData)
 
-    const [{ data: prData }, { data: vendorData }, { data: expenseData }] = await Promise.all([
+    const [{ data: prData }, { data: vendorData }, { data: expenseData }, { data: savedData }] = await Promise.all([
       supabase.from('purchase_requests').select('*').eq('id', poData.pr_id).single(),
       supabase.from('vendors').select('*').eq('id', poData.vendor_id).single(),
       supabase.from('expense_reports').select('id, report_reference, total_amount, status').eq('po_id', poData.id),
+      // Invoices already captured against this PO (SubmitPOExpense, or a
+      // Quick Add receipt with this PO attached) but not yet bundled into
+      // any report — still counts against the pending balance, same as the
+      // KT-documented Zoho tool validates at upload time, before a report
+      // even exists.
+      supabase.from('expense_details').select('id, amount, vendor, date, invoice_number').eq('po_number', poData.po_number).eq('status', 'saved'),
     ])
     setPR(prData)
     setVendor(vendorData)
     setLinkedExpenses(expenseData || [])
+    setSavedExpenses(savedData || [])
 
     if (poData.pdf_storage_path) {
       const { data: signed } = await supabase.storage
@@ -146,7 +154,9 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
   // role. Other Finance-area actions on this page (marking a PO completed,
   // etc.) stay gated to the broader isFinance/admin access.
   const isPOApprover = user.role === 'finance'
-  const totalSubmitted = linkedExpenses.filter(e => e.status !== 'rejected').reduce((sum, e) => sum + (Number(e.total_amount) || 0), 0)
+  const reportsTotal = linkedExpenses.filter(e => e.status !== 'rejected').reduce((sum, e) => sum + (Number(e.total_amount) || 0), 0)
+  const savedTotal = savedExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0)
+  const totalSubmitted = reportsTotal + savedTotal
   const pendingAmount = Math.max(0, (Number(po.amount) || 0) - totalSubmitted)
 
   return (
@@ -390,7 +400,7 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
             )}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0 20px', marginBottom: linkedExpenses.length ? '16px' : '0' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0 20px', marginBottom: (linkedExpenses.length || savedExpenses.length) ? '16px' : '0' }}>
             <div>
               <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '2px' }}>Approved</div>
               <div style={{ fontSize: '15px', fontWeight: 600, color: '#1A1F36' }}>{fmtAmt(po.amount)}</div>
@@ -412,6 +422,20 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
                   <span style={{ fontFamily: 'monospace', color: '#6B7280' }}>{e.report_reference}</span>
                   <span style={{ color: '#374151' }}>{fmtAmt(e.total_amount)}</span>
                   <span style={{ color: e.status === 'rejected' ? '#B91C1C' : '#6B7280', textTransform: 'capitalize' }}>{e.status}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {savedExpenses.length > 0 && (
+            <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: '12px', marginTop: linkedExpenses.length > 0 ? '4px' : 0 }}>
+              {savedExpenses.map(e => (
+                <div key={e.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '6px 0' }}>
+                  <span style={{ color: '#374151' }}>{e.vendor || 'Invoice'}{e.invoice_number ? ` — ${e.invoice_number}` : ''}</span>
+                  <span style={{ color: '#374151' }}>{fmtAmt(e.amount)}</span>
+                  <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 6px', borderRadius: '2px', background: '#FFFBEB', color: '#B45309' }}>
+                    Saved — not yet in a report
+                  </span>
                 </div>
               ))}
             </div>

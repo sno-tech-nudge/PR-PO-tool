@@ -161,10 +161,26 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
         .from('report_expenses')
         .insert(expenses.map(e => ({ report_id: report.id, expense_id: e.id })))
 
+      // Flips these out of the 'saved' pool every "available expenses" query
+      // filters on (enterReportWorkspace, ExpenseSelector.refetch, the
+      // Unreported count) — without this they'd keep showing up as
+      // selectable in every future report forever.
       await supabase
         .from('expense_details')
-        .update({ policy_status: 'submitted', approval_route: approvalRoute.route })
+        .update({ status: 'reported', policy_status: 'submitted', approval_route: approvalRoute.route })
         .in('id', expenses.map(e => e.id))
+
+      // Best-effort: if every expense in this report came from the same PO
+      // (e.g. a PO-tranche invoice captured via SubmitPOExpense, possibly
+      // alongside other expenses also tagged with that same po_number),
+      // link the report to it so the "View PO" card shows up. Left null
+      // for personal reports or ones mixing more than one PO — no error,
+      // just no link.
+      const poNumbers = [...new Set(expenses.map(e => e.po_number).filter(Boolean))]
+      if (poNumbers.length === 1) {
+        const { data: po } = await supabase.from('purchase_orders').select('id').eq('po_number', poNumbers[0]).maybeSingle()
+        if (po) await supabase.from('expense_reports').update({ po_id: po.id }).eq('id', report.id)
+      }
 
       setGenerating(false)
       setSubmitting(false)

@@ -117,6 +117,19 @@ export async function processApproval(
         reviewed_at: now,
       })
       .eq('id', reportId)
+
+    // Free the underlying expenses back into the 'saved' pool — submitting
+    // flips them to 'reported' (see ReportPreview.jsx) so they stop showing
+    // up as selectable in a new report; a rejection needs to undo exactly
+    // that, or "edit and resubmit" would have nothing to resubmit.
+    const { data: reportExpenses } = await supabaseClient
+      .from('report_expenses')
+      .select('expense_id')
+      .eq('report_id', reportId)
+    const expenseIds = (reportExpenses || []).map(re => re.expense_id)
+    if (expenseIds.length > 0) {
+      await supabaseClient.from('expense_details').update({ status: 'saved' }).in('id', expenseIds)
+    }
   }
 }
 
