@@ -28,20 +28,26 @@ export function getAdvanceFlags(advancePercent) {
   }
 }
 
+// requiredRole gates who can actually act on that level (mirrors
+// pr_approvals.required_role / PRDetail.jsx's roleMatches) — it's a
+// team_members.role value, not the approver_level label. reporting_manager
+// has no natural 1:1 role in the roster (no per-employee manager mapping in
+// this app), so it stays null — canAccessApprovals' coarse fallback applies,
+// same as legacy rows created before this column existed.
 export function getApprovalLevels(totalAmount) {
   if (totalAmount <= 50000) {
-    return [{ level: 1, role: 'reporting_manager', label: 'Reporting Manager' }]
+    return [{ level: 1, role: 'reporting_manager', label: 'Reporting Manager', requiredRole: null }]
   }
   if (totalAmount <= 200000) {
     return [
-      { level: 1, role: 'reporting_manager', label: 'Reporting Manager' },
-      { level: 2, role: 'functional_lead', label: 'Functional Lead' },
+      { level: 1, role: 'reporting_manager', label: 'Reporting Manager', requiredRole: null },
+      { level: 2, role: 'functional_lead', label: 'Functional Lead', requiredRole: 'fl' },
     ]
   }
   return [
-    { level: 1, role: 'reporting_manager', label: 'Reporting Manager' },
-    { level: 2, role: 'functional_lead', label: 'Functional Lead' },
-    { level: 3, role: 'coo', label: 'COO' },
+    { level: 1, role: 'reporting_manager', label: 'Reporting Manager', requiredRole: null },
+    { level: 2, role: 'functional_lead', label: 'Functional Lead', requiredRole: 'fl' },
+    { level: 3, role: 'coo', label: 'COO', requiredRole: 'coo' },
   ]
 }
 
@@ -54,6 +60,7 @@ export async function createApprovalRecords(reportId, totalAmount, supabaseClien
     report_id: reportId,
     approver_level: level.role,
     approver_name: level.label,
+    required_role: level.requiredRole,
     status: level.level === 1 ? 'pending' : 'waiting',
     due_at: dueAt.toISOString(),
   }))

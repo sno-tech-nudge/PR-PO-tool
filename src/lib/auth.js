@@ -5,7 +5,7 @@ import { supabase } from './supabase'
 // instead of a hardcoded map — see src/components/settings/SettingsView.jsx.
 // No passwords: access is still just "type an authorised email," identical
 // trust model to before, now editable by an admin instead of a developer.
-export const ROLES = ['employee', 'fl', 'admin', 'finance', 'pr_approver', 'observer']
+export const ROLES = ['employee', 'fl', 'admin', 'finance', 'pr_approver', 'coo', 'observer']
 
 const ROLE_LABEL = {
   employee:    'Employee',
@@ -13,6 +13,7 @@ const ROLE_LABEL = {
   admin:       'Admin',
   finance:     'Finance Team',
   pr_approver: 'PR Approver',
+  coo:         'COO',
   observer:    'Observer',
 }
 
@@ -82,7 +83,7 @@ export async function getEmailsByRole(role) {
 // admin bypasses every restriction below — "admin has both finance & employee
 // view... can access & do anything."
 export const canAccessFinance   = (role) => role === 'admin' || role === 'finance'
-export const canAccessApprovals = (role) => role === 'admin' || role === 'finance' || role === 'fl' || role === 'pr_approver'
+export const canAccessApprovals = (role) => role === 'admin' || role === 'finance' || role === 'fl' || role === 'pr_approver' || role === 'coo'
 export const isObserver         = (role) => role === 'observer'
 
 // The one fine-grained guardrail explicitly requested: within Finance,

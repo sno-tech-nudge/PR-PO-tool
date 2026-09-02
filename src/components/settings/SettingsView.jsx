@@ -86,6 +86,16 @@ export default function SettingsView({ user }) {
     await supabase.from('team_members').update({ can_approve_vendors: checked }).eq('id', member.id)
   }
 
+  // Only bumps a marker (analytics_reset_at) that Personal Analytics filters
+  // on — never touches any real pr_approvals/vendors/report_approvals row,
+  // and never affects anyone else's numbers.
+  async function handleResetAnalytics(member) {
+    if (!window.confirm(`Reset ${member.name}'s personal analytics? Their Approved PR/Vendor/Expense counts and avg approval time will start counting from now — no approval history is deleted.`)) return
+    const resetAt = new Date().toISOString()
+    setMembers(prev => prev.map(m => m.id === member.id ? { ...m, analytics_reset_at: resetAt } : m))
+    await supabase.from('team_members').update({ analytics_reset_at: resetAt }).eq('id', member.id)
+  }
+
   const selectStyle = {
     height: '30px', border: '1px solid #E3E8EF', borderRadius: '3px',
     padding: '0 8px', fontSize: '12px', color: '#1A1F36', background: '#FFFFFF',
@@ -241,7 +251,17 @@ export default function SettingsView({ user }) {
                           <span style={{ fontSize: '12px', color: '#D1D5DB' }}>—</span>
                         )}
                       </td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right' }}>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <button
+                          onClick={() => handleResetAnalytics(m)}
+                          title={m.analytics_reset_at ? `Last reset ${new Date(m.analytics_reset_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}` : 'Never reset'}
+                          style={{
+                            height: '28px', padding: '0 12px', background: '#FFFFFF', color: '#374151',
+                            border: '1px solid #E3E8EF', borderRadius: '3px', fontSize: '12px', cursor: 'pointer', marginRight: '8px',
+                          }}
+                        >
+                          Reset Analytics
+                        </button>
                         {!isSelf && (
                           <button
                             onClick={() => handleRemove(m)}

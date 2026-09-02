@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { processApproval, createNotification } from '../../lib/approvalEngine'
+import { canAccessApprovals } from '../../lib/auth'
 import { generateManagerSummary } from '../../lib/claude'
 import ExpenseApprovalCard from './ExpenseApprovalCard'
 import RejectionModal from './RejectionModal'
@@ -163,6 +164,14 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
 
   const total = expenses.reduce((s, e) => s + (e.amount || 0), 0)
   const isAlreadyReviewed = report.status === 'approved' || report.status === 'rejected'
+  // Each level is only actionable by its assigned role (fl for Functional
+  // Lead, coo for COO) — same rule PRDetail.jsx already applies. Reporting
+  // Manager has no natural 1:1 role in the roster, so required_role stays
+  // null for it and falls back to the coarse any-approver-role rule, same
+  // as legacy rows created before this column existed.
+  const roleMatches = pendingApproval?.required_role
+    ? user.role === pendingApproval.required_role
+    : canAccessApprovals(user.role)
 
   return (
     <div style={{ maxWidth: '480px', margin: '0 auto', padding: '20px', width: '100%', paddingBottom: '140px' }}>
@@ -276,8 +285,8 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
         </div>
       )}
 
-      {/* Fixed decision bar */}
-      {!isAlreadyReviewed && (
+      {/* Fixed decision bar — only shown when this viewer can act on the current level */}
+      {!isAlreadyReviewed && roleMatches && (
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 10 }}>
           <div style={{
             maxWidth: '480px', margin: '0 auto',

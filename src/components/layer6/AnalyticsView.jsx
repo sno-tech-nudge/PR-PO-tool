@@ -118,6 +118,12 @@ export default function AnalyticsView({ user, onViewPR, onViewPO, onViewVendor }
   const [auditLoading, setAuditLoading] = useState(true)
   const [auditRefreshedAt, setAuditRefreshedAt] = useState(null)
 
+  // Personal Analytics — real, already-recorded per-person approval activity.
+  const [members, setMembers] = useState([])
+  const [selectedMemberId, setSelectedMemberId] = useState('')
+  const [personalStats, setPersonalStats] = useState(null)
+  const [personalLoading, setPersonalLoading] = useState(true)
+
   const isAdmin = user?.role === 'admin'
 
   // Fast-moving numbers (cash flow, live pipeline counts, TAT) poll every
@@ -170,6 +176,58 @@ export default function AnalyticsView({ user, onViewPR, onViewPO, onViewVendor }
   }, [isAdmin])
 
   useEffect(() => { loadAudit() }, [loadAudit])
+
+  // Team roster for the person-picker — loads once, defaults the selection
+  // to the signed-in viewer if they're in team_members.
+  useEffect(() => {
+    async function loadMembers() {
+      const { data } = await supabase.from('team_members').select('*').order('name')
+      setMembers(data || [])
+      const self = (data || []).find(m => m.email?.toLowerCase() === user?.email?.toLowerCase())
+      setSelectedMemberId(self?.id || data?.[0]?.id || '')
+    }
+    loadMembers()
+  }, [user?.email])
+
+  // Real per-person activity — each of these tables already records who
+  // acted (approver_email / approved_by) and when, so nothing here is
+  // estimated or fabricated. Scoped to analytics_reset_at when the admin has
+  // reset this person's counters from Settings > Team & Roles.
+  useEffect(() => {
+    const member = members.find(m => m.id === selectedMemberId)
+    if (!member) { setPersonalStats(null); setPersonalLoading(false); return }
+    let cancelled = false
+    async function loadPersonal() {
+      setPersonalLoading(true)
+      const resetAt = member.analytics_reset_at
+      let prQuery = supabase.from('pr_approvals').select('created_at, actioned_at').eq('approver_email', member.email).eq('status', 'approved')
+      let vendorQuery = supabase.from('vendors').select('submitted_at, approved_at').eq('approved_by', member.email).eq('status', 'approved')
+      let reportQuery = supabase.from('report_approvals').select('created_at, actioned_at').eq('approver_email', member.email).eq('status', 'approved')
+      if (resetAt) {
+        prQuery = prQuery.gte('actioned_at', resetAt)
+        vendorQuery = vendorQuery.gte('approved_at', resetAt)
+        reportQuery = reportQuery.gte('actioned_at', resetAt)
+      }
+      const [{ data: prRows }, { data: vendorRows }, { data: reportRows }] = await Promise.all([prQuery, vendorQuery, reportQuery])
+      if (cancelled) return
+      const allDurations = [
+        ...(prRows || []).map(r => daysBetween(r.created_at, r.actioned_at)),
+        ...(vendorRows || []).map(r => daysBetween(r.submitted_at, r.approved_at)),
+        ...(reportRows || []).map(r => daysBetween(r.created_at, r.actioned_at)),
+      ].filter(d => d != null && d >= 0)
+      const avgDays = allDurations.length ? Math.round((allDurations.reduce((a, b) => a + b, 0) / allDurations.length) * 10) / 10 : null
+      setPersonalStats({
+        prCount: (prRows || []).length,
+        vendorCount: (vendorRows || []).length,
+        reportCount: (reportRows || []).length,
+        avgDays,
+        resetAt,
+      })
+      setPersonalLoading(false)
+    }
+    loadPersonal()
+    return () => { cancelled = true }
+  }, [selectedMemberId, members])
 
   if (loading) return <div style={{ fontSize: '13px', color: '#6B7280', padding: '40px 0', textAlign: 'center' }}>Loading analytics…</div>
 
@@ -256,6 +314,39 @@ export default function AnalyticsView({ user, onViewPR, onViewPO, onViewVendor }
           <KPICard label="PR Approval TAT" value={prTAT == null ? '—' : `${prTAT} day${prTAT === 1 ? '' : 's'}`} sub={`${prDurations.length} approved PR${prDurations.length !== 1 ? 's' : ''} measured`} borderColor="#B45309" />
           <KPICard label="Vendor Approval TAT" value={vendorTAT == null ? '—' : `${vendorTAT} day${vendorTAT === 1 ? '' : 's'}`} sub={`${approvedVendors.length} approved vendor${approvedVendors.length !== 1 ? 's' : ''} measured`} borderColor="#6D28D9" />
         </div>
+      </SectionCard>
+
+      {/* Personal Analytics — real per-person approval activity, resettable from Settings > Team & Roles */}
+      <SectionCard
+        title="Personal Analytics"
+        sub={personalStats?.resetAt ? `Since ${fmtDate(personalStats.resetAt)} — reset from Settings > Team & Roles` : 'All-time — reset from Settings > Team & Roles'}
+        action={
+          <select
+            value={selectedMemberId}
+            onChange={e => setSelectedMemberId(e.target.value)}
+            style={{ height: '28px', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '0 8px', fontSize: '12px', color: '#1A1F36', background: '#FFFFFF' }}
+          >
+            {members.map(m => <option key={m.id} value={m.id}>{m.name} ({m.role})</option>)}
+          </select>
+        }
+      >
+        {personalLoading ? (
+          <div style={{ fontSize: '12px', color: '#9CA3AF', textAlign: 'center', padding: '12px 0' }}>Loading…</div>
+        ) : !personalStats ? (
+          <div style={{ fontSize: '12px', color: '#9CA3AF', textAlign: 'center', padding: '12px 0' }}>No team member selected.</div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px' }}>
+            <KPICard label="Approved PRs" value={personalStats.prCount} borderColor="#B45309" />
+            <KPICard label="Approved Vendors" value={personalStats.vendorCount} borderColor="#6D28D9" />
+            <KPICard label="Approved Expense Reports" value={personalStats.reportCount} borderColor="#1565C0" />
+            <KPICard
+              label="Avg Time to Approve"
+              value={personalStats.avgDays == null ? '—' : `${personalStats.avgDays} day${personalStats.avgDays === 1 ? '' : 's'}`}
+              sub="across all three, combined"
+              borderColor="#15803D"
+            />
+          </div>
+        )}
       </SectionCard>
 
       {/* Audit Worklist — admin only */}
