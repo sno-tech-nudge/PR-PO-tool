@@ -58,7 +58,14 @@ export async function createApprovalRecords(reportId, totalAmount, supabaseClien
     due_at: dueAt.toISOString(),
   }))
 
-  const { error } = await supabaseClient.from('report_approvals').insert(records)
+  // onConflict + ignoreDuplicates makes this safe to call more than once for
+  // the same report (StrictMode double-invoke, a remounted confirmation
+  // screen, etc.) — relies on the report_approvals_report_level_unique
+  // constraint (report_id, approver_level) from
+  // supabase_migration_report_approvals_unique.sql.
+  const { error } = await supabaseClient
+    .from('report_approvals')
+    .upsert(records, { onConflict: 'report_id,approver_level', ignoreDuplicates: true })
   if (error) console.log('Approval records error:', error.message)
 }
 

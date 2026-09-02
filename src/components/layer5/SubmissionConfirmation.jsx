@@ -45,7 +45,9 @@ export default function SubmissionConfirmation({ submission, onStartNew, onTrack
 
       if (data) {
         setReportId(data.id)
-        // Create approval records (non-blocking — safe to call multiple times due to insert)
+        // Safe to call more than once (StrictMode double-invokes this effect in dev,
+        // and a remount could too in prod) — createApprovalRecords upserts on the
+        // (report_id, approver_level) unique constraint instead of a bare insert.
         await createApprovalRecords(data.id, total || 0, supabase)
       }
     }
