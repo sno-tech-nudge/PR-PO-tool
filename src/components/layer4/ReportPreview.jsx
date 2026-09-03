@@ -148,6 +148,7 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
       pdf_storage_path: pdfPath || null,
       selected_expense_ids: expenses.map(e => e.id),
       employee_email: user?.email ?? null,
+      po_related: reportDetails?.po_related ?? null,
     }
 
     try {
@@ -170,16 +171,30 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
         .update({ status: 'reported', policy_status: 'submitted', approval_route: approvalRoute.route })
         .in('id', expenses.map(e => e.id))
 
-      // Best-effort: if every expense in this report came from the same PO
-      // (e.g. a PO-tranche invoice captured via SubmitPOExpense, possibly
-      // alongside other expenses also tagged with that same po_number),
-      // link the report to it so the "View PO" card shows up. Left null
-      // for personal reports or ones mixing more than one PO — no error,
-      // just no link.
-      const poNumbers = [...new Set(expenses.map(e => e.po_number).filter(Boolean))]
-      if (poNumbers.length === 1) {
-        const { data: po } = await supabase.from('purchase_orders').select('id').eq('po_number', poNumbers[0]).maybeSingle()
-        if (po) await supabase.from('expense_reports').update({ po_id: po.id }).eq('id', report.id)
+      // The person's explicit "is this related to a PO?" answer (ReportDetails,
+      // Step 2) is authoritative. When they picked one, link the report to it
+      // and back-fill po_number onto any included expense so PODetail's
+      // pending-balance tracking picks this report up too — but never
+      // overwrite a po_number an expense already carries (e.g. one captured
+      // via SubmitPOExpense against a *different* PO).
+      if (reportDetails?.po_related && reportDetails?.linked_po_id) {
+        await supabase.from('expense_reports').update({ po_id: reportDetails.linked_po_id }).eq('id', report.id)
+        const { data: linkedPO } = await supabase.from('purchase_orders').select('po_number').eq('id', reportDetails.linked_po_id).maybeSingle()
+        if (linkedPO) {
+          const unTaggedIds = expenses.filter(e => !e.po_number).map(e => e.id)
+          if (unTaggedIds.length) {
+            await supabase.from('expense_details').update({ po_number: linkedPO.po_number }).in('id', unTaggedIds)
+          }
+        }
+      } else if (reportDetails?.po_related == null) {
+        // Legacy fallback for anything that skipped the new required prompt
+        // (shouldn't happen going forward, kept for safety): infer a link
+        // only when every included expense already shares one po_number.
+        const poNumbers = [...new Set(expenses.map(e => e.po_number).filter(Boolean))]
+        if (poNumbers.length === 1) {
+          const { data: po } = await supabase.from('purchase_orders').select('id').eq('po_number', poNumbers[0]).maybeSingle()
+          if (po) await supabase.from('expense_reports').update({ po_id: po.id }).eq('id', report.id)
+        }
       }
 
       setGenerating(false)

@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { supabase } from '../../lib/supabase'
 import { blockNonNumericKey, sanitizeNumericPaste, sanitizeNumericValue } from '../../lib/numericInput'
 
 const ENTITIES = [
@@ -69,9 +70,53 @@ function formatDuration(start, end) {
   return `${fmt(start)} – ${fmt(end)}`
 }
 
+function fmtAmt(n) {
+  if (n == null) return '—'
+  return '₹' + Number(n).toLocaleString('en-IN')
+}
+
 export default function ReportDetails({ expenses, reportMeta, onContinue, onBack }) {
   const total = (expenses || []).reduce((s, e) => s + (e.amount || 0), 0)
   const count = (expenses || []).length
+
+  // Section 0 — PO relation (required on every report, per finance's ask
+  // that PR/PO stay independent of the Expense Report module — the report
+  // itself decides whether it's tied to a PO, instead of the PO page
+  // driving expense creation). null until answered; the Continue button is
+  // blocked until this is set.
+  const [poRelated, setPoRelated] = useState(null) // true | false
+  const [poOptions, setPoOptions] = useState([])
+  const [selectedPOId, setSelectedPOId] = useState('')
+  const [poPending, setPoPending] = useState(null) // { amount, pending } once a PO is picked
+  const [poLoading, setPoLoading] = useState(false)
+  const [poError, setPoError] = useState(null)
+
+  useEffect(() => {
+    if (poRelated !== true || poOptions.length) return
+    supabase.from('purchase_orders').select('id, po_number, amount, vendors(org_name)').eq('status', 'issued').order('created_at', { ascending: false }).limit(200)
+      .then(({ data }) => setPoOptions(data || []))
+  }, [poRelated, poOptions.length])
+
+  async function handleSelectPO(id) {
+    setSelectedPOId(id)
+    setPoPending(null)
+    setPoError(null)
+    if (!id) return
+    setPoLoading(true)
+    const po = poOptions.find(p => p.id === id)
+    const [{ data: linkedReports }, { data: savedExpenses }] = await Promise.all([
+      supabase.from('expense_reports').select('total_amount, status').eq('po_id', id),
+      supabase.from('expense_details').select('amount').eq('po_number', po?.po_number || '').eq('status', 'saved'),
+    ])
+    const reportsTotal = (linkedReports || []).filter(r => r.status !== 'rejected').reduce((s, r) => s + (Number(r.total_amount) || 0), 0)
+    const savedTotal = (savedExpenses || []).reduce((s, e) => s + (Number(e.amount) || 0), 0)
+    const claimed = reportsTotal + savedTotal
+    const pending = Math.max(0, (Number(po?.amount) || 0) - claimed)
+    setPoPending({ amount: po?.amount, pending })
+    setPoLoading(false)
+  }
+
+  const poSectionValid = poRelated === false || (poRelated === true && !!selectedPOId && !!poPending && total <= poPending.pending)
 
   // Section A — Who
   const [whoType, setWhoType] = useState(null) // 'just_me' | 'multiple'
@@ -101,12 +146,15 @@ export default function ReportDetails({ expenses, reportMeta, onContinue, onBack
   const perPerson = actualCount > 1 && total > 0 ? Math.round(total / actualCount) : null
 
   function handleContinue() {
+    if (!poSectionValid) return
     onContinue({
       report_id: reportMeta?.id || null,
       report_reference: reportMeta?.report_reference || null,
       business_purpose: reportMeta?.business_purpose || null,
       duration_start: reportMeta?.duration_start || null,
       duration_end: reportMeta?.duration_end || null,
+      po_related: poRelated,
+      linked_po_id: poRelated ? selectedPOId : null,
       entity: entity || null,
       expense_type: whoType === 'multiple' ? 'my_team' : 'just_me',
       attendee_count: actualCount || null,
@@ -147,7 +195,7 @@ export default function ReportDetails({ expenses, reportMeta, onContinue, onBack
       <div style={{ fontSize: '13px', color: '#4A4A4A', marginBottom: '6px' }}>
         These details apply to all {count} selected expense{count !== 1 ? 's' : ''}.
       </div>
-      <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '20px' }}>Step 2 of 3 · All fields optional</div>
+      <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '20px' }}>Step 2 of 3 · One required question below, everything else optional</div>
 
       {reportMeta && (
         <div style={{ border: '1px solid #E8E8E8', marginBottom: '24px' }}>
@@ -163,6 +211,42 @@ export default function ReportDetails({ expenses, reportMeta, onContinue, onBack
             <span style={{ fontSize: '12px', color: '#6B6B6B' }}>Duration</span>
             <span style={{ fontSize: '13px', color: '#1A1A1A' }}>{formatDuration(reportMeta.duration_start, reportMeta.duration_end)}</span>
           </div>
+        </div>
+      )}
+
+      <div style={{ height: '1px', background: '#E8E8E8', marginBottom: '24px' }} />
+
+      {/* SECTION 0 — PO relation, required on every report */}
+      <SectionLabel>Is this report related to a Purchase Order?<span style={{ color: '#DC2626' }}> *</span></SectionLabel>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+        <TapCard selected={poRelated === true} onClick={() => setPoRelated(true)} main="Yes" sub="Paying an invoice against an issued PO" />
+        <TapCard selected={poRelated === false} onClick={() => { setPoRelated(false); setSelectedPOId(''); setPoPending(null) }} main="No" sub="A normal expense claim" />
+      </div>
+
+      {poRelated === true && (
+        <div style={{ marginBottom: '12px' }}>
+          <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '8px' }}>Which Purchase Order</div>
+          <select
+            value={selectedPOId}
+            onChange={e => handleSelectPO(e.target.value)}
+            style={{ ...inputStyle, paddingLeft: '10px' }}
+          >
+            <option value="">Select a PO…</option>
+            {poOptions.map(po => (
+              <option key={po.id} value={po.id}>{po.po_number}{po.vendors?.org_name ? ` — ${po.vendors.org_name}` : ''}</option>
+            ))}
+          </select>
+
+          {poLoading && <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '6px' }}>Checking pending balance…</div>}
+
+          {!poLoading && poPending && (
+            <div style={{ fontSize: '12px', color: total > poPending.pending ? '#DC2626' : '#4A4A4A', marginTop: '8px' }}>
+              PO amount {fmtAmt(poPending.amount)} · pending {fmtAmt(poPending.pending)}
+              {total > poPending.pending && ` — this report's ${fmtAmt(total)} exceeds what's still pending on this PO.`}
+            </div>
+          )}
+
+          {poError && <div style={{ fontSize: '12px', color: '#DC2626', marginTop: '8px' }}>{poError}</div>}
         </div>
       )}
 
@@ -331,13 +415,20 @@ export default function ReportDetails({ expenses, reportMeta, onContinue, onBack
           maxWidth: '480px', margin: '0 auto',
           background: '#FFFFFF', borderTop: '1px solid #E8E8E8', padding: '16px',
         }}>
+          {poRelated === null && (
+            <div style={{ fontSize: '12px', color: '#DC2626', marginBottom: '8px' }}>
+              Answer whether this report is related to a Purchase Order before continuing.
+            </div>
+          )}
           <button
             onClick={handleContinue}
+            disabled={!poSectionValid}
             style={{
               width: '100%', height: '48px',
-              background: '#8C3225', color: '#FFFFFF',
+              background: poSectionValid ? '#8C3225' : '#E8E8E8',
+              color: poSectionValid ? '#FFFFFF' : '#9CA3AF',
               border: 'none', fontSize: '14px', fontWeight: 500,
-              cursor: 'pointer', borderRadius: '4px',
+              cursor: poSectionValid ? 'pointer' : 'default', borderRadius: '4px',
             }}
           >
             Continue to preview
