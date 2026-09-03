@@ -11,10 +11,12 @@ function fmtAmt(n) { return `₹${Number(n || 0).toLocaleString('en-IN')}` }
 // PRApproverDashboard.jsx (quick accept/reject icons in the list) so both act
 // on a PR's approval chain identically.
 
+// Atomic — see generatePRNumber's comment in PRForm.jsx; same fix, same reason.
 export async function generatePONumber() {
   const fy = getFiscalYearPrefix()
-  const { count } = await supabase.from('purchase_orders').select('id', { count: 'exact', head: true }).like('po_number', `${fy}-PO-%`)
-  return `${fy}-PO-07-${((count || 0) + 1).toString().padStart(4, '0')}`
+  const { data, error } = await supabase.rpc('next_doc_number', { kind: 'PO', fy_prefix: fy })
+  if (error) throw error
+  return data
 }
 
 // Notifies every team member holding `role` that a PR/PO needs their

@@ -57,13 +57,14 @@ export default function HomeScreenAddons({
   user, onViewReport,
   onResumePRDraft, onResumeVendorDraft,
   onOpenExpenseApprovals, onOpenPRApprovals, onOpenFinance,
+  hideExpenseFeatures = false,
 }) {
   const [stats, setStats]                 = useState(null)
   const [recentReports, setRecentReports] = useState([])
   const [tasks, setTasks]                 = useState(null)
   const [loading, setLoading]             = useState(true)
 
-  useEffect(() => { load() }, [user?.email])
+  useEffect(() => { load() }, [user?.email, hideExpenseFeatures])
 
   async function load() {
     const email = user?.email
@@ -79,16 +80,20 @@ export default function HomeScreenAddons({
       { count: pendingPRs },
       { count: pendingPOs },
     ] = await Promise.all([
-      supabase.from('expense_details')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'saved')
-        .eq('user_email', email),
-      supabase.from('expense_reports')
-        .select('id,report_reference,total_amount,status,created_at,brand')
-        .eq('employee_email', email)
-        .not('status', 'eq', 'saved')
-        .order('created_at', { ascending: false })
-        .limit(50),
+      hideExpenseFeatures
+        ? Promise.resolve({ count: 0 })
+        : supabase.from('expense_details')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'saved')
+            .eq('user_email', email),
+      hideExpenseFeatures
+        ? Promise.resolve({ data: [] })
+        : supabase.from('expense_reports')
+            .select('id,report_reference,total_amount,status,created_at,brand')
+            .eq('employee_email', email)
+            .not('status', 'eq', 'saved')
+            .order('created_at', { ascending: false })
+            .limit(50),
       supabase.from('purchase_requests')
         .select('id, pr_number, amount, vendors(org_name)')
         .eq('requested_by', email)
@@ -147,8 +152,24 @@ export default function HomeScreenAddons({
 
   return (
     <div>
+      {/* Expense reporting stats/history are out of scope for this testing
+          round (Vendor/PR/PO only) — show a plain status card instead. */}
+      {hideExpenseFeatures && (
+        <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '10px', padding: '16px 18px', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 700, color: '#111827' }}>Expense reporting</span>
+            <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '5px', background: '#F3F4F6', color: '#6B7280' }}>
+              Coming soon
+            </span>
+          </div>
+          <div style={{ fontSize: '12px', color: '#9CA3AF', lineHeight: 1.5 }}>
+            We're currently testing Vendor, Purchase Request, and Purchase Order workflows. Expense capture and reports will open up here soon.
+          </div>
+        </div>
+      )}
+
       {/* Stat cards */}
-      {stats && (
+      {!hideExpenseFeatures && stats && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '24px' }}>
           <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '10px', padding: '14px 12px' }}>
             <div style={{ fontSize: '24px', fontWeight: 800, color: '#111827', lineHeight: 1 }}>{stats.unreported}</div>
@@ -233,7 +254,7 @@ export default function HomeScreenAddons({
       )}
 
       {/* Recent reports */}
-      {recentReports.length > 0 && (
+      {!hideExpenseFeatures && recentReports.length > 0 && (
         <div style={{ marginBottom: '24px' }}>
           <div style={{ fontSize: '12px', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
             Recent Reports
@@ -280,22 +301,24 @@ export default function HomeScreenAddons({
       )}
 
       {/* Policy reminders */}
-      <div>
-        <div style={{ fontSize: '12px', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
-          Policy Reminders
+      {!hideExpenseFeatures && (
+        <div>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
+            Policy Reminders
+          </div>
+          <div style={{ border: '1px solid #E5E7EB', borderRadius: '10px', overflow: 'hidden' }}>
+            {POLICY_REMINDERS.map((r, i) => (
+              <div key={i} style={{
+                padding: '11px 14px',
+                borderBottom: i < POLICY_REMINDERS.length - 1 ? '1px solid #F3F4F6' : 'none',
+                background: '#FAFAFA',
+              }}>
+                <span style={{ fontSize: '12px', color: '#4B5563', lineHeight: '18px' }}>{r.text}</span>
+              </div>
+            ))}
+          </div>
         </div>
-        <div style={{ border: '1px solid #E5E7EB', borderRadius: '10px', overflow: 'hidden' }}>
-          {POLICY_REMINDERS.map((r, i) => (
-            <div key={i} style={{
-              padding: '11px 14px',
-              borderBottom: i < POLICY_REMINDERS.length - 1 ? '1px solid #F3F4F6' : 'none',
-              background: '#FAFAFA',
-            }}>
-              <span style={{ fontSize: '12px', color: '#4B5563', lineHeight: '18px' }}>{r.text}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      )}
     </div>
   )
 }

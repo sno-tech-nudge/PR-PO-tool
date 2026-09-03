@@ -131,7 +131,8 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
     if (!amt || amt <= 0) { setPoError('Enter a valid amount.'); return }
     if (amt > remaining) { setPoError(`Amount can't exceed the remaining ₹${remaining.toLocaleString('en-IN')}.`); return }
     setPoError(null)
-    await createPendingPO({ prId, pr, amount: amt })
+    const newPO = await createPendingPO({ prId, pr, amount: amt })
+    if (!newPO) { setPoError('Could not create the purchase order. Please try again.'); await load(); return }
     setNewPOAmount('')
     setCreatingPO(false)
     await load()
@@ -144,8 +145,12 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
 
     const result = await approvePRLevel({ prId, approvals, user, pr })
     if (result.isFinal) {
-      await createPendingPO({ prId, pr, amount: pr.amount })
-      showToast?.('Purchase request fully approved. Purchase Order created, pending Finance approval.', 'approved')
+      const newPO = await createPendingPO({ prId, pr, amount: pr.amount })
+      if (newPO) {
+        showToast?.('Purchase request fully approved. Purchase Order created, pending Finance approval.', 'approved')
+      } else {
+        showToast?.('Purchase request approved, but the Purchase Order could not be created. Use "Create Additional PO" below to retry.', 'rejected')
+      }
     } else {
       showToast?.(`Level ${currentPending.approver_level} approved. Forwarded to ${result.nextWaiting.approver_name}.`, 'info')
     }
@@ -166,7 +171,13 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
   }
 
   if (loading) return <div style={{ padding: '40px', textAlign: 'center', fontSize: '13px', color: '#6B7280' }}>Loading…</div>
-  if (!pr) return <div style={{ padding: '40px', textAlign: 'center', fontSize: '13px', color: '#9CA3AF' }}>Request not found.</div>
+  // Mirrors PRList's "My Requests" scoping (employees only ever see their
+  // own PRs there) — that list filter alone doesn't stop someone from
+  // reaching another PR's detail via a stale link/notification, so enforce
+  // it here too. Reported the same as "not found" rather than "forbidden".
+  if (!pr || (user.role === 'employee' && pr.requested_by !== user.email)) {
+    return <div style={{ padding: '40px', textAlign: 'center', fontSize: '13px', color: '#9CA3AF' }}>Request not found.</div>
+  }
 
   const canEdit = user.email === pr.requested_by && pr.status === 'rejected'
   const lc = pr.link_confidence ? LINK_CONF[pr.link_confidence] : null

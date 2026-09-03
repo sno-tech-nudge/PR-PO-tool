@@ -144,7 +144,14 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
   }
 
   if (loading) return <div style={{ padding: '60px', textAlign: 'center', fontSize: '13px', color: '#9CA3AF' }}>Loading…</div>
-  if (!po) return <div style={{ padding: '60px', textAlign: 'center', fontSize: '13px', color: '#9CA3AF' }}>Purchase order not found.</div>
+  // Mirrors POList's "employees only see their own POs" scoping — that list
+  // filter alone doesn't stop someone from reaching another PO's detail via
+  // a stale link/notification, so enforce it here too. Reported the same as
+  // "not found" rather than a distinct "forbidden" message, so it doesn't
+  // confirm to an employee that a PO they can't see does exist.
+  if (!po || (user.role === 'employee' && pr && pr.requested_by !== user.email)) {
+    return <div style={{ padding: '60px', textAlign: 'center', fontSize: '13px', color: '#9CA3AF' }}>Purchase order not found.</div>
+  }
 
   const st = STATUS[po.status] || STATUS.issued
   const isFinance = canAccessFinance(user.role)

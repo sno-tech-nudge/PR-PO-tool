@@ -276,8 +276,11 @@ export default function App() {
   const navItems = [
     { key: 'list',    label: 'Home',              icon: '⊞' },
     // Finance doesn't submit expenses/reports themselves, so their own
-    // History (of expense submissions) isn't relevant to them.
-    ...(role !== 'finance' ? [{ key: 'history', label: 'History', icon: '☰' }] : []),
+    // History (of expense submissions) isn't relevant to them. Expense
+    // reporting is "coming soon" for employees during this testing round
+    // (Vendor/PR/PO only), so History is hidden for them too rather than
+    // linking to a feature that isn't open yet.
+    ...(role !== 'finance' && role !== 'employee' ? [{ key: 'history', label: 'History', icon: '☰' }] : []),
     ...(canAccessApprovals(role) ? [{ key: 'approvals', label: 'Approvals', icon: '✓' }] : []),
     ...(canAccessFinance(role)   ? [{ key: 'finance',   label: 'Finance',   icon: '₹' }] : []),
     { key: 'pr-list', label: 'Purchase Requests',  icon: '◫' },
@@ -357,32 +360,36 @@ export default function App() {
             )
           })}
 
-          <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '10px 0' }} />
+          {user.role !== 'employee' && (
+            <>
+              <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '10px 0' }} />
 
-          <div
-            onClick={handleAddAnother}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '10px',
-              padding: '9px 16px 9px 17px', cursor: 'pointer',
-              color: '#E8A090', fontSize: '13px', fontWeight: 600,
-              userSelect: 'none',
-            }}
-          >
-            <span style={{ fontSize: '16px', minWidth: '16px', textAlign: 'center' }}>+</span>
-            New Expense
-          </div>
-          <div
-            onClick={handleNewReport}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '10px',
-              padding: '9px 16px 9px 17px', cursor: 'pointer',
-              color: '#c4826f', fontSize: '13px',
-              userSelect: 'none',
-            }}
-          >
-            <span style={{ fontSize: '13px', minWidth: '16px', textAlign: 'center', opacity: 0.7 }}>◷</span>
-            New Report
-          </div>
+              <div
+                onClick={handleAddAnother}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '9px 16px 9px 17px', cursor: 'pointer',
+                  color: '#E8A090', fontSize: '13px', fontWeight: 600,
+                  userSelect: 'none',
+                }}
+              >
+                <span style={{ fontSize: '16px', minWidth: '16px', textAlign: 'center' }}>+</span>
+                New Expense
+              </div>
+              <div
+                onClick={handleNewReport}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '9px 16px 9px 17px', cursor: 'pointer',
+                  color: '#c4826f', fontSize: '13px',
+                  userSelect: 'none',
+                }}
+              >
+                <span style={{ fontSize: '13px', minWidth: '16px', textAlign: 'center', opacity: 0.7 }}>◷</span>
+                New Report
+              </div>
+            </>
+          )}
         </nav>
 
         {/* User info + sign out */}
@@ -454,48 +461,62 @@ export default function App() {
               </div>
             </div>
 
-            <div style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '10px', padding: '20px', marginBottom: '28px' }}>
-              <div style={{ fontSize: '16px', fontWeight: 700, color: '#111827', marginBottom: '16px' }}>Quick Add</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '14px' }}>
-                <QuickAddDropzone onReady={handleQuickReceipt} />
-
-                <div
-                  onClick={handleAddAnother}
-                  style={{
-                    border: '1px solid #E5E7EB', borderRadius: '10px', padding: '28px 12px',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', minHeight: '148px', boxSizing: 'border-box', textAlign: 'center',
-                  }}
-                >
-                  <div style={{
-                    width: '40px', height: '40px', borderRadius: '50%', background: '#fdf0ed',
-                    color: '#8C3225', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '18px', fontWeight: 700, marginBottom: '10px',
-                  }}>
-                    +
-                  </div>
-                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#1A1F36' }}>New Expense</div>
+            {user.role === 'employee' ? (
+              <div style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '10px', padding: '20px', marginBottom: '28px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#111827' }}>Quick Add</div>
+                  <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '5px', background: '#F3F4F6', color: '#6B7280' }}>
+                    Coming soon
+                  </span>
                 </div>
-
-                <div
-                  onClick={handleNewReport}
-                  style={{
-                    border: '1px solid #E5E7EB', borderRadius: '10px', padding: '28px 12px',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', minHeight: '148px', boxSizing: 'border-box', textAlign: 'center',
-                  }}
-                >
-                  <div style={{
-                    width: '40px', height: '40px', borderRadius: '50%', background: '#fdf0ed',
-                    color: '#8C3225', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '16px', marginBottom: '10px',
-                  }}>
-                    ◷
-                  </div>
-                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#1A1F36' }}>New Report</div>
+                <div style={{ fontSize: '13px', color: '#9CA3AF', lineHeight: 1.5 }}>
+                  Expense capture isn't part of this testing round yet — we're currently focused on Vendor, Purchase Request, and Purchase Order workflows.
                 </div>
               </div>
-            </div>
+            ) : (
+              <div style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '10px', padding: '20px', marginBottom: '28px' }}>
+                <div style={{ fontSize: '16px', fontWeight: 700, color: '#111827', marginBottom: '16px' }}>Quick Add</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '14px' }}>
+                  <QuickAddDropzone onReady={handleQuickReceipt} />
+
+                  <div
+                    onClick={handleAddAnother}
+                    style={{
+                      border: '1px solid #E5E7EB', borderRadius: '10px', padding: '28px 12px',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', minHeight: '148px', boxSizing: 'border-box', textAlign: 'center',
+                    }}
+                  >
+                    <div style={{
+                      width: '40px', height: '40px', borderRadius: '50%', background: '#fdf0ed',
+                      color: '#8C3225', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '18px', fontWeight: 700, marginBottom: '10px',
+                    }}>
+                      +
+                    </div>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#1A1F36' }}>New Expense</div>
+                  </div>
+
+                  <div
+                    onClick={handleNewReport}
+                    style={{
+                      border: '1px solid #E5E7EB', borderRadius: '10px', padding: '28px 12px',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', minHeight: '148px', boxSizing: 'border-box', textAlign: 'center',
+                    }}
+                  >
+                    <div style={{
+                      width: '40px', height: '40px', borderRadius: '50%', background: '#fdf0ed',
+                      color: '#8C3225', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '16px', marginBottom: '10px',
+                    }}>
+                      ◷
+                    </div>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#1A1F36' }}>New Report</div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <HomeScreenAddons
               user={user}
@@ -505,6 +526,7 @@ export default function App() {
               onOpenExpenseApprovals={() => { setApprovalsTab('expenses'); setAppScreen('approvals') }}
               onOpenPRApprovals={() => { setApprovalsTab('prs'); setAppScreen('approvals') }}
               onOpenFinance={() => setAppScreen('finance')}
+              hideExpenseFeatures={user.role === 'employee'}
             />
           </div>
         )}

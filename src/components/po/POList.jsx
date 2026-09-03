@@ -56,13 +56,19 @@ export default function POList({ user, onViewPO }) {
 
   async function load() {
     setLoading(true)
+    const isEmployee = user.role === 'employee'
+    // !inner turns the embedded relation into a real join filter — without
+    // it, .eq('purchase_requests.requested_by', ...) only filters which
+    // nested purchase_requests object comes back (leaving it null for a
+    // non-match) while still returning the parent purchase_orders row, so
+    // employees could see other people's POs with a blank PR card attached.
     let q = supabase
       .from('purchase_orders')
-      .select('*, purchase_requests(*), vendors(*)')
+      .select(isEmployee ? '*, purchase_requests!inner(*), vendors(*)' : '*, purchase_requests(*), vendors(*)')
       .order('generated_at', { ascending: false })
 
     // Employees only see their own POs
-    if (user.role === 'employee') {
+    if (isEmployee) {
       q = q.eq('purchase_requests.requested_by', user.email)
     }
 

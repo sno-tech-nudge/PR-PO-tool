@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
+import { sendFeedbackEmail } from '../../lib/feedbackEmail'
 
 const CATEGORIES = [
   { key: 'bug', label: 'Bug', icon: '⚠' },
@@ -226,6 +227,16 @@ export default function FeedbackWidget({ user, moduleName }) {
       if (error) throw error
 
       const refId = (data?.id || '').slice(0, 8).toUpperCase()
+      sendFeedbackEmail({
+        category, title: title.trim(), description: description.trim(),
+        severity: category === 'bug' ? severity : null,
+        moduleName: moduleName || null,
+        pageUrl: window.location.href,
+        browserInfo: parseBrowserOS(navigator.userAgent),
+        submitterName: user?.name || null,
+        submitterEmail: user?.email || null,
+        refId,
+      })
       setToast({ type: 'success', message: `Thanks! Feedback submitted — ref ${refId}` })
       handleClose()
     } catch (err) {

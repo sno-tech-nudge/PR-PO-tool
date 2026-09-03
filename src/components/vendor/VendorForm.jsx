@@ -235,11 +235,12 @@ function FileUpload({ label, required, error, existing, file, onChange, accept =
   )
 }
 
+// Atomic — see generatePRNumber's comment in PRForm.jsx; same fix, same reason.
 async function generateVendorId() {
   const fy = getFiscalYearPrefix()
-  const { count } = await supabase.from('vendors').select('id', { count: 'exact', head: true }).like('vendor_id', `${fy}-VR-%`)
-  const next = ((count || 0) + 1).toString().padStart(4, '0')
-  return `${fy}-VR-07-${next}`
+  const { data, error } = await supabase.rpc('next_doc_number', { kind: 'VR', fy_prefix: fy })
+  if (error) throw error
+  return data
 }
 
 // ─── main component ─────────────────────────────────────────────────────────────

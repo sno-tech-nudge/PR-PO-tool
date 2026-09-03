@@ -17,10 +17,15 @@ const FREQUENCIES = ['One-time', 'Monthly', 'Quarterly', 'Annually']
 const PR_MIN = 25000
 const PR_CONTRACT_THRESHOLD = 2500000  // 25 lacs
 
+// Atomic — next_doc_number (see supabase_migration_atomic_document_numbering.sql)
+// uses a real Postgres sequence under the hood, so two people submitting a
+// PR at the same moment can never be handed the same number (the previous
+// read-count-then-format approach could).
 async function generatePRNumber() {
   const fy = getFiscalYearPrefix()
-  const { count } = await supabase.from('purchase_requests').select('id', { count: 'exact', head: true }).like('pr_number', `${fy}-PR-%`)
-  return `${fy}-PR-07-${((count || 0) + 1).toString().padStart(4, '0')}`
+  const { data, error } = await supabase.rpc('next_doc_number', { kind: 'PR', fy_prefix: fy })
+  if (error) throw error
+  return data
 }
 
 function StepIndicator({ current, total, labels }) {
