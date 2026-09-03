@@ -1,9 +1,17 @@
+import { useState, useRef, useLayoutEffect } from 'react'
 import { getEntityAddress, getEntityCity } from '../../lib/orgEntities'
 import { amountInWords } from '../../lib/numberToWords'
 import { PO_TERMS_INTRO, PO_TERMS_CLAUSES } from '../../lib/poTermsAndConditions'
 
 const BROWN = '#8C3225'
 const BORDER = '#D9C2BB'
+// A4 at 96dpi — matches the 794px page width already used throughout this
+// file (jsPDF's `unit:'px', format:'a4'` in pdfGenerator.js resolves to the
+// same numbers, so a page rendered at this size drops straight into the PDF
+// at 1:1 with no rescaling).
+const PAGE_W = 794
+const PAGE_H = 1123
+const PAGE_PAD = 40
 
 function fmtDate(d) {
   if (!d) return '—'
@@ -168,36 +176,118 @@ export default function POTemplate({ po, pr, vendor }) {
         <div style={{ height: '5px', background: BROWN, marginTop: '24px' }} />
       </div>
 
-      {/* ── Page 2+: Terms and Conditions (Appendix A), verbatim, our layout ── */}
-      <div
-        id="po-template-terms"
-        style={{
-          width: '794px', background: '#FFFFFF', padding: '40px',
-          fontFamily: 'system-ui, -apple-system, sans-serif', boxSizing: 'border-box',
-          position: 'absolute', left: '-9999px', top: 0, display: 'block', color: '#1A1F36',
-        }}
-      >
-        <div style={{ height: '5px', background: BROWN, marginBottom: '20px' }} />
-        <div style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '4px' }}>
-          APPENDIX A
-        </div>
-        <div style={{ fontSize: '20px', fontFamily: 'Georgia, serif', fontWeight: 700, color: BROWN, textAlign: 'center', marginBottom: '18px' }}>
-          Terms and Conditions
-        </div>
+      {/* ── Page 2+: Terms and Conditions (Appendix A) — paginated by actually
+          measuring rendered clause heights, not by slicing one tall
+          screenshot at fixed pixel intervals (see TermsSection below for why
+          that matters). ── */}
+      <TermsSection pageIdPrefix="po-template-terms" />
+    </>
+  )
+}
 
-        <div style={{ fontSize: '11px', color: '#374151', lineHeight: 1.7, marginBottom: '16px' }}>
-          {PO_TERMS_INTRO}
-        </div>
+// Terms & Conditions spans a variable, content-dependent number of pages.
+// The previous approach screenshotted the whole clause list as one tall
+// off-screen div and let pdfGenerator.js slice the resulting image at fixed
+// pixel intervals — since that slicing has no idea where a line or sentence
+// ends, a page boundary could (and did) land mid-word, and every page after
+// the first started with zero top margin since the "page" was just a raw
+// crop of the source image.
+//
+// This instead measures each clause's real rendered height first (the
+// hidden probe below), packs them into page-sized groups in JS, and renders
+// each page as its own fully-padded, fixed-height div with a repeated
+// running header — so every page gets identical margins and a clause is
+// never split, because pagination happens at the text level before any
+// screenshot is taken.
+function TermsSection({ pageIdPrefix }) {
+  const headerRef = useRef(null)
+  const introRef = useRef(null)
+  const clauseRefs = useRef([])
+  const [pages, setPages] = useState(null)
 
+  useLayoutEffect(() => {
+    const headerH = headerRef.current?.offsetHeight || 0
+    const introH = (introRef.current?.offsetHeight || 0) + 16 // + its own marginBottom
+    const barH = 5
+    const topBarGap = 20   // top bar's marginBottom
+    const bottomBarGap = 24 // bottom bar's marginTop
+    const overhead = 2 * PAGE_PAD + barH + topBarGap + headerH + barH + bottomBarGap
+    const firstPageAvail = PAGE_H - overhead - introH
+    const contPageAvail = PAGE_H - overhead
+
+    const clauseHeights = clauseRefs.current.map(el => (el?.offsetHeight || 0) + 10) // + its own marginBottom
+
+    const computed = []
+    let current = []
+    let used = 0
+    let avail = firstPageAvail
+    PO_TERMS_CLAUSES.forEach((text, i) => {
+      const h = clauseHeights[i] || 0
+      if (current.length && used + h > avail) {
+        computed.push(current)
+        current = []
+        used = 0
+        avail = contPageAvail
+      }
+      current.push({ text, index: i })
+      used += h
+    })
+    computed.push(current)
+    setPages(computed)
+  }, [])
+
+  return (
+    <>
+      {/* Hidden measurement probe — same width/font as the real pages, read
+          via offsetHeight, never itself screenshotted. */}
+      <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', width: `${PAGE_W - 2 * PAGE_PAD}px` }}>
+        <div ref={headerRef} style={{ overflow: 'hidden' }}>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '4px' }}>APPENDIX A</div>
+          <div style={{ fontSize: '20px', fontFamily: 'Georgia, serif', fontWeight: 700, color: BROWN, textAlign: 'center', marginBottom: '18px' }}>Terms and Conditions</div>
+        </div>
+        <div ref={introRef} style={{ fontSize: '11px', color: '#374151', lineHeight: 1.7 }}>{PO_TERMS_INTRO}</div>
         {PO_TERMS_CLAUSES.map((text, i) => (
-          <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '10px', fontSize: '10.5px', color: '#374151', lineHeight: 1.6 }}>
+          <div key={i} ref={el => (clauseRefs.current[i] = el)} style={{ display: 'flex', gap: '8px', fontSize: '10.5px', color: '#374151', lineHeight: 1.6 }}>
             <span style={{ fontWeight: 700, color: BROWN, flexShrink: 0, width: '20px' }}>{i + 1}.</span>
             <span>{text}</span>
           </div>
         ))}
-
-        <div style={{ height: '5px', background: BROWN, marginTop: '24px' }} />
       </div>
+
+      {pages && pages.map((clauses, pageIndex) => (
+        <div
+          key={pageIndex}
+          id={`${pageIdPrefix}-${pageIndex}`}
+          style={{
+            width: `${PAGE_W}px`, height: `${PAGE_H}px`, background: '#FFFFFF', padding: `${PAGE_PAD}px`,
+            fontFamily: 'system-ui, -apple-system, sans-serif', boxSizing: 'border-box',
+            position: 'absolute', left: '-9999px', top: 0, display: 'block', color: '#1A1F36', overflow: 'hidden',
+          }}
+        >
+          <div style={{ height: '5px', background: BROWN, marginBottom: '20px' }} />
+          <div style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '4px' }}>
+            APPENDIX A
+          </div>
+          <div style={{ fontSize: '20px', fontFamily: 'Georgia, serif', fontWeight: 700, color: BROWN, textAlign: 'center', marginBottom: '18px' }}>
+            Terms and Conditions{pageIndex > 0 ? ' (continued)' : ''}
+          </div>
+
+          {pageIndex === 0 && (
+            <div style={{ fontSize: '11px', color: '#374151', lineHeight: 1.7, marginBottom: '16px' }}>
+              {PO_TERMS_INTRO}
+            </div>
+          )}
+
+          {clauses.map(({ text, index }) => (
+            <div key={index} style={{ display: 'flex', gap: '8px', marginBottom: '10px', fontSize: '10.5px', color: '#374151', lineHeight: 1.6 }}>
+              <span style={{ fontWeight: 700, color: BROWN, flexShrink: 0, width: '20px' }}>{index + 1}.</span>
+              <span>{text}</span>
+            </div>
+          ))}
+
+          <div style={{ height: '5px', background: BROWN, position: 'absolute', bottom: `${PAGE_PAD}px`, left: `${PAGE_PAD}px`, right: `${PAGE_PAD}px` }} />
+        </div>
+      ))}
     </>
   )
 }
