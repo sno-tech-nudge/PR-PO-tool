@@ -1,7 +1,7 @@
 import { useState, useRef, useLayoutEffect } from 'react'
 import { getEntityAddress, getEntityCity } from '../../lib/orgEntities'
 import { amountInWords } from '../../lib/numberToWords'
-import { PO_TERMS_INTRO, PO_TERMS_CLAUSES } from '../../lib/poTermsAndConditions'
+import { getPOTermsIntro, getPOTermsClauses } from '../../lib/poTermsAndConditions'
 
 const BROWN = '#8C3225'
 const BORDER = '#D9C2BB'
@@ -180,7 +180,7 @@ export default function POTemplate({ po, pr, vendor }) {
           measuring rendered clause heights, not by slicing one tall
           screenshot at fixed pixel intervals (see TermsSection below for why
           that matters). ── */}
-      <TermsSection pageIdPrefix="po-template-terms" />
+      <TermsSection pageIdPrefix="po-template-terms" entity={entity} />
     </>
   )
 }
@@ -199,11 +199,14 @@ export default function POTemplate({ po, pr, vendor }) {
 // running header — so every page gets identical margins and a clause is
 // never split, because pagination happens at the text level before any
 // screenshot is taken.
-function TermsSection({ pageIdPrefix }) {
+function TermsSection({ pageIdPrefix, entity }) {
   const headerRef = useRef(null)
   const introRef = useRef(null)
   const clauseRefs = useRef([])
   const [pages, setPages] = useState(null)
+
+  const termsIntro = getPOTermsIntro(entity)
+  const termsClauses = getPOTermsClauses(entity)
 
   useLayoutEffect(() => {
     const headerH = headerRef.current?.offsetHeight || 0
@@ -221,7 +224,7 @@ function TermsSection({ pageIdPrefix }) {
     let current = []
     let used = 0
     let avail = firstPageAvail
-    PO_TERMS_CLAUSES.forEach((text, i) => {
+    getPOTermsClauses(entity).forEach((text, i) => {
       const h = clauseHeights[i] || 0
       if (current.length && used + h > avail) {
         computed.push(current)
@@ -234,7 +237,7 @@ function TermsSection({ pageIdPrefix }) {
     })
     computed.push(current)
     setPages(computed)
-  }, [])
+  }, [entity])
 
   return (
     <>
@@ -245,8 +248,8 @@ function TermsSection({ pageIdPrefix }) {
           <div style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '4px' }}>APPENDIX A</div>
           <div style={{ fontSize: '20px', fontFamily: 'Georgia, serif', fontWeight: 700, color: BROWN, textAlign: 'center', marginBottom: '18px' }}>Terms and Conditions</div>
         </div>
-        <div ref={introRef} style={{ fontSize: '11px', color: '#374151', lineHeight: 1.7 }}>{PO_TERMS_INTRO}</div>
-        {PO_TERMS_CLAUSES.map((text, i) => (
+        <div ref={introRef} style={{ fontSize: '11px', color: '#374151', lineHeight: 1.7 }}>{termsIntro}</div>
+        {termsClauses.map((text, i) => (
           <div key={i} ref={el => (clauseRefs.current[i] = el)} style={{ display: 'flex', gap: '8px', fontSize: '10.5px', color: '#374151', lineHeight: 1.6 }}>
             <span style={{ fontWeight: 700, color: BROWN, flexShrink: 0, width: '20px' }}>{i + 1}.</span>
             <span>{text}</span>
@@ -274,7 +277,7 @@ function TermsSection({ pageIdPrefix }) {
 
           {pageIndex === 0 && (
             <div style={{ fontSize: '11px', color: '#374151', lineHeight: 1.7, marginBottom: '16px' }}>
-              {PO_TERMS_INTRO}
+              {termsIntro}
             </div>
           )}
 
