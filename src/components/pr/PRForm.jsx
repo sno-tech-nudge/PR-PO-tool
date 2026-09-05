@@ -305,6 +305,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
     if (step === 1 && belowThreshold) { setShowBelowBlock(true); return }
     if (Object.keys(e).length) return
     setStep(s => s + 1)
+    window.scrollTo({ top: 0 })
   }
 
   // Saves whatever's filled in, from any step — no validation gate, mirrors
