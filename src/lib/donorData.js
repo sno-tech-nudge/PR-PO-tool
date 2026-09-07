@@ -98,6 +98,15 @@ export function getDonors(entity, program, subprogram) {
   return DONOR_MAP[entity]?.[program]?.[subprogram] || []
 }
 
+// Flattened donor list for a Programme — merges every sub-programme's donors
+// into one deduplicated list, for forms that don't ask Sub-Programme
+// separately (see ExpenseDetails.jsx).
+export function getDonorsForProgram(entity, program) {
+  if (!entity || !program) return []
+  const subMap = DONOR_MAP[entity]?.[program] || {}
+  return [...new Set(Object.values(subMap).flat())]
+}
+
 // Revenue / Capital / Program classification (Zoho-style expense nature)
 export const EXPENSE_NATURES = [
   'Revenue Expenditure',

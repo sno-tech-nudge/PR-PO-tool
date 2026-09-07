@@ -165,10 +165,17 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
       // Flips these out of the 'saved' pool every "available expenses" query
       // filters on (enterReportWorkspace, ExpenseSelector.refetch, the
       // Unreported count) — without this they'd keep showing up as
-      // selectable in every future report forever.
+      // selectable in every future report forever. Reimbursement type is
+      // asked once per report (ReportDetails) but read per-expense
+      // everywhere it's displayed (FinanceDashboard, AdminReportDetail,
+      // ReimbursementCard, CSV export), so it's written onto every
+      // included expense here rather than only on the report row.
       await supabase
         .from('expense_details')
-        .update({ status: 'reported', policy_status: 'submitted', approval_route: approvalRoute.route })
+        .update({
+          status: 'reported', policy_status: 'submitted', approval_route: approvalRoute.route,
+          ...(reportDetails?.reimbursement_type ? { reimbursement_type: reportDetails.reimbursement_type } : {}),
+        })
         .in('id', expenses.map(e => e.id))
 
       // The person's explicit "is this related to a PO?" answer (ReportDetails,

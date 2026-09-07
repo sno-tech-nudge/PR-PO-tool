@@ -32,3 +32,10 @@ export function getDisplayName(email) {
   const name = cache?.get(email.toLowerCase())
   return name || email
 }
+
+// Full {email, name} list for search/multi-select UI (e.g. picking expense
+// attendees) — reuses the same cache as getDisplayName, no extra query.
+export function getAllDirectoryEntries() {
+  if (!cache) return []
+  return [...cache.entries()].map(([email, name]) => ({ email, name }))
+}

@@ -604,6 +604,7 @@ export default function App() {
             expenses={selectedExpenses}
             results={selectedResults}
             reportMeta={newReportMeta}
+            user={user}
             onContinue={handleLayer4Details}
             onBack={() => setLayer4Screen('selector')}
           />

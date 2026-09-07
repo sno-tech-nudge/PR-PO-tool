@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { generateReportReference } from '../../lib/reportReference'
+import { attachPendingBalances, poOptionLabel } from '../../lib/poBalance'
 
 export default function NewReportModal({ user, onCreated, onClose }) {
   const [reference] = useState(() => generateReportReference())
@@ -24,9 +25,16 @@ export default function NewReportModal({ user, onCreated, onClose }) {
 
   useEffect(() => {
     if (poRelated !== true || poOptions.length) return
-    supabase.from('purchase_orders').select('id, po_number, vendors(org_name)').eq('status', 'issued').order('created_at', { ascending: false }).limit(200)
-      .then(({ data }) => setPoOptions(data || []))
-  }, [poRelated, poOptions.length])
+    // !inner turns the embedded relation into a real join filter, so only
+    // POs whose underlying PR this person themselves raised come back —
+    // otherwise someone else's issued PO would still show up here.
+    supabase.from('purchase_orders')
+      .select('id, po_number, amount, vendors(org_name), purchase_requests!inner(requested_by)')
+      .eq('status', 'issued')
+      .eq('purchase_requests.requested_by', user?.email ?? '')
+      .order('created_at', { ascending: false }).limit(200)
+      .then(async ({ data }) => setPoOptions(await attachPendingBalances(data || [])))
+  }, [poRelated, poOptions.length, user?.email])
 
   function handleContinue() {
     if (poRelated === null) {
@@ -151,9 +159,7 @@ export default function NewReportModal({ user, onCreated, onClose }) {
                   >
                     <option value="">Select a PO…</option>
                     {poOptions.map(po => (
-                      <option key={po.id} value={po.id}>
-                        {po.po_number}{po.vendors?.org_name ? ` — ${po.vendors.org_name}` : ''}
-                      </option>
+                      <option key={po.id} value={po.id}>{poOptionLabel(po)}</option>
                     ))}
                   </select>
                 </div>

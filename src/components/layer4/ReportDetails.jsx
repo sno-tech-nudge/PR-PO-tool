@@ -1,14 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { blockNonNumericKey, sanitizeNumericPaste, sanitizeNumericValue } from '../../lib/numericInput'
-
-const ENTITIES = [
-  { key: 'AIC NCORE', label: 'AIC NCORE', sub: 'Atal Incubation Centre' },
-  { key: 'NLF', label: 'NLF', sub: 'Nudge Lifeskills Foundation' },
-  { key: 'NLF FCRA', label: 'NLF FCRA', sub: 'Nudge Lifeskills Foundation — Foreign Contribution' },
-  { key: 'TNF US', label: 'TNF US', sub: 'The Nudge Foundation US' },
-  { key: 'NTPL', label: 'NTPL', sub: 'Nudge Technologies Private Limited' },
-]
+import { attachPendingBalances, poOptionLabel } from '../../lib/poBalance'
 
 const PURPOSE_OPTIONS = [
   { key: 'internal', label: 'Internal team work', placeholder: 'What was the meeting or work about' },
@@ -86,9 +78,26 @@ function fmtAmt(n) {
   return '₹' + Number(n).toLocaleString('en-IN')
 }
 
-export default function ReportDetails({ expenses, reportMeta, onContinue, onBack }) {
+// Every expense already states its own Entity (ExpenseDetails) — rather
+// than ask again at the report level, pick whichever entity shows up most
+// often across the included expenses. Still needed here (not just dropped)
+// because it drives FCRA/TNF-US policy flagging and the report's own
+// entity tag downstream in ReportPreview.jsx.
+function mostCommonEntity(expenses) {
+  const counts = {}
+  for (const e of expenses || []) {
+    if (!e.entity) continue
+    counts[e.entity] = (counts[e.entity] || 0) + 1
+  }
+  const entries = Object.entries(counts)
+  if (!entries.length) return null
+  return entries.reduce((best, cur) => (cur[1] > best[1] ? cur : best))[0]
+}
+
+export default function ReportDetails({ expenses, reportMeta, user, onContinue, onBack }) {
   const total = (expenses || []).reduce((s, e) => s + (e.amount || 0), 0)
   const count = (expenses || []).length
+  const derivedEntity = mostCommonEntity(expenses)
 
   // Section 0 — PO relation. This question now gets asked up front, when
   // the report is first created (NewReportModal), so for a report created
@@ -107,9 +116,16 @@ export default function ReportDetails({ expenses, reportMeta, onContinue, onBack
 
   useEffect(() => {
     if (poRelated !== true || poOptions.length) return
-    supabase.from('purchase_orders').select('id, po_number, amount, vendors(org_name)').eq('status', 'issued').order('created_at', { ascending: false }).limit(200)
-      .then(({ data }) => setPoOptions(data || []))
-  }, [poRelated, poOptions.length])
+    // !inner turns the embedded relation into a real join filter, so only
+    // POs whose underlying PR this person themselves raised come back —
+    // otherwise someone else's issued PO would still show up here.
+    supabase.from('purchase_orders')
+      .select('id, po_number, amount, vendors(org_name), purchase_requests!inner(requested_by)')
+      .eq('status', 'issued')
+      .eq('purchase_requests.requested_by', user?.email ?? '')
+      .order('created_at', { ascending: false }).limit(200)
+      .then(async ({ data }) => setPoOptions(await attachPendingBalances(data || [])))
+  }, [poRelated, poOptions.length, user?.email])
 
   // A PO answered at report-creation time only has its id — run the same
   // pending-balance check used when picking one here, once the option
@@ -141,35 +157,21 @@ export default function ReportDetails({ expenses, reportMeta, onContinue, onBack
 
   const poSectionValid = poRelated === false || (poRelated === true && !!selectedPOId && !!poPending && total <= poPending.pending)
 
-  // Section A — Who
-  const [whoType, setWhoType] = useState(null) // 'just_me' | 'multiple'
-  const [attendeeCount, setAttendeeCount] = useState(null) // number or '7+'
-  const [customCount, setCustomCount] = useState('')
-  const [attendeeNames, setAttendeeNames] = useState('')
-
-  // Section B — Purpose (optional)
+  // Section B — Purpose (required — the one substantive question left
+  // here once PO/Who/Trip/Prior-approval/Entity all moved to being
+  // answered per-expense or derived automatically)
   const [purposeKey, setPurposeKey] = useState(null)
   const [purposeDescription, setPurposeDescription] = useState('')
 
-  // Section C — Trip (optional)
-  const [tripType, setTripType] = useState(null) // 'yes' | 'no'
-  const [tripName, setTripName] = useState('')
-
-  // Section D — Prior approval (optional, only if total > 5000)
-  const [approvalType, setApprovalType] = useState(null) // 'yes' | 'no'
-  const [approvalRef, setApprovalRef] = useState('')
-
-  // Section E — Entity (optional per user request)
-  const [entity, setEntity] = useState(null)
-
-  // Section F — Reimbursement
+  // Section F — Reimbursement (required)
   const [reimbType, setReimbType] = useState(null) // 'bank_transfer' | 'petty_cash'
 
-  const actualCount = attendeeCount === '7+' ? (parseInt(customCount) || 7) : attendeeCount
-  const perPerson = actualCount > 1 && total > 0 ? Math.round(total / actualCount) : null
+  const purposeValid = !!purposeKey && !!purposeDescription.trim()
+  const reimbValid = !!reimbType
+  const allValid = poSectionValid && purposeValid && reimbValid
 
   function handleContinue() {
-    if (!poSectionValid) return
+    if (!allValid) return
     onContinue({
       report_id: reportMeta?.id || null,
       report_reference: reportMeta?.report_reference || null,
@@ -178,18 +180,10 @@ export default function ReportDetails({ expenses, reportMeta, onContinue, onBack
       duration_end: reportMeta?.duration_end || null,
       po_related: poRelated,
       linked_po_id: poRelated ? selectedPOId : null,
-      entity: entity || null,
-      expense_type: whoType === 'multiple' ? 'my_team' : 'just_me',
-      attendee_count: actualCount || null,
-      per_person_amount: perPerson || null,
-      attendee_names: attendeeNames || null,
-      purpose_type: purposeKey || null,
-      description: purposeDescription || null,
-      trip_related: tripType === 'yes',
-      trip_name: tripName || null,
-      prior_approval_taken: approvalType === 'yes' ? true : approvalType === 'no' ? false : null,
-      prior_approval_reference: approvalRef || null,
-      reimbursement_type: reimbType || null,
+      entity: derivedEntity,
+      purpose_type: purposeKey,
+      description: purposeDescription,
+      reimbursement_type: reimbType,
     })
   }
 
@@ -218,7 +212,7 @@ export default function ReportDetails({ expenses, reportMeta, onContinue, onBack
       <div style={{ fontSize: '13px', color: '#4A4A4A', marginBottom: '6px' }}>
         These details apply to all {count} selected expense{count !== 1 ? 's' : ''}.
       </div>
-      <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '20px' }}>Step 2 of 3 · One required question below, everything else optional</div>
+      <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '20px' }}>Step 2 of 3 · Everything below is required</div>
 
       {reportMeta && (
         <div style={{ border: '1px solid #E8E8E8', marginBottom: '24px' }}>
@@ -290,7 +284,7 @@ export default function ReportDetails({ expenses, reportMeta, onContinue, onBack
               >
                 <option value="">Select a PO…</option>
                 {poOptions.map(po => (
-                  <option key={po.id} value={po.id}>{po.po_number}{po.vendors?.org_name ? ` — ${po.vendors.org_name}` : ''}</option>
+                  <option key={po.id} value={po.id}>{poOptionLabel(po)}</option>
                 ))}
               </select>
 
@@ -304,74 +298,8 @@ export default function ReportDetails({ expenses, reportMeta, onContinue, onBack
 
       <div style={{ height: '1px', background: '#E8E8E8', marginBottom: '24px' }} />
 
-      {/* SECTION A — Who */}
-      <SectionLabel>Who were these expenses for</SectionLabel>
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-        <TapCard selected={whoType === 'just_me'} onClick={() => setWhoType('just_me')} main="Just me" sub="Personal expenses" />
-        <TapCard selected={whoType === 'multiple'} onClick={() => setWhoType('multiple')} main="Multiple people" sub="Team or group" />
-      </div>
-
-      {whoType === 'multiple' && (
-        <div style={{ marginBottom: '12px' }}>
-          <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '8px' }}>
-            How many people including you
-          </div>
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-            {[2, 3, 4, 5, 6, '7+'].map(n => (
-              <div
-                key={n}
-                onClick={() => setAttendeeCount(n)}
-                style={{
-                  width: '44px', height: '44px',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  border: `1.5px solid ${attendeeCount === n ? '#1A1A1A' : '#E8E8E8'}`,
-                  background: attendeeCount === n ? '#1A1A1A' : '#FFFFFF',
-                  color: attendeeCount === n ? '#FFFFFF' : '#1A1A1A',
-                  fontSize: '13px', fontWeight: 500, cursor: 'pointer', borderRadius: '4px',
-                }}
-              >
-                {n}
-              </div>
-            ))}
-          </div>
-
-          {attendeeCount === '7+' && (
-            <div style={{ marginTop: '8px' }}>
-              <input
-                type="number"
-                value={customCount}
-                onChange={e => setCustomCount(sanitizeNumericValue(e.target.value))}
-                onKeyDown={blockNonNumericKey}
-                onPaste={sanitizeNumericPaste}
-                placeholder="Enter number"
-                style={{ ...inputStyle, width: '140px' }}
-              />
-            </div>
-          )}
-
-          {perPerson && (
-            <div style={{ fontSize: '12px', color: '#4A4A4A', marginTop: '8px' }}>
-              ₹{Number(perPerson).toLocaleString('en-IN')} per person
-            </div>
-          )}
-
-          <div style={{ marginTop: '8px' }}>
-            <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '4px' }}>
-              Names of attendees (optional)
-            </div>
-            <input
-              type="text"
-              value={attendeeNames}
-              onChange={e => setAttendeeNames(e.target.value)}
-              placeholder="Priya, Rahul, Sneha"
-              style={inputStyle}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* SECTION B — Purpose */}
-      <SectionLabel mt={24}>What were these expenses for</SectionLabel>
+      {/* SECTION B — Purpose (required) */}
+      <SectionLabel>What were these expenses for<span style={{ color: '#DC2626' }}> *</span></SectionLabel>
       {PURPOSE_OPTIONS.map(opt => (
         <div key={opt.key}>
           <TapCard
@@ -391,73 +319,8 @@ export default function ReportDetails({ expenses, reportMeta, onContinue, onBack
         </div>
       ))}
 
-      {/* SECTION C — Trip */}
-      <SectionLabel mt={24}>Was this part of a trip or visit</SectionLabel>
-      <TapCard selected={tripType === 'yes'} onClick={() => setTripType(tripType === 'yes' ? null : 'yes')} main="Yes" sub="Part of outstation travel" fullWidth />
-      <TapCard selected={tripType === 'no'} onClick={() => setTripType(tripType === 'no' ? null : 'no')} main="No" sub="Local or standalone expenses" fullWidth />
-      {tripType === 'yes' && (
-        <TextInput
-          value={tripName}
-          onChange={setTripName}
-          placeholder="Rajasthan field visit, May 2026"
-          label="Trip or visit name"
-        />
-      )}
-
-      {/* SECTION D — Prior approval (only if total > 5000) */}
-      {total > 5000 && (
-        <>
-          <SectionLabel mt={24}>Was prior approval taken</SectionLabel>
-          <TapCard selected={approvalType === 'yes'} onClick={() => setApprovalType(approvalType === 'yes' ? null : 'yes')} main="Yes" sub="I have an approval reference" fullWidth />
-          <TapCard selected={approvalType === 'no'} onClick={() => setApprovalType(approvalType === 'no' ? null : 'no')} main="No" sub="Will be flagged for review" fullWidth />
-          {approvalType === 'yes' && (
-            <TextInput
-              value={approvalRef}
-              onChange={setApprovalRef}
-              placeholder="Email reference, Slack message, or approver name"
-              label="Approval reference"
-            />
-          )}
-          {approvalType === 'no' && (
-            <div style={{
-              border: '1px solid #CA8A04', background: '#FEFCE8',
-              padding: '12px', marginTop: '8px', borderRadius: '4px',
-              fontSize: '12px', color: '#CA8A04', lineHeight: '1.5',
-            }}>
-              This report will go to your manager for approval before it can be reimbursed.
-            </div>
-          )}
-        </>
-      )}
-
-      {/* SECTION E — Entity */}
-      <SectionLabel mt={24}>Which entity were these expenses for</SectionLabel>
-      <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '12px' }}>
-        Select the legal entity this expense should be recorded under.
-      </div>
-      {ENTITIES.map(e => (
-        <div key={e.key}>
-          <TapCard
-            selected={entity === e.key}
-            onClick={() => setEntity(entity === e.key ? null : e.key)}
-            main={e.label}
-            sub={e.sub}
-            fullWidth
-          />
-          {entity === 'NLF FCRA' && e.key === 'NLF FCRA' && (
-            <div style={{
-              border: '1px solid #8C3225', background: '#F7F7F7',
-              padding: '12px', marginTop: '-4px', marginBottom: '8px',
-              fontSize: '12px', color: '#4A4A4A', lineHeight: '1.5',
-            }}>
-              FCRA expenses are tracked separately and reported to the Ministry of Home Affairs.
-            </div>
-          )}
-        </div>
-      ))}
-
-      {/* SECTION F — Reimbursement */}
-      <SectionLabel mt={24}>How would you like to be reimbursed</SectionLabel>
+      {/* SECTION F — Reimbursement (required) */}
+      <SectionLabel mt={24}>How would you like to be reimbursed<span style={{ color: '#DC2626' }}> *</span></SectionLabel>
       <TapCard selected={reimbType === 'bank_transfer'} onClick={() => setReimbType(reimbType === 'bank_transfer' ? null : 'bank_transfer')} main="Bank transfer" sub="Transferred to your registered account" fullWidth />
       <TapCard selected={reimbType === 'petty_cash'} onClick={() => setReimbType(reimbType === 'petty_cash' ? null : 'petty_cash')} main="Petty cash" sub="Collected from finance team in person" fullWidth />
 
@@ -477,15 +340,25 @@ export default function ReportDetails({ expenses, reportMeta, onContinue, onBack
               Select which Purchase Order this report is related to before continuing.
             </div>
           )}
+          {poSectionValid && !purposeValid && (
+            <div style={{ fontSize: '12px', color: '#DC2626', marginBottom: '8px' }}>
+              Answer what these expenses were for before continuing.
+            </div>
+          )}
+          {poSectionValid && purposeValid && !reimbValid && (
+            <div style={{ fontSize: '12px', color: '#DC2626', marginBottom: '8px' }}>
+              Choose how you'd like to be reimbursed before continuing.
+            </div>
+          )}
           <button
             onClick={handleContinue}
-            disabled={!poSectionValid}
+            disabled={!allValid}
             style={{
               width: '100%', height: '48px',
-              background: poSectionValid ? '#8C3225' : '#E8E8E8',
-              color: poSectionValid ? '#FFFFFF' : '#9CA3AF',
+              background: allValid ? '#8C3225' : '#E8E8E8',
+              color: allValid ? '#FFFFFF' : '#9CA3AF',
               border: 'none', fontSize: '14px', fontWeight: 500,
-              cursor: poSectionValid ? 'pointer' : 'default', borderRadius: '4px',
+              cursor: allValid ? 'pointer' : 'default', borderRadius: '4px',
             }}
           >
             Continue to preview
