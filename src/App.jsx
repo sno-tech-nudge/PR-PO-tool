@@ -479,11 +479,17 @@ export default function App() {
                     }}
                   >
                     <div style={{
-                      width: '40px', height: '40px', borderRadius: '50%', background: '#fdf0ed',
+                      width: '44px', height: '44px', borderRadius: '50%', background: '#fdf0ed',
                       color: '#8C3225', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '18px', fontWeight: 700, marginBottom: '10px',
+                      marginBottom: '10px',
                     }}>
-                      +
+                      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+                        <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+                        <path d="M10 9H8" />
+                        <path d="M16 13H8" />
+                        <path d="M16 17H8" />
+                      </svg>
                     </div>
                     <div style={{ fontSize: '14px', fontWeight: 600, color: '#1A1F36' }}>New PR</div>
                   </div>
@@ -497,11 +503,19 @@ export default function App() {
                     }}
                   >
                     <div style={{
-                      width: '40px', height: '40px', borderRadius: '50%', background: '#fdf0ed',
+                      width: '44px', height: '44px', borderRadius: '50%', background: '#fdf0ed',
                       color: '#8C3225', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '18px', fontWeight: 700, marginBottom: '10px',
+                      marginBottom: '10px',
                     }}>
-                      +
+                      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
+                        <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" />
+                        <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" />
+                        <path d="M10 6h4" />
+                        <path d="M10 10h4" />
+                        <path d="M10 14h4" />
+                        <path d="M10 18h4" />
+                      </svg>
                     </div>
                     <div style={{ fontSize: '14px', fontWeight: 600, color: '#1A1F36' }}>New Vendor</div>
                   </div>
