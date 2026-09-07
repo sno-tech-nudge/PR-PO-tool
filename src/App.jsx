@@ -242,6 +242,11 @@ export default function App() {
   }
 
   function openPRCreate()   { setEditingPR(null); setPRSubScreen('form') }
+  // Home's "New PR"/"New Vendor" quick actions — same entry points as the
+  // Purchase Requests / Vendors nav's own "create" buttons, just reachable
+  // straight from Home without an extra click through the list first.
+  function openPRQuickAdd()     { openPRCreate(); setAppScreen('pr-list') }
+  function openVendorQuickAdd() { openVendorCreate(); setAppScreen('vendors') }
   function openPRDetail(id) { setViewingPRId(id); setPRSubScreen('detail') }
   function openPRList()     { setPRSubScreen('list'); setEditingPR(null); setViewingPRId(null) }
   function openPREdit(pr)   { setEditingPR(pr); setPRSubScreen('form') }
@@ -463,14 +468,43 @@ export default function App() {
 
             {user.role === 'employee' ? (
               <div style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '10px', padding: '20px', marginBottom: '28px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#111827' }}>Quick Add</div>
-                  <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '5px', background: '#F3F4F6', color: '#6B7280' }}>
-                    Coming soon
-                  </span>
-                </div>
-                <div style={{ fontSize: '13px', color: '#9CA3AF', lineHeight: 1.5 }}>
-                  Expense capture isn't part of this testing round yet — we're currently focused on Vendor, Purchase Request, and Purchase Order workflows.
+                <div style={{ fontSize: '16px', fontWeight: 700, color: '#111827', marginBottom: '16px' }}>Quick Add</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                  <div
+                    onClick={openPRQuickAdd}
+                    style={{
+                      border: '1px solid #E5E7EB', borderRadius: '10px', padding: '28px 12px',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', minHeight: '148px', boxSizing: 'border-box', textAlign: 'center',
+                    }}
+                  >
+                    <div style={{
+                      width: '40px', height: '40px', borderRadius: '50%', background: '#fdf0ed',
+                      color: '#8C3225', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '18px', fontWeight: 700, marginBottom: '10px',
+                    }}>
+                      +
+                    </div>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#1A1F36' }}>New PR</div>
+                  </div>
+
+                  <div
+                    onClick={openVendorQuickAdd}
+                    style={{
+                      border: '1px solid #E5E7EB', borderRadius: '10px', padding: '28px 12px',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', minHeight: '148px', boxSizing: 'border-box', textAlign: 'center',
+                    }}
+                  >
+                    <div style={{
+                      width: '40px', height: '40px', borderRadius: '50%', background: '#fdf0ed',
+                      color: '#8C3225', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '18px', fontWeight: 700, marginBottom: '10px',
+                    }}>
+                      +
+                    </div>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#1A1F36' }}>New Vendor</div>
+                  </div>
                 </div>
               </div>
             ) : (
