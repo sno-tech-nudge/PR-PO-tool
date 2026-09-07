@@ -44,6 +44,17 @@ function TapCard({ selected, onClick, main, sub, fullWidth }) {
   )
 }
 
+function PendingBalanceNote({ total, poPending, poLoading }) {
+  if (poLoading) return <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '6px' }}>Checking pending balance…</div>
+  if (!poPending) return null
+  return (
+    <div style={{ fontSize: '12px', color: total > poPending.pending ? '#DC2626' : '#4A4A4A', marginTop: '8px' }}>
+      PO amount {fmtAmt(poPending.amount)} · pending {fmtAmt(poPending.pending)}
+      {total > poPending.pending && ` — this report's ${fmtAmt(total)} exceeds what's still pending on this PO.`}
+    </div>
+  )
+}
+
 function TextInput({ value, onChange, placeholder, label }) {
   return (
     <div style={{ marginTop: '8px' }}>
@@ -79,23 +90,35 @@ export default function ReportDetails({ expenses, reportMeta, onContinue, onBack
   const total = (expenses || []).reduce((s, e) => s + (e.amount || 0), 0)
   const count = (expenses || []).length
 
-  // Section 0 — PO relation (required on every report, per finance's ask
-  // that PR/PO stay independent of the Expense Report module — the report
-  // itself decides whether it's tied to a PO, instead of the PO page
-  // driving expense creation). null until answered; the Continue button is
-  // blocked until this is set.
-  const [poRelated, setPoRelated] = useState(null) // true | false
+  // Section 0 — PO relation. This question now gets asked up front, when
+  // the report is first created (NewReportModal), so for a report created
+  // through that flow poRelated/selectedPOId arrive here already answered
+  // — shown as a read-only summary with a "Change" option rather than
+  // asked again. A report created before this question moved (po_related
+  // still null on its row) falls back to asking it here instead, exactly
+  // as this section used to work unconditionally.
+  const [poRelated, setPoRelated] = useState(reportMeta?.po_related ?? null) // true | false
   const [poOptions, setPoOptions] = useState([])
-  const [selectedPOId, setSelectedPOId] = useState('')
+  const [selectedPOId, setSelectedPOId] = useState(reportMeta?.po_id || '')
   const [poPending, setPoPending] = useState(null) // { amount, pending } once a PO is picked
   const [poLoading, setPoLoading] = useState(false)
   const [poError, setPoError] = useState(null)
+  const [editingPO, setEditingPO] = useState(reportMeta?.po_related == null)
 
   useEffect(() => {
     if (poRelated !== true || poOptions.length) return
     supabase.from('purchase_orders').select('id, po_number, amount, vendors(org_name)').eq('status', 'issued').order('created_at', { ascending: false }).limit(200)
       .then(({ data }) => setPoOptions(data || []))
   }, [poRelated, poOptions.length])
+
+  // A PO answered at report-creation time only has its id — run the same
+  // pending-balance check used when picking one here, once the option
+  // list (needed to look up its po_number) has loaded.
+  useEffect(() => {
+    if (poRelated === true && selectedPOId && poOptions.length && !poPending && !poLoading) {
+      handleSelectPO(selectedPOId)
+    }
+  }, [poOptions, poRelated, selectedPOId, poPending, poLoading])
 
   async function handleSelectPO(id) {
     setSelectedPOId(id)
@@ -216,38 +239,67 @@ export default function ReportDetails({ expenses, reportMeta, onContinue, onBack
 
       <div style={{ height: '1px', background: '#E8E8E8', marginBottom: '24px' }} />
 
-      {/* SECTION 0 — PO relation, required on every report */}
-      <SectionLabel>Is this report related to a Purchase Order?<span style={{ color: '#DC2626' }}> *</span></SectionLabel>
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-        <TapCard selected={poRelated === true} onClick={() => setPoRelated(true)} main="Yes" sub="Paying an invoice against an issued PO" />
-        <TapCard selected={poRelated === false} onClick={() => { setPoRelated(false); setSelectedPOId(''); setPoPending(null) }} main="No" sub="A normal expense claim" />
-      </div>
+      {/* SECTION 0 — PO relation. Answered already at report creation for
+          any report made through NewReportModal — shown read-only with a
+          "Change" option; only genuinely asked here for an older report
+          that never got asked (po_related still null). */}
+      <SectionLabel>Purchase Order{editingPO && <span style={{ color: '#DC2626' }}> *</span>}</SectionLabel>
 
-      {poRelated === true && (
-        <div style={{ marginBottom: '12px' }}>
-          <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '8px' }}>Which Purchase Order</div>
-          <select
-            value={selectedPOId}
-            onChange={e => handleSelectPO(e.target.value)}
-            style={{ ...inputStyle, paddingLeft: '10px' }}
-          >
-            <option value="">Select a PO…</option>
-            {poOptions.map(po => (
-              <option key={po.id} value={po.id}>{po.po_number}{po.vendors?.org_name ? ` — ${po.vendors.org_name}` : ''}</option>
-            ))}
-          </select>
+      {!editingPO ? (
+        <div style={{ border: '1px solid #E8E8E8', borderRadius: '4px', padding: '12px 14px', marginBottom: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
+            <div>
+              {poRelated ? (
+                <>
+                  <div style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A1A' }}>
+                    Related to {poOptions.find(p => p.id === selectedPOId)?.po_number || 'a Purchase Order'}
+                  </div>
+                  {poOptions.find(p => p.id === selectedPOId)?.vendors?.org_name && (
+                    <div style={{ fontSize: '11px', color: '#6B6B6B', marginTop: '2px' }}>
+                      {poOptions.find(p => p.id === selectedPOId).vendors.org_name}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A1A' }}>Not related to a Purchase Order</div>
+              )}
+            </div>
+            <span
+              onClick={() => setEditingPO(true)}
+              style={{ fontSize: '12px', color: '#8C3225', cursor: 'pointer', textDecoration: 'underline', flexShrink: 0 }}
+            >
+              Change
+            </span>
+          </div>
+          {poRelated && <PendingBalanceNote total={total} poPending={poPending} poLoading={poLoading} />}
+        </div>
+      ) : (
+        <>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+            <TapCard selected={poRelated === true} onClick={() => setPoRelated(true)} main="Yes" sub="Paying an invoice against an issued PO" />
+            <TapCard selected={poRelated === false} onClick={() => { setPoRelated(false); setSelectedPOId(''); setPoPending(null) }} main="No" sub="A normal expense claim" />
+          </div>
 
-          {poLoading && <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '6px' }}>Checking pending balance…</div>}
+          {poRelated === true && (
+            <div style={{ marginBottom: '12px' }}>
+              <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '8px' }}>Which Purchase Order</div>
+              <select
+                value={selectedPOId}
+                onChange={e => handleSelectPO(e.target.value)}
+                style={{ ...inputStyle, paddingLeft: '10px' }}
+              >
+                <option value="">Select a PO…</option>
+                {poOptions.map(po => (
+                  <option key={po.id} value={po.id}>{po.po_number}{po.vendors?.org_name ? ` — ${po.vendors.org_name}` : ''}</option>
+                ))}
+              </select>
 
-          {!poLoading && poPending && (
-            <div style={{ fontSize: '12px', color: total > poPending.pending ? '#DC2626' : '#4A4A4A', marginTop: '8px' }}>
-              PO amount {fmtAmt(poPending.amount)} · pending {fmtAmt(poPending.pending)}
-              {total > poPending.pending && ` — this report's ${fmtAmt(total)} exceeds what's still pending on this PO.`}
+              <PendingBalanceNote total={total} poPending={poPending} poLoading={poLoading} />
+
+              {poError && <div style={{ fontSize: '12px', color: '#DC2626', marginTop: '8px' }}>{poError}</div>}
             </div>
           )}
-
-          {poError && <div style={{ fontSize: '12px', color: '#DC2626', marginTop: '8px' }}>{poError}</div>}
-        </div>
+        </>
       )}
 
       <div style={{ height: '1px', background: '#E8E8E8', marginBottom: '24px' }} />
@@ -418,6 +470,11 @@ export default function ReportDetails({ expenses, reportMeta, onContinue, onBack
           {poRelated === null && (
             <div style={{ fontSize: '12px', color: '#DC2626', marginBottom: '8px' }}>
               Answer whether this report is related to a Purchase Order before continuing.
+            </div>
+          )}
+          {poRelated === true && !selectedPOId && (
+            <div style={{ fontSize: '12px', color: '#DC2626', marginBottom: '8px' }}>
+              Select which Purchase Order this report is related to before continuing.
             </div>
           )}
           <button

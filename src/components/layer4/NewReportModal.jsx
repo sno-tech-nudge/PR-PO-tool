@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { generateReportReference } from '../../lib/reportReference'
 
@@ -10,7 +10,29 @@ export default function NewReportModal({ user, onCreated, onClose }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
+  // Asked first, before anything else about the report — the report
+  // itself decides whether it's tied to a PO. Kept required so it can't
+  // be skipped and revisited later; ReportDetails (step 2) shows this as
+  // a read-only summary with a "Change" option instead of asking again.
+  const [poRelated, setPoRelated] = useState(null)
+  const [poOptions, setPoOptions] = useState([])
+  const [selectedPOId, setSelectedPOId] = useState('')
+
+  useEffect(() => {
+    if (poRelated !== true || poOptions.length) return
+    supabase.from('purchase_orders').select('id, po_number, vendors(org_name)').eq('status', 'issued').order('created_at', { ascending: false }).limit(200)
+      .then(({ data }) => setPoOptions(data || []))
+  }, [poRelated, poOptions.length])
+
   async function handleSave() {
+    if (poRelated === null) {
+      setError('Please answer whether this report is related to a Purchase Order.')
+      return
+    }
+    if (poRelated === true && !selectedPOId) {
+      setError('Please select which Purchase Order this report is related to.')
+      return
+    }
     if (!durationStart || !durationEnd) {
       setError('Please fill in the report duration.')
       return
@@ -26,6 +48,8 @@ export default function NewReportModal({ user, onCreated, onClose }) {
         duration_end: durationEnd,
         employee_email: user?.email ?? null,
         status: 'draft',
+        po_related: poRelated,
+        po_id: poRelated ? selectedPOId : null,
       })
       .select()
       .single()
@@ -73,6 +97,51 @@ export default function NewReportModal({ user, onCreated, onClose }) {
 
         {/* Body */}
         <div style={{ padding: '20px' }}>
+          <div style={{ marginBottom: '18px' }}>
+            <label style={labelStyle}>Related to a Purchase Order?{required}</label>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+              <div
+                onClick={() => setPoRelated(true)}
+                style={{
+                  flex: 1, padding: '12px 14px', cursor: 'pointer',
+                  border: `1.5px solid ${poRelated === true ? '#1A1A1A' : '#E8E8E8'}`,
+                  background: poRelated === true ? '#F7F7F7' : '#FFFFFF', borderRadius: '4px',
+                }}
+              >
+                <div style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A1A' }}>Yes</div>
+                <div style={{ fontSize: '11px', color: '#6B6B6B', marginTop: '2px' }}>Paying an invoice against an issued PO</div>
+              </div>
+              <div
+                onClick={() => { setPoRelated(false); setSelectedPOId('') }}
+                style={{
+                  flex: 1, padding: '12px 14px', cursor: 'pointer',
+                  border: `1.5px solid ${poRelated === false ? '#1A1A1A' : '#E8E8E8'}`,
+                  background: poRelated === false ? '#F7F7F7' : '#FFFFFF', borderRadius: '4px',
+                }}
+              >
+                <div style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A1A' }}>No</div>
+                <div style={{ fontSize: '11px', color: '#6B6B6B', marginTop: '2px' }}>A normal expense claim</div>
+              </div>
+            </div>
+
+            {poRelated === true && (
+              <div style={{ marginTop: '10px' }}>
+                <select
+                  value={selectedPOId}
+                  onChange={e => setSelectedPOId(e.target.value)}
+                  style={{ ...inputStyle, paddingLeft: '10px' }}
+                >
+                  <option value="">Select a PO…</option>
+                  {poOptions.map(po => (
+                    <option key={po.id} value={po.id}>
+                      {po.po_number}{po.vendors?.org_name ? ` — ${po.vendors.org_name}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
           <div style={{ marginBottom: '18px' }}>
             <label style={labelStyle}>Report Name{required}</label>
             <div style={{

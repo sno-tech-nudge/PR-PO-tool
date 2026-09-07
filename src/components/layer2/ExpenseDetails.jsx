@@ -66,6 +66,10 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
   const [poId, setPoId] = useState('')
   const [poOptions, setPoOptions] = useState([])
   const [poLoading, setPoLoading] = useState(false)
+  // Required when creating a new expense (not when editing an existing
+  // one, which keeps today's unforced "Attach PO" dropdown) — null until
+  // answered, checked in validate() below.
+  const [poRelated, setPoRelated] = useState(null)
 
   const [entity, setEntity] = useState(existingExpense?.entity || '')
   const [program, setProgram] = useState(existingExpense?.program || '')
@@ -223,6 +227,8 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
 
   function validate() {
     const missing = []
+    if (!isEdit && poRelated === null) missing.push('Related to a Purchase Order (Yes/No)')
+    if (!isEdit && poRelated === true && !poId) missing.push('Which Purchase Order')
     if (!date) missing.push('Expense Date')
     if (!vendor) missing.push('Merchant')
     if (!category) missing.push('Category')
@@ -318,23 +324,75 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
       </div>
       <div style={{ height: '1px', background: '#E8E8E8', marginBottom: '20px' }} />
 
-      {/* Attach PO — optional, pulls in that PO's entity/programme/donor/category so the rest of the form arrives filled in */}
-      <div style={fieldWrap}>
-        <label style={labelStyle}>Attach PO</label>
-        <select
-          value={poId}
-          onChange={e => handlePOSelect(e.target.value)}
-          style={{ ...inputStyle, paddingLeft: '10px' }}
-        >
-          <option value="">No PO — personal expense</option>
-          {poOptions.map(po => (
-            <option key={po.id} value={po.id}>
-              {po.po_number}{po.vendors?.org_name ? ` — ${po.vendors.org_name}` : ''}
-            </option>
-          ))}
-        </select>
-        {poLoading && <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '4px' }}>Filling in details from this PO…</div>}
-      </div>
+      {/* Attach PO — required first question for a new expense (asked
+          before anything else so the answer can pull in that PO's
+          entity/programme/donor/category to fill in the rest of the
+          form); editing an existing expense keeps the old unforced
+          dropdown instead of re-asking. */}
+      {!isEdit ? (
+        <div style={fieldWrap}>
+          <label style={labelStyle}>Is this related to a Purchase Order?{required}</label>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+            <div
+              onClick={() => setPoRelated(true)}
+              style={{
+                flex: 1, padding: '12px 14px', cursor: 'pointer',
+                border: `1.5px solid ${poRelated === true ? '#1A1A1A' : '#E8E8E8'}`,
+                background: poRelated === true ? '#F7F7F7' : '#FFFFFF', borderRadius: '4px',
+              }}
+            >
+              <div style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A1A' }}>Yes</div>
+              <div style={{ fontSize: '11px', color: '#6B6B6B', marginTop: '2px' }}>Paying against an issued PO</div>
+            </div>
+            <div
+              onClick={() => { setPoRelated(false); setPoId(''); setPoNumber('') }}
+              style={{
+                flex: 1, padding: '12px 14px', cursor: 'pointer',
+                border: `1.5px solid ${poRelated === false ? '#1A1A1A' : '#E8E8E8'}`,
+                background: poRelated === false ? '#F7F7F7' : '#FFFFFF', borderRadius: '4px',
+              }}
+            >
+              <div style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A1A' }}>No</div>
+              <div style={{ fontSize: '11px', color: '#6B6B6B', marginTop: '2px' }}>A normal expense</div>
+            </div>
+          </div>
+
+          {poRelated === true && (
+            <div style={{ marginTop: '10px' }}>
+              <select
+                value={poId}
+                onChange={e => handlePOSelect(e.target.value)}
+                style={{ ...inputStyle, paddingLeft: '10px' }}
+              >
+                <option value="">Select a PO…</option>
+                {poOptions.map(po => (
+                  <option key={po.id} value={po.id}>
+                    {po.po_number}{po.vendors?.org_name ? ` — ${po.vendors.org_name}` : ''}
+                  </option>
+                ))}
+              </select>
+              {poLoading && <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '4px' }}>Filling in details from this PO…</div>}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div style={fieldWrap}>
+          <label style={labelStyle}>Attach PO</label>
+          <select
+            value={poId}
+            onChange={e => handlePOSelect(e.target.value)}
+            style={{ ...inputStyle, paddingLeft: '10px' }}
+          >
+            <option value="">No PO — personal expense</option>
+            {poOptions.map(po => (
+              <option key={po.id} value={po.id}>
+                {po.po_number}{po.vendors?.org_name ? ` — ${po.vendors.org_name}` : ''}
+              </option>
+            ))}
+          </select>
+          {poLoading && <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '4px' }}>Filling in details from this PO…</div>}
+        </div>
+      )}
 
       {/* Report — optional link to an existing report by this employee */}
       <div style={fieldWrap}>
