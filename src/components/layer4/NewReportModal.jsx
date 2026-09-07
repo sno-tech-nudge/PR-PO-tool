@@ -10,10 +10,14 @@ export default function NewReportModal({ user, onCreated, onClose }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
-  // Asked first, before anything else about the report — the report
-  // itself decides whether it's tied to a PO. Kept required so it can't
-  // be skipped and revisited later; ReportDetails (step 2) shows this as
-  // a read-only summary with a "Change" option instead of asking again.
+  // Step 1 — asked first, before anything else about the report, in its
+  // own popup. Step 2 collects the actual report details (name/purpose/
+  // duration). The report itself decides whether it's tied to a PO; kept
+  // required so it can't be skipped and revisited later — ReportDetails
+  // (step 2 of the report-building flow, not to be confused with this
+  // modal's own step 2) shows this as a read-only summary with a
+  // "Change" option instead of asking again.
+  const [step, setStep] = useState(1)
   const [poRelated, setPoRelated] = useState(null)
   const [poOptions, setPoOptions] = useState([])
   const [selectedPOId, setSelectedPOId] = useState('')
@@ -24,7 +28,7 @@ export default function NewReportModal({ user, onCreated, onClose }) {
       .then(({ data }) => setPoOptions(data || []))
   }, [poRelated, poOptions.length])
 
-  async function handleSave() {
+  function handleContinue() {
     if (poRelated === null) {
       setError('Please answer whether this report is related to a Purchase Order.')
       return
@@ -33,6 +37,11 @@ export default function NewReportModal({ user, onCreated, onClose }) {
       setError('Please select which Purchase Order this report is related to.')
       return
     }
+    setError(null)
+    setStep(2)
+  }
+
+  async function handleSave() {
     if (!durationStart || !durationEnd) {
       setError('Please fill in the report duration.')
       return
@@ -78,114 +87,128 @@ export default function NewReportModal({ user, onCreated, onClose }) {
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{ background: '#FFFFFF', width: '100%', maxWidth: '440px', borderRadius: '6px', overflow: 'hidden' }}
+        style={{
+          background: '#FFFFFF', width: '100%', maxWidth: '440px', maxHeight: '85vh',
+          borderRadius: '6px', overflow: 'hidden', display: 'flex', flexDirection: 'column',
+        }}
       >
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px', borderBottom: '1px solid #E8E8E8' }}>
-          <div style={{ fontSize: '16px', fontWeight: 600, color: '#1A1A1A' }}>New Report</div>
-          <div
-            onClick={onClose}
-            style={{
-              width: '28px', height: '28px', borderRadius: '50%', border: '1px solid #E8E8E8',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', fontSize: '14px', color: '#6B6B6B',
-            }}
-          >
-            ✕
+        <div style={{ flexShrink: 0, padding: '18px 20px', borderBottom: '1px solid #E8E8E8' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: '#1A1A1A' }}>New Report</div>
+            <div
+              onClick={onClose}
+              style={{
+                width: '28px', height: '28px', borderRadius: '50%', border: '1px solid #E8E8E8',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', fontSize: '14px', color: '#6B6B6B',
+              }}
+            >
+              ✕
+            </div>
+          </div>
+          <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '6px' }}>
+            {step === 1 ? 'Step 1 of 2 · Purchase Order' : 'Step 2 of 2 · Report details'}
           </div>
         </div>
 
         {/* Body */}
-        <div style={{ padding: '20px' }}>
-          <div style={{ marginBottom: '18px' }}>
-            <label style={labelStyle}>Related to a Purchase Order?{required}</label>
-            <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
-              <div
-                onClick={() => setPoRelated(true)}
-                style={{
-                  flex: 1, padding: '12px 14px', cursor: 'pointer',
-                  border: `1.5px solid ${poRelated === true ? '#1A1A1A' : '#E8E8E8'}`,
-                  background: poRelated === true ? '#F7F7F7' : '#FFFFFF', borderRadius: '4px',
-                }}
-              >
-                <div style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A1A' }}>Yes</div>
-                <div style={{ fontSize: '11px', color: '#6B6B6B', marginTop: '2px' }}>Paying an invoice against an issued PO</div>
-              </div>
-              <div
-                onClick={() => { setPoRelated(false); setSelectedPOId('') }}
-                style={{
-                  flex: 1, padding: '12px 14px', cursor: 'pointer',
-                  border: `1.5px solid ${poRelated === false ? '#1A1A1A' : '#E8E8E8'}`,
-                  background: poRelated === false ? '#F7F7F7' : '#FFFFFF', borderRadius: '4px',
-                }}
-              >
-                <div style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A1A' }}>No</div>
-                <div style={{ fontSize: '11px', color: '#6B6B6B', marginTop: '2px' }}>A normal expense claim</div>
-              </div>
-            </div>
-
-            {poRelated === true && (
-              <div style={{ marginTop: '10px' }}>
-                <select
-                  value={selectedPOId}
-                  onChange={e => setSelectedPOId(e.target.value)}
-                  style={{ ...inputStyle, paddingLeft: '10px' }}
+        <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
+          {step === 1 && (
+            <div>
+              <label style={labelStyle}>Related to a Purchase Order?{required}</label>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                <div
+                  onClick={() => setPoRelated(true)}
+                  style={{
+                    flex: 1, padding: '12px 14px', cursor: 'pointer',
+                    border: `1.5px solid ${poRelated === true ? '#1A1A1A' : '#E8E8E8'}`,
+                    background: poRelated === true ? '#F7F7F7' : '#FFFFFF', borderRadius: '4px',
+                  }}
                 >
-                  <option value="">Select a PO…</option>
-                  {poOptions.map(po => (
-                    <option key={po.id} value={po.id}>
-                      {po.po_number}{po.vendors?.org_name ? ` — ${po.vendors.org_name}` : ''}
-                    </option>
-                  ))}
-                </select>
+                  <div style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A1A' }}>Yes</div>
+                  <div style={{ fontSize: '11px', color: '#6B6B6B', marginTop: '2px' }}>Paying an invoice against an issued PO</div>
+                </div>
+                <div
+                  onClick={() => { setPoRelated(false); setSelectedPOId('') }}
+                  style={{
+                    flex: 1, padding: '12px 14px', cursor: 'pointer',
+                    border: `1.5px solid ${poRelated === false ? '#1A1A1A' : '#E8E8E8'}`,
+                    background: poRelated === false ? '#F7F7F7' : '#FFFFFF', borderRadius: '4px',
+                  }}
+                >
+                  <div style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A1A' }}>No</div>
+                  <div style={{ fontSize: '11px', color: '#6B6B6B', marginTop: '2px' }}>A normal expense claim</div>
+                </div>
               </div>
-            )}
-          </div>
 
-          <div style={{ marginBottom: '18px' }}>
-            <label style={labelStyle}>Report Name{required}</label>
-            <div style={{
-              ...inputStyle, display: 'flex', alignItems: 'center',
-              background: '#F7F7F7', color: '#6B6B6B',
-            }}>
-              {reference} — this field will be auto-generated
+              {poRelated === true && (
+                <div style={{ marginTop: '10px' }}>
+                  <select
+                    value={selectedPOId}
+                    onChange={e => setSelectedPOId(e.target.value)}
+                    style={{ ...inputStyle, paddingLeft: '10px' }}
+                  >
+                    <option value="">Select a PO…</option>
+                    {poOptions.map(po => (
+                      <option key={po.id} value={po.id}>
+                        {po.po_number}{po.vendors?.org_name ? ` — ${po.vendors.org_name}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
-          </div>
+          )}
 
-          <div style={{ marginBottom: '18px' }}>
-            <label style={labelStyle}>Business Purpose</label>
-            <textarea
-              value={businessPurpose}
-              onChange={e => setBusinessPurpose(e.target.value.slice(0, 500))}
-              placeholder="Max 500 characters"
-              rows={3}
-              style={{
-                ...inputStyle, height: 'auto', padding: '10px 12px',
-                resize: 'vertical', fontFamily: 'inherit',
-              }}
-            />
-            <div style={{ fontSize: '11px', color: '#6B6B6B', marginTop: '4px', textAlign: 'right' }}>
-              {businessPurpose.length}/500
-            </div>
-          </div>
+          {step === 2 && (
+            <>
+              <div style={{ marginBottom: '18px' }}>
+                <label style={labelStyle}>Report Name{required}</label>
+                <div style={{
+                  ...inputStyle, display: 'flex', alignItems: 'center',
+                  background: '#F7F7F7', color: '#6B6B6B',
+                }}>
+                  {reference} — this field will be auto-generated
+                </div>
+              </div>
 
-          <div style={{ marginBottom: '8px' }}>
-            <label style={labelStyle}>Duration{required}</label>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <input
-                type="date"
-                value={durationStart}
-                onChange={e => setDurationStart(e.target.value)}
-                style={inputStyle}
-              />
-              <input
-                type="date"
-                value={durationEnd}
-                onChange={e => setDurationEnd(e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-          </div>
+              <div style={{ marginBottom: '18px' }}>
+                <label style={labelStyle}>Business Purpose</label>
+                <textarea
+                  value={businessPurpose}
+                  onChange={e => setBusinessPurpose(e.target.value.slice(0, 500))}
+                  placeholder="Max 500 characters"
+                  rows={3}
+                  style={{
+                    ...inputStyle, height: 'auto', padding: '10px 12px',
+                    resize: 'vertical', fontFamily: 'inherit',
+                  }}
+                />
+                <div style={{ fontSize: '11px', color: '#6B6B6B', marginTop: '4px', textAlign: 'right' }}>
+                  {businessPurpose.length}/500
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '8px' }}>
+                <label style={labelStyle}>Duration{required}</label>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <input
+                    type="date"
+                    value={durationStart}
+                    onChange={e => setDurationStart(e.target.value)}
+                    style={inputStyle}
+                  />
+                  <input
+                    type="date"
+                    value={durationEnd}
+                    onChange={e => setDurationEnd(e.target.value)}
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+            </>
+          )}
 
           {error && (
             <div style={{ fontSize: '13px', color: '#DC2626', marginTop: '12px' }}>{error}</div>
@@ -193,31 +216,60 @@ export default function NewReportModal({ user, onCreated, onClose }) {
         </div>
 
         {/* Footer */}
-        <div style={{ display: 'flex', gap: '10px', padding: '16px 20px', borderTop: '1px solid #E8E8E8' }}>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            style={{
-              height: '44px', padding: '0 24px',
-              background: saving ? '#9CA3AF' : '#8C3225', color: '#FFFFFF',
-              border: 'none', fontSize: '14px', fontWeight: 500,
-              cursor: saving ? 'default' : 'pointer', borderRadius: '4px',
-            }}
-          >
-            {saving ? 'Saving…' : 'Save'}
-          </button>
-          <button
-            onClick={onClose}
-            disabled={saving}
-            style={{
-              height: '44px', padding: '0 24px',
-              background: '#FFFFFF', color: '#1A1A1A',
-              border: '1px solid #E8E8E8', fontSize: '14px', fontWeight: 500,
-              cursor: 'pointer', borderRadius: '4px',
-            }}
-          >
-            Cancel
-          </button>
+        <div style={{ flexShrink: 0, display: 'flex', gap: '10px', padding: '16px 20px', borderTop: '1px solid #E8E8E8' }}>
+          {step === 1 ? (
+            <>
+              <button
+                onClick={handleContinue}
+                style={{
+                  height: '44px', padding: '0 24px',
+                  background: '#8C3225', color: '#FFFFFF',
+                  border: 'none', fontSize: '14px', fontWeight: 500,
+                  cursor: 'pointer', borderRadius: '4px',
+                }}
+              >
+                Continue
+              </button>
+              <button
+                onClick={onClose}
+                style={{
+                  height: '44px', padding: '0 24px',
+                  background: '#FFFFFF', color: '#1A1A1A',
+                  border: '1px solid #E8E8E8', fontSize: '14px', fontWeight: 500,
+                  cursor: 'pointer', borderRadius: '4px',
+                }}
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                style={{
+                  height: '44px', padding: '0 24px',
+                  background: saving ? '#9CA3AF' : '#8C3225', color: '#FFFFFF',
+                  border: 'none', fontSize: '14px', fontWeight: 500,
+                  cursor: saving ? 'default' : 'pointer', borderRadius: '4px',
+                }}
+              >
+                {saving ? 'Saving…' : 'Save'}
+              </button>
+              <button
+                onClick={() => { setError(null); setStep(1) }}
+                disabled={saving}
+                style={{
+                  height: '44px', padding: '0 24px',
+                  background: '#FFFFFF', color: '#1A1A1A',
+                  border: '1px solid #E8E8E8', fontSize: '14px', fontWeight: 500,
+                  cursor: 'pointer', borderRadius: '4px',
+                }}
+              >
+                Back
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
