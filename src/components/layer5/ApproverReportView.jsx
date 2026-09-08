@@ -3,9 +3,22 @@ import { supabase } from '../../lib/supabase'
 import { processApproval, createNotification } from '../../lib/approvalEngine'
 import { canAccessApprovals } from '../../lib/auth'
 import { generateManagerSummary } from '../../lib/claude'
+import { runAllChecks } from '../../lib/policyEngine'
 import ExpenseApprovalCard from './ExpenseApprovalCard'
 import RejectionModal from './RejectionModal'
 import NotificationToast from './NotificationToast'
+
+const PURPOSE_LABELS = {
+  internal: 'Internal team work',
+  field: 'Field programme or beneficiary visit',
+  donor: 'Donor or client engagement',
+  office: 'Office or admin',
+}
+
+const REIMBURSEMENT_LABELS = {
+  bank_transfer: 'Bank transfer',
+  petty_cash: 'Petty cash',
+}
 
 const ROUTE_LABEL = {
   reporting_manager: 'Reporting Manager',
@@ -39,6 +52,8 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
   const [toast, setToast] = useState(null)
   const [aiSummary, setAiSummary] = useState(null)
   const [aiLoading, setAiLoading] = useState(false)
+  const [linkedPO, setLinkedPO] = useState(null)
+  const [policyResults, setPolicyResults] = useState({}) // expenseId -> { violations, flags }
 
   useEffect(() => {
     if (!reportId) return
@@ -51,11 +66,27 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
         .single()
       setReport(rep)
 
+      if (rep?.po_id) {
+        supabase.from('purchase_orders').select('po_number, vendors(org_name)').eq('id', rep.po_id).single()
+          .then(({ data }) => setLinkedPO(data))
+      }
+
       const { data: re } = await supabase
         .from('report_expenses')
         .select('expense_details(*)')
         .eq('report_id', reportId)
-      setExpenses(re?.map(r => r.expense_details).filter(Boolean) || [])
+      const loadedExpenses = re?.map(r => r.expense_details).filter(Boolean) || []
+      setExpenses(loadedExpenses)
+
+      // Policy checks are never persisted (only shown transiently to the
+      // employee at submission time), so they're re-run here against the
+      // same rules — an approver needs to see any red flag, not just trust
+      // that the employee's own preview screen already caught it.
+      Promise.all(loadedExpenses.map(exp => runAllChecks(exp, loadedExpenses))).then(results => {
+        const byId = {}
+        loadedExpenses.forEach((exp, i) => { byId[exp.id] = results[i] })
+        setPolicyResults(byId)
+      })
 
       const { data: apprList } = await supabase
         .from('report_approvals')
@@ -68,7 +99,6 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
       setLoading(false)
 
       // Auto-generate AI summary for manager
-      const loadedExpenses = re?.map(r => r.expense_details).filter(Boolean) || []
       if (rep && loadedExpenses.length > 0) {
         setAiLoading(true)
         generateManagerSummary(rep, loadedExpenses).then(summary => {
@@ -261,10 +291,25 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
         {report.business_purpose && (
           <SummaryRow label="Business Purpose" value={report.business_purpose} alt={true} />
         )}
-        <SummaryRow label="Expenses" value={`${expenses.length} item${expenses.length !== 1 ? 's' : ''}`} alt={false} />
-        <SummaryRow label="Total amount" value={`₹${Number(report.total_amount || 0).toLocaleString('en-IN')}`} alt={true} />
-        <SummaryRow label="Approval route" value={ROUTE_LABEL[report.approval_route] || '—'} alt={false} />
-        <SummaryRow label="Status" value={report.status?.replace('_', ' ') || '—'} alt={true} />
+        <SummaryRow
+          label="Purchase Order"
+          value={report.po_related ? `${linkedPO?.po_number || '…'}${linkedPO?.vendors?.org_name ? ` — ${linkedPO.vendors.org_name}` : ''}` : 'Not related to a PO'}
+          alt={false}
+        />
+        <SummaryRow
+          label="Purpose"
+          value={report.purpose_type ? `${PURPOSE_LABELS[report.purpose_type] || report.purpose_type}${report.purpose_description ? ` — ${report.purpose_description}` : ''}` : '—'}
+          alt={true}
+        />
+        <SummaryRow
+          label="Reimbursement"
+          value={REIMBURSEMENT_LABELS[expenses[0]?.reimbursement_type] || expenses[0]?.reimbursement_type || '—'}
+          alt={false}
+        />
+        <SummaryRow label="Expenses" value={`${expenses.length} item${expenses.length !== 1 ? 's' : ''}`} alt={true} />
+        <SummaryRow label="Total amount" value={`₹${Number(report.total_amount || 0).toLocaleString('en-IN')}`} alt={false} />
+        <SummaryRow label="Approval route" value={ROUTE_LABEL[report.approval_route] || '—'} alt={true} />
+        <SummaryRow label="Status" value={report.status?.replace('_', ' ') || '—'} alt={false} />
       </div>
 
       {/* Expenses */}
@@ -273,6 +318,7 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
         <ExpenseApprovalCard
           key={exp.id}
           expense={exp}
+          result={policyResults[exp.id]}
           onFlag={handleFlagExpense}
           onRemove={handleRemoveExpense}
         />

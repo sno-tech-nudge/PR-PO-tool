@@ -149,6 +149,8 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
       selected_expense_ids: expenses.map(e => e.id),
       employee_email: user?.email ?? null,
       po_related: reportDetails?.po_related ?? null,
+      purpose_type: reportDetails?.purpose_type ?? null,
+      purpose_description: reportDetails?.description ?? null,
     }
 
     try {
