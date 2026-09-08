@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase'
 import { getSession, canAccessApprovals, canAccessFinance, canCreatePR, isObserver, signOut } from './lib/auth'
 import { preloadDirectory } from './lib/directory'
-import Icon from './components/shared/Icons'
 import LoginScreen from './components/auth/LoginScreen'
 import OfflineBanner from './components/capture/OfflineBanner'
 import NewExpense from './components/capture/NewExpense'
@@ -280,21 +279,21 @@ export default function App() {
   const isPRApproverOnly = canAccessApprovals(role) && !isObserver(role) && !canCreatePR(role)
 
   const navItems = [
-    { key: 'list',    label: 'Home',              icon: Icon.Home },
+    { key: 'list',    label: 'Home',              icon: '⊞' },
     // Finance doesn't submit expenses/reports themselves, so their own
     // History (of expense submissions) isn't relevant to them. Expense
     // reporting is "coming soon" for employees during this testing round
     // (Vendor/PR/PO only), so History is hidden for them too rather than
     // linking to a feature that isn't open yet.
-    ...(role !== 'finance' && role !== 'employee' ? [{ key: 'history', label: 'History', icon: Icon.History }] : []),
-    ...(canAccessApprovals(role) ? [{ key: 'approvals', label: 'Approvals', icon: Icon.Approvals }] : []),
-    ...(canAccessFinance(role)   ? [{ key: 'finance',   label: 'Finance',   icon: Icon.Finance }] : []),
-    { key: 'pr-list', label: 'Purchase Requests',  icon: Icon.PurchaseRequest },
-    { key: 'po-list', label: 'Purchase Orders',    icon: Icon.PurchaseOrder },
-    { key: 'vendors', label: canAccessFinance(role) ? 'Vendor Management' : 'Vendors', icon: Icon.Vendor },
+    ...(role !== 'finance' && role !== 'employee' ? [{ key: 'history', label: 'History', icon: '☰' }] : []),
+    ...(canAccessApprovals(role) ? [{ key: 'approvals', label: 'Approvals', icon: '✓' }] : []),
+    ...(canAccessFinance(role)   ? [{ key: 'finance',   label: 'Finance',   icon: '₹' }] : []),
+    { key: 'pr-list', label: 'Purchase Requests',  icon: '◫' },
+    { key: 'po-list', label: 'Purchase Orders',    icon: '◻' },
+    { key: 'vendors', label: canAccessFinance(role) ? 'Vendor Management' : 'Vendors', icon: '⬡' },
     // Everyone gets Settings now — admins see Team & Roles plus their own
     // profile there; everyone else just sees their own read-only profile.
-    { key: 'settings', label: 'Settings', icon: Icon.Settings },
+    { key: 'settings', label: 'Settings', icon: '⚙' },
   ]
 
   const activeNav = SCREEN_PARENT[appScreen] || appScreen
@@ -340,7 +339,7 @@ export default function App() {
 
         {/* Nav */}
         <nav className="sidebar-nav" style={{ flex: 1, padding: '10px 0', overflowY: 'auto' }}>
-          {navItems.map(({ key, label, icon: NavIcon }) => {
+          {navItems.map(({ key, label, icon }) => {
             const active = activeNav === key
             return (
               <div
@@ -358,8 +357,8 @@ export default function App() {
                   userSelect: 'none',
                 }}
               >
-                <span style={{ display: 'flex', minWidth: '16px', justifyContent: 'center', opacity: active ? 1 : 0.7 }}>
-                  <NavIcon size={15} />
+                <span style={{ fontSize: '13px', minWidth: '16px', textAlign: 'center', opacity: active ? 1 : 0.7 }}>
+                  {icon}
                 </span>
                 {label}
               </div>
@@ -379,9 +378,7 @@ export default function App() {
                   userSelect: 'none',
                 }}
               >
-                <span style={{ display: 'flex', minWidth: '16px', justifyContent: 'center' }}>
-                  <Icon.PlusCircle size={15} />
-                </span>
+                <span style={{ fontSize: '16px', minWidth: '16px', textAlign: 'center' }}>+</span>
                 New Expense
               </div>
               <div
@@ -393,9 +390,7 @@ export default function App() {
                   userSelect: 'none',
                 }}
               >
-                <span style={{ display: 'flex', minWidth: '16px', justifyContent: 'center', opacity: 0.7 }}>
-                  <Icon.FolderPlus size={15} />
-                </span>
+                <span style={{ fontSize: '13px', minWidth: '16px', textAlign: 'center', opacity: 0.7 }}>◷</span>
                 New Report
               </div>
             </>

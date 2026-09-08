@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { timeAgo } from '../../lib/approvalEngine'
-import Icon from '../shared/Icons'
 
 const STATUS_BADGE = {
-  approved: { label: 'Approved', color: '#16A34A', bg: '#F0FDF4', icon: Icon.CheckCircle },
-  rejected: { label: 'Returned', color: '#DC2626', bg: '#FEF2F2', icon: Icon.XCircle },
-  processing: { label: 'Processing', color: '#CA8A04', bg: '#FEFCE8', icon: Icon.Clock },
-  reimbursed: { label: 'Reimbursed', color: '#16A34A', bg: '#F0FDF4', icon: Icon.CheckCircle },
+  approved: { label: 'Approved', color: '#16A34A', bg: '#F0FDF4', icon: '✓' },
+  rejected: { label: 'Returned', color: '#DC2626', bg: '#FEF2F2', icon: '✕' },
+  processing: { label: 'Processing', color: '#CA8A04', bg: '#FEFCE8', icon: '◷' },
+  reimbursed: { label: 'Reimbursed', color: '#16A34A', bg: '#F0FDF4', icon: '✓' },
 }
 
 const ROUTE_LABEL = {
@@ -72,7 +71,7 @@ function ReportCard({ report, onClick, showSLA = true }) {
               fontSize: '11px', padding: '2px 8px', borderRadius: '2px',
               background: '#F7F7F7', color: '#6B6B6B',
             }}>
-              <Icon.Clock size={11} />
+              <span style={{ fontSize: '11px' }}>◷</span>
               {ROUTE_LABEL[report.approval_route] || '—'}
             </div>
           ) : (
@@ -83,7 +82,7 @@ function ReportCard({ report, onClick, showSLA = true }) {
                 background: STATUS_BADGE[report.status].bg,
                 color: STATUS_BADGE[report.status].color,
               }}>
-                {(() => { const BadgeIcon = STATUS_BADGE[report.status].icon; return <BadgeIcon size={11} /> })()}
+                <span style={{ fontSize: '11px' }}>{STATUS_BADGE[report.status].icon}</span>
                 {STATUS_BADGE[report.status].label}
               </div>
             )
@@ -99,7 +98,7 @@ function ReportCard({ report, onClick, showSLA = true }) {
           background: '#FEF2F2', borderTop: '1px solid #DC2626',
           fontSize: '11px', color: '#DC2626',
         }}>
-          <Icon.AlertTriangle size={12} />
+          <span style={{ fontSize: '12px' }}>⚠</span>
           Overdue by {Math.ceil(-hoursLeft)} hour{Math.ceil(-hoursLeft) !== 1 ? 's' : ''}.
         </div>
       )}
@@ -110,7 +109,7 @@ function ReportCard({ report, onClick, showSLA = true }) {
           background: '#FEFCE8', borderTop: '1px solid #CA8A04',
           fontSize: '11px', color: '#CA8A04',
         }}>
-          <Icon.Clock size={12} />
+          <span style={{ fontSize: '12px' }}>◷</span>
           {Math.floor(hoursLeft)} hour{Math.floor(hoursLeft) !== 1 ? 's' : ''} left to review.
         </div>
       )}

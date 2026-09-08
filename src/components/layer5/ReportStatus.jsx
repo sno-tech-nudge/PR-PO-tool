@@ -5,16 +5,15 @@ import StatusTimeline from './StatusTimeline'
 import NotificationToast from './NotificationToast'
 import ReportChat from '../shared/ReportChat'
 import Confetti from '../shared/Confetti'
-import Icon from '../shared/Icons'
 
 const STATUS_BADGE = {
-  draft: { bg: '#F3F4F6', color: '#6B7280', label: 'Draft', icon: Icon.CircleDot },
-  submitted: { bg: '#F7F7F7', color: '#1A1A1A', label: 'Submitted', icon: Icon.Clock },
-  under_review: { bg: '#fdf0ed', color: '#8C3225', label: 'Under Review', icon: Icon.Clock },
-  approved: { bg: '#F0FDF4', color: '#16A34A', label: 'Approved', icon: Icon.CheckCircle },
-  rejected: { bg: '#FEF2F2', color: '#DC2626', label: 'Rejected', icon: Icon.XCircle },
-  processing: { bg: '#FEFCE8', color: '#CA8A04', label: 'Processing', icon: Icon.Clock },
-  reimbursed: { bg: '#F0FDF4', color: '#16A34A', label: 'Reimbursed', icon: Icon.CheckCircle },
+  draft: { bg: '#F3F4F6', color: '#6B7280', label: 'Draft', icon: '●' },
+  submitted: { bg: '#F7F7F7', color: '#1A1A1A', label: 'Submitted', icon: '◷' },
+  under_review: { bg: '#fdf0ed', color: '#8C3225', label: 'Under Review', icon: '◷' },
+  approved: { bg: '#F0FDF4', color: '#16A34A', label: 'Approved', icon: '✓' },
+  rejected: { bg: '#FEF2F2', color: '#DC2626', label: 'Rejected', icon: '✕' },
+  processing: { bg: '#FEFCE8', color: '#CA8A04', label: 'Processing', icon: '◷' },
+  reimbursed: { bg: '#F0FDF4', color: '#16A34A', label: 'Reimbursed', icon: '✓' },
 }
 
 function getStatusMessage(status, reviewedBy) {
@@ -258,7 +257,7 @@ export default function ReportStatus({ reportId, onBack, onStartNew, onViewPO })
           padding: '6px 16px', fontSize: '13px', fontWeight: 500,
           borderRadius: '2px', marginBottom: '8px',
         }}>
-          <badge.icon size={13} />
+          <span style={{ fontSize: '13px' }}>{badge.icon}</span>
           {badge.label}
         </div>
         <div style={{ fontSize: '13px', color: '#4A4A4A', lineHeight: '1.5' }}>
