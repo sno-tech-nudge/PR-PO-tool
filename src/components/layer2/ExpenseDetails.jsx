@@ -17,9 +17,19 @@ const CATEGORIES = [
 
 const PAYMENT_MODES = ['Self - Cash/Card', 'Self - UPI', 'Company Card', 'Advance Adjustment']
 
-// Card numbers a Company Card payment can be attributed to — placeholder
-// test entry until the org's real list is provided.
-const CARD_NUMBERS = ['**1234']
+// Card numbers a Company Card payment can be attributed to.
+const CARD_NUMBERS = [
+  'XXXX-XXXX-XXXX-3800',
+  'XXXX-XXXX-XXXX-3750',
+  'XXXX-XXXX-XXXX-3768',
+  'XXXX-XXXX-XXXX-3735',
+  'XXXX-XXXX-XXXX-3826',
+  'XXXX-XXXX-XXXX-3776',
+  'XXXX-XXXX-XXXX-3784',
+  'XXXX-XXXX-XXXX-3818',
+  'XXXX-XXXX-XXXX-3743',
+  'XXXX-XXXX-XXXX-3792',
+]
 
 function toInputDate(dateStr) {
   if (!dateStr) return ''
