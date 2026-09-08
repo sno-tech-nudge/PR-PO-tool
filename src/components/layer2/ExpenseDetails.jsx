@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { suggestCategory } from '../../lib/claude'
 import { ENTITIES, EXPENSE_NATURES, getPrograms, getDonorsForProgram } from '../../lib/donorData'
-import { preloadDirectory, getAllDirectoryEntries } from '../../lib/directory'
+import { preloadDirectory, getActiveDirectoryEntries } from '../../lib/directory'
 import { attachPendingBalances, poOptionLabel } from '../../lib/poBalance'
 import AmountInput from '../shared/AmountInput'
 
@@ -49,31 +49,33 @@ function fromInputDate(val) {
 }
 
 // Searchable multi-select for expense attendees — matches against the org
-// directory (~1,200 people, already preloaded/cached by App.jsx) so most
-// names are a couple keystrokes away, but also lets someone add a typed
-// name outside the directory (a donor rep, an external guest) since not
-// every attendee is a Nudge team member.
+// directory (active Zoho accounts only, already preloaded/cached by
+// App.jsx) so most names are a couple keystrokes away, but also lets
+// someone add a typed name outside the directory (a donor rep, an external
+// guest) since not every attendee is a Nudge team member. Each selected
+// entry is {name, email} — email is null for a free-text addition — so a
+// person can be looked up by email later rather than just matched by name.
 function AttendeeMultiSelect({ selected, onChange, directoryEntries }) {
   const [query, setQuery] = useState('')
   const trimmed = query.trim()
   const filtered = trimmed
     ? directoryEntries
-        .filter(d => d.name.toLowerCase().includes(trimmed.toLowerCase()) && !selected.includes(d.name))
+        .filter(d => d.name.toLowerCase().includes(trimmed.toLowerCase()) && !selected.some(s => s.email === d.email))
         .slice(0, 8)
     : []
   const exactMatch = trimmed && (
     filtered.some(d => d.name.toLowerCase() === trimmed.toLowerCase()) ||
-    selected.some(s => s.toLowerCase() === trimmed.toLowerCase())
+    selected.some(s => s.name.toLowerCase() === trimmed.toLowerCase())
   )
 
-  function addName(name) {
+  function addAttendee(name, email = null) {
     const clean = name.trim()
-    if (!clean || selected.some(s => s.toLowerCase() === clean.toLowerCase())) { setQuery(''); return }
-    onChange([...selected, clean])
+    if (!clean || selected.some(s => s.name.toLowerCase() === clean.toLowerCase())) { setQuery(''); return }
+    onChange([...selected, { name: clean, email }])
     setQuery('')
   }
-  function removeName(name) {
-    onChange(selected.filter(s => s !== name))
+  function removeAttendee(name) {
+    onChange(selected.filter(s => s.name !== name))
   }
 
   const inputStyle = {
@@ -89,7 +91,7 @@ function AttendeeMultiSelect({ selected, onChange, directoryEntries }) {
         type="text"
         value={query}
         onChange={e => setQuery(e.target.value)}
-        onKeyDown={e => { if (e.key === 'Enter' && trimmed) { e.preventDefault(); addName(trimmed) } }}
+        onKeyDown={e => { if (e.key === 'Enter' && trimmed) { e.preventDefault(); addAttendee(trimmed) } }}
         placeholder="Search team members or type a name"
         style={inputStyle}
       />
@@ -98,7 +100,7 @@ function AttendeeMultiSelect({ selected, onChange, directoryEntries }) {
           {filtered.map(d => (
             <div
               key={d.email}
-              onClick={() => addName(d.name)}
+              onClick={() => addAttendee(d.name, d.email)}
               style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '13px', borderBottom: '1px solid #F3F4F6', display: 'flex', justifyContent: 'space-between' }}
             >
               <span>{d.name}</span>
@@ -107,7 +109,7 @@ function AttendeeMultiSelect({ selected, onChange, directoryEntries }) {
           ))}
           {!exactMatch && (
             <div
-              onClick={() => addName(trimmed)}
+              onClick={() => addAttendee(trimmed)}
               style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '13px', color: '#8C3225' }}
             >
               + Add "{trimmed}" (not in directory)
@@ -117,16 +119,17 @@ function AttendeeMultiSelect({ selected, onChange, directoryEntries }) {
       )}
       {selected.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
-          {selected.map(name => (
+          {selected.map(a => (
             <span
-              key={name}
+              key={a.name}
+              title={a.email || ''}
               style={{
                 fontSize: '12px', color: '#374151', background: '#F3F4F6',
                 borderRadius: '3px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '6px',
               }}
             >
-              {name}
-              <span onClick={() => removeName(name)} style={{ cursor: 'pointer', color: '#9CA3AF' }}>×</span>
+              {a.name}
+              <span onClick={() => removeAttendee(a.name)} style={{ cursor: 'pointer', color: '#9CA3AF' }}>×</span>
             </span>
           ))}
         </div>
@@ -149,8 +152,12 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
   const [expenseType, setExpenseType] = useState(existingExpense?.expense_type || null)
   const [attendeeCount, setAttendeeCount] = useState(existingExpense?.attendee_count || null) // number or '7+'
   const [customCount, setCustomCount] = useState('')
-  const [attendeeNames, setAttendeeNames] = useState(
-    existingExpense?.attendee_names ? existingExpense.attendee_names.split(',').map(s => s.trim()).filter(Boolean) : []
+  const [attendees, setAttendees] = useState(
+    Array.isArray(existingExpense?.attendees) && existingExpense.attendees.length > 0
+      ? existingExpense.attendees
+      : existingExpense?.attendee_names
+        ? existingExpense.attendee_names.split(',').map(s => s.trim()).filter(Boolean).map(name => ({ name, email: null }))
+        : []
   )
   const [directoryEntries, setDirectoryEntries] = useState([])
   const [invoiceNumber, setInvoiceNumber] = useState(existingExpense?.invoice_number ?? layer1Data?.invoice_number ?? '')
@@ -224,7 +231,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
   }, [])
 
   useEffect(() => {
-    preloadDirectory().then(() => setDirectoryEntries(getAllDirectoryEntries()))
+    preloadDirectory().then(() => setDirectoryEntries(getActiveDirectoryEntries()))
   }, [])
 
   useEffect(() => {
@@ -353,7 +360,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
     if (!isEdit && !expenseType) missing.push('Who was this for')
     if (!isEdit && expenseType === 'my_team') {
       if (!actualAttendeeCount) missing.push('Number of people')
-      if (attendeeNames.length === 0) missing.push('Attendee names')
+      if (attendees.length === 0) missing.push('Attendee names')
     }
     return missing
   }
@@ -375,7 +382,8 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
       expense_type: expenseType,
       attendee_count: expenseType === 'my_team' ? actualAttendeeCount : null,
       per_person_amount: expenseType === 'my_team' ? perPersonAmount : null,
-      attendee_names: expenseType === 'my_team' && attendeeNames.length ? attendeeNames.join(', ') : null,
+      attendee_names: expenseType === 'my_team' && attendees.length ? attendees.map(a => a.name).join(', ') : null,
+      attendees: expenseType === 'my_team' && attendees.length ? attendees : null,
       invoice_number: invoiceNumber || null,
       gstin: gstin || null,
       description: note || null,
@@ -733,7 +741,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
               <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '4px' }}>
                 Names of attendees{required}
               </div>
-              <AttendeeMultiSelect selected={attendeeNames} onChange={setAttendeeNames} directoryEntries={directoryEntries} />
+              <AttendeeMultiSelect selected={attendees} onChange={setAttendees} directoryEntries={directoryEntries} />
             </div>
           </div>
         )}
