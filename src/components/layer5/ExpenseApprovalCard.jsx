@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import Icon from '../shared/Icons'
 
 const WHO_LABELS = { just_me: 'Just me', my_team: 'Multiple people' }
 
@@ -178,11 +179,17 @@ export default function ExpenseApprovalCard({ expense, result, onFlag, onRemove 
 
       {/* Policy status */}
       {hasViolation ? (
-        <div style={{ fontSize: '11px', color: '#DC2626', marginBottom: '4px' }}>Policy issue flagged</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: '#DC2626', marginBottom: '4px' }}>
+          <Icon.XCircle size={12} />Policy issue flagged
+        </div>
       ) : hasFlagPrev ? (
-        <div style={{ fontSize: '11px', color: '#CA8A04', marginBottom: '4px' }}>Flagged for review</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: '#CA8A04', marginBottom: '4px' }}>
+          <Icon.AlertTriangle size={12} />Flagged for review
+        </div>
       ) : (
-        <div style={{ fontSize: '11px', color: '#16A34A', marginBottom: '4px' }}>Policy passed</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: '#16A34A', marginBottom: '4px' }}>
+          <Icon.CheckCircle size={12} />Policy passed
+        </div>
       )}
 
       {/* Actual policy note text — not just the coarse pass/flag/issue badge */}

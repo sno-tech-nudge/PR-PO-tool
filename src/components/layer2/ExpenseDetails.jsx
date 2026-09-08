@@ -168,6 +168,10 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
   const [suggestedCategory, setSuggestedCategory] = useState(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  // Field-level errors only ever show once a save has actually been
+  // attempted (never as-you-type), and each one clears itself the moment
+  // its own field becomes valid — see the `errors` derivation below.
+  const [submitAttempted, setSubmitAttempted] = useState(false)
 
   // Itemize — split one expense's amount across sub-line-items. The top-level
   // `amount` stays the source of truth everywhere else in the app (reports,
@@ -345,32 +349,37 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
     setItemLines(lines => lines.map((l, i) => (i === idx ? { ...l, [field]: value } : l)))
   }
 
-  function validate() {
-    const missing = []
-    if (!isEdit && poRelated === null) missing.push('Related to a Purchase Order (Yes/No)')
-    if (!isEdit && poRelated === true && !poId) missing.push('Which Purchase Order')
-    if (!date) missing.push('Expense Date')
-    if (!vendor) missing.push('Merchant')
-    if (!category) missing.push('Category')
-    if (!effectiveAmount) missing.push('Amount')
-    if (!paymentMode) missing.push('Payment Mode')
-    if (paymentMode === 'Company Card' && !cardNo) missing.push('Card No.')
-    if (!entity) missing.push('Entity')
-    if (!note) missing.push('Description')
-    if (!isEdit && !expenseType) missing.push('Who was this for')
+  // Per-field errors, keyed to match the `errors.<key>` reads next to each
+  // field below — replaces a single "please fill in: X, Y, Z" banner so
+  // each problem shows right where it needs fixing.
+  function getErrors() {
+    const e = {}
+    if (!isEdit && poRelated === null) e.poRelated = 'Please answer Yes or No'
+    if (!isEdit && poRelated === true && !poId) e.poId = 'Please select a Purchase Order'
+    if (!date) e.date = 'Required'
+    if (!vendor) e.vendor = 'Required'
+    if (!category) e.category = 'Required'
+    if (!effectiveAmount) e.amount = 'Required'
+    if (!paymentMode) e.paymentMode = 'Required'
+    if (paymentMode === 'Company Card' && !cardNo) e.cardNo = 'Required'
+    if (!entity) e.entity = 'Required'
+    if (!note) e.description = 'Required'
+    if (!isEdit && !expenseType) e.expenseType = 'Please choose one'
     if (!isEdit && expenseType === 'my_team') {
-      if (!actualAttendeeCount) missing.push('Number of people')
-      if (attendees.length === 0) missing.push('Attendee names')
+      if (!actualAttendeeCount) e.attendeeCount = 'Required'
+      if (attendees.length === 0) e.attendees = 'Add at least one attendee'
     }
-    return missing
+    return e
   }
 
+  const errors = submitAttempted ? getErrors() : {}
+  const errorText = { fontSize: '11px', color: '#DC2626', marginTop: '5px' }
+  const errBorder = (key) => (errors[key] ? '1px solid #DC2626' : undefined)
+
   async function handleSave() {
-    const missing = validate()
-    if (missing.length > 0) {
-      setError(`Please fill in required fields: ${missing.join(', ')}`)
-      return
-    }
+    setSubmitAttempted(true)
+    const fieldErrors = getErrors()
+    if (Object.keys(fieldErrors).length > 0) return
     setSaving(true)
     setError(null)
     const payload = {
@@ -492,16 +501,18 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
               <select
                 value={poId}
                 onChange={e => handlePOSelect(e.target.value)}
-                style={{ ...inputStyle, paddingLeft: '10px' }}
+                style={{ ...inputStyle, paddingLeft: '10px', border: errBorder('poId') }}
               >
                 <option value="">Select a PO…</option>
                 {poOptions.map(po => (
                   <option key={po.id} value={po.id}>{poOptionLabel(po)}</option>
                 ))}
               </select>
+              {errors.poId && <div style={errorText}>{errors.poId}</div>}
               {poLoading && <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '4px' }}>Filling in details from this PO…</div>}
             </div>
           )}
+          {errors.poRelated && <div style={errorText}>{errors.poRelated}</div>}
         </div>
       ) : (
         <div style={fieldWrap}>
@@ -527,8 +538,9 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
           type="date"
           value={toInputDate(date)}
           onChange={e => setDate(fromInputDate(e.target.value))}
-          style={inputStyle}
+          style={{ ...inputStyle, border: errBorder('date') }}
         />
+        {errors.date && <div style={errorText}>{errors.date}</div>}
       </div>
 
       {/* Merchant */}
@@ -541,11 +553,12 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
           onChange={e => setVendor(e.target.value)}
           onBlur={() => applyVendorHistory(vendor)}
           placeholder="Select existing or type a new merchant"
-          style={inputStyle}
+          style={{ ...inputStyle, border: errBorder('vendor') }}
         />
         <datalist id="merchant-options">
           {merchantOptions.map(m => <option key={m} value={m} />)}
         </datalist>
+        {errors.vendor && <div style={errorText}>{errors.vendor}</div>}
       </div>
 
       {/* Category */}
@@ -559,11 +572,12 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
         <select
           value={category}
           onChange={e => setCategory(e.target.value)}
-          style={{ ...inputStyle, paddingLeft: '10px' }}
+          style={{ ...inputStyle, paddingLeft: '10px', border: errBorder('category') }}
         >
           <option value="">Select a category</option>
           {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
+        {errors.category && <div style={errorText}>{errors.category}</div>}
       </div>
 
       {/* Amount + Itemize */}
@@ -579,8 +593,9 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
         </div>
 
         {!itemized && (
-          <AmountInput value={amount} onChange={setAmount} inputStyle={{ height: inputStyle.height, fontSize: inputStyle.fontSize }} />
+          <AmountInput value={amount} onChange={setAmount} error={!!errors.amount} inputStyle={{ height: inputStyle.height, fontSize: inputStyle.fontSize }} />
         )}
+        {errors.amount && <div style={errorText}>{errors.amount}</div>}
 
         {itemized && (
           <div>
@@ -627,10 +642,11 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
         <select
           value={paymentMode}
           onChange={e => { setPaymentMode(e.target.value); if (e.target.value !== 'Company Card') setCardNo('') }}
-          style={{ ...inputStyle, paddingLeft: '10px' }}
+          style={{ ...inputStyle, paddingLeft: '10px', border: errBorder('paymentMode') }}
         >
           {PAYMENT_MODES.map(m => <option key={m} value={m}>{m}</option>)}
         </select>
+        {errors.paymentMode && <div style={errorText}>{errors.paymentMode}</div>}
       </div>
 
       {/* Card No. — only when paying by Company Card */}
@@ -640,11 +656,12 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
           <select
             value={cardNo}
             onChange={e => setCardNo(e.target.value)}
-            style={{ ...inputStyle, paddingLeft: '10px' }}
+            style={{ ...inputStyle, paddingLeft: '10px', border: errBorder('cardNo') }}
           >
             <option value="">Select a card…</option>
             {CARD_NUMBERS.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
+          {errors.cardNo && <div style={errorText}>{errors.cardNo}</div>}
         </div>
       )}
 
@@ -654,11 +671,12 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
         <select
           value={entity}
           onChange={e => { setEntity(e.target.value); setProgram(''); setDonorName('') }}
-          style={{ ...inputStyle, paddingLeft: '10px' }}
+          style={{ ...inputStyle, paddingLeft: '10px', border: errBorder('entity') }}
         >
           <option value="">Select entity…</option>
           {ENTITIES.map(v => <option key={v} value={v}>{v}</option>)}
         </select>
+        {errors.entity && <div style={errorText}>{errors.entity}</div>}
       </div>
 
       {/* Description */}
@@ -669,8 +687,9 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
           value={note}
           onChange={e => setNote(e.target.value)}
           placeholder="What was this expense for"
-          style={inputStyle}
+          style={{ ...inputStyle, border: errBorder('description') }}
         />
+        {errors.description && <div style={errorText}>{errors.description}</div>}
       </div>
 
       {/* Who was this for */}
@@ -696,6 +715,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
             </div>
           ))}
         </div>
+        {errors.expenseType && <div style={errorText}>{errors.expenseType}</div>}
 
         {expenseType === 'my_team' && (
           <div style={{ marginTop: '10px' }}>
@@ -710,7 +730,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
                   style={{
                     width: '44px', height: '44px',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    border: `1.5px solid ${attendeeCount === n ? '#1A1A1A' : '#E8E8E8'}`,
+                    border: `1.5px solid ${attendeeCount === n ? '#1A1A1A' : errors.attendeeCount ? '#DC2626' : '#E8E8E8'}`,
                     background: attendeeCount === n ? '#1A1A1A' : '#FFFFFF',
                     color: attendeeCount === n ? '#FFFFFF' : '#1A1A1A',
                     fontSize: '13px', fontWeight: 500, cursor: 'pointer', borderRadius: '4px',
@@ -720,6 +740,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
                 </div>
               ))}
             </div>
+            {errors.attendeeCount && <div style={errorText}>{errors.attendeeCount}</div>}
 
             {attendeeCount === '7+' && (
               <input
@@ -742,6 +763,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
                 Names of attendees{required}
               </div>
               <AttendeeMultiSelect selected={attendees} onChange={setAttendees} directoryEntries={directoryEntries} />
+              {errors.attendees && <div style={errorText}>{errors.attendees}</div>}
             </div>
           </div>
         )}

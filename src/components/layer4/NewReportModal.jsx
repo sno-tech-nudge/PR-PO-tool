@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { generateReportReference } from '../../lib/reportReference'
 import { attachPendingBalances, poOptionLabel } from '../../lib/poBalance'
+import StepIndicator from '../shared/StepIndicator'
 
 export default function NewReportModal({ user, onCreated, onClose }) {
   const [reference] = useState(() => generateReportReference())
@@ -115,13 +116,12 @@ export default function NewReportModal({ user, onCreated, onClose }) {
               ✕
             </div>
           </div>
-          <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '6px' }}>
-            {step === 1 ? 'Step 1 of 2 · Purchase Order' : 'Step 2 of 2 · Report details'}
-          </div>
         </div>
 
         {/* Body */}
         <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
+          <StepIndicator current={step - 1} total={2} labels={['Purchase Order', 'Report Details']} />
+
           {step === 1 && (
             <div>
               <label style={labelStyle}>Related to a Purchase Order?{required}</label>

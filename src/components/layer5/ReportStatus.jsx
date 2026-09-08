@@ -4,15 +4,17 @@ import { STATUS_STEP, formatDateTime } from '../../lib/approvalEngine'
 import StatusTimeline from './StatusTimeline'
 import NotificationToast from './NotificationToast'
 import ReportChat from '../shared/ReportChat'
+import Confetti from '../shared/Confetti'
+import Icon from '../shared/Icons'
 
 const STATUS_BADGE = {
-  draft: { bg: '#F3F4F6', color: '#6B7280', label: 'Draft' },
-  submitted: { bg: '#F7F7F7', color: '#1A1A1A', label: 'Submitted' },
-  under_review: { bg: '#fdf0ed', color: '#8C3225', label: 'Under Review' },
-  approved: { bg: '#F0FDF4', color: '#16A34A', label: 'Approved' },
-  rejected: { bg: '#FEF2F2', color: '#DC2626', label: 'Rejected' },
-  processing: { bg: '#FEFCE8', color: '#CA8A04', label: 'Processing' },
-  reimbursed: { bg: '#F0FDF4', color: '#16A34A', label: 'Reimbursed' },
+  draft: { bg: '#F3F4F6', color: '#6B7280', label: 'Draft', icon: Icon.CircleDot },
+  submitted: { bg: '#F7F7F7', color: '#1A1A1A', label: 'Submitted', icon: Icon.Clock },
+  under_review: { bg: '#fdf0ed', color: '#8C3225', label: 'Under Review', icon: Icon.Clock },
+  approved: { bg: '#F0FDF4', color: '#16A34A', label: 'Approved', icon: Icon.CheckCircle },
+  rejected: { bg: '#FEF2F2', color: '#DC2626', label: 'Rejected', icon: Icon.XCircle },
+  processing: { bg: '#FEFCE8', color: '#CA8A04', label: 'Processing', icon: Icon.Clock },
+  reimbursed: { bg: '#F0FDF4', color: '#16A34A', label: 'Reimbursed', icon: Icon.CheckCircle },
 }
 
 function getStatusMessage(status, reviewedBy) {
@@ -53,10 +55,27 @@ export default function ReportStatus({ reportId, onBack, onStartNew, onViewPO })
   const [polling, setPolling] = useState(false)
   const [, setRealtimeConnected] = useState(false)
   const [toast, setToast] = useState(null)
+  const [celebrate, setCelebrate] = useState(false)
   const subRef = useRef(null)
+  const celebratedRef = useRef(false)
 
   function showToast(message, type = 'info') {
     setToast({ message, type })
+  }
+
+  // Fires once per report, the first time this person sees it as
+  // Reimbursed — a plain localStorage flag (not a DB column) since it's
+  // purely a "have I already celebrated this on this device" marker, not
+  // data anything else needs to read.
+  function celebrateOnce(id) {
+    if (!id || celebratedRef.current) return
+    const key = `celebrated_report_${id}`
+    try {
+      if (localStorage.getItem(key)) return
+      localStorage.setItem(key, '1')
+    } catch { /* private-browsing or storage disabled — still celebrate this once */ }
+    celebratedRef.current = true
+    setCelebrate(true)
   }
 
   // Load report and expenses
@@ -71,6 +90,7 @@ export default function ReportStatus({ reportId, onBack, onStartNew, onViewPO })
         .single()
 
       if (rep) setReport(rep)
+      if (rep?.status === 'reimbursed') celebrateOnce(rep.id)
       if (rep?.po_id) {
         const { data: po } = await supabase.from('purchase_orders').select('id, po_number, status').eq('id', rep.po_id).single()
         setLinkedPO(po)
@@ -106,6 +126,7 @@ export default function ReportStatus({ reportId, onBack, onStartNew, onViewPO })
           setReport(prev => ({ ...prev, ...payload.new }))
           const badge = STATUS_BADGE[payload.new.status]
           if (badge) showToast(`Report status updated: ${badge.label}`, payload.new.status === 'rejected' ? 'rejected' : payload.new.status === 'approved' || payload.new.status === 'reimbursed' ? 'approved' : 'info')
+          if (payload.new.status === 'reimbursed') celebrateOnce(payload.new.id || reportId)
         }
       )
       .subscribe((status) => {
@@ -170,6 +191,7 @@ export default function ReportStatus({ reportId, onBack, onStartNew, onViewPO })
 
   return (
     <div style={{ maxWidth: '480px', margin: '0 auto', padding: '20px', width: '100%' }}>
+      {celebrate && <Confetti />}
       {toast && (
         <NotificationToast
           message={toast.message}
@@ -231,17 +253,27 @@ export default function ReportStatus({ reportId, onBack, onStartNew, onViewPO })
       {/* Status badge */}
       <div style={{ marginBottom: '12px' }}>
         <div style={{
-          display: 'inline-block',
+          display: 'inline-flex', alignItems: 'center', gap: '6px',
           background: badge.bg, color: badge.color,
           padding: '6px 16px', fontSize: '13px', fontWeight: 500,
           borderRadius: '2px', marginBottom: '8px',
         }}>
+          <badge.icon size={13} />
           {badge.label}
         </div>
         <div style={{ fontSize: '13px', color: '#4A4A4A', lineHeight: '1.5' }}>
           {getStatusMessage(status, report?.reviewed_by)}
         </div>
       </div>
+
+      {status === 'reimbursed' && (
+        <div style={{
+          border: '1px solid #BBF7D0', background: '#F0FDF4', borderRadius: '6px',
+          padding: '12px 16px', marginBottom: '16px', fontSize: '13px', color: '#15803D',
+        }}>
+          🎉 ₹{Number(report?.total_amount || 0).toLocaleString('en-IN')} reimbursed — this report is fully settled.
+        </div>
+      )}
 
       {/* Rejection card */}
       {isRejected && report?.rejection_reason && (
