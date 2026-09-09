@@ -714,6 +714,10 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         result = await supabase.from('vendors').insert(payload).select().single()
       }
       if (result.error) throw result.error
+      sendVendorEmail({
+        type: 'submitted', vendorOrgName: result.data.org_name, vendorId: result.data.vendor_id,
+        recipientEmail: result.data.submitted_by,
+      })
       onSaved(result.data)
     } catch (err) {
       setSaveError(err.message || 'Save failed. Please try again.')

@@ -1,11 +1,14 @@
 // Vercel serverless function — the only place RESEND_API_KEY is used, so it
 // never reaches the browser bundle (unlike VITE_-prefixed env vars).
-// Called by src/lib/vendorEmail.js after a vendor is approved or rejected.
+// Called by src/lib/vendorEmail.js after a vendor is submitted, approved,
+// or rejected. Template built from the shared api/_lib/mailer.js helpers so
+// PR/Report/Vendor lifecycle emails all look consistent.
+import { escapeHtml, renderBrandHeader, renderStatusBadge, wrapEmailShell, sendViaResend } from './_lib/mailer.js'
 
-const BRAND_COLOR = '#8C3225'
-
-function escapeHtml(str) {
-  return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+const STATUS_BADGE = {
+  submitted: { label: 'Pending Approval', color: '#B45309', bg: '#FFFBEB' },
+  approved:  { label: 'Approved',         color: '#15803D', bg: '#F0FDF4' },
+  rejected:  { label: 'Rejected',         color: '#B91C1C', bg: '#FEF2F2' },
 }
 
 function buildEmail({ type, vendorOrgName, vendorId, actorName, reason, comment, panNumber, submitterEmail }) {
@@ -13,7 +16,7 @@ function buildEmail({ type, vendorOrgName, vendorId, actorName, reason, comment,
   const isBlockedKyc = type === 'aadhaar_pan_not_linked'
   const vendorLabel = vendorId ? `${vendorOrgName} (${vendorId})` : vendorOrgName
 
-  let subject, headline, headlineColor, bodyLine, noteLabel, noteValue
+  let subject, headline, headlineColor, bodyLine, noteLabel, noteValue, badge
   if (isBlockedKyc) {
     subject = `Vendor Registration Blocked — Aadhaar/PAN Not Linked: ${vendorOrgName}`
     headline = 'Vendor Registration Blocked — Aadhaar/PAN Not Linked'
@@ -21,10 +24,17 @@ function buildEmail({ type, vendorOrgName, vendorId, actorName, reason, comment,
     bodyLine = `${escapeHtml(submitterEmail || 'A user')} tried to register vendor <strong>${escapeHtml(vendorOrgName)}</strong>` +
       `${panNumber ? ` (PAN ${escapeHtml(panNumber)})` : ''} and disclosed that their Aadhaar and PAN are <strong>not linked</strong>. ` +
       `The submission was blocked and no vendor record was created. Flagging for Finance's awareness in case follow-up is needed.`
+  } else if (type === 'submitted') {
+    subject = `Vendor Submitted: ${vendorLabel}`
+    headline = 'Vendor Submitted'
+    headlineColor = '#1A1A1A'
+    badge = STATUS_BADGE.submitted
+    bodyLine = `Your vendor <strong>${escapeHtml(vendorLabel)}</strong> has been submitted and is now awaiting approval.`
   } else {
     subject = `Vendor ${isApproved ? 'Approved' : 'Not Approved'}: ${vendorLabel}`
     headline = isApproved ? 'Vendor Approved' : 'Vendor Not Approved'
     headlineColor = isApproved ? '#15803D' : '#B91C1C'
+    badge = isApproved ? STATUS_BADGE.approved : STATUS_BADGE.rejected
     bodyLine = isApproved
       ? `Your vendor <strong>${escapeHtml(vendorLabel)}</strong> has been approved by ${escapeHtml(actorName || 'Finance')}. You can now raise purchase requests against them.`
       : `Your vendor <strong>${escapeHtml(vendorLabel)}</strong> was not approved by ${escapeHtml(actorName || 'Finance')}. You can edit and resubmit it.`
@@ -33,34 +43,17 @@ function buildEmail({ type, vendorOrgName, vendorId, actorName, reason, comment,
   }
 
   const noteBlock = noteValue
-    ? `<tr><td style="padding-top:16px;">
+    ? `<div style="margin-top:16px;">
          <div style="font-size:12px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">${noteLabel}</div>
          <div style="font-size:14px;color:#1A1F36;background:#F8F9FA;border:1px solid #E3E8EF;border-radius:4px;padding:12px 14px;">${escapeHtml(noteValue)}</div>
-       </td></tr>`
+       </div>`
     : ''
 
-  const html = `<!doctype html>
-<html>
-  <body style="margin:0;padding:0;background:#F4F5F7;font-family:Arial,Helvetica,sans-serif;">
-    <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F5F7;padding:32px 0;">
-      <tr><td align="center">
-        <table width="480" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border-radius:6px;overflow:hidden;border:1px solid #E3E8EF;">
-          <tr><td style="background:${BRAND_COLOR};padding:18px 24px;">
-            <div style="font-size:14px;font-weight:700;color:#FFFFFF;">The Nudge Institute — Expense Tracker</div>
-          </td></tr>
-          <tr><td style="padding:24px;">
-            <div style="font-size:17px;font-weight:700;color:${headlineColor};margin-bottom:12px;">${headline}</div>
-            <table cellpadding="0" cellspacing="0"><tr><td style="font-size:14px;color:#374151;line-height:1.6;">${bodyLine}</td></tr>${noteBlock}</table>
-          </td></tr>
-          <tr><td style="padding:14px 24px;background:#F8F9FA;border-top:1px solid #E3E8EF;">
-            <div style="font-size:11px;color:#9CA3AF;">This is an automated message from the Nudge Expense Tracker. Please do not reply to this email.</div>
-          </td></tr>
-        </table>
-      </td></tr>
-    </table>
-  </body>
-</html>`
-
+  const html = wrapEmailShell({
+    headerHtml: renderBrandHeader(),
+    statusHtml: badge ? renderStatusBadge(badge) : '',
+    bodyHtml: `<div style="font-size:16px;font-weight:700;color:${headlineColor};margin-bottom:10px;">${headline}</div>${bodyLine}${noteBlock}`,
+  })
   const text = `${headline}\n\n${bodyLine.replace(/<[^>]+>/g, '')}${noteValue ? `\n\n${noteLabel}: ${noteValue}` : ''}`
 
   return { subject, html, text }
@@ -80,8 +73,8 @@ export default async function handler(req, res) {
   }
 
   const { type, vendorOrgName, vendorId, recipientEmail, actorName, reason, comment, panNumber, submitterEmail } = req.body || {}
-  if (!['approved', 'rejected', 'aadhaar_pan_not_linked'].includes(type)) {
-    res.status(400).json({ error: 'type must be "approved", "rejected" or "aadhaar_pan_not_linked"' })
+  if (!['submitted', 'approved', 'rejected', 'aadhaar_pan_not_linked'].includes(type)) {
+    res.status(400).json({ error: 'type must be "submitted", "approved", "rejected" or "aadhaar_pan_not_linked"' })
     return
   }
   const recipients = Array.isArray(recipientEmail) ? recipientEmail.filter(Boolean) : [recipientEmail].filter(Boolean)
@@ -94,20 +87,10 @@ export default async function handler(req, res) {
   const fromAddress = process.env.RESEND_FROM_EMAIL || 'The Nudge Institute <onboarding@resend.dev>'
 
   try {
-    const resendRes = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({ from: fromAddress, to: recipients, subject, html, text }),
-    })
-    const data = await resendRes.json()
-    if (!resendRes.ok) {
-      console.error('Resend API error:', data)
-      res.status(502).json({ error: data?.message || 'Failed to send email' })
-      return
-    }
-    res.status(200).json({ ok: true, id: data?.id })
+    const result = await sendViaResend({ apiKey, from: fromAddress, to: recipients, subject, html, text })
+    res.status(200).json(result)
   } catch (err) {
-    console.error('send-vendor-email failed:', err)
-    res.status(500).json({ error: 'Failed to send email' })
+    console.error('send-vendor-email failed:', err.resendError || err)
+    res.status(502).json({ error: err.message || 'Failed to send email' })
   }
 }

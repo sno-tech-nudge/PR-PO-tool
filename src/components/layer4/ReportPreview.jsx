@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { determineApprovalRoute, checkLargeClaimDonorMention, flagEntityContext } from '../../lib/policyEngine'
 import { generateExpenseReportPDF, downloadPDF, uploadPDFToSupabase } from '../../lib/pdfGenerator'
 import { generateReportReference } from '../../lib/reportReference'
+import { sendReportEmail } from '../../lib/reportEmail'
 import ReportSummaryCard from './ReportSummaryCard'
 import ExpenseLineItem from './ExpenseLineItem'
 import PDFTemplate from './PDFTemplate'
@@ -206,6 +207,11 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
         }
       }
 
+      sendReportEmail({
+        type: 'submitted', recipientEmail: user?.email, reportReference: reference,
+        amount: total, currentStep: 0,
+      })
+
       setGenerating(false)
       setSubmitting(false)
       onSubmitted({
@@ -315,7 +321,7 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
       </div>
 
       {/* Fixed bottom bar */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 10 }}>
+      <div style={{ position: 'fixed', bottom: 0, left: '220px', right: 0, zIndex: 10 }}>
         <div style={{
           maxWidth: '480px', margin: '0 auto',
           background: '#FFFFFF', borderTop: '1px solid #E8E8E8', padding: '16px',

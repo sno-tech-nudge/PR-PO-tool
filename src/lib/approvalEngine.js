@@ -1,3 +1,6 @@
+import { sendReportEmail } from './reportEmail'
+import { getApproverEmailsForLevel, getEmailsByRole } from './auth'
+
 // PR approval chain — fixed for every PR regardless of amount:
 // Functional Leader → PR Approver → PO Approver (Finance issues the PO;
 // handled as a separate stage in prApprovalActions.js/PODetail.jsx, not a
@@ -82,7 +85,9 @@ export async function processApproval(
   action,
   notes,
   supabaseClient,
-  approverEmail
+  approverEmail,
+  report,
+  approverName
 ) {
   const now = new Date().toISOString()
 
@@ -112,11 +117,29 @@ export async function processApproval(
         .from('expense_reports')
         .update({ status: 'under_review', reviewed_by: approverLevel, reviewed_at: now })
         .eq('id', reportId)
+
+      sendReportEmail({
+        type: 'advanced', recipientEmail: report?.employee_email, reportReference: report?.report_reference,
+        amount: report?.total_amount, actorName: approverName, nextLevelLabel: nextApproval.approver_name, currentStep: 1,
+      })
+      getApproverEmailsForLevel(nextApproval.required_role).then(emails => sendReportEmail({
+        type: 'action_needed', recipientEmail: emails, reportReference: report?.report_reference,
+        amount: report?.total_amount, nextLevelLabel: nextApproval.approver_name,
+      }))
     } else {
       await supabaseClient
         .from('expense_reports')
         .update({ status: 'approved', approved_at: now, reviewed_by: approverLevel, reviewed_at: now })
         .eq('id', reportId)
+
+      sendReportEmail({
+        type: 'advanced', recipientEmail: report?.employee_email, reportReference: report?.report_reference,
+        amount: report?.total_amount, actorName: approverName, nextLevelLabel: 'Finance (reimbursement processing)', currentStep: 2,
+      })
+      getEmailsByRole('finance').then(emails => sendReportEmail({
+        type: 'action_needed', recipientEmail: emails, reportReference: report?.report_reference,
+        amount: report?.total_amount, nextLevelLabel: 'Finance processing',
+      }))
     }
   }
 
@@ -144,6 +167,11 @@ export async function processApproval(
     if (expenseIds.length > 0) {
       await supabaseClient.from('expense_details').update({ status: 'saved' }).in('id', expenseIds)
     }
+
+    sendReportEmail({
+      type: 'rejected', recipientEmail: report?.employee_email, reportReference: report?.report_reference,
+      actorName: approverName, reason: notes,
+    })
   }
 }
 

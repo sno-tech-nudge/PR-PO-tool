@@ -59,7 +59,7 @@ export default function FinanceDashboard({ user, showToast, onBack }) {
     setPendingLoading(true)
     const { data } = await supabase
       .from('expense_reports')
-      .select(`id, report_reference, total_amount, expense_count, status, brand, approved_at,
+      .select(`id, report_reference, total_amount, expense_count, status, brand, approved_at, employee_email,
         report_expenses (expense_details (id, vendor, category, amount, reimbursement_type))`)
       .eq('status', 'approved')
       .order('approved_at', { ascending: true })

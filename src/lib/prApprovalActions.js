@@ -2,8 +2,10 @@ import { supabase } from './supabase'
 import { generatePOPDF, uploadPDFToSupabase } from './pdfGenerator'
 import { autoLinkPRToExpense } from './linkEngine'
 import { getFiscalYearPrefix } from './formCalc'
-import { getEmailsByRole } from './auth'
+import { getEmailsByRole, getApproverEmailsForLevel } from './auth'
 import { notifySlack, recordUrl } from './slack'
+import { sendPREmail } from './prEmail'
+import { buildPRTimelineSteps } from './prStatusSteps'
 
 function fmtAmt(n) { return `₹${Number(n || 0).toLocaleString('en-IN')}` }
 
@@ -47,6 +49,11 @@ export async function approvePRLevel({ prId, approvals, user, pr }) {
     status: 'approved', actioned_at: now, approver_email: user.email,
   }).eq('id', currentPending.id)
 
+  // Reflects the update above (plus the next-level promotion below, if any)
+  // so the email timeline shows the state the tool will show once reloaded,
+  // not the stale pre-update snapshot the caller fetched.
+  const updatedApprovals = approvals.map(a => (a.id === currentPending.id ? { ...a, status: 'approved' } : a))
+
   const nextWaiting = approvals.find(a => a.status === 'waiting')
   if (nextWaiting) {
     await supabase.from('pr_approvals').update({ status: 'pending' }).eq('id', nextWaiting.id)
@@ -60,11 +67,30 @@ export async function approvePRLevel({ prId, approvals, user, pr }) {
       })
     }
     notifySlack(`✅ PR <${recordUrl('pr', prId)}|${pr?.pr_number || prId}> approved by ${currentPending.approver_name} (${user.name}) — now awaiting *${nextWaiting.approver_name}* approval.`)
+
+    const timelineForNext = updatedApprovals.map(a => (a.id === nextWaiting.id ? { ...a, status: 'pending' } : a))
+    const timelineSteps = buildPRTimelineSteps('submitted', timelineForNext)
+    sendPREmail({
+      type: 'advanced', recipientEmail: pr?.requested_by, prNumber: pr?.pr_number,
+      amount: pr?.amount, actorName: user.name, nextLevelLabel: nextWaiting.approver_name, timelineSteps,
+    })
+    getApproverEmailsForLevel(nextWaiting.required_role).then(emails => sendPREmail({
+      type: 'action_needed', recipientEmail: emails, prNumber: pr?.pr_number,
+      amount: pr?.amount, nextLevelLabel: nextWaiting.approver_name, timelineSteps,
+    }))
+
     return { ok: true, isFinal: false, currentPending, nextWaiting }
   }
 
   await supabase.from('purchase_requests').update({ status: 'approved' }).eq('id', prId)
   notifySlack(`✅ PR <${recordUrl('pr', prId)}|${pr?.pr_number || prId}> fully approved by ${currentPending.approver_name} (${user.name}) — ${fmtAmt(pr?.amount)}, ready for PO.`)
+
+  sendPREmail({
+    type: 'advanced', recipientEmail: pr?.requested_by, prNumber: pr?.pr_number,
+    amount: pr?.amount, actorName: user.name, nextLevelLabel: 'Finance (PO issuance)',
+    timelineSteps: buildPRTimelineSteps('approved', updatedApprovals),
+  })
+
   return { ok: true, isFinal: true, currentPending, nextWaiting: null }
 }
 
@@ -91,6 +117,10 @@ export async function createPendingPO({ prId, pr, amount }) {
       relatedId: newPO.id,
     })
     notifySlack(`📦 PO <${recordUrl('po', newPO.id)}|${poNumber}> created for PR ${pr?.pr_number || ''} — ${fmtAmt(poAmount)} — awaiting *Finance* approval.`)
+    getEmailsByRole('finance').then(emails => sendPREmail({
+      type: 'action_needed', recipientEmail: emails, prNumber: pr?.pr_number,
+      amount: poAmount, nextLevelLabel: 'Finance (PO issuance)',
+    }))
     return newPO
   } catch (err) {
     console.error('PO creation error:', err.message)
@@ -139,6 +169,12 @@ export async function approvePO({ po, pr, user, setPOData }) {
     } catch { /* non-blocking — the PO is already approved above */ }
     notifySlack(`✅ PO <${recordUrl('po', po.id)}|${po.po_number}> approved & issued by ${user.name} — ${fmtAmt(po.amount)} (PR ${pr.pr_number}).`)
 
+    sendPREmail({
+      type: 'finalized', recipientEmail: pr.requested_by, prNumber: pr.pr_number,
+      amount: po.amount, poNumber: po.po_number,
+      timelineSteps: buildPRTimelineSteps('po_generated', []),
+    })
+
     return true
   } catch (err) {
     console.error('PO approval error:', err.message)
@@ -149,10 +185,16 @@ export async function approvePO({ po, pr, user, setPOData }) {
 // Finance rejects a pending PO — it's cancelled with a reason, but the
 // underlying PR stays approved so Finance can create a corrected
 // replacement PO against the same PR without re-running PR approval.
-export async function rejectPO({ poId, reason, po, user }) {
+export async function rejectPO({ poId, reason, po, user, pr }) {
   await supabase.from('purchase_orders').update({ status: 'rejected', rejection_reason: reason }).eq('id', poId)
   if (po && user) {
     notifySlack(`❌ PO <${recordUrl('po', poId)}|${po.po_number}> rejected by ${user.name}. Reason: ${reason}`)
+  }
+  if (pr) {
+    sendPREmail({
+      type: 'rejected', recipientEmail: pr.requested_by, prNumber: pr.pr_number,
+      actorName: user?.name, reason,
+    })
   }
   return { ok: true }
 }
@@ -187,5 +229,9 @@ export async function rejectPRLevel({ prId, approvals, pr, user, reason }) {
     })
   } catch { /* non-blocking — the PR is already rejected above */ }
   notifySlack(`❌ PR <${recordUrl('pr', prId)}|${pr?.pr_number || prId}> rejected by ${user.name}. Reason: ${reason}`)
+  sendPREmail({
+    type: 'rejected', recipientEmail: pr?.requested_by, prNumber: pr?.pr_number,
+    actorName: user.name, reason,
+  })
   return { ok: true }
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { sendReportEmail } from '../../lib/reportEmail'
 
 export default function ReimbursementBatch({ reports, onReimbursed }) {
   const [selected, setSelected] = useState(new Set())
@@ -47,6 +48,11 @@ export default function ReimbursementBatch({ reports, onReimbursed }) {
       setSubmitting(false)
       return
     }
+
+    selectedReports.forEach(r => sendReportEmail({
+      type: 'finalized', recipientEmail: r.employee_email, reportReference: r.report_reference,
+      amount: r.total_amount, currentStep: 4,
+    }))
 
     setShowModal(false)
     setSubmitting(false)

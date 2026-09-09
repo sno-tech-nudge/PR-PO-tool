@@ -1,12 +1,4 @@
-const GENERIC_STEPS = ['Draft', 'Submitted', 'Approved', 'PO Issued']
-
-const STATUS_STEP = {
-  draft:         0,
-  submitted:     1,
-  approved:      2,
-  po_generated:  3,
-  rejected:     -1,
-}
+import { buildPRTimelineSteps } from '../../lib/prStatusSteps'
 
 if (typeof document !== 'undefined' && !document.getElementById('pr-timeline-style')) {
   const s = document.createElement('style')
@@ -15,38 +7,8 @@ if (typeof document !== 'undefined' && !document.getElementById('pr-timeline-sty
   document.head.appendChild(s)
 }
 
-// Fallback used when no pr_approvals rows are available — collapses every
-// approval level into one generic "Approved" step.
-function buildGenericSteps(status) {
-  const currentStep = STATUS_STEP[status] ?? 0
-  if (currentStep === -1) {
-    return GENERIC_STEPS.map((label, i) => ({ label: i === 1 ? 'Rejected' : label, state: i === 1 ? 'rejected' : 'waiting' }))
-  }
-  return GENERIC_STEPS.map((label, i) => ({
-    label,
-    state: i < currentStep ? 'done' : i === currentStep ? 'current' : 'waiting',
-  }))
-}
-
-// One step per actual approval level (Functional Leader, COO, ...) instead of
-// collapsing them all into a single "Approved" dot.
-function buildLevelAwareSteps(status, approvals) {
-  const isRejected = status === 'rejected'
-  const levelSteps = approvals.map(a => ({
-    label: a.approver_name,
-    state: a.status === 'approved' ? 'done' : a.status === 'rejected' ? 'rejected' : a.status === 'pending' ? 'current' : 'waiting',
-  }))
-  const steps = [{ label: 'Submitted', state: 'done' }, ...levelSteps]
-  if (!isRejected) {
-    steps.push({ label: 'PO Issued', state: status === 'po_generated' ? 'done' : status === 'approved' ? 'current' : 'waiting' })
-  }
-  return steps
-}
-
 export default function PRStatusTimeline({ status = 'draft', approvals, compact = false }) {
-  const steps = approvals && approvals.length > 0
-    ? buildLevelAwareSteps(status, approvals)
-    : buildGenericSteps(status)
+  const steps = buildPRTimelineSteps(status, approvals)
 
   return (
     <div style={{ padding: compact ? '8px 0' : '12px 0' }}>

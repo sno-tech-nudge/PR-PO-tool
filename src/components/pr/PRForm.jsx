@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { getPRApprovalLevels, getRequiredQuotes } from '../../lib/approvalEngine'
 import { getEmailsByRole } from '../../lib/auth'
+import { sendPREmail } from '../../lib/prEmail'
+import { buildPRTimelineSteps } from '../../lib/prStatusSteps'
 import { generatePRSummary } from '../../lib/claude'
 import { EXPENSE_NATURES, validateAllocations, primaryAllocation } from '../../lib/donorData'
 import { quotesValidity, advanceValidity, breakdownTotals, lineItemsBase, lineItemsValid, distinctCategories, getFiscalYearPrefix, fiscalYearStartStr } from '../../lib/formCalc'
@@ -489,6 +491,14 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
       } catch { /* non-blocking */ }
 
       notifySlack(`📝 New PR raised: <${recordUrl('pr', prId)}|${prNumber}> — ₹${bd.total.toLocaleString('en-IN')} (${categoriesLabel}) by ${user.name}. Awaiting *Functional Leader* approval.${advNote}`)
+
+      sendPREmail({
+        type: 'submitted',
+        recipientEmail: user.email,
+        prNumber,
+        amount: bd.total,
+        timelineSteps: buildPRTimelineSteps('submitted', approvalRecords),
+      })
 
       onSaved({ prId, prNumber })
     } catch (err) {

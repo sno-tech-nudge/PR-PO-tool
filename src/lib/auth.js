@@ -79,6 +79,17 @@ export async function getEmailsByRole(role) {
   return (data || []).map(r => r.email)
 }
 
+// Who to email for an "action needed" notice at a given report_approvals/
+// pr_approvals level. A specific required_role (fl/coo/pr_approver/finance)
+// targets just that role; the coarse "Reporting Manager" level has no 1:1
+// role (required_role: null), so it falls back to everyone canAccessApprovals
+// already lets act there — the email reaches exactly who can actually act.
+export async function getApproverEmailsForLevel(requiredRole) {
+  if (requiredRole) return getEmailsByRole(requiredRole)
+  const { data } = await supabase.from('team_members').select('email').in('role', ['admin', 'finance', 'fl', 'pr_approver', 'coo'])
+  return (data || []).map(r => r.email)
+}
+
 // ─── Permission helpers ──────────────────────────────────────────────────
 // admin bypasses every restriction below — "admin has both finance & employee
 // view... can access & do anything."

@@ -120,7 +120,7 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
         .map(([id, note]) => `[${id.slice(-6)}]: ${note}`)
         .join('; ')
 
-      await processApproval(reportId, pendingApproval.approver_level, 'approved', combinedNotes || '', supabase, user?.email)
+      await processApproval(reportId, pendingApproval.approver_level, 'approved', combinedNotes || '', supabase, user?.email, report, user?.name)
       await createNotification(
         report?.employee_email,
         reportId,
@@ -142,7 +142,7 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
   async function handleReject(reason) {
     if (!pendingApproval) return
     try {
-      await processApproval(reportId, pendingApproval.approver_level, 'rejected', reason, supabase, user?.email)
+      await processApproval(reportId, pendingApproval.approver_level, 'rejected', reason, supabase, user?.email, report, user?.name)
       await createNotification(
         report?.employee_email,
         reportId,
@@ -333,7 +333,7 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
 
       {/* Fixed decision bar — only shown when this viewer can act on the current level */}
       {!isAlreadyReviewed && roleMatches && (
-        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 10 }}>
+        <div style={{ position: 'fixed', bottom: 0, left: '220px', right: 0, zIndex: 10 }}>
           <div style={{
             maxWidth: '480px', margin: '0 auto',
             background: '#FFFFFF', borderTop: '1px solid #E8E8E8', padding: '16px',
