@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { generateExpenseAttachmentsPDF, downloadPDF } from '../../lib/expenseAttachmentsPdf'
 
 const WHO_LABELS = { just_me: 'Just me', my_team: 'Multiple people' }
 
@@ -123,6 +124,60 @@ function SupportingAttachments({ attachments }) {
   )
 }
 
+// Merges the receipt, payment proof, and any supporting_attachments into
+// one downloadable PDF instead of leaving them as separate images to
+// view/save one at a time — reuses the same pdf-lib merge already built
+// for vendor profile PDFs (src/lib/pdfMerge.js).
+function DownloadAttachmentsButton({ captureId, attachments }) {
+  const [busy, setBusy] = useState(false)
+  const [step, setStep] = useState('')
+  const [error, setError] = useState(null)
+
+  async function handleDownload() {
+    setBusy(true)
+    setError(null)
+    try {
+      const documents = []
+      if (captureId) {
+        const { data } = await supabase.from('expense_captures').select('receipt_storage_path, payment_storage_path').eq('id', captureId).single()
+        if (data?.receipt_storage_path) {
+          const { data: s } = await supabase.storage.from('expense-documents').createSignedUrl(data.receipt_storage_path, 3600)
+          if (s?.signedUrl) documents.push({ label: 'Receipt', url: s.signedUrl, path: data.receipt_storage_path })
+        }
+        if (data?.payment_storage_path) {
+          const { data: s } = await supabase.storage.from('expense-documents').createSignedUrl(data.payment_storage_path, 3600)
+          if (s?.signedUrl) documents.push({ label: 'Payment proof', url: s.signedUrl, path: data.payment_storage_path })
+        }
+      }
+      for (const a of attachments || []) {
+        const { data: s } = await supabase.storage.from('expense-documents').createSignedUrl(a.path, 3600)
+        if (s?.signedUrl) documents.push({ label: a.label, url: s.signedUrl, path: a.path })
+      }
+      if (documents.length === 0) { setError('No documents found.'); setBusy(false); return }
+
+      const blob = await generateExpenseAttachmentsPDF({ documents, onProgress: setStep })
+      downloadPDF(blob, 'expense-attachments.pdf')
+    } catch (err) {
+      console.error('Attachments PDF error:', err)
+      setError('Could not generate the PDF.')
+    }
+    setBusy(false)
+    setStep('')
+  }
+
+  return (
+    <div style={{ marginBottom: '8px' }}>
+      <div
+        onClick={busy ? undefined : handleDownload}
+        style={{ fontSize: '11px', color: busy ? '#9CA3AF' : '#8C3225', cursor: busy ? 'default' : 'pointer', textDecoration: 'underline', display: 'inline-block' }}
+      >
+        {busy ? (step || 'Preparing PDF…') : 'Download attachments (PDF)'}
+      </div>
+      {error && <div style={{ fontSize: '11px', color: '#DC2626', marginTop: '4px' }}>{error}</div>}
+    </div>
+  )
+}
+
 export default function ExpenseApprovalCard({ expense, result, onFlag, onRemove }) {
   const [expanded, setExpanded] = useState(false)
   const [flagging, setFlagging] = useState(false)
@@ -229,6 +284,9 @@ export default function ExpenseApprovalCard({ expense, result, onFlag, onRemove 
           )}
           {expense.supporting_attachments?.length > 0 && (
             <SupportingAttachments attachments={expense.supporting_attachments} />
+          )}
+          {(expense.capture_id || expense.supporting_attachments?.length > 0) && (
+            <DownloadAttachmentsButton captureId={expense.capture_id} attachments={expense.supporting_attachments} />
           )}
         </div>
       )}

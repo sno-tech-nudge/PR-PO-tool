@@ -1,13 +1,9 @@
 // Builds a single PDF: the vendor overview (rendered from the off-screen
-// VendorPdfTemplate) followed by one page per attached document.
-//
-// Uses pdf-lib rather than pdfjs-dist for the attachments: pdf-lib merges
-// existing PDF pages byte-for-byte on the main thread, with no rendering
-// worker involved at all — pdfjs-dist's worker (the technique used
-// elsewhere in this app for reading an uploaded PDF page, e.g.
-// receiptImage.js) hung indefinitely here in both dev and production
-// builds, apparently a main-thread/worker version mismatch from this
-// project's bundling. pdf-lib sidesteps that entirely.
+// VendorPdfTemplate) followed by one page per attached document (the
+// document-merging part is shared with any other feature that needs to
+// combine uploaded files into one PDF — see src/lib/pdfMerge.js).
+
+import { appendDocumentsToPdf, downloadPDF } from './pdfMerge'
 
 const A4_WIDTH = 595.28
 const A4_HEIGHT = 841.89
@@ -18,27 +14,6 @@ function dataUrlToBytes(dataUrl) {
   const bytes = new Uint8Array(binary.length)
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
   return bytes
-}
-
-// Normalizes any image blob to JPEG bytes via canvas — same technique as
-// imageFileToJpegBase64 in receiptImage.js — so pdf-lib's embedJpg always
-// gets a format it understands regardless of the source (PNG, WebP, etc).
-async function imageBlobToJpegBytes(blob) {
-  const dataUrl = await new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(blob)
-    const img = new Image()
-    img.onload = () => {
-      const canvas = document.createElement('canvas')
-      canvas.width = img.naturalWidth
-      canvas.height = img.naturalHeight
-      canvas.getContext('2d').drawImage(img, 0, 0)
-      URL.revokeObjectURL(url)
-      resolve(canvas.toDataURL('image/jpeg', 0.9))
-    }
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not load image')) }
-    img.src = url
-  })
-  return dataUrlToBytes(dataUrl)
 }
 
 function drawFitted(page, image, label, font) {
@@ -80,45 +55,12 @@ export async function generateVendorProfilePDF({ documents = [], onProgress } = 
   const overviewImg = await pdfDoc.embedPng(overviewBytes)
   drawFitted(pdfDoc.addPage([A4_WIDTH, A4_HEIGHT]), overviewImg, null, font)
 
-  for (const doc of documents) {
-    onProgress?.(`Adding ${doc.label}…`)
-    try {
-      const res = await fetch(doc.url)
-      if (!res.ok) throw new Error(`fetch failed: ${res.status}`)
-      const blob = await res.blob()
-      const isPdf = blob.type === 'application/pdf' || /\.pdf(\?|$)/i.test(doc.path || '')
-
-      if (isPdf) {
-        const srcDoc = await PDFDocument.load(await blob.arrayBuffer())
-        const copiedPages = await pdfDoc.copyPages(srcDoc, srcDoc.getPageIndices())
-        copiedPages.forEach((page, idx) => {
-          pdfDoc.addPage(page)
-          const label = copiedPages.length > 1 ? `${doc.label} (page ${idx + 1}/${copiedPages.length})` : doc.label
-          page.drawText(label, { x: 16, y: page.getHeight() - 20, size: 9, font })
-        })
-      } else {
-        const jpegBytes = await imageBlobToJpegBytes(blob)
-        const img = await pdfDoc.embedJpg(jpegBytes)
-        drawFitted(pdfDoc.addPage([A4_WIDTH, A4_HEIGHT]), img, doc.label, font)
-      }
-    } catch (err) {
-      console.error(`Could not embed document "${doc.label}":`, err)
-      const page = pdfDoc.addPage([A4_WIDTH, A4_HEIGHT])
-      page.drawText(`${doc.label} — could not be loaded for this PDF`, { x: 20, y: A4_HEIGHT - 28, size: 11, font })
-    }
-  }
+  await appendDocumentsToPdf(pdfDoc, font, documents, onProgress)
 
   const bytes = await pdfDoc.save()
   return new Blob([bytes], { type: 'application/pdf' })
 }
 
 export function downloadVendorProfilePDF(blob, filename) {
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  URL.revokeObjectURL(url)
+  downloadPDF(blob, filename)
 }

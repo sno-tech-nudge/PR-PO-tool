@@ -4,6 +4,7 @@ import { suggestCategory } from '../../lib/claude'
 import { ENTITIES, EXPENSE_NATURES, getPrograms, getDonorsForProgram } from '../../lib/donorData'
 import { preloadDirectory, getActiveDirectoryEntries } from '../../lib/directory'
 import { attachPendingBalances, poOptionLabel } from '../../lib/poBalance'
+import { toInputDate, fromInputDate } from '../../lib/dateFormat'
 import AmountInput from '../shared/AmountInput'
 
 const CATEGORIES = [
@@ -30,23 +31,6 @@ const CARD_NUMBERS = [
   'XXXX-XXXX-XXXX-3743',
   'XXXX-XXXX-XXXX-3792',
 ]
-
-function toInputDate(dateStr) {
-  if (!dateStr) return ''
-  const ddmm = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
-  if (ddmm) return `${ddmm[3]}-${ddmm[2].padStart(2, '0')}-${ddmm[1].padStart(2, '0')}`
-  const dash = dateStr.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/)
-  if (dash) return `${dash[3]}-${dash[2].padStart(2, '0')}-${dash[1].padStart(2, '0')}`
-  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr
-  return ''
-}
-
-function fromInputDate(val) {
-  if (!val) return ''
-  const m = val.match(/^(\d{4})-(\d{2})-(\d{2})$/)
-  if (m) return `${m[3]}/${m[2]}/${m[1]}`
-  return val
-}
 
 // Searchable multi-select for expense attendees — matches against the org
 // directory (active Zoho accounts only, already preloaded/cached by
