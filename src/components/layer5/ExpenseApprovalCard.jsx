@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { generateExpenseAttachmentsPDF, downloadPDF } from '../../lib/expenseAttachmentsPdf'
 
@@ -14,65 +14,61 @@ function DetailRow({ label, value }) {
   )
 }
 
-// Primary receipt/payment-proof document, linked via expense_captures —
-// storage paths only, so a signed URL is fetched on demand rather than up
-// front for every expense in the report.
+// Primary receipt/payment-proof document, linked via expense_captures.
+// Auto-loads as soon as the card mounts (an approver needs to see the
+// actual receipt to verify the claim, not go looking for a "View
+// documents" link first) — the signed URL fetch is still lazy in the
+// sense that it only happens for expenses actually rendered on screen,
+// just not gated behind an extra click on top of that.
 function ReceiptDocuments({ captureId }) {
   const [urls, setUrls] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
 
-  async function load() {
-    if (urls || loading) return
-    setLoading(true)
-    const { data } = await supabase.from('expense_captures').select('receipt_storage_path, payment_storage_path').eq('id', captureId).single()
-    if (!data) { setLoading(false); return }
-    const links = {}
-    if (data.receipt_storage_path) {
-      const { data: s } = await supabase.storage.from('expense-documents').createSignedUrl(data.receipt_storage_path, 3600)
-      if (s?.signedUrl) links.receipt = s.signedUrl
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      const { data } = await supabase.from('expense_captures').select('receipt_storage_path, payment_storage_path').eq('id', captureId).single()
+      if (cancelled) return
+      if (!data) { setLoading(false); return }
+      const links = {}
+      if (data.receipt_storage_path) {
+        const { data: s } = await supabase.storage.from('expense-documents').createSignedUrl(data.receipt_storage_path, 3600)
+        if (s?.signedUrl) links.receipt = s.signedUrl
+      }
+      if (data.payment_storage_path) {
+        const { data: s } = await supabase.storage.from('expense-documents').createSignedUrl(data.payment_storage_path, 3600)
+        if (s?.signedUrl) links.payment = s.signedUrl
+      }
+      if (!cancelled) { setUrls(links); setLoading(false) }
     }
-    if (data.payment_storage_path) {
-      const { data: s } = await supabase.storage.from('expense-documents').createSignedUrl(data.payment_storage_path, 3600)
-      if (s?.signedUrl) links.payment = s.signedUrl
-    }
-    setUrls(links)
-    setLoading(false)
-  }
+    load()
+    return () => { cancelled = true }
+  }, [captureId])
 
-  if (!urls && !loading) {
-    return (
-      <div
-        onClick={load}
-        style={{ fontSize: '11px', color: '#6B6B6B', cursor: 'pointer', textDecoration: 'underline', marginBottom: '8px' }}
-      >
-        View documents
-      </div>
-    )
-  }
-  if (loading) return <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '8px' }}>Loading…</div>
-  if (!urls.receipt && !urls.payment) return <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '8px' }}>No documents found</div>
+  if (loading) return <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '8px' }}>Loading receipt…</div>
+  if (!urls?.receipt && !urls?.payment) return <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '8px' }}>No documents found</div>
 
   return (
     <div style={{ display: 'flex', gap: '12px', marginBottom: '8px' }}>
       {urls.receipt && (
-        <div>
+        <a href={urls.receipt} target="_blank" rel="noopener noreferrer">
           <img
             src={urls.receipt}
             alt="Receipt"
-            style={{ maxWidth: '120px', maxHeight: '90px', objectFit: 'contain', border: '1px solid #E8E8E8', display: 'block' }}
+            style={{ maxWidth: '140px', maxHeight: '110px', objectFit: 'contain', border: '1px solid #E8E8E8', display: 'block', borderRadius: '3px' }}
           />
           <div style={{ fontSize: '10px', color: '#6B6B6B', marginTop: '4px' }}>Receipt</div>
-        </div>
+        </a>
       )}
       {urls.payment && (
-        <div>
+        <a href={urls.payment} target="_blank" rel="noopener noreferrer">
           <img
             src={urls.payment}
             alt="Payment proof"
-            style={{ maxWidth: '120px', maxHeight: '90px', objectFit: 'contain', border: '1px solid #E8E8E8', display: 'block' }}
+            style={{ maxWidth: '140px', maxHeight: '110px', objectFit: 'contain', border: '1px solid #E8E8E8', display: 'block', borderRadius: '3px' }}
           />
           <div style={{ fontSize: '10px', color: '#6B6B6B', marginTop: '4px' }}>Payment proof</div>
-        </div>
+        </a>
       )}
     </div>
   )
@@ -252,6 +248,15 @@ export default function ExpenseApprovalCard({ expense, result, onFlag, onRemove 
         </div>
       ))}
 
+      {/* Receipt/payment proof — always visible, not tucked behind "View
+          details", since seeing the actual attachment is the main thing an
+          approver needs to verify a claim. */}
+      {expense.capture_id ? (
+        <ReceiptDocuments captureId={expense.capture_id} />
+      ) : (
+        <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '8px' }}>No receipt linked</div>
+      )}
+
       {/* All compulsory details this expense was filed with */}
       <div
         onClick={() => setExpanded(e => !e)}
@@ -278,10 +283,6 @@ export default function ExpenseApprovalCard({ expense, result, onFlag, onRemove 
             <DetailRow label="GSTIN" value={expense.gstin} />
           </div>
 
-          {expense.capture_id && <ReceiptDocuments captureId={expense.capture_id} />}
-          {!expense.capture_id && (
-            <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '8px' }}>No receipt linked</div>
-          )}
           {expense.supporting_attachments?.length > 0 && (
             <SupportingAttachments attachments={expense.supporting_attachments} />
           )}

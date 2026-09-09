@@ -325,7 +325,7 @@ export default function ReportDetails({ expenses, reportMeta, user, onContinue, 
       <TapCard selected={reimbType === 'petty_cash'} onClick={() => setReimbType(reimbType === 'petty_cash' ? null : 'petty_cash')} main="Petty cash" sub="Collected from finance team in person" fullWidth />
 
       {/* Fixed bottom bar */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 10 }}>
+      <div style={{ position: 'fixed', bottom: 0, left: '220px', right: 0, zIndex: 10 }}>
         <div style={{
           maxWidth: '480px', margin: '0 auto',
           background: '#FFFFFF', borderTop: '1px solid #E8E8E8', padding: '16px',

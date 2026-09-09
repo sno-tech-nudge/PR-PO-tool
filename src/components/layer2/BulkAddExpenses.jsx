@@ -297,7 +297,7 @@ export default function BulkAddExpenses({ user, onSaved, onBack }) {
         <div style={{ fontSize: '13px', color: '#DC2626', marginTop: '16px' }}>{error}</div>
       )}
 
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 10 }}>
+      <div style={{ position: 'fixed', bottom: 0, left: '220px', right: 0, zIndex: 10 }}>
         <div style={{ background: '#FFFFFF', borderTop: '1px solid #E5E7EB', padding: '16px 20px', display: 'flex', gap: '10px', maxWidth: '960px', margin: '0 auto' }}>
           <button
             onClick={handleSave}

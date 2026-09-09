@@ -927,7 +927,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
       )}
 
       {/* Fixed bottom */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 10 }}>
+      <div style={{ position: 'fixed', bottom: 0, left: '220px', right: 0, zIndex: 10 }}>
         <div style={{
           maxWidth: '480px', margin: '0 auto',
           background: '#FFFFFF', borderTop: '1px solid #E8E8E8', padding: '16px',
