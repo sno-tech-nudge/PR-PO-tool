@@ -1,15 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-
-const STATUS_CONFIG = {
-  saved:        { label: 'Saved',        color: '#374151', bg: '#F9FAFB' },
-  submitted:    { label: 'Submitted',    color: '#B45309', bg: '#FFFBEB' },
-  under_review: { label: 'Under Review', color: '#8C3225', bg: '#fdf0ed' },
-  approved:     { label: 'Approved',     color: '#15803D', bg: '#F0FDF4' },
-  rejected:     { label: 'Rejected',     color: '#B91C1C', bg: '#FEF2F2' },
-  processing:   { label: 'Processing',   color: '#6D28D9', bg: '#F5F3FF' },
-  reimbursed:   { label: 'Reimbursed',   color: '#15803D', bg: '#F0FDF4' },
-}
+import ExpenseDetailModal from './ExpenseDetailModal'
+import StatusBadge from '../shared/ExpenseStatusBadge'
 
 function fmtDate(d) {
   if (!d) return '—'
@@ -21,24 +13,13 @@ function fmtDate(d) {
   return dt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-function StatusBadge({ status }) {
-  const sc = STATUS_CONFIG[status] || { label: status, color: '#6B7280', bg: '#F9FAFB' }
-  return (
-    <span style={{
-      fontSize: '10px', fontWeight: 600, padding: '2px 7px', borderRadius: '4px',
-      background: sc.bg, color: sc.color,
-    }}>
-      {sc.label}
-    </span>
-  )
-}
-
 export default function ExpenseHistoryScreen({ user, onViewReport, onBack }) {
   const [tab, setTab]           = useState('reports')
   const [expenses, setExpenses] = useState([])
   const [reports, setReports]   = useState([])
   const [loading, setLoading]   = useState(true)
   const [search, setSearch]     = useState('')
+  const [selectedExpense, setSelectedExpense] = useState(null)
 
   useEffect(() => { loadAll() }, [user?.email])
 
@@ -47,7 +28,10 @@ export default function ExpenseHistoryScreen({ user, onViewReport, onBack }) {
 
     let expsQuery = supabase
       .from('expense_details')
-      .select('id, vendor, amount, date, category, status, payment_method, invoice_number, policy_status, created_at')
+      .select(`id, vendor, amount, date, category, status, payment_method, invoice_number, policy_status, created_at,
+        description, entity, program, donor_name, expense_nature, sub_category, card_no, paid_to, po_number,
+        gstin, reference_number, capture_id, supporting_attachments, expense_type, attendee_count, attendee_names,
+        attendees, per_person_amount, reimbursable`)
       .order('created_at', { ascending: false })
       .limit(200)
 
@@ -219,10 +203,14 @@ export default function ExpenseHistoryScreen({ user, onViewReport, onBack }) {
             </div>
           )}
           {filteredExpenses.map(exp => (
-            <div key={exp.id} style={{
-              border: '1px solid #E5E7EB', borderRadius: '8px', marginBottom: '8px',
-              padding: '12px 14px', background: '#FFFFFF',
-            }}>
+            <div
+              key={exp.id}
+              onClick={() => setSelectedExpense(exp)}
+              style={{
+                border: '1px solid #E5E7EB', borderRadius: '8px', marginBottom: '8px',
+                padding: '12px 14px', background: '#FFFFFF', cursor: 'pointer',
+              }}
+            >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
                 <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827' }}>
                   {exp.vendor || 'Unknown vendor'}
@@ -305,6 +293,10 @@ export default function ExpenseHistoryScreen({ user, onViewReport, onBack }) {
             </div>
           ))}
         </>
+      )}
+
+      {selectedExpense && (
+        <ExpenseDetailModal expense={selectedExpense} onClose={() => setSelectedExpense(null)} />
       )}
     </div>
   )
