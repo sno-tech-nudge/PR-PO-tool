@@ -31,7 +31,7 @@ export default function ExpenseHistoryScreen({ user, onViewReport, onBack }) {
       .select(`id, vendor, amount, date, category, status, payment_method, invoice_number, policy_status, created_at,
         description, entity, program, donor_name, expense_nature, sub_category, card_no, paid_to, po_number,
         gstin, reference_number, capture_id, supporting_attachments, expense_type, attendee_count, attendee_names,
-        attendees, per_person_amount, reimbursable`)
+        attendees, per_person_amount, reimbursable, po_pdf_link, vr_pdf_link, er_pdf_link`)
       .order('created_at', { ascending: false })
       .limit(200)
 

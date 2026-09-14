@@ -6,6 +6,7 @@ import ReportChat from '../shared/ReportChat'
 import { manualLinkPRToExpense } from '../../lib/linkEngine'
 import { getDisplayName } from '../../lib/directory'
 import { generateExpenseAttachmentsPDF, downloadPDF } from '../../lib/expenseAttachmentsPdf'
+import { ExternalAttachmentLinks } from '../shared/ExpenseAttachments'
 
 const STATUS_CONFIG = {
   submitted:    { label: 'Submitted',     color: '#B45309', bg: '#FFFBEB' },
@@ -72,7 +73,7 @@ export default function AdminReportDetail({ reportId, user, onBack, onViewAuditT
               id, vendor, category, amount, date, payment_method,
               invoice_number, gstin, description, policy_status,
               expense_type, reimbursement_type, submitted_at, capture_id,
-              supporting_attachments
+              supporting_attachments, po_pdf_link, vr_pdf_link, er_pdf_link
             )
           )
         `)
@@ -565,9 +566,10 @@ function ExpenseTableRow({ exp, av, aiV, pc, i, total }) {
               {exp.description && <MiniField label="Note" value={exp.description} />}
             </div>
             {exp.capture_id && <ReceiptLink captureId={exp.capture_id} />}
-            {!exp.capture_id && (
+            {!exp.capture_id && !exp.po_pdf_link && !exp.vr_pdf_link && !exp.er_pdf_link && (
               <div style={{ marginTop: '8px', fontSize: '11px', color: '#9CA3AF' }}>No receipt linked</div>
             )}
+            <ExternalAttachmentLinks poLink={exp.po_pdf_link} vrLink={exp.vr_pdf_link} erLink={exp.er_pdf_link} />
             {exp.supporting_attachments?.length > 0 && (
               <SupportingAttachments attachments={exp.supporting_attachments} />
             )}

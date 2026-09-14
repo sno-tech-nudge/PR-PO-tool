@@ -108,6 +108,39 @@ export function SupportingAttachments({ attachments }) {
   )
 }
 
+// Raw external links carried over from migrated/historical data (PO Pdf
+// link, VR PDF Link, ER PDF Link on Zoho's own export) — opened directly
+// in a new tab exactly as given, rather than proxied through our own
+// Storage. No signed-URL fetch needed since these already point straight
+// at the source (Zoho/Google Drive), and whoever clicks it uses their own
+// session there to view it.
+export function ExternalAttachmentLinks({ poLink, vrLink, erLink }) {
+  const links = [
+    poLink && { url: poLink, label: 'View Attachment (PO)' },
+    vrLink && { url: vrLink, label: 'View Attachment (VR)' },
+    erLink && { url: erLink, label: 'View Attachment (Report)' },
+  ].filter(Boolean)
+  if (links.length === 0) return null
+
+  // Only qualify the label when there's more than one to tell apart —
+  // a single link just reads "View Attachment".
+  return (
+    <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginBottom: '8px' }}>
+      {links.map((l, i) => (
+        <a
+          key={i}
+          href={l.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ fontSize: '11px', color: '#8C3225', textDecoration: 'underline' }}
+        >
+          {links.length > 1 ? l.label : 'View Attachment'}
+        </a>
+      ))}
+    </div>
+  )
+}
+
 // Merges the receipt, payment proof, and any supporting_attachments into
 // one downloadable PDF instead of leaving them as separate images to
 // view/save one at a time — reuses the same pdf-lib merge already built

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ReceiptDocuments, SupportingAttachments, DownloadAttachmentsButton } from '../shared/ExpenseAttachments'
+import { ReceiptDocuments, SupportingAttachments, DownloadAttachmentsButton, ExternalAttachmentLinks } from '../shared/ExpenseAttachments'
 
 const WHO_LABELS = { just_me: 'Just me', my_team: 'Multiple people' }
 
@@ -92,9 +92,10 @@ export default function ExpenseApprovalCard({ expense, result, onFlag, onRemove 
           approver needs to verify a claim. */}
       {expense.capture_id ? (
         <ReceiptDocuments captureId={expense.capture_id} />
-      ) : (
+      ) : (expense.po_pdf_link || expense.vr_pdf_link || expense.er_pdf_link) ? null : (
         <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '8px' }}>No receipt linked</div>
       )}
+      <ExternalAttachmentLinks poLink={expense.po_pdf_link} vrLink={expense.vr_pdf_link} erLink={expense.er_pdf_link} />
 
       {/* All compulsory details this expense was filed with */}
       <div

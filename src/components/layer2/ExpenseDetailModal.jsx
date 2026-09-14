@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import StatusBadge from '../shared/ExpenseStatusBadge'
-import { ReceiptDocuments, SupportingAttachments, DownloadAttachmentsButton } from '../shared/ExpenseAttachments'
+import { ReceiptDocuments, SupportingAttachments, DownloadAttachmentsButton, ExternalAttachmentLinks } from '../shared/ExpenseAttachments'
 
 const WHO_LABELS = { just_me: 'Just me', my_team: 'Multiple people' }
 
@@ -161,11 +161,12 @@ export default function ExpenseDetailModal({ expense, onClose }) {
             </div>
             {expense.capture_id ? (
               <ReceiptDocuments captureId={expense.capture_id} />
-            ) : (
+            ) : (expense.po_pdf_link || expense.vr_pdf_link || expense.er_pdf_link) ? null : (
               <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '8px' }}>
                 No receipt attached yet
               </div>
             )}
+            <ExternalAttachmentLinks poLink={expense.po_pdf_link} vrLink={expense.vr_pdf_link} erLink={expense.er_pdf_link} />
             {expense.supporting_attachments?.length > 0 && (
               <SupportingAttachments attachments={expense.supporting_attachments} />
             )}
