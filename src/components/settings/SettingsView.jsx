@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { ROLES, getRoleLabel } from '../../lib/auth'
+import { ROLES, getRoleLabel, canAccessFinance } from '../../lib/auth'
 import MyProfile from './MyProfile'
+import ApprovalRulesView from './ApprovalRulesView'
 
 const EMPTY_FORM = { name: '', email: '', role: 'employee', can_approve_vendors: false }
 
 export default function SettingsView({ user }) {
   const isAdmin = user.role === 'admin'
+  const canSeeSettingsTabs = canAccessFinance(user.role) // admin or finance
   const [tab, setTab] = useState('profile')
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -15,6 +17,8 @@ export default function SettingsView({ user }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [removingId, setRemovingId] = useState(null)
+  const [search, setSearch] = useState('')
+  const [roleFilter, setRoleFilter] = useState('')
 
   useEffect(() => { load() }, [])
 
@@ -25,9 +29,9 @@ export default function SettingsView({ user }) {
     setLoading(false)
   }
 
-  // Non-admins only ever see their own read-only profile — no tab bar needed
-  // since there's nothing else for them here.
-  if (!isAdmin) {
+  // Anyone who isn't admin/finance only ever sees their own read-only
+  // profile — no tab bar needed since there's nothing else for them here.
+  if (!canSeeSettingsTabs) {
     return (
       <div style={{ background: 'var(--taupe-50)', minHeight: '100vh' }}>
         <div style={{ background: 'var(--surface-card)', borderBottom: '1px solid var(--taupe-200)', padding: '0 28px' }}>
@@ -96,6 +100,13 @@ export default function SettingsView({ user }) {
     await supabase.from('team_members').update({ analytics_reset_at: resetAt }).eq('id', member.id)
   }
 
+  const filteredMembers = members.filter(m => {
+    const q = search.trim().toLowerCase()
+    const matchesSearch = !q || m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q)
+    const matchesRole = !roleFilter || m.role === roleFilter
+    return matchesSearch && matchesRole
+  })
+
   const selectStyle = {
     height: '30px', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)',
     padding: '0 8px', fontSize: '12px', color: 'var(--ink)', background: 'var(--surface-card)',
@@ -107,7 +118,11 @@ export default function SettingsView({ user }) {
         <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '14px 0 0' }}>
           <h1 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--ink)', margin: '0 0 8px' }}>Settings</h1>
           <div style={{ display: 'flex', gap: '4px' }}>
-            {[['profile', 'My Profile'], ['team', 'Team & Roles']].map(([key, label]) => (
+            {[
+              ['profile', 'My Profile'],
+              ...(isAdmin ? [['team', 'Team & Roles']] : []),
+              ['approvals', 'Custom Approval'],
+            ].map(([key, label]) => (
               <div
                 key={key}
                 onClick={() => setTab(key)}
@@ -138,14 +153,25 @@ export default function SettingsView({ user }) {
         </div>
       )}
 
-      {tab === 'team' && (
+      {tab === 'team' && isAdmin && (
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 28px' }}>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '8px', flex: 1, minWidth: '260px' }}>
+            <input
+              type="text" value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Search by name or email…"
+              style={{ height: '34px', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '0 10px', fontSize: '13px', flex: 1, maxWidth: '280px' }}
+            />
+            <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} style={{ ...selectStyle, height: '34px' }}>
+              <option value="">All roles</option>
+              {ROLES.map(r => <option key={r} value={r}>{getRoleLabel(r)}</option>)}
+            </select>
+          </div>
           <button
             onClick={() => { setShowAdd(v => !v); setError(null) }}
             style={{
               height: '34px', padding: '0 16px', background: 'var(--action)', color: 'var(--surface-card)',
-              border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+              border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
             }}
           >
             {showAdd ? 'Cancel' : '+ Add Member'}
@@ -211,6 +237,8 @@ export default function SettingsView({ user }) {
 
         {loading ? (
           <div style={{ fontSize: '13px', color: 'var(--text-muted)', padding: '40px 0', textAlign: 'center' }}>Loading…</div>
+        ) : filteredMembers.length === 0 ? (
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)', padding: '40px 0', textAlign: 'center' }}>No team members match your search.</div>
         ) : (
           <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -224,10 +252,10 @@ export default function SettingsView({ user }) {
                 </tr>
               </thead>
               <tbody>
-                {members.map((m, i) => {
+                {filteredMembers.map((m, i) => {
                   const isSelf = m.email.toLowerCase() === user.email.toLowerCase()
                   return (
-                    <tr key={m.id} style={{ borderBottom: i < members.length - 1 ? '1px solid var(--taupe-100)' : 'none', background: i % 2 === 0 ? 'var(--surface-card)' : 'var(--taupe-50)' }}>
+                    <tr key={m.id} style={{ borderBottom: i < filteredMembers.length - 1 ? '1px solid var(--taupe-100)' : 'none', background: i % 2 === 0 ? 'var(--surface-card)' : 'var(--taupe-50)' }}>
                       <td style={{ padding: '10px 14px', fontSize: '12px', color: 'var(--ink)', fontWeight: 500 }}>{m.name}</td>
                       <td style={{ padding: '10px 14px', fontSize: '12px', color: 'var(--ink)', fontFamily: 'monospace' }}>{m.email}</td>
                       <td style={{ padding: '10px 14px' }}>
@@ -283,6 +311,12 @@ export default function SettingsView({ user }) {
           </div>
         )}
       </div>
+      )}
+
+      {tab === 'approvals' && (
+        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 28px' }}>
+          <ApprovalRulesView />
+        </div>
       )}
     </div>
   )

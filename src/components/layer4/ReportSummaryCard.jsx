@@ -1,9 +1,3 @@
-const ROUTE_LABEL = {
-  reporting_manager: 'Reporting Manager',
-  manager_and_fl: 'Reporting Manager and Functional Lead',
-  manager_fl_coo: 'Reporting Manager, Functional Lead and COO',
-}
-
 const PURPOSE_LABELS = {
   internal: 'Internal team work',
   field: 'Field programme or beneficiary visit',
@@ -61,7 +55,7 @@ export default function ReportSummaryCard({ reference, entity, period, expenseCo
       {people && <Row label="People" value={people} alt={true} />}
       <Row
         label="Approval required from"
-        value={ROUTE_LABEL[approvalRoute?.route] || '—'}
+        value={approvalRoute?.label || '—'}
         alt={false}
       />
       <Row label="Generated" value={generatedAt} alt={true} />

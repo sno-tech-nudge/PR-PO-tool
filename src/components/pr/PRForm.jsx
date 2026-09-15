@@ -108,6 +108,10 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
   const [draftId, setDraftId] = useState(existingPR?.status === 'draft' ? existingPR.id : null)
   const [step, setStep]       = useState(0)
   const [errors, setErrors]   = useState({})
+  // True right after a Continue/Review click that failed validation — gates
+  // the error-summary banner so it only appears once someone has actually
+  // tried to move on, not the moment a single field is blurred.
+  const [attemptedNext, setAttemptedNext] = useState(false)
   const [saving, setSaving]   = useState(false)
   const [savingDraft, setSavingDraft] = useState(false)
   const [draftSavedAt, setDraftSavedAt] = useState(null)
@@ -282,7 +286,12 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
     const e = validateStep(step)
     setErrors(e)
     if (step === 1 && belowThreshold) { setShowBelowBlock(true); return }
-    if (Object.keys(e).length) return
+    if (Object.keys(e).length) {
+      setAttemptedNext(true)
+      window.scrollTo({ top: 0 })
+      return
+    }
+    setAttemptedNext(false)
     setStep(s => s + 1)
     window.scrollTo({ top: 0 })
   }
@@ -554,6 +563,19 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
         </div>
       )}
 
+      {attemptedNext && Object.values(errors).some(v => typeof v === 'string') && (
+        <div style={{ background: 'var(--clay-bg)', border: '1px solid var(--clay-border)', borderRadius: 'var(--radius-sm)', padding: '12px 14px', marginBottom: '12px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--clay-text)', marginBottom: '4px' }}>
+            Please fix the following before continuing:
+          </div>
+          <ul style={{ margin: 0, paddingLeft: '18px' }}>
+            {Object.values(errors).filter(v => typeof v === 'string').map((msg, i) => (
+              <li key={i} style={{ fontSize: '12px', color: 'var(--clay-text)', lineHeight: 1.6 }}>{msg}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* Slim progress bar — purely cosmetic, tucked above the step circles
           rather than anywhere near the form fields themselves. */}
       <div style={{ height: '4px', background: 'var(--taupe-100)', borderRadius: 'var(--radius-xs)', marginBottom: '18px', overflow: 'hidden' }}>
@@ -801,7 +823,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
         <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
           {step > 0 && (
             <button
-              onClick={() => setStep(s => s - 1)}
+              onClick={() => { setErrors({}); setAttemptedNext(false); setStep(s => s - 1) }}
               style={{ height: '40px', padding: '0 20px', background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', fontSize: '14px', cursor: 'pointer' }}
             >
               Back
@@ -828,7 +850,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
       {step === STEPS.length - 1 && (
         <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
           <button
-            onClick={() => setStep(s => s - 1)}
+            onClick={() => { setErrors({}); setAttemptedNext(false); setStep(s => s - 1) }}
             style={{ height: '38px', padding: '0 20px', background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', fontSize: '13px', cursor: 'pointer' }}
           >
             ← Edit

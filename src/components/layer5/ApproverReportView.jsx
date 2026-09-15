@@ -308,7 +308,7 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
         />
         <SummaryRow label="Expenses" value={`${expenses.length} item${expenses.length !== 1 ? 's' : ''}`} alt={true} />
         <SummaryRow label="Total amount" value={`₹${Number(report.total_amount || 0).toLocaleString('en-IN')}`} alt={false} />
-        <SummaryRow label="Approval route" value={ROUTE_LABEL[report.approval_route] || '—'} alt={true} />
+        <SummaryRow label="Approval route" value={ROUTE_LABEL[report.approval_route] || (report.approval_route || '—').replace(/_/g, ' ')} alt={true} />
         <SummaryRow label="Status" value={report.status?.replace('_', ' ') || '—'} alt={false} />
       </div>
 

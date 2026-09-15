@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { determineApprovalRoute, checkLargeClaimDonorMention, flagEntityContext } from '../../lib/policyEngine'
+import { getApprovalRules } from '../../lib/approvalEngine'
 import { generateExpenseReportPDF, downloadPDF, uploadPDFToSupabase } from '../../lib/pdfGenerator'
 import { generateReportReference } from '../../lib/reportReference'
 import { sendReportEmail } from '../../lib/reportEmail'
@@ -42,10 +43,13 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
   const [downloadError, setDownloadError] = useState(false)
   const [submitError, setSubmitError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  const [rules, setRules] = useState([])
+
+  useEffect(() => { getApprovalRules(supabase).then(setRules) }, [])
 
   const total = expenses.reduce((sum, e) => sum + (e.amount || 0), 0)
   const period = getPeriod(expenses)
-  const approvalRoute = determineApprovalRoute(expenses)
+  const approvalRoute = determineApprovalRoute(expenses, rules)
   const entity = reportDetails?.entity || null
   const generatedAt = new Date().toLocaleString('en-IN', {
     day: 'numeric', month: 'short', year: 'numeric',

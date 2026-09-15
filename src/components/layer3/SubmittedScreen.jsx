@@ -1,9 +1,3 @@
-const ROUTE_LABEL = {
-  reporting_manager: 'Reporting Manager',
-  manager_and_fl: 'Reporting Manager & Functional Lead',
-  manager_fl_coo: 'Reporting Manager, Functional Lead & COO',
-}
-
 export default function SubmittedScreen({ submission, onAddAnother }) {
   const { reference, approvalRoute, expenseCount, total } = submission || {}
 
@@ -65,7 +59,7 @@ export default function SubmittedScreen({ submission, onAddAnother }) {
           }}>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Approvers</div>
             <div style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text)', textAlign: 'right', maxWidth: '200px' }}>
-              {ROUTE_LABEL[approvalRoute?.route] || '—'}
+              {approvalRoute?.label || '—'}
             </div>
           </div>
         </div>

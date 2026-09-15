@@ -72,7 +72,7 @@ function ReportCard({ report, onClick, showSLA = true }) {
               background: 'var(--taupe-50)', color: 'var(--text-muted)',
             }}>
               <span style={{ fontSize: '11px' }}>◷</span>
-              {ROUTE_LABEL[report.approval_route] || '—'}
+              {ROUTE_LABEL[report.approval_route] || (report.approval_route || '—').replace(/_/g, ' ')}
             </div>
           ) : (
             STATUS_BADGE[report.status] && (

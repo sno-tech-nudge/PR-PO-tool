@@ -4,12 +4,6 @@ import { downloadPDF } from '../../lib/pdfGenerator'
 import { createApprovalRecords } from '../../lib/approvalEngine'
 import StatusTimeline from './StatusTimeline'
 
-const ROUTE_LABEL = {
-  reporting_manager: 'Reporting Manager',
-  manager_and_fl: 'Reporting Manager and Functional Lead',
-  manager_fl_coo: 'Reporting Manager, Functional Lead and COO',
-}
-
 function InfoRow({ label, value, alt }) {
   return (
     <div style={{
@@ -79,7 +73,7 @@ export default function SubmissionConfirmation({ submission, onStartNew, onTrack
         Your report is submitted
       </div>
       <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: '1.5' }}>
-        {ROUTE_LABEL[approvalRoute?.route] || 'Your approver'} has been notified and will review your report.
+        {approvalRoute?.label || 'Your approver'} has been notified and will review your report.
       </div>
 
       {/* Reference card */}
@@ -87,7 +81,7 @@ export default function SubmissionConfirmation({ submission, onStartNew, onTrack
         <InfoRow label="Reference" value={<span style={{ fontFamily: 'monospace' }}>{reference}</span>} alt={false} />
         <InfoRow label="Total amount" value={total ? `₹${Number(total).toLocaleString('en-IN')}` : '—'} alt={true} />
         <InfoRow label="Expenses" value={expenseCount ? `${expenseCount} item${expenseCount !== 1 ? 's' : ''}` : '—'} alt={false} />
-        <InfoRow label="Submitted to" value={ROUTE_LABEL[approvalRoute?.route] || '—'} alt={true} />
+        <InfoRow label="Submitted to" value={approvalRoute?.label || '—'} alt={true} />
         <InfoRow label="Expected by" value="Next Friday if approved by Wednesday" alt={false} />
       </div>
 

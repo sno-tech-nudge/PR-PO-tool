@@ -1,12 +1,6 @@
-const ROUTE_STEPS = {
-  reporting_manager: ['You', 'Reporting Manager'],
-  manager_and_fl: ['You', 'Reporting Manager', 'Functional Lead'],
-  manager_fl_coo: ['You', 'Reporting Manager', 'Functional Lead', 'COO'],
-}
-
 export default function ApprovalRoute({ route }) {
   if (!route) return null
-  const steps = ROUTE_STEPS[route.route] || ROUTE_STEPS.reporting_manager
+  const steps = route.steps || ['You', route.label || 'Reporting Manager']
 
   return (
     <div style={{

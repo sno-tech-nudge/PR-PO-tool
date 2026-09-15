@@ -31,31 +31,98 @@ export function getAdvanceFlags(advancePercent) {
   }
 }
 
-// requiredRole gates who can actually act on that level (mirrors
-// pr_approvals.required_role / PRDetail.jsx's roleMatches) — it's a
-// team_members.role value, not the approver_level label. reporting_manager
-// has no natural 1:1 role in the roster (no per-employee manager mapping in
-// this app), so it stays null — canAccessApprovals' coarse fallback applies,
-// same as legacy rows created before this column existed.
-export function getApprovalLevels(totalAmount) {
+// Fallback used only when no active rule matches (nothing seeded yet, or the
+// fetch hasn't resolved) — kept byte-identical to what this function always
+// did before rules became configurable, so a missing/empty rules table never
+// changes real behavior.
+function fallbackLevels(totalAmount) {
   if (totalAmount <= 50000) {
-    return [{ level: 1, role: 'reporting_manager', label: 'Reporting Manager', requiredRole: null }]
+    return [{ level: 1, role: 'level_1', label: 'Reporting Manager', requiredRole: null }]
   }
   if (totalAmount <= 200000) {
     return [
-      { level: 1, role: 'reporting_manager', label: 'Reporting Manager', requiredRole: null },
-      { level: 2, role: 'functional_lead', label: 'Functional Lead', requiredRole: 'fl' },
+      { level: 1, role: 'level_1', label: 'Reporting Manager', requiredRole: null },
+      { level: 2, role: 'level_2', label: 'Functional Lead', requiredRole: 'fl' },
     ]
   }
   return [
-    { level: 1, role: 'reporting_manager', label: 'Reporting Manager', requiredRole: null },
-    { level: 2, role: 'functional_lead', label: 'Functional Lead', requiredRole: 'fl' },
-    { level: 3, role: 'coo', label: 'COO', requiredRole: 'coo' },
+    { level: 1, role: 'level_1', label: 'Reporting Manager', requiredRole: null },
+    { level: 2, role: 'level_2', label: 'Functional Lead', requiredRole: 'fl' },
+    { level: 3, role: 'level_3', label: 'COO', requiredRole: 'coo' },
   ]
 }
 
+// Admin/finance-configurable approval rules — Settings > Custom Approval,
+// backed by the approval_rules table (supabase_migration_approval_rules.sql).
+// Fetched once per flow (not per keystroke) and passed into the pure
+// matching functions below, so the same rule set drives both the
+// pre-submission "Approval route" preview (policyEngine.js
+// determineApprovalRoute) and the records actually created here — the two
+// used to be independently hardcoded and could silently disagree.
+export async function getApprovalRules(supabaseClient) {
+  const { data } = await supabaseClient
+    .from('approval_rules')
+    .select('*')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true })
+  return data || []
+}
+
+function matchRule(rules, totalAmount) {
+  return (rules || []).find(r =>
+    (r.min_amount == null || totalAmount > Number(r.min_amount)) &&
+    (r.max_amount == null || totalAmount <= Number(r.max_amount))
+  )
+}
+
+// requiredRole gates who can actually act on that level (mirrors
+// pr_approvals.required_role / PRDetail.jsx's roleMatches) — it's a
+// team_members.role value, not the approver_level label. A level with no
+// required_role (e.g. today's "Reporting Manager", which has no natural 1:1
+// role in the roster) stays null — canAccessApprovals' coarse fallback
+// applies, same as legacy rows created before required_role existed.
+//
+// Returns either a levels array, or { autoMode: 'approved' | 'rejected' }
+// for a rule configured as Auto Approve / Auto Reject.
+export function getApprovalLevels(totalAmount, rules) {
+  const rule = matchRule(rules, totalAmount)
+  if (!rule) return fallbackLevels(totalAmount)
+  if (rule.mode === 'auto_approve') return { autoMode: 'approved', ruleName: rule.name }
+  if (rule.mode === 'auto_reject') return { autoMode: 'rejected', ruleName: rule.name }
+  return (rule.levels || []).map((lvl, i) => ({
+    level: i + 1, role: `level_${i + 1}`, label: lvl.label, requiredRole: lvl.required_role || null,
+  }))
+}
+
 export async function createApprovalRecords(reportId, totalAmount, supabaseClient) {
-  const levels = getApprovalLevels(totalAmount)
+  const rules = await getApprovalRules(supabaseClient)
+  const levels = getApprovalLevels(totalAmount, rules)
+
+  if (levels.autoMode) {
+    const now = new Date().toISOString()
+    const status = levels.autoMode
+    const patch = status === 'approved'
+      ? { status: 'approved', approved_at: now, reviewed_by: 'auto_rule', reviewed_at: now }
+      : { status: 'rejected', rejected_at: now, reviewed_by: 'auto_rule', reviewed_at: now, rejection_reason: `Auto-rejected by approval rule "${levels.ruleName}".` }
+    const { error } = await supabaseClient.from('expense_reports').update(patch).eq('id', reportId)
+    if (error) console.log('Auto-approval update error:', error.message)
+
+    const { data: report } = await supabaseClient
+      .from('expense_reports')
+      .select('report_reference, total_amount, employee_email')
+      .eq('id', reportId)
+      .maybeSingle()
+    if (report) {
+      sendReportEmail({
+        type: status === 'approved' ? 'advanced' : 'rejected',
+        recipientEmail: report.employee_email, reportReference: report.report_reference,
+        amount: report.total_amount, actorName: 'Approval rules', reason: patch.rejection_reason,
+        nextLevelLabel: status === 'approved' ? 'Finance (reimbursement processing)' : undefined,
+      })
+    }
+    return
+  }
+
   const dueAt = new Date()
   dueAt.setHours(dueAt.getHours() + 48)
 

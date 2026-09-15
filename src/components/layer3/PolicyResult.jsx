@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { determineApprovalRoute } from '../../lib/policyEngine'
+import { getApprovalRules } from '../../lib/approvalEngine'
 import PolicyViolation from './PolicyViolation'
 import PolicyFlag from './PolicyFlag'
 import ApprovalRoute from './ApprovalRoute'
@@ -66,8 +67,11 @@ async function saveReport(expenses, approvalRoute, reference, statusOverride, us
 export default function PolicyResult({ results, expenses, onSubmitted, onProceedToReport, onBack }) {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState(null)
+  const [rules, setRules] = useState([])
 
-  const approvalRoute = determineApprovalRoute(expenses)
+  useEffect(() => { getApprovalRules(supabase).then(setRules) }, [])
+
+  const approvalRoute = determineApprovalRoute(expenses, rules)
 
   // Map results to expenses
   const expenseResults = expenses.map((exp, i) => ({

@@ -272,15 +272,51 @@ export async function checkNonReimbursableAI(expense) {
   } catch { return passed('non_reimbursable') }
 }
 
-export function determineApprovalRoute(expenses) {
+// Oxford-comma-ish join: "A" / "A and B" / "A, B, and C"
+function joinLabels(labels) {
+  if (labels.length === 0) return 'your approver'
+  if (labels.length === 1) return labels[0]
+  if (labels.length === 2) return `${labels[0]} and ${labels[1]}`
+  return `${labels.slice(0, -1).join(', ')}, and ${labels[labels.length - 1]}`
+}
+
+// Same rule-matching as approvalEngine.js's getApprovalLevels — reads the
+// admin/finance-configurable approval_rules table (fetched once by the
+// caller via getApprovalRules, passed in as `rules`) so the pre-submission
+// preview shown here never disagrees with the report_approvals actually
+// created at submission. `rules` empty/undefined falls back to the same
+// ₹50k/₹2L default this function always used before rules were configurable.
+export function determineApprovalRoute(expenses, rules) {
   const highest = Math.max(...expenses.map(e => e.amount || 0))
-  if (highest > 200000) {
-    return { route: 'manager_fl_coo', label: 'Reporting Manager, Functional Lead, and COO', message: 'This report requires approval from your manager, Functional Lead, and COO due to an expense above ₹2,00,000.' }
+  const fallback = () => {
+    if (highest > 200000) {
+      return { levelLabels: ['Reporting Manager', 'Functional Lead', 'COO'], message: 'This report requires approval from your manager, Functional Lead, and COO due to an expense above ₹2,00,000.' }
+    }
+    if (highest > 50000) {
+      return { levelLabels: ['Reporting Manager', 'Functional Lead'], message: 'This report requires approval from your manager and Functional Lead due to an expense above ₹50,000.' }
+    }
+    return { levelLabels: ['Reporting Manager'], message: 'Your manager will review and approve this report.' }
   }
-  if (highest > 50000) {
-    return { route: 'manager_and_fl', label: 'Reporting Manager and Functional Lead', message: 'This report requires approval from your manager and Functional Lead due to an expense above ₹50,000.' }
+
+  const rule = (rules || []).find(r =>
+    (r.min_amount == null || highest > Number(r.min_amount)) &&
+    (r.max_amount == null || highest <= Number(r.max_amount))
+  )
+
+  if (rule?.mode === 'auto_approve') {
+    return { route: 'auto_approved', label: 'Automatically approved', steps: ['You', 'Auto-approved'], message: `This report will be automatically approved (rule: "${rule.name}").` }
   }
-  return { route: 'reporting_manager', label: 'Reporting Manager', message: 'Your manager will review and approve this report.' }
+  if (rule?.mode === 'auto_reject') {
+    return { route: 'auto_rejected', label: 'Automatically rejected', steps: ['You', 'Auto-rejected'], message: `This report will be automatically rejected (rule: "${rule.name}").` }
+  }
+
+  const { levelLabels, message } = rule
+    ? { levelLabels: (rule.levels || []).map(l => l.label), message: rule.description || `This report follows the "${rule.name}" approval rule.` }
+    : fallback()
+
+  const label = joinLabels(levelLabels)
+  const route = levelLabels.map(l => l.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')).join('_') || 'reporting_manager'
+  return { route, label, message, steps: ['You', ...levelLabels] }
 }
 
 export async function runAllChecks(expense, allExpenses) {

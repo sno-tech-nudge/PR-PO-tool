@@ -1,9 +1,3 @@
-const ROUTE_LABEL = {
-  reporting_manager: 'Reporting Manager',
-  manager_and_fl: 'Reporting Manager and Functional Lead',
-  manager_fl_coo: 'Reporting Manager, Functional Lead and COO',
-}
-
 function formatDate(dateStr) {
   if (!dateStr) return '—'
   const parts = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
@@ -66,7 +60,7 @@ function CoverPage({ expenses, reportData }) {
           ['Report reference', reportData.reference],
           ['Period', reportData.period],
           ['Generated', reportData.generatedAt],
-          ['Submitted to', ROUTE_LABEL[reportData.approvalRoute?.route] || '—'],
+          ['Submitted to', reportData.approvalRoute?.label || '—'],
         ].map(([label, value]) => (
           <div key={label} style={{
             display: 'flex', alignItems: 'center', height: '32px',
