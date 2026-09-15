@@ -101,7 +101,7 @@ export default function ExpenseDetailModal({ expense, onClose }) {
             <div style={{ fontSize: '15px', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>
               {expense.vendor || 'Unknown vendor'}
             </div>
-            <StatusBadge status={expense.status} />
+            <StatusBadge status={expense.status} sourceStatus={expense.source_status} />
           </div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: '16px', fontWeight: 700, color: '#111827' }}>

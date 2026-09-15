@@ -5,6 +5,7 @@ import StatusTimeline from './StatusTimeline'
 import NotificationToast from './NotificationToast'
 import ReportChat from '../shared/ReportChat'
 import Confetti from '../shared/Confetti'
+import ExpenseDetailModal from '../layer2/ExpenseDetailModal'
 
 const STATUS_BADGE = {
   draft: { bg: '#F3F4F6', color: '#6B7280', label: 'Draft', icon: '●' },
@@ -55,6 +56,7 @@ export default function ReportStatus({ reportId, onBack, onStartNew, onViewPO })
   const [, setRealtimeConnected] = useState(false)
   const [toast, setToast] = useState(null)
   const [celebrate, setCelebrate] = useState(false)
+  const [selectedExpense, setSelectedExpense] = useState(null)
   const subRef = useRef(null)
   const celebratedRef = useRef(false)
 
@@ -354,8 +356,9 @@ export default function ReportStatus({ reportId, onBack, onStartNew, onViewPO })
             {displayedExpenses.map((exp, i) => (
               <div
                 key={exp.id}
+                onClick={() => setSelectedExpense(exp)}
                 style={{
-                  padding: '12px 16px',
+                  padding: '12px 16px', cursor: 'pointer',
                   borderBottom: i < displayedExpenses.length - 1 ? '1px solid #E8E8E8' : 'none',
                   background: i % 2 === 0 ? '#FFFFFF' : '#F7F7F7',
                 }}
@@ -444,6 +447,10 @@ export default function ReportStatus({ reportId, onBack, onStartNew, onViewPO })
       >
         Go home
       </button>
+
+      {selectedExpense && (
+        <ExpenseDetailModal expense={selectedExpense} onClose={() => setSelectedExpense(null)} />
+      )}
     </div>
   )
 }

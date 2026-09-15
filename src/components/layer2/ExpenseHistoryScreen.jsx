@@ -13,6 +13,53 @@ function fmtDate(d) {
   return dt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+// True whenever there's something worth opening the detail modal for —
+// drives the small paperclip indicator so an attachment is spottable
+// without opening every row to check.
+function hasAttachment(exp) {
+  return !!(exp.capture_id || exp.po_pdf_link || exp.vr_pdf_link || exp.er_pdf_link || exp.supporting_attachments?.length)
+}
+
+function ExpenseRow({ exp, onClick, compact }) {
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        border: compact ? 'none' : '1px solid #E5E7EB',
+        borderTop: compact ? '1px solid #F3F4F6' : undefined,
+        borderRadius: compact ? 0 : '8px',
+        marginBottom: compact ? 0 : '8px',
+        padding: compact ? '10px 4px' : '12px 14px',
+        background: '#FFFFFF', cursor: 'pointer',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: compact ? '12px' : '13px', fontWeight: 600, color: '#111827' }}>
+          {hasAttachment(exp) && <span title="Has an attachment" style={{ fontSize: '11px' }}>📎</span>}
+          {exp.vendor || 'Unknown vendor'}
+        </div>
+        <div style={{ fontSize: compact ? '13px' : '14px', fontWeight: 700, color: '#111827' }}>
+          ₹{Number(exp.amount || 0).toLocaleString('en-IN')}
+        </div>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ fontSize: '11px', color: '#6B7280' }}>
+          {exp.category} · {fmtDate(exp.date)}
+        </div>
+        <StatusBadge status={exp.status} sourceStatus={exp.source_status} />
+      </div>
+      {exp.policy_status && exp.policy_status !== 'pending' && exp.policy_status !== 'passed' && (
+        <div style={{
+          marginTop: '6px', fontSize: '11px', fontWeight: 500,
+          color: exp.policy_status === 'violation' ? '#B91C1C' : '#B45309',
+        }}>
+          Policy: {exp.policy_status}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function ExpenseHistoryScreen({ user, onViewReport, onBack }) {
   const [tab, setTab]           = useState('reports')
   const [expenses, setExpenses] = useState([])
@@ -20,6 +67,7 @@ export default function ExpenseHistoryScreen({ user, onViewReport, onBack }) {
   const [loading, setLoading]   = useState(true)
   const [search, setSearch]     = useState('')
   const [selectedExpense, setSelectedExpense] = useState(null)
+  const [expandedReportIds, setExpandedReportIds] = useState(new Set())
 
   useEffect(() => { loadAll() }, [user?.email])
 
@@ -28,10 +76,10 @@ export default function ExpenseHistoryScreen({ user, onViewReport, onBack }) {
 
     let expsQuery = supabase
       .from('expense_details')
-      .select(`id, vendor, amount, date, category, status, payment_method, invoice_number, policy_status, created_at,
+      .select(`id, report_id, vendor, amount, date, category, status, payment_method, invoice_number, policy_status, created_at,
         description, entity, program, donor_name, expense_nature, sub_category, card_no, paid_to, po_number,
         gstin, reference_number, capture_id, supporting_attachments, expense_type, attendee_count, attendee_names,
-        attendees, per_person_amount, reimbursable, po_pdf_link, vr_pdf_link, er_pdf_link`)
+        attendees, per_person_amount, reimbursable, po_pdf_link, vr_pdf_link, er_pdf_link, source_status`)
       .order('created_at', { ascending: false })
       .limit(200)
 
@@ -60,15 +108,37 @@ export default function ExpenseHistoryScreen({ user, onViewReport, onBack }) {
     : expenses
 
   const filteredReports = search.trim()
-    ? reports.filter(r =>
-        (r.report_reference || '').toLowerCase().includes(search.toLowerCase()) ||
-        (r.brand || '').toLowerCase().includes(search.toLowerCase())
-      )
+    ? reports.filter(r => {
+        const q = search.toLowerCase()
+        if ((r.report_reference || '').toLowerCase().includes(q)) return true
+        if ((r.brand || '').toLowerCase().includes(q)) return true
+        // Also match on what's actually inside the report — someone is far
+        // more likely to remember "the Lalit Ashok expense" than its exact
+        // reference number.
+        return expenses.some(e => e.report_id === r.id && (
+          (e.vendor || '').toLowerCase().includes(q) || (e.category || '').toLowerCase().includes(q)
+        ))
+      })
     : reports
 
   const totalSpend = expenses
     .filter(e => ['submitted','under_review','approved','processing','reimbursed'].includes(e.status))
     .reduce((s, e) => s + (e.amount || 0), 0)
+
+  // Every already-loaded expense already carries report_id, so a report's
+  // own expenses can be read straight out of client state — no extra
+  // per-report query needed to expand one inline.
+  function expensesForReport(reportId) {
+    return expenses.filter(e => e.report_id === reportId)
+  }
+
+  function toggleReport(reportId) {
+    setExpandedReportIds(prev => {
+      const next = new Set(prev)
+      next.has(reportId) ? next.delete(reportId) : next.add(reportId)
+      return next
+    })
+  }
 
   return (
     <div style={{ maxWidth: '560px', margin: '0 auto', padding: '20px', width: '100%', boxSizing: 'border-box' }}>
@@ -203,42 +273,15 @@ export default function ExpenseHistoryScreen({ user, onViewReport, onBack }) {
             </div>
           )}
           {filteredExpenses.map(exp => (
-            <div
-              key={exp.id}
-              onClick={() => setSelectedExpense(exp)}
-              style={{
-                border: '1px solid #E5E7EB', borderRadius: '8px', marginBottom: '8px',
-                padding: '12px 14px', background: '#FFFFFF', cursor: 'pointer',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827' }}>
-                  {exp.vendor || 'Unknown vendor'}
-                </div>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: '#111827' }}>
-                  ₹{Number(exp.amount || 0).toLocaleString('en-IN')}
-                </div>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ fontSize: '11px', color: '#6B7280' }}>
-                  {exp.category} · {fmtDate(exp.date)}
-                </div>
-                <StatusBadge status={exp.status} />
-              </div>
-              {exp.policy_status && exp.policy_status !== 'pending' && exp.policy_status !== 'passed' && (
-                <div style={{
-                  marginTop: '6px', fontSize: '11px', fontWeight: 500,
-                  color: exp.policy_status === 'violation' ? '#B91C1C' : '#B45309',
-                }}>
-                  Policy: {exp.policy_status}
-                </div>
-              )}
-            </div>
+            <ExpenseRow key={exp.id} exp={exp} onClick={() => setSelectedExpense(exp)} />
           ))}
         </>
       )}
 
-      {/* Reports tab */}
+      {/* Reports tab — click a report to expand it right here (its
+          expenses, each clickable straight into the same detail modal
+          with attachments), instead of always jumping to a separate
+          full-status screen just to check what's in it. */}
       {!loading && tab === 'reports' && (
         <>
           {filteredReports.length === 0 && (
@@ -246,52 +289,78 @@ export default function ExpenseHistoryScreen({ user, onViewReport, onBack }) {
               No reports found
             </div>
           )}
-          {filteredReports.map(report => (
-            <div
-              key={report.id}
-              onClick={() => onViewReport && onViewReport(report.id)}
-              style={{
-                border: '1px solid #E5E7EB', borderRadius: '8px', marginBottom: '8px',
-                padding: '12px 14px', background: '#FFFFFF', cursor: 'pointer',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#111827', fontFamily: 'monospace' }}>
-                    {report.report_reference}
-                  </span>
-                  {report.vouched_at && (
-                    <span style={{ fontSize: '10px', color: '#15803D', fontWeight: 600 }}>
-                      Vouched
+          {filteredReports.map(report => {
+            // While searching, auto-expand every match so it's obvious
+            // which expense inside actually matched, instead of still
+            // requiring a click to find out.
+            const isExpanded = search.trim() ? true : expandedReportIds.has(report.id)
+            const reportExpenses = isExpanded ? expensesForReport(report.id) : []
+            const anyAttachment = reportExpenses.some(hasAttachment)
+            return (
+              <div
+                key={report.id}
+                style={{ border: '1px solid #E5E7EB', borderRadius: '8px', marginBottom: '8px', background: '#FFFFFF', overflow: 'hidden' }}
+              >
+                <div onClick={() => toggleReport(report.id)} style={{ padding: '12px 14px', cursor: 'pointer' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '11px', color: '#9CA3AF' }}>{isExpanded ? '▾' : '▸'}</span>
+                      <span style={{ fontSize: '13px', fontWeight: 600, color: '#111827', fontFamily: 'monospace' }}>
+                        {report.report_reference}
+                      </span>
+                      {anyAttachment && <span title="Has an attachment" style={{ fontSize: '11px' }}>📎</span>}
+                      {report.vouched_at && (
+                        <span style={{ fontSize: '10px', color: '#15803D', fontWeight: 600 }}>
+                          Vouched
+                        </span>
+                      )}
+                    </div>
+                    <span style={{ fontSize: '14px', fontWeight: 700, color: '#111827' }}>
+                      ₹{Number(report.total_amount || 0).toLocaleString('en-IN')}
                     </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: report.vouched_at ? '4px' : 0 }}>
+                    <div style={{ fontSize: '11px', color: '#6B7280' }}>
+                      {report.brand || ''}{report.brand ? ' · ' : ''}{report.expense_count || 0} expense{report.expense_count !== 1 ? 's' : ''} · {fmtDate(report.created_at)}
+                    </div>
+                    <StatusBadge status={report.status} />
+                  </div>
+                  {report.vouched_at && (
+                    <div style={{ fontSize: '11px', color: '#15803D' }}>
+                      Verified by {report.vouched_by || 'Finance'} on {fmtDate(report.vouched_at)}
+                    </div>
+                  )}
+                  {report.finance_notes && (
+                    <div style={{
+                      marginTop: '6px', fontSize: '11px', color: '#374151',
+                      background: '#F9FAFB', borderRadius: '4px', padding: '6px 8px',
+                      borderLeft: '2px solid #E5E7EB',
+                    }}>
+                      <span style={{ color: '#6B7280' }}>Finance note: </span>{report.finance_notes}
+                    </div>
                   )}
                 </div>
-                <span style={{ fontSize: '14px', fontWeight: 700, color: '#111827' }}>
-                  ₹{Number(report.total_amount || 0).toLocaleString('en-IN')}
-                </span>
+
+                {isExpanded && (
+                  <div style={{ padding: '0 14px 12px', background: '#FAFAFA', borderTop: '1px solid #F3F4F6' }}>
+                    {reportExpenses.length === 0 ? (
+                      <div style={{ fontSize: '11px', color: '#9CA3AF', padding: '10px 4px' }}>No expenses found for this report</div>
+                    ) : (
+                      reportExpenses.map(exp => (
+                        <ExpenseRow key={exp.id} exp={exp} compact onClick={() => setSelectedExpense(exp)} />
+                      ))
+                    )}
+                    <div
+                      onClick={() => onViewReport && onViewReport(report.id)}
+                      style={{ fontSize: '11px', color: '#8C3225', textDecoration: 'underline', cursor: 'pointer', paddingTop: '8px' }}
+                    >
+                      View full report status →
+                    </div>
+                  </div>
+                )}
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: report.vouched_at ? '4px' : 0 }}>
-                <div style={{ fontSize: '11px', color: '#6B7280' }}>
-                  {report.brand || ''}{report.brand ? ' · ' : ''}{report.expense_count || 0} expense{report.expense_count !== 1 ? 's' : ''} · {fmtDate(report.created_at)}
-                </div>
-                <StatusBadge status={report.status} />
-              </div>
-              {report.vouched_at && (
-                <div style={{ fontSize: '11px', color: '#15803D' }}>
-                  Verified by {report.vouched_by || 'Finance'} on {fmtDate(report.vouched_at)}
-                </div>
-              )}
-              {report.finance_notes && (
-                <div style={{
-                  marginTop: '6px', fontSize: '11px', color: '#374151',
-                  background: '#F9FAFB', borderRadius: '4px', padding: '6px 8px',
-                  borderLeft: '2px solid #E5E7EB',
-                }}>
-                  <span style={{ color: '#6B7280' }}>Finance note: </span>{report.finance_notes}
-                </div>
-              )}
-            </div>
-          ))}
+            )
+          })}
         </>
       )}
 

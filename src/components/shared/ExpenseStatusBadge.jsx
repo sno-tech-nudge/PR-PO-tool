@@ -8,8 +8,16 @@ const STATUS_CONFIG = {
   reimbursed:   { label: 'Reimbursed',   color: '#15803D', bg: '#F0FDF4' },
 }
 
-export default function StatusBadge({ status }) {
-  const sc = STATUS_CONFIG[status] || { label: status, color: '#6B7280', bg: '#F9FAFB' }
+// sourceStatus (when present) overrides the computed label — used for
+// migrated/historical rows so the badge matches the real status the
+// source system had, instead of our own internal workflow state (e.g.
+// "reported", which just means "already bundled into a report" and isn't
+// itself a meaningful approval status for something migrated in already
+// closed out).
+export default function StatusBadge({ status, sourceStatus }) {
+  const sc = sourceStatus
+    ? STATUS_CONFIG[sourceStatus.toLowerCase()] || { label: sourceStatus, color: '#15803D', bg: '#F0FDF4' }
+    : STATUS_CONFIG[status] || { label: status, color: '#6B7280', bg: '#F9FAFB' }
   return (
     <span style={{
       fontSize: '10px', fontWeight: 600, padding: '2px 7px', borderRadius: '4px',
