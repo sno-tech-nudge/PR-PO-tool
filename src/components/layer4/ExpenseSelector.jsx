@@ -76,13 +76,13 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
   }
 
   function getPolicyBadge(exp, i) {
-    if (blockedIds.has(exp.id) || violatedIds.has(exp.id)) return { label: 'Issue', color: '#DC2626', bg: '#FEF2F2' }
+    if (blockedIds.has(exp.id) || violatedIds.has(exp.id)) return { label: 'Issue', color: 'var(--clay-text)', bg: 'var(--clay-bg)' }
     const r = results[i]
     if (r && r.flags && r.flags.filter(f => !f.internalOnly).length > 0) {
-      return { label: 'Flagged', color: '#CA8A04', bg: '#FEFCE8' }
+      return { label: 'Flagged', color: 'var(--gold-text)', bg: 'var(--gold-bg)' }
     }
-    if (exp.policy_status === 'flagged') return { label: 'Flagged', color: '#CA8A04', bg: '#FEFCE8' }
-    return { label: 'Passed', color: '#16A34A', bg: '#F0FDF4' }
+    if (exp.policy_status === 'flagged') return { label: 'Flagged', color: 'var(--gold-text)', bg: 'var(--gold-bg)' }
+    return { label: 'Passed', color: 'var(--moss)', bg: 'var(--moss-bg)' }
   }
 
   function toggleSelect(expId) {
@@ -147,26 +147,26 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
           onClick={() => toggleSelect(exp.id)}
           style={{
             display: 'flex', alignItems: 'center', padding: '16px', minHeight: '72px',
-            borderBottom: '1px solid #E8E8E8',
+            borderBottom: '1px solid var(--taupe-200)',
             cursor: isBlocked ? 'default' : 'pointer',
             opacity: isBlocked ? 0.5 : 1,
-            background: '#FFFFFF',
+            background: 'var(--surface-card)',
           }}
         >
           {/* Checkbox */}
           <div style={{
             width: '20px', height: '20px', flexShrink: 0,
-            border: `1.5px solid ${isSelected ? '#1A1A1A' : '#E8E8E8'}`,
-            background: isSelected ? '#1A1A1A' : '#FFFFFF',
+            border: `1.5px solid ${isSelected ? 'var(--text)' : 'var(--taupe-200)'}`,
+            background: isSelected ? 'var(--text)' : 'var(--surface-card)',
             marginRight: '16px',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            borderRadius: '2px',
+            borderRadius: 'var(--radius-xs)',
             pointerEvents: isBlocked ? 'none' : 'auto',
           }}>
             {isSelected && (
               <div style={{
                 width: '10px', height: '6px',
-                borderLeft: '2px solid #FFFFFF', borderBottom: '2px solid #FFFFFF',
+                borderLeft: '2px solid var(--surface-card)', borderBottom: '2px solid var(--surface-card)',
                 transform: 'rotate(-45deg)', marginTop: '-3px',
               }} />
             )}
@@ -175,28 +175,28 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
           {/* Details */}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-              <div style={{ fontSize: '14px', fontWeight: 500, color: '#1A1A1A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, marginRight: '12px' }}>
+              <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, marginRight: '12px' }}>
                 {exp.vendor || 'Unknown vendor'}
               </div>
-              <div style={{ fontSize: '14px', fontWeight: 500, color: '#1A1A1A', flexShrink: 0 }}>
+              <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text)', flexShrink: 0 }}>
                 {exp.amount ? `₹${Number(exp.amount).toLocaleString('en-IN')}` : '—'}
               </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: '12px', color: '#6B6B6B' }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                 {[exp.category, exp.date].filter(Boolean).join(' · ')}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, marginLeft: '8px' }}>
                 <div style={{
                   fontSize: '11px', fontWeight: 500,
-                  padding: '2px 8px', borderRadius: '2px',
+                  padding: '2px 8px', borderRadius: 'var(--radius-xs)',
                   background: badge.bg, color: badge.color,
                 }}>
                   {badge.label}
                 </div>
                 <span
                   onClick={e => { e.stopPropagation(); setEditingExpense(exp) }}
-                  style={{ fontSize: '11px', color: '#4A4A4A', textDecoration: 'underline', cursor: 'pointer' }}
+                  style={{ fontSize: '11px', color: 'var(--text-muted)', textDecoration: 'underline', cursor: 'pointer' }}
                 >
                   Edit
                 </span>
@@ -207,10 +207,10 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
 
         {violationMsg && (
           <div style={{
-            fontSize: '11px', color: '#DC2626',
+            fontSize: '11px', color: 'var(--clay-text)',
             padding: '6px 16px 8px 52px',
-            background: '#FEF2F2',
-            borderBottom: '1px solid #E8E8E8',
+            background: 'var(--clay-bg)',
+            borderBottom: '1px solid var(--taupe-200)',
             lineHeight: '1.4',
           }}>
             {isBlocked ? 'Cannot be included — ' : 'Policy note — '}{violationMsg}
@@ -223,7 +223,7 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-        <div style={{ fontSize: '13px', color: '#6B6B6B' }}>Loading expenses...</div>
+        <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Loading expenses...</div>
       </div>
     )
   }
@@ -236,7 +236,7 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
         <div style={{ padding: '20px 20px 0' }}>
           <div
             onClick={onBack}
-            style={{ fontSize: '13px', color: '#4A4A4A', cursor: 'pointer', textDecoration: 'underline', marginBottom: '4px' }}
+            style={{ fontSize: '13px', color: 'var(--text-muted)', cursor: 'pointer', textDecoration: 'underline', marginBottom: '4px' }}
           >
             ← Back
           </div>
@@ -245,32 +245,32 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
       {/* Report workspace header — this draft report's own page */}
       {reportMeta && (
         <div style={{ padding: '20px 20px 0' }}>
-          <div style={{ border: '1px solid #E8E8E8', overflow: 'hidden' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', borderBottom: '1px solid #E8E8E8' }}>
-              <span style={{ fontSize: '13px', fontFamily: 'monospace', color: '#1A1A1A' }}>{reportMeta.report_reference}</span>
-              <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 8px', borderRadius: '2px', background: '#F7F7F7', color: '#6B6B6B', letterSpacing: '0.03em' }}>
+          <div style={{ border: '1px solid var(--taupe-200)', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', borderBottom: '1px solid var(--taupe-200)' }}>
+              <span style={{ fontSize: '13px', fontFamily: 'monospace', color: 'var(--text)' }}>{reportMeta.report_reference}</span>
+              <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 8px', borderRadius: 'var(--radius-xs)', background: 'var(--taupe-50)', color: 'var(--text-muted)', letterSpacing: '0.03em' }}>
                 {(reportMeta.status || 'draft').toUpperCase()}
               </span>
               {formatDuration(reportMeta.duration_start, reportMeta.duration_end) && (
-                <span style={{ fontSize: '12px', color: '#6B6B6B', marginLeft: 'auto' }}>
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: 'auto' }}>
                   {formatDuration(reportMeta.duration_start, reportMeta.duration_end)}
                 </span>
               )}
             </div>
             {reportMeta.business_purpose && (
-              <div style={{ padding: '10px 16px', borderBottom: '1px solid #E8E8E8', background: '#F7F7F7' }}>
-                <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '2px' }}>Business Purpose</div>
-                <div style={{ fontSize: '13px', color: '#1A1A1A' }}>{reportMeta.business_purpose}</div>
+              <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--taupe-200)', background: 'var(--taupe-50)' }}>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>Business Purpose</div>
+                <div style={{ fontSize: '13px', color: 'var(--text)' }}>{reportMeta.business_purpose}</div>
               </div>
             )}
             <div style={{ display: 'flex' }}>
-              <div style={{ flex: 1, padding: '12px 16px', borderRight: '1px solid #E8E8E8' }}>
-                <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '2px' }}>Total</div>
-                <div style={{ fontSize: '15px', fontWeight: 600, color: '#1A1A1A' }}>₹{selectedTotal.toLocaleString('en-IN')}</div>
+              <div style={{ flex: 1, padding: '12px 16px', borderRight: '1px solid var(--taupe-200)' }}>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>Total</div>
+                <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text)' }}>₹{selectedTotal.toLocaleString('en-IN')}</div>
               </div>
               <div style={{ flex: 1, padding: '12px 16px' }}>
-                <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '2px' }}>Amount to be Reimbursed</div>
-                <div style={{ fontSize: '15px', fontWeight: 600, color: '#1A1A1A' }}>₹{selectedReimbursable.toLocaleString('en-IN')}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>Amount to be Reimbursed</div>
+                <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text)' }}>₹{selectedReimbursable.toLocaleString('en-IN')}</div>
               </div>
             </div>
           </div>
@@ -279,25 +279,25 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
 
       {/* Header */}
       <div style={{ padding: '20px 20px 0' }}>
-        <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '8px' }}>{reportMeta ? 'Add expenses to this report' : 'Create Report'}</div>
-        <div style={{ fontSize: '20px', fontWeight: 500, color: '#1A1A1A', marginBottom: '8px' }}>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>{reportMeta ? 'Add expenses to this report' : 'Create Report'}</div>
+        <div style={{ fontSize: '20px', fontWeight: 500, color: 'var(--text)', marginBottom: '8px' }}>
           {reportMeta ? 'Drag receipts in, or pick from saved expenses' : 'Select expenses to include'}
         </div>
-        <div style={{ fontSize: '13px', color: '#4A4A4A', marginBottom: '16px', lineHeight: '1.5' }}>
+        <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: '1.5' }}>
           {reportMeta
             ? 'Each receipt is auto-read and added straight into this report — check the fields it fills in before submitting.'
             : 'Choose which expenses to include in this report. You can create multiple reports from your saved expenses.'}
         </div>
         <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
-          <span onClick={selectAll} style={{ fontSize: '13px', color: '#1A1A1A', textDecoration: 'underline', cursor: 'pointer' }}>
+          <span onClick={selectAll} style={{ fontSize: '13px', color: 'var(--text)', textDecoration: 'underline', cursor: 'pointer' }}>
             Select all
           </span>
-          <span onClick={clearAll} style={{ fontSize: '13px', color: '#4A4A4A', textDecoration: 'underline', cursor: 'pointer' }}>
+          <span onClick={clearAll} style={{ fontSize: '13px', color: 'var(--text-muted)', textDecoration: 'underline', cursor: 'pointer' }}>
             Clear all
           </span>
           <span
             onClick={() => setShowAddPanel(s => !s)}
-            style={{ fontSize: '13px', color: '#1A1A1A', textDecoration: 'underline', cursor: 'pointer', marginLeft: 'auto' }}
+            style={{ fontSize: '13px', color: 'var(--text)', textDecoration: 'underline', cursor: 'pointer', marginLeft: 'auto' }}
           >
             + Add expense
           </span>
@@ -308,7 +308,7 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
             <QuickAddDropzone onReady={data => { setNewLayer1Data(data); setAddingNew(true) }} />
             <div
               onClick={() => { setNewLayer1Data(null); setAddingNew(true) }}
-              style={{ textAlign: 'center', fontSize: '12px', color: '#4A4A4A', textDecoration: 'underline', cursor: 'pointer', marginTop: '10px' }}
+              style={{ textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)', textDecoration: 'underline', cursor: 'pointer', marginTop: '10px' }}
             >
               or enter details manually
             </div>
@@ -317,14 +317,14 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
       </div>
 
       {/* Expense list */}
-      <div style={{ borderTop: '1px solid #E8E8E8', borderBottom: '1px solid #E8E8E8' }}>
+      <div style={{ borderTop: '1px solid var(--taupe-200)', borderBottom: '1px solid var(--taupe-200)' }}>
         {!grouped && expenses.map((exp, i) => renderRow(exp, i))}
         {grouped && Object.entries(groupedData).map(([group, exps]) => (
           <div key={group}>
             <div style={{
-              fontSize: '11px', fontWeight: 500, color: '#6B6B6B',
-              background: '#F7F7F7', padding: '8px 16px',
-              borderBottom: '1px solid #E8E8E8',
+              fontSize: '11px', fontWeight: 500, color: 'var(--text-muted)',
+              background: 'var(--taupe-50)', padding: '8px 16px',
+              borderBottom: '1px solid var(--taupe-200)',
             }}>
               {group}
             </div>
@@ -340,25 +340,25 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
           style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
         >
           <div style={{
-            width: '36px', height: '20px', borderRadius: '10px',
-            background: grouped ? '#1A1A1A' : '#E8E8E8',
+            width: '36px', height: '20px', borderRadius: 'var(--radius-lg)',
+            background: grouped ? 'var(--text)' : 'var(--taupe-200)',
             position: 'relative', transition: 'background 0.2s', flexShrink: 0,
           }}>
             <div style={{
-              width: '16px', height: '16px', borderRadius: '50%', background: '#FFFFFF',
+              width: '16px', height: '16px', borderRadius: '50%', background: 'var(--surface-card)',
               position: 'absolute', top: '2px',
               left: grouped ? '18px' : '2px',
               transition: 'left 0.2s',
             }} />
           </div>
-          <span style={{ fontSize: '13px', color: '#4A4A4A' }}>Group by trip or project</span>
+          <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Group by trip or project</span>
         </div>
       </div>
 
       {/* Multiple reports note */}
       {expenses.length > 5 && (
-        <div style={{ margin: '0 20px 16px', padding: '12px', background: '#F7F7F7', border: '1px solid #E8E8E8' }}>
-          <div style={{ fontSize: '12px', color: '#4A4A4A', lineHeight: '1.6' }}>
+        <div style={{ margin: '0 20px 16px', padding: '12px', background: 'var(--taupe-50)', border: '1px solid var(--taupe-200)' }}>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.6' }}>
             You have {expenses.length} saved expenses. You can create multiple reports — select a subset now and create another report later for the rest.
           </div>
         </div>
@@ -371,18 +371,18 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
       }}>
         <div style={{
           maxWidth: '480px', margin: '0 auto',
-          background: '#FFFFFF', borderTop: '1px solid #E8E8E8',
+          background: 'var(--surface-card)', borderTop: '1px solid var(--taupe-200)',
           padding: '16px',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         }}>
-          <div style={{ fontSize: '13px', color: '#4A4A4A' }}>
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
             {selected.size} selected · ₹{selectedTotal.toLocaleString('en-IN')}
           </div>
           <div
             onClick={handlePreview}
             style={{
               fontSize: '14px', fontWeight: 500,
-              color: selected.size > 0 ? '#1A1A1A' : '#E8E8E8',
+              color: selected.size > 0 ? 'var(--text)' : 'var(--taupe-200)',
               cursor: selected.size > 0 ? 'pointer' : 'default',
             }}
           >
@@ -397,7 +397,7 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
           onClick={() => setEditingExpense(null)}
           style={{ position: 'fixed', inset: 0, background: 'rgba(26,26,26,0.5)', zIndex: 100, overflowY: 'auto' }}
         >
-          <div onClick={e => e.stopPropagation()} style={{ background: '#FFFFFF', minHeight: '100vh' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--surface-card)', minHeight: '100vh' }}>
             <ExpenseDetails
               existingExpense={editingExpense}
               user={user}
@@ -414,7 +414,7 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
           onClick={() => setAddingNew(false)}
           style={{ position: 'fixed', inset: 0, background: 'rgba(26,26,26,0.5)', zIndex: 100, overflowY: 'auto' }}
         >
-          <div onClick={e => e.stopPropagation()} style={{ background: '#FFFFFF', minHeight: '100vh' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--surface-card)', minHeight: '100vh' }}>
             <ExpenseDetails
               layer1Data={newLayer1Data}
               defaultReportId={reportMeta?.id}

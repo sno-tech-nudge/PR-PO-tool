@@ -30,8 +30,8 @@ function PdfField({ label, value }) {
   if (!value) return null
   return (
     <div style={{ marginBottom: '12px' }}>
-      <div style={{ fontSize: '10px', color: '#6B6B6B', marginBottom: '2px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>{label}</div>
-      <div style={{ fontSize: '12px', color: '#1A1A1A', fontFamily: 'system-ui, -apple-system, sans-serif' }}>{value}</div>
+      <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '2px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>{label}</div>
+      <div style={{ fontSize: '12px', color: 'var(--text)', fontFamily: 'system-ui, -apple-system, sans-serif' }}>{value}</div>
     </div>
   )
 }
@@ -41,22 +41,22 @@ function CoverPage({ expenses, reportData }) {
 
   return (
     <div style={{
-      width: '794px', height: '1122px', background: '#FFFFFF',
+      width: '794px', height: '1122px', background: 'var(--surface-card)',
       display: 'flex', flexDirection: 'column', boxSizing: 'border-box',
       pageBreakAfter: 'always',
     }}>
-      <div style={{ height: '4px', background: '#1A1A1A', flexShrink: 0 }} />
+      <div style={{ height: '4px', background: 'var(--text)', flexShrink: 0 }} />
 
       <div style={{ padding: '40px', flex: 1 }}>
         <div style={{
-          fontSize: '11px', fontWeight: 600, color: '#6B6B6B',
+          fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)',
           letterSpacing: '0.15em', fontFamily: 'system-ui, -apple-system, sans-serif',
         }}>
           THE/NUDGE INSTITUTE
         </div>
-        <div style={{ height: '1px', background: '#E8E8E8', margin: '8px 0 32px' }} />
+        <div style={{ height: '1px', background: 'var(--taupe-200)', margin: '8px 0 32px' }} />
 
-        <div style={{ fontSize: '32px', fontFamily: 'Georgia, serif', fontWeight: 400, color: '#1A1A1A', marginBottom: '40px' }}>
+        <div style={{ fontSize: '32px', fontFamily: 'Georgia, serif', fontWeight: 400, color: 'var(--text)', marginBottom: '40px' }}>
           Expense Report
         </div>
 
@@ -72,25 +72,25 @@ function CoverPage({ expenses, reportData }) {
             display: 'flex', alignItems: 'center', height: '32px',
             fontFamily: 'system-ui, -apple-system, sans-serif',
           }}>
-            <div style={{ width: '160px', fontSize: '11px', color: '#6B6B6B', flexShrink: 0 }}>{label}</div>
-            <div style={{ fontSize: '13px', color: '#1A1A1A' }}>{value}</div>
+            <div style={{ width: '160px', fontSize: '11px', color: 'var(--text-muted)', flexShrink: 0 }}>{label}</div>
+            <div style={{ fontSize: '13px', color: 'var(--text)' }}>{value}</div>
           </div>
         ))}
 
-        <div style={{ height: '1px', background: '#E8E8E8', margin: '32px 0' }} />
+        <div style={{ height: '1px', background: 'var(--taupe-200)', margin: '32px 0' }} />
 
         <div>
           <div style={{
-            fontSize: '11px', color: '#6B6B6B', marginBottom: '8px',
+            fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px',
             fontFamily: 'system-ui, -apple-system, sans-serif',
           }}>
             Total claimed
           </div>
-          <div style={{ fontSize: '48px', fontFamily: 'Georgia, serif', fontWeight: 400, color: '#1A1A1A', lineHeight: 1 }}>
+          <div style={{ fontSize: '48px', fontFamily: 'Georgia, serif', fontWeight: 400, color: 'var(--text)', lineHeight: 1 }}>
             ₹{Number(total).toLocaleString('en-IN')}
           </div>
           <div style={{
-            fontSize: '13px', color: '#4A4A4A', marginTop: '8px',
+            fontSize: '13px', color: 'var(--text-muted)', marginTop: '8px',
             fontFamily: 'system-ui, -apple-system, sans-serif',
           }}>
             {expenses.length} expense{expenses.length !== 1 ? 's' : ''}
@@ -100,7 +100,7 @@ function CoverPage({ expenses, reportData }) {
 
       <div style={{
         textAlign: 'center', padding: '0 0 32px',
-        fontSize: '11px', color: '#6B6B6B',
+        fontSize: '11px', color: 'var(--text-muted)',
         fontFamily: 'system-ui, -apple-system, sans-serif',
       }}>
         Confidential — for internal use only
@@ -115,22 +115,22 @@ function SummaryPage({ expenses, reportData }) {
 
   return (
     <div style={{
-      width: '794px', minHeight: '1122px', background: '#FFFFFF',
+      width: '794px', minHeight: '1122px', background: 'var(--surface-card)',
       boxSizing: 'border-box', padding: '40px',
       pageBreakAfter: 'always',
     }}>
-      <div style={{ fontSize: '20px', fontFamily: 'Georgia, serif', color: '#1A1A1A', marginBottom: '24px' }}>
+      <div style={{ fontSize: '20px', fontFamily: 'Georgia, serif', color: 'var(--text)', marginBottom: '24px' }}>
         Expense Summary
       </div>
 
       <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
         <thead>
-          <tr style={{ background: '#F7F7F7' }}>
+          <tr style={{ background: 'var(--taupe-50)' }}>
             {['No', 'Date', 'Vendor', 'Category', 'Amount', 'Status'].map((h, i) => (
               <th key={h} style={{
                 textAlign: i === 4 ? 'right' : 'left',
-                fontSize: '11px', fontWeight: 600, color: '#6B6B6B',
-                padding: '10px 12px', borderBottom: '1px solid #E8E8E8',
+                fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)',
+                padding: '10px 12px', borderBottom: '1px solid var(--taupe-200)',
               }}>
                 {h}
               </th>
@@ -144,24 +144,24 @@ function SummaryPage({ expenses, reportData }) {
             const hasFlag = result?.flags?.filter(f => !f.internalOnly).length > 0
             const statusLabel = hasViolation ? 'Issue' : hasFlag ? 'Flagged' : 'Passed'
             return (
-              <tr key={exp.id} style={{ background: i % 2 === 0 ? '#FFFFFF' : '#F7F7F7' }}>
-                <td style={{ fontSize: '12px', color: '#1A1A1A', padding: '10px 12px', borderBottom: '1px solid #E8E8E8' }}>{i + 1}</td>
-                <td style={{ fontSize: '12px', color: '#1A1A1A', padding: '10px 12px', borderBottom: '1px solid #E8E8E8' }}>{formatDate(exp.date)}</td>
-                <td style={{ fontSize: '12px', color: '#1A1A1A', padding: '10px 12px', borderBottom: '1px solid #E8E8E8' }}>{truncate(exp.vendor, 20)}</td>
-                <td style={{ fontSize: '12px', color: '#1A1A1A', padding: '10px 12px', borderBottom: '1px solid #E8E8E8' }}>{exp.category || '—'}</td>
-                <td style={{ fontSize: '12px', color: '#1A1A1A', padding: '10px 12px', borderBottom: '1px solid #E8E8E8', textAlign: 'right' }}>
+              <tr key={exp.id} style={{ background: i % 2 === 0 ? 'var(--surface-card)' : 'var(--taupe-50)' }}>
+                <td style={{ fontSize: '12px', color: 'var(--text)', padding: '10px 12px', borderBottom: '1px solid var(--taupe-200)' }}>{i + 1}</td>
+                <td style={{ fontSize: '12px', color: 'var(--text)', padding: '10px 12px', borderBottom: '1px solid var(--taupe-200)' }}>{formatDate(exp.date)}</td>
+                <td style={{ fontSize: '12px', color: 'var(--text)', padding: '10px 12px', borderBottom: '1px solid var(--taupe-200)' }}>{truncate(exp.vendor, 20)}</td>
+                <td style={{ fontSize: '12px', color: 'var(--text)', padding: '10px 12px', borderBottom: '1px solid var(--taupe-200)' }}>{exp.category || '—'}</td>
+                <td style={{ fontSize: '12px', color: 'var(--text)', padding: '10px 12px', borderBottom: '1px solid var(--taupe-200)', textAlign: 'right' }}>
                   {exp.amount ? `₹${Number(exp.amount).toLocaleString('en-IN')}` : '—'}
                 </td>
-                <td style={{ fontSize: '12px', color: '#1A1A1A', padding: '10px 12px', borderBottom: '1px solid #E8E8E8' }}>{statusLabel}</td>
+                <td style={{ fontSize: '12px', color: 'var(--text)', padding: '10px 12px', borderBottom: '1px solid var(--taupe-200)' }}>{statusLabel}</td>
               </tr>
             )
           })}
-          <tr style={{ background: '#1A1A1A' }}>
-            <td colSpan={4} style={{ fontSize: '12px', fontWeight: 600, color: '#FFFFFF', padding: '10px 12px' }}>Total</td>
-            <td style={{ fontSize: '12px', fontWeight: 600, color: '#FFFFFF', padding: '10px 12px', textAlign: 'right' }}>
+          <tr style={{ background: 'var(--text)' }}>
+            <td colSpan={4} style={{ fontSize: '12px', fontWeight: 600, color: 'var(--surface-card)', padding: '10px 12px' }}>Total</td>
+            <td style={{ fontSize: '12px', fontWeight: 600, color: 'var(--surface-card)', padding: '10px 12px', textAlign: 'right' }}>
               ₹{Number(total).toLocaleString('en-IN')}
             </td>
-            <td style={{ fontSize: '12px', fontWeight: 600, color: '#FFFFFF', padding: '10px 12px' }}>
+            <td style={{ fontSize: '12px', fontWeight: 600, color: 'var(--surface-card)', padding: '10px 12px' }}>
               {expenses.length} expenses
             </td>
           </tr>
@@ -170,7 +170,7 @@ function SummaryPage({ expenses, reportData }) {
 
       {flaggedCount > 0 && (
         <div style={{ marginTop: '24px' }}>
-          <div style={{ fontSize: '13px', fontWeight: 600, color: '#CA8A04', marginBottom: '8px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--gold-text)', marginBottom: '8px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
             Notes
           </div>
           {expenses.map((exp, i) => {
@@ -178,7 +178,7 @@ function SummaryPage({ expenses, reportData }) {
             const flags = result?.flags?.filter(f => !f.internalOnly) || []
             return flags.map((f, fi) => (
               <div key={`${i}-${fi}`} style={{
-                fontSize: '12px', color: '#CA8A04', marginBottom: '4px',
+                fontSize: '12px', color: 'var(--gold-text)', marginBottom: '4px',
                 fontFamily: 'system-ui, -apple-system, sans-serif',
               }}>
                 · {exp.vendor} — {f.message}
@@ -198,7 +198,7 @@ function ExpensePage({ expense, index, total, reportData, result }) {
 
   return (
     <div style={{
-      width: '794px', minHeight: '1122px', background: '#FFFFFF',
+      width: '794px', minHeight: '1122px', background: 'var(--surface-card)',
       boxSizing: 'border-box', padding: '40px',
       pageBreakBefore: 'always',
     }}>
@@ -206,20 +206,20 @@ function ExpensePage({ expense, index, total, reportData, result }) {
         display: 'flex', justifyContent: 'space-between', marginBottom: '16px',
         fontFamily: 'system-ui, -apple-system, sans-serif',
       }}>
-        <div style={{ fontSize: '11px', color: '#6B6B6B' }}>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
           Expense {index + 1} of {total}
         </div>
-        <div style={{ fontSize: '11px', color: '#6B6B6B' }}>{reportData.reference}</div>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{reportData.reference}</div>
       </div>
 
-      <div style={{ fontSize: '22px', fontFamily: 'Georgia, serif', color: '#1A1A1A', marginBottom: '4px' }}>
+      <div style={{ fontSize: '22px', fontFamily: 'Georgia, serif', color: 'var(--text)', marginBottom: '4px' }}>
         {expense.vendor || 'Unknown vendor'}
       </div>
-      <div style={{ fontSize: '18px', fontWeight: 500, color: '#1A1A1A', marginBottom: '16px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      <div style={{ fontSize: '18px', fontWeight: 500, color: 'var(--text)', marginBottom: '16px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
         {expense.amount ? `₹${Number(expense.amount).toLocaleString('en-IN')}` : '—'}
       </div>
 
-      <div style={{ height: '1px', background: '#E8E8E8', marginBottom: '20px' }} />
+      <div style={{ height: '1px', background: 'var(--taupe-200)', marginBottom: '20px' }} />
 
       <div style={{ display: 'flex', gap: '0', marginBottom: '16px' }}>
         <div style={{ width: '50%', paddingRight: '24px' }}>
@@ -258,16 +258,16 @@ function ExpensePage({ expense, index, total, reportData, result }) {
       <div style={{ marginBottom: '16px' }}>
         {statusPassed ? (
           <div style={{
-            fontSize: '12px', color: '#16A34A', background: '#F0FDF4',
-            padding: '8px 12px', border: '1px solid #16A34A',
+            fontSize: '12px', color: 'var(--moss)', background: 'var(--moss-bg)',
+            padding: '8px 12px', border: '1px solid var(--moss)',
             fontFamily: 'system-ui, -apple-system, sans-serif',
           }}>
             Policy check passed
           </div>
         ) : hasFlag ? (
           <div style={{
-            fontSize: '12px', color: '#CA8A04', background: '#FEFCE8',
-            padding: '8px 12px', border: '1px solid #CA8A04',
+            fontSize: '12px', color: 'var(--gold-text)', background: 'var(--gold-bg)',
+            padding: '8px 12px', border: '1px solid var(--gold-text)',
             fontFamily: 'system-ui, -apple-system, sans-serif',
           }}>
             <div style={{ marginBottom: '4px' }}>Flagged for review</div>
@@ -281,7 +281,7 @@ function ExpensePage({ expense, index, total, reportData, result }) {
       {(expense.receipt_url || expense.payment_url) && (
         <div>
           <div style={{
-            fontSize: '11px', color: '#6B6B6B', fontWeight: 600, marginBottom: '12px',
+            fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '12px',
             fontFamily: 'system-ui, -apple-system, sans-serif',
           }}>
             Documents
@@ -293,16 +293,16 @@ function ExpensePage({ expense, index, total, reportData, result }) {
                   src={expense.receipt_url}
                   alt="Receipt"
                   crossOrigin="anonymous"
-                  style={{ maxWidth: '300px', maxHeight: '200px', objectFit: 'contain', border: '1px solid #E8E8E8', display: 'block' }}
+                  style={{ maxWidth: '300px', maxHeight: '200px', objectFit: 'contain', border: '1px solid var(--taupe-200)', display: 'block' }}
                   onError={e => {
                     e.target.style.display = 'none'
                     e.target.nextSibling.style.display = 'flex'
                   }}
                 />
-                <div style={{ display: 'none', width: '200px', height: '120px', border: '1px solid #E8E8E8', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: '10px', color: '#6B6B6B', fontFamily: 'system-ui' }}>Document on file</span>
+                <div style={{ display: 'none', width: '200px', height: '120px', border: '1px solid var(--taupe-200)', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'system-ui' }}>Document on file</span>
                 </div>
-                <div style={{ fontSize: '10px', color: '#6B6B6B', marginTop: '4px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>Receipt</div>
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>Receipt</div>
               </div>
             ) : null}
             {expense.payment_url ? (
@@ -311,16 +311,16 @@ function ExpensePage({ expense, index, total, reportData, result }) {
                   src={expense.payment_url}
                   alt="Payment proof"
                   crossOrigin="anonymous"
-                  style={{ maxWidth: '300px', maxHeight: '200px', objectFit: 'contain', border: '1px solid #E8E8E8', display: 'block' }}
+                  style={{ maxWidth: '300px', maxHeight: '200px', objectFit: 'contain', border: '1px solid var(--taupe-200)', display: 'block' }}
                   onError={e => {
                     e.target.style.display = 'none'
                     e.target.nextSibling.style.display = 'flex'
                   }}
                 />
-                <div style={{ display: 'none', width: '200px', height: '120px', border: '1px solid #E8E8E8', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: '10px', color: '#6B6B6B', fontFamily: 'system-ui' }}>Document on file</span>
+                <div style={{ display: 'none', width: '200px', height: '120px', border: '1px solid var(--taupe-200)', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'system-ui' }}>Document on file</span>
                 </div>
-                <div style={{ fontSize: '10px', color: '#6B6B6B', marginTop: '4px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>Payment proof</div>
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>Payment proof</div>
               </div>
             ) : null}
           </div>
@@ -338,7 +338,7 @@ export default function PDFTemplate({ expenses, reportData }) {
       id="pdf-template"
       style={{
         position: 'absolute', left: '-9999px', top: 0,
-        width: '794px', background: '#FFFFFF',
+        width: '794px', background: 'var(--surface-card)',
       }}
     >
       <CoverPage expenses={expenses} reportData={reportData} />

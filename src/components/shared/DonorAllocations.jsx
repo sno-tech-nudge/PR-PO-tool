@@ -20,9 +20,9 @@ function cellSelect(val, onChange, options, placeholder, disabled) {
       onChange={e => onChange(e.target.value)}
       disabled={disabled}
       style={{
-        width: '100%', height: '34px', border: '1px solid #D1D5DB', borderRadius: '4px',
-        padding: '0 8px', fontSize: '12px', color: val ? '#1A1F36' : '#9CA3AF',
-        background: disabled ? '#F3F4F6' : '#FFFFFF', outline: 'none', boxSizing: 'border-box',
+        width: '100%', height: '34px', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)',
+        padding: '0 8px', fontSize: '12px', color: val ? 'var(--ink)' : 'var(--text-muted)',
+        background: disabled ? 'var(--taupe-100)' : 'var(--surface-card)', outline: 'none', boxSizing: 'border-box',
       }}
     >
       <option value="">{placeholder}</option>
@@ -38,8 +38,8 @@ function cellInput(val, onChange, placeholder) {
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
       style={{
-        width: '100%', height: '34px', border: '1px solid #D1D5DB', borderRadius: '4px',
-        padding: '0 8px', fontSize: '12px', color: '#1A1F36', background: '#FFFFFF',
+        width: '100%', height: '34px', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)',
+        padding: '0 8px', fontSize: '12px', color: 'var(--ink)', background: 'var(--surface-card)',
         outline: 'none', boxSizing: 'border-box',
       }}
     />
@@ -75,7 +75,7 @@ export default function DonorAllocations({ value = [], onChange, error, lockEnti
     onChange(next.length ? next : [emptyRow(lockEntity)])
   }
 
-  const totalColor = total === 100 ? '#15803D' : total > 100 ? '#B91C1C' : '#B45309'
+  const totalColor = total === 100 ? 'var(--moss-text)' : total > 100 ? 'var(--clay-text)' : 'var(--gold-text)'
 
   return (
     <div>
@@ -85,14 +85,14 @@ export default function DonorAllocations({ value = [], onChange, error, lockEnti
           const subprograms = getSubprograms(row.entity, row.program)
           const donors      = getDonors(row.entity, row.program, row.subprogram)
           return (
-            <div key={idx} style={{ border: '1px solid #E3E8EF', borderRadius: '6px', padding: '12px', background: '#F9FAFB' }}>
+            <div key={idx} style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '12px', background: 'var(--taupe-50)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280' }}>Allocation {idx + 1}</span>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)' }}>Allocation {idx + 1}</span>
                 {rows.length > 1 && (
                   <button
                     type="button"
                     onClick={() => removeRow(idx)}
-                    style={{ background: 'none', border: 'none', color: '#B91C1C', fontSize: '11px', cursor: 'pointer', padding: 0 }}
+                    style={{ background: 'none', border: 'none', color: 'var(--clay-text)', fontSize: '11px', cursor: 'pointer', padding: 0 }}
                   >
                     Remove
                   </button>
@@ -101,23 +101,23 @@ export default function DonorAllocations({ value = [], onChange, error, lockEnti
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                 <div>
-                  <div style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '3px' }}>Entity</div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '3px' }}>Entity</div>
                   {cellSelect(row.entity, v => handleEntity(idx, v), ENTITIES, 'Select entity…', !!lockEntity || idx > 0)}
                 </div>
                 <div>
-                  <div style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '3px' }}>Programme</div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '3px' }}>Programme</div>
                   {programs.length > 0
                     ? cellSelect(row.program, v => handleProgram(idx, v), programs, 'Select…')
                     : cellInput(row.program, v => handleProgram(idx, v), 'e.g. Livelihood Program, Central')}
                 </div>
                 <div>
-                  <div style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '3px' }}>Sub-Programme</div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '3px' }}>Sub-Programme</div>
                   {subprograms.length > 0
                     ? cellSelect(row.subprogram, v => handleSubprogram(idx, v), subprograms, 'Select…')
                     : cellInput(row.subprogram, v => handleSubprogram(idx, v), 'e.g. PMU, Prize')}
                 </div>
                 <div>
-                  <div style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '3px' }}>Donor</div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '3px' }}>Donor</div>
                   {donors.length > 0
                     ? cellSelect(row.donor, v => update(idx, { donor: v }), donors, 'Select donor…')
                     : cellInput(row.donor, v => update(idx, { donor: v }), 'Enter donor name')}
@@ -125,7 +125,7 @@ export default function DonorAllocations({ value = [], onChange, error, lockEnti
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '10px', color: '#9CA3AF' }}>Allocation</span>
+                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Allocation</span>
                 <PercentInput
                   value={row.percent}
                   onChange={v => update(idx, { percent: v })}
@@ -143,7 +143,7 @@ export default function DonorAllocations({ value = [], onChange, error, lockEnti
           <button
             type="button"
             onClick={addRow}
-            style={{ background: 'none', border: '1px dashed #C4826F', color: '#8C3225', fontSize: '12px', cursor: 'pointer', borderRadius: '4px', padding: '6px 12px' }}
+            style={{ background: 'none', border: '1px dashed var(--text-on-dark-muted)', color: 'var(--action)', fontSize: '12px', cursor: 'pointer', borderRadius: 'var(--radius-sm)', padding: '6px 12px' }}
           >
             + Add donor / programme
           </button>
@@ -154,7 +154,7 @@ export default function DonorAllocations({ value = [], onChange, error, lockEnti
       </div>
 
       {error && !valid && (
-        <div style={{ fontSize: '11px', color: '#DC2626', marginTop: '6px' }}>{error}</div>
+        <div style={{ fontSize: '11px', color: 'var(--clay-text)', marginTop: '6px' }}>{error}</div>
       )}
     </div>
   )

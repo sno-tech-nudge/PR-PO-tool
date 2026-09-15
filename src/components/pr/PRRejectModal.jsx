@@ -24,13 +24,13 @@ export default function PRRejectModal({ prNumber, onConfirm, onCancel }) {
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{ background: '#FFFFFF', borderRadius: '6px', padding: '24px', width: '100%', maxWidth: '440px' }}
+        style={{ background: 'var(--surface-card)', borderRadius: 'var(--radius-md)', padding: '24px', width: '100%', maxWidth: '440px' }}
       >
-        <div style={{ fontSize: '16px', fontWeight: 700, color: '#1A1F36', marginBottom: '4px' }}>
+        <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--ink)', marginBottom: '4px' }}>
           Reject purchase request
         </div>
         {prNumber && (
-          <div style={{ fontSize: '12px', color: '#6B7280', fontFamily: 'monospace', marginBottom: '14px' }}>{prNumber}</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'monospace', marginBottom: '14px' }}>{prNumber}</div>
         )}
 
         <textarea
@@ -39,7 +39,7 @@ export default function PRRejectModal({ prNumber, onConfirm, onCancel }) {
           placeholder="Explain why this purchase request is being rejected…"
           rows={4}
           autoFocus
-          style={{ width: '100%', border: '1px solid #E3E8EF', borderRadius: '4px', padding: '10px 12px', fontSize: '13px', color: '#1A1F36', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }}
+          style={{ width: '100%', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', fontSize: '13px', color: 'var(--ink)', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }}
         />
 
         <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
@@ -47,8 +47,8 @@ export default function PRRejectModal({ prNumber, onConfirm, onCancel }) {
             onClick={handleConfirm}
             disabled={!reason.trim() || saving}
             style={{
-              height: '40px', padding: '0 24px', borderRadius: '4px', fontSize: '13px', fontWeight: 600,
-              background: !reason.trim() || saving ? '#9CA3AF' : '#B91C1C', color: '#FFFFFF', border: 'none',
+              height: '40px', padding: '0 24px', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 600,
+              background: !reason.trim() || saving ? 'var(--text-muted)' : 'var(--clay-text)', color: 'var(--surface-card)', border: 'none',
               cursor: !reason.trim() || saving ? 'default' : 'pointer',
             }}
           >
@@ -56,7 +56,7 @@ export default function PRRejectModal({ prNumber, onConfirm, onCancel }) {
           </button>
           <button
             onClick={onCancel}
-            style={{ height: '40px', padding: '0 20px', background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '13px', cursor: 'pointer' }}
+            style={{ height: '40px', padding: '0 20px', background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', fontSize: '13px', cursor: 'pointer' }}
           >
             Cancel
           </button>

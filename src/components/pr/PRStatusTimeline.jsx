@@ -17,25 +17,25 @@ export default function PRStatusTimeline({ status = 'draft', approvals, compact 
           const isDone = step.state === 'done'
           const isCurrent = step.state === 'current'
           const isRejected = step.state === 'rejected'
-          const activeColor = isRejected ? '#DC2626' : isDone ? '#16A34A' : isCurrent ? '#1A1A1A' : null
+          const activeColor = isRejected ? 'var(--clay-text)' : isDone ? 'var(--moss)' : isCurrent ? 'var(--text)' : null
 
           return (
             <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
               {i > 0 && (
                 <div style={{
                   position: 'absolute', top: '4px', right: '50%', width: '100%', height: '1px',
-                  background: isDone || isRejected ? activeColor : '#E8E8E8', zIndex: 0,
+                  background: isDone || isRejected ? activeColor : 'var(--taupe-200)', zIndex: 0,
                 }} />
               )}
               <div style={{
                 width: '10px', height: '10px', borderRadius: '50%', zIndex: 1, position: 'relative', flexShrink: 0,
-                background: activeColor || '#FFFFFF',
-                border: `1.5px solid ${activeColor || '#E8E8E8'}`,
+                background: activeColor || 'var(--surface-card)',
+                border: `1.5px solid ${activeColor || 'var(--taupe-200)'}`,
                 animation: isCurrent ? 'prPulse 2s ease-in-out infinite' : 'none',
               }} />
               <div style={{
                 fontSize: compact ? '9px' : '10px', textAlign: 'center', marginTop: '6px', lineHeight: '1.3',
-                color: activeColor || '#6B6B6B',
+                color: activeColor || 'var(--text-muted)',
                 fontWeight: isCurrent || isRejected ? 500 : 400,
                 paddingLeft: '2px', paddingRight: '2px',
               }}>

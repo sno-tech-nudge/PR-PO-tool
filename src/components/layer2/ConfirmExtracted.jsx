@@ -51,18 +51,18 @@ export default function ConfirmExtracted({ layer1Data, onContinue, onBack }) {
 
   return (
     <QuestionScreen step={1} onBack={onBack} heading="We found this from your receipt">
-      <div style={{ border: '1px solid #E8E8E8', borderRadius: '4px', marginBottom: '20px', overflow: 'hidden' }}>
+      <div style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', marginBottom: '20px', overflow: 'hidden' }}>
         {rows.map((row, i) => (
           <div key={row.key}>
             <div
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '0 16px', minHeight: '56px',
-                background: i % 2 === 0 ? '#FFFFFF' : '#F7F7F7',
-                borderBottom: i < rows.length - 1 ? '1px solid #E8E8E8' : 'none',
+                background: i % 2 === 0 ? 'var(--surface-card)' : 'var(--taupe-50)',
+                borderBottom: i < rows.length - 1 ? '1px solid var(--taupe-200)' : 'none',
               }}
             >
-              <span style={{ fontSize: '12px', color: '#6B6B6B', flexShrink: 0, marginRight: '12px' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)', flexShrink: 0, marginRight: '12px' }}>
                 {row.label}
               </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, justifyContent: 'flex-end' }}>
@@ -72,8 +72,8 @@ export default function ConfirmExtracted({ layer1Data, onContinue, onBack }) {
                       value={data.category}
                       onChange={(e) => handleChange('category', e.target.value)}
                       style={{
-                        fontSize: '13px', border: '1px solid #E8E8E8', borderRadius: '4px',
-                        padding: '4px 8px', outline: 'none', background: '#FFFFFF',
+                        fontSize: '13px', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)',
+                        padding: '4px 8px', outline: 'none', background: 'var(--surface-card)',
                       }}
                     >
                       {CATEGORIES.map((c) => (
@@ -86,23 +86,23 @@ export default function ConfirmExtracted({ layer1Data, onContinue, onBack }) {
                       value={data[row.key]}
                       onChange={(e) => handleChange(row.key, e.target.value)}
                       style={{
-                        fontSize: '13px', border: '1px solid #E8E8E8', borderRadius: '4px',
+                        fontSize: '13px', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)',
                         padding: '4px 8px', outline: 'none', width: '140px',
                       }}
                     />
                   )
                 ) : (
-                  <span style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A1A', textAlign: 'right' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)', textAlign: 'right' }}>
                     {row.isCategory ? (
                       <span>
                         {data.category || '—'}
                         {suggestedCategory && data.category === suggestedCategory && (
-                          <span style={{ fontSize: '11px', color: '#6B6B6B', fontWeight: 400, marginLeft: '6px' }}>
+                          <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400, marginLeft: '6px' }}>
                             (suggested)
                           </span>
                         )}
                         {loadingCategory && !suggestedCategory && (
-                          <span style={{ fontSize: '11px', color: '#6B6B6B', fontWeight: 400, marginLeft: '6px' }}>
+                          <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400, marginLeft: '6px' }}>
                             Detecting category...
                           </span>
                         )}
@@ -116,7 +116,7 @@ export default function ConfirmExtracted({ layer1Data, onContinue, onBack }) {
                   onClick={() => handleEdit(row.key)}
                   style={{
                     background: 'none', border: 'none', cursor: 'pointer',
-                    fontSize: '13px', color: '#4A4A4A', padding: 0, flexShrink: 0,
+                    fontSize: '13px', color: 'var(--text-muted)', padding: 0, flexShrink: 0,
                   }}
                 >
                   {editingField === row.key ? 'Done' : 'Edit'}
@@ -126,24 +126,24 @@ export default function ConfirmExtracted({ layer1Data, onContinue, onBack }) {
             {row.isCategory && suggestedCategory && editingField !== 'category' && (
               <div style={{
                 padding: '4px 16px 8px',
-                background: i % 2 === 0 ? '#FFFFFF' : '#F7F7F7',
-                borderBottom: '1px solid #E8E8E8',
+                background: i % 2 === 0 ? 'var(--surface-card)' : 'var(--taupe-50)',
+                borderBottom: '1px solid var(--taupe-200)',
               }}>
-                <span style={{ fontSize: '11px', color: '#6B6B6B' }}>Based on vendor name</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Based on vendor name</span>
               </div>
             )}
             {row.isCategory && !data.category && !loadingCategory && editingField !== 'category' && (
               <div style={{
                 padding: '4px 16px 8px',
-                background: i % 2 === 0 ? '#FFFFFF' : '#F7F7F7',
-                borderBottom: '1px solid #E8E8E8',
+                background: i % 2 === 0 ? 'var(--surface-card)' : 'var(--taupe-50)',
+                borderBottom: '1px solid var(--taupe-200)',
               }}>
                 <select
                   value={data.category}
                   onChange={(e) => handleChange('category', e.target.value)}
                   style={{
-                    fontSize: '13px', border: '1px solid #E8E8E8', borderRadius: '4px',
-                    padding: '4px 8px', outline: 'none', background: '#FFFFFF', width: '100%',
+                    fontSize: '13px', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)',
+                    padding: '4px 8px', outline: 'none', background: 'var(--surface-card)', width: '100%',
                   }}
                 >
                   <option value="">Select a category</option>
@@ -157,8 +157,8 @@ export default function ConfirmExtracted({ layer1Data, onContinue, onBack }) {
       <button
         onClick={() => onContinue(data)}
         style={{
-          width: '100%', height: '48px', background: '#8C3225', color: '#FFFFFF',
-          border: 'none', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: '4px',
+          width: '100%', height: '48px', background: 'var(--action)', color: 'var(--surface-card)',
+          border: 'none', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: 'var(--radius-sm)',
         }}
       >
         Looks correct, continue

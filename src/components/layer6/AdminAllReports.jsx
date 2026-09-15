@@ -4,12 +4,12 @@ import { downloadCSV, reportsToRows } from '../../lib/exportUtils'
 import { getDisplayName } from '../../lib/directory'
 
 const STATUS_CONFIG = {
-  submitted:    { label: 'Submitted',     color: '#B45309', bg: '#FFFBEB' },
-  under_review: { label: 'Under Review',  color: '#8C3225', bg: '#fdf0ed' },
-  approved:     { label: 'Approved',      color: '#15803D', bg: '#F0FDF4' },
-  processing:   { label: 'Processing',    color: '#6D28D9', bg: '#F5F3FF' },
-  reimbursed:   { label: 'Reimbursed',    color: '#374151', bg: '#F9FAFB' },
-  rejected:     { label: 'Rejected',      color: '#B91C1C', bg: '#FEF2F2' },
+  submitted:    { label: 'Submitted',     color: 'var(--gold-text)', bg: 'var(--gold-bg)' },
+  under_review: { label: 'Under Review',  color: 'var(--action)', bg: 'var(--action-bg)' },
+  approved:     { label: 'Approved',      color: 'var(--moss-text)', bg: 'var(--moss-bg)' },
+  processing:   { label: 'Processing',    color: 'var(--gold-text)', bg: 'var(--gold-bg)' },
+  reimbursed:   { label: 'Reimbursed',    color: 'var(--ink)', bg: 'var(--taupe-50)' },
+  rejected:     { label: 'Rejected',      color: 'var(--clay-text)', bg: 'var(--clay-bg)' },
 }
 
 
@@ -164,8 +164,8 @@ export default function AdminAllReports({ onViewDetail }) {
     .reduce((s, r) => s + (r.total_amount || 0), 0)
 
   const selectStyle = {
-    height: '32px', border: '1px solid #E3E8EF', borderRadius: '3px',
-    padding: '0 8px', fontSize: '12px', color: '#374151', background: '#FFFFFF',
+    height: '32px', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)',
+    padding: '0 8px', fontSize: '12px', color: 'var(--ink)', background: 'var(--surface-card)',
     outline: 'none',
   }
 
@@ -183,16 +183,16 @@ export default function AdminAllReports({ onViewDetail }) {
   return (
     <div>
       {/* Toolbar */}
-      <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '3px', marginBottom: '12px' }}>
+      <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', marginBottom: '12px' }}>
 
         {/* Row 1 — search + dropdowns */}
-        <div style={{ padding: '12px 16px', display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', borderBottom: '1px solid #F3F4F6' }}>
+        <div style={{ padding: '12px 16px', display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', borderBottom: '1px solid var(--taupe-100)' }}>
           <input
             type="text"
             placeholder="Search reference, email, entity…"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            style={{ width: '220px', height: '32px', border: '1px solid #E3E8EF', borderRadius: '3px', padding: '0 10px', fontSize: '12px', color: '#1A1F36', outline: 'none', background: '#F8F9FA' }}
+            style={{ width: '220px', height: '32px', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '0 10px', fontSize: '12px', color: 'var(--ink)', outline: 'none', background: 'var(--taupe-50)' }}
           />
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={selectStyle}>
             <option value="all">All statuses</option>
@@ -220,16 +220,16 @@ export default function AdminAllReports({ onViewDetail }) {
             <option value="clean">Clean only</option>
           </select>
           {activeFilterCount > 0 && (
-            <button onClick={clearFilters} style={{ height: '32px', padding: '0 10px', background: 'none', border: '1px solid #E3E8EF', borderRadius: '3px', fontSize: '12px', color: '#6B7280', cursor: 'pointer' }}>
+            <button onClick={clearFilters} style={{ height: '32px', padding: '0 10px', background: 'none', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', fontSize: '12px', color: 'var(--text-muted)', cursor: 'pointer' }}>
               Clear ({activeFilterCount})
             </button>
           )}
         </div>
 
         {/* Row 2 — date range + export */}
-        <div style={{ padding: '10px 16px', display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', background: '#FAFAFA' }}>
-          <span style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '4px' }}>Date Range</span>
-          <select value={datePreset} onChange={e => handlePreset(e.target.value)} style={{ ...selectStyle, background: '#FFFFFF' }}>
+        <div style={{ padding: '10px 16px', display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', background: 'var(--taupe-50)' }}>
+          <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '4px' }}>Date Range</span>
+          <select value={datePreset} onChange={e => handlePreset(e.target.value)} style={{ ...selectStyle, background: 'var(--surface-card)' }}>
             <option value="all">All time</option>
             <option value="today">Today</option>
             <option value="this_week">This week</option>
@@ -245,7 +245,7 @@ export default function AdminAllReports({ onViewDetail }) {
             onChange={e => { setDateFrom(e.target.value); setDatePreset('custom') }}
             style={{ ...selectStyle, width: '140px', padding: '0 8px' }}
           />
-          <span style={{ fontSize: '12px', color: '#9CA3AF' }}>to</span>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>to</span>
           <input
             type="date"
             value={dateTo}
@@ -254,7 +254,7 @@ export default function AdminAllReports({ onViewDetail }) {
           />
 
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '12px', color: '#6B7280' }}>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
               {filtered.length} record{filtered.length !== 1 ? 's' : ''}
               {selected.size > 0 && ` · ${selected.size} selected · INR ${selectedTotal.toLocaleString('en-IN')}`}
             </span>
@@ -262,9 +262,9 @@ export default function AdminAllReports({ onViewDetail }) {
               onClick={handleExport}
               disabled={exporting || filtered.length === 0}
               style={{
-                height: '32px', padding: '0 16px', borderRadius: '3px',
-                background: filtered.length === 0 ? '#F3F4F6' : '#1565C0',
-                color: filtered.length === 0 ? '#9CA3AF' : '#FFFFFF',
+                height: '32px', padding: '0 16px', borderRadius: 'var(--radius-sm)',
+                background: filtered.length === 0 ? 'var(--taupe-100)' : 'var(--action)',
+                color: filtered.length === 0 ? 'var(--text-muted)' : 'var(--surface-card)',
                 border: 'none', fontSize: '12px', fontWeight: 600,
                 cursor: exporting || filtered.length === 0 ? 'default' : 'pointer',
                 whiteSpace: 'nowrap',
@@ -277,28 +277,28 @@ export default function AdminAllReports({ onViewDetail }) {
       </div>
 
       {loading && (
-        <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '3px', padding: '40px 0', textAlign: 'center', fontSize: '13px', color: '#9CA3AF' }}>
+        <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '40px 0', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>
           Loading…
         </div>
       )}
 
       {!loading && filtered.length === 0 && (
-        <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '3px', padding: '48px 0', textAlign: 'center', fontSize: '13px', color: '#9CA3AF' }}>
+        <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '48px 0', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>
           No reports found
         </div>
       )}
 
       {!loading && filtered.length > 0 && (
-        <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '3px', overflowX: 'auto' }}>
+        <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px' }}>
             <thead>
-              <tr style={{ background: '#F8F9FA', borderBottom: '1px solid #E3E8EF' }}>
+              <tr style={{ background: 'var(--taupe-50)', borderBottom: '1px solid var(--taupe-200)' }}>
                 <th style={{ width: '40px', padding: '10px 14px' }}>
                   <div
                     onClick={toggleAll}
                     style={{
-                      width: '15px', height: '15px', border: `1.5px solid ${selected.size === filtered.length ? '#1565C0' : '#D1D5DB'}`,
-                      borderRadius: '2px', background: selected.size === filtered.length ? '#1565C0' : '#FFFFFF',
+                      width: '15px', height: '15px', border: `1.5px solid ${selected.size === filtered.length ? 'var(--action)' : 'var(--taupe-400)'}`,
+                      borderRadius: 'var(--radius-xs)', background: selected.size === filtered.length ? 'var(--action)' : 'var(--surface-card)',
                       cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}
                   >
@@ -310,7 +310,7 @@ export default function AdminAllReports({ onViewDetail }) {
                   </div>
                 </th>
                 {['Reference', 'Entity', 'Expenses', 'Amount (INR)', 'Submitted By', 'Approved By', 'Vouched By', 'Date', 'Status', ''].map(h => (
-                  <th key={h} style={{ padding: '10px 14px', fontSize: '11px', fontWeight: 600, color: '#6B7280', textAlign: h === 'Amount (INR)' ? 'right' : 'left', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                  <th key={h} style={{ padding: '10px 14px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textAlign: h === 'Amount (INR)' ? 'right' : 'left', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
                     {h}
                   </th>
                 ))}
@@ -318,7 +318,7 @@ export default function AdminAllReports({ onViewDetail }) {
             </thead>
             <tbody>
               {filtered.map((report, i) => {
-                const sc = STATUS_CONFIG[report.status] || { label: report.status, color: '#6B7280', bg: '#F9FAFB' }
+                const sc = STATUS_CONFIG[report.status] || { label: report.status, color: 'var(--text-muted)', bg: 'var(--taupe-50)' }
                 const expenses = (report.report_expenses || []).map(re => re.expense_details).filter(Boolean)
                 const violationCount = expenses.filter(e => e.policy_status === 'violation').length
                 const isSelected = selected.has(report.id)
@@ -326,16 +326,16 @@ export default function AdminAllReports({ onViewDetail }) {
                   <tr
                     key={report.id}
                     style={{
-                      borderBottom: i < filtered.length - 1 ? '1px solid #F3F4F6' : 'none',
-                      background: isSelected ? '#fdf0ed' : i % 2 === 0 ? '#FFFFFF' : '#FAFAFA',
+                      borderBottom: i < filtered.length - 1 ? '1px solid var(--taupe-100)' : 'none',
+                      background: isSelected ? 'var(--action-bg)' : i % 2 === 0 ? 'var(--surface-card)' : 'var(--taupe-50)',
                     }}
                   >
                     <td style={{ padding: '11px 14px' }}>
                       <div
                         onClick={e => { e.stopPropagation(); toggleSelect(report.id) }}
                         style={{
-                          width: '15px', height: '15px', border: `1.5px solid ${isSelected ? '#1565C0' : '#D1D5DB'}`,
-                          borderRadius: '2px', background: isSelected ? '#1565C0' : '#FFFFFF',
+                          width: '15px', height: '15px', border: `1.5px solid ${isSelected ? 'var(--action)' : 'var(--taupe-400)'}`,
+                          borderRadius: 'var(--radius-xs)', background: isSelected ? 'var(--action)' : 'var(--surface-card)',
                           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}
                       >
@@ -349,30 +349,30 @@ export default function AdminAllReports({ onViewDetail }) {
                     <td style={{ padding: '11px 14px' }}>
                       <div
                         onClick={() => onViewDetail && onViewDetail(report.id)}
-                        style={{ fontSize: '13px', fontFamily: 'monospace', color: '#8C3225', fontWeight: 500, cursor: 'pointer', textDecoration: 'underline' }}
+                        style={{ fontSize: '13px', fontFamily: 'monospace', color: 'var(--action)', fontWeight: 500, cursor: 'pointer', textDecoration: 'underline' }}
                       >
                         {report.report_reference}
                       </div>
                       {report.vouched_at && (
-                        <div style={{ fontSize: '10px', color: '#15803D', marginTop: '2px' }}>Vouched</div>
+                        <div style={{ fontSize: '10px', color: 'var(--moss-text)', marginTop: '2px' }}>Vouched</div>
                       )}
                     </td>
-                    <td style={{ padding: '11px 14px', fontSize: '12px', color: '#374151' }}>
+                    <td style={{ padding: '11px 14px', fontSize: '12px', color: 'var(--ink)' }}>
                       {report.brand || '—'}
                     </td>
-                    <td style={{ padding: '11px 14px', fontSize: '12px', color: '#374151' }}>
+                    <td style={{ padding: '11px 14px', fontSize: '12px', color: 'var(--ink)' }}>
                       {report.expense_count || expenses.length}
                       {violationCount > 0 && (
-                        <span style={{ marginLeft: '6px', color: '#B91C1C', fontWeight: 500 }}>{violationCount} violation{violationCount !== 1 ? 's' : ''}</span>
+                        <span style={{ marginLeft: '6px', color: 'var(--clay-text)', fontWeight: 500 }}>{violationCount} violation{violationCount !== 1 ? 's' : ''}</span>
                       )}
                     </td>
-                    <td style={{ padding: '11px 14px', fontSize: '13px', fontWeight: 600, color: '#1A1F36', textAlign: 'right', fontFamily: 'monospace' }}>
+                    <td style={{ padding: '11px 14px', fontSize: '13px', fontWeight: 600, color: 'var(--ink)', textAlign: 'right', fontFamily: 'monospace' }}>
                       {Number(report.total_amount || 0).toLocaleString('en-IN')}
                     </td>
-                    <td style={{ padding: '11px 14px', fontSize: '12px', color: '#374151' }}>
+                    <td style={{ padding: '11px 14px', fontSize: '12px', color: 'var(--ink)' }}>
                       {report.employee_email ? getDisplayName(report.employee_email) : '—'}
                     </td>
-                    <td style={{ padding: '11px 14px', fontSize: '12px', color: '#374151' }}>
+                    <td style={{ padding: '11px 14px', fontSize: '12px', color: 'var(--ink)' }}>
                       {(() => {
                         const approvedRecord = (report.report_approvals || [])
                           .filter(a => a.status === 'approved')
@@ -380,17 +380,17 @@ export default function AdminAllReports({ onViewDetail }) {
                         return approvedRecord?.approver_name || '—'
                       })()}
                     </td>
-                    <td style={{ padding: '11px 14px', fontSize: '12px', color: '#374151' }}>
+                    <td style={{ padding: '11px 14px', fontSize: '12px', color: 'var(--ink)' }}>
                       {report.vouched_by
-                        ? <span style={{ fontSize: '11px', color: '#15803D', fontWeight: 500 }}>{report.vouched_by}</span>
+                        ? <span style={{ fontSize: '11px', color: 'var(--moss-text)', fontWeight: 500 }}>{report.vouched_by}</span>
                         : '—'}
                     </td>
-                    <td style={{ padding: '11px 14px', fontSize: '12px', color: '#6B7280', whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '11px 14px', fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                       {report.created_at ? new Date(report.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
                     </td>
                     <td style={{ padding: '11px 14px' }}>
                       <span style={{
-                        fontSize: '11px', fontWeight: 500, padding: '2px 8px', borderRadius: '2px',
+                        fontSize: '11px', fontWeight: 500, padding: '2px 8px', borderRadius: 'var(--radius-xs)',
                         background: sc.bg, color: sc.color,
                       }}>
                         {sc.label}
@@ -400,7 +400,7 @@ export default function AdminAllReports({ onViewDetail }) {
                       <button
                         onClick={() => onViewDetail && onViewDetail(report.id)}
                         style={{
-                          fontSize: '12px', color: '#8C3225', background: 'none', border: 'none',
+                          fontSize: '12px', color: 'var(--action)', background: 'none', border: 'none',
                           cursor: 'pointer', padding: 0, fontWeight: 500,
                         }}
                       >
@@ -412,7 +412,7 @@ export default function AdminAllReports({ onViewDetail }) {
               })}
             </tbody>
           </table>
-          <div style={{ padding: '10px 16px', background: '#F8F9FA', borderTop: '1px solid #E3E8EF', fontSize: '11px', color: '#6B7280' }}>
+          <div style={{ padding: '10px 16px', background: 'var(--taupe-50)', borderTop: '1px solid var(--taupe-200)', fontSize: '11px', color: 'var(--text-muted)' }}>
             {filtered.length} record{filtered.length !== 1 ? 's' : ''}
             {selected.size > 0 && ` · ${selected.size} selected`}
           </div>

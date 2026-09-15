@@ -10,16 +10,16 @@ export default function StepIndicator({ current, total, labels }) {
             <div style={{
               width: '28px', height: '28px', borderRadius: '50%', display: 'flex',
               alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 600,
-              background: i < current ? '#16A34A' : i === current ? '#8C3225' : '#E5E7EB',
-              color: i <= current ? '#FFFFFF' : '#6B7280',
+              background: i < current ? 'var(--moss)' : i === current ? 'var(--action)' : 'var(--taupe-200)',
+              color: i <= current ? 'var(--surface-card)' : 'var(--text-muted)',
             }}>
               {i < current ? '✓' : i + 1}
             </div>
-            <div style={{ fontSize: '10px', fontWeight: i === current ? 700 : 500, color: i === current ? '#1A1F36' : '#9CA3AF', whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: '10px', fontWeight: i === current ? 700 : 500, color: i === current ? 'var(--ink)' : 'var(--text-muted)', whiteSpace: 'nowrap' }}>
               {labels?.[i]}
             </div>
           </div>
-          {i < total - 1 && <div style={{ width: '36px', height: '1px', background: i < current ? '#16A34A' : '#E5E7EB', marginTop: '13px' }} />}
+          {i < total - 1 && <div style={{ width: '36px', height: '1px', background: i < current ? 'var(--moss)' : 'var(--taupe-200)', marginTop: '13px' }} />}
         </div>
       ))}
     </div>

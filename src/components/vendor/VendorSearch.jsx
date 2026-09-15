@@ -27,14 +27,14 @@ export default function VendorSearch({ onCreateNew, onSelectExisting, onBack }) 
       {onBack && (
         <div
           onClick={onBack}
-          style={{ fontSize: '13px', color: '#8C3225', cursor: 'pointer', marginBottom: '16px' }}
+          style={{ fontSize: '13px', color: 'var(--action)', cursor: 'pointer', marginBottom: '16px' }}
         >
           ← Back
         </div>
       )}
       <div style={{ marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A1F36', margin: '0 0 4px' }}>Add a Vendor</h2>
-        <p style={{ fontSize: '13px', color: '#6B7280', margin: 0 }}>
+        <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--ink)', margin: '0 0 4px' }}>Add a Vendor</h2>
+        <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
           First, search to check if this vendor already exists.
         </p>
       </div>
@@ -47,16 +47,16 @@ export default function VendorSearch({ onCreateNew, onSelectExisting, onBack }) 
           onKeyDown={e => e.key === 'Enter' && handleSearch()}
           placeholder="Search by organisation name, PAN, email or phone"
           style={{
-            flex: 1, height: '40px', border: '1px solid #D1D5DB', borderRadius: '4px',
-            padding: '0 12px', fontSize: '14px', outline: 'none', color: '#1A1F36',
+            flex: 1, height: '40px', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)',
+            padding: '0 12px', fontSize: '14px', outline: 'none', color: 'var(--ink)',
           }}
         />
         <button
           onClick={handleSearch}
           disabled={loading}
           style={{
-            height: '40px', padding: '0 20px', background: '#8C3225', color: '#FFFFFF',
-            border: 'none', borderRadius: '4px', fontSize: '14px', fontWeight: 600,
+            height: '40px', padding: '0 20px', background: 'var(--action)', color: 'var(--surface-card)',
+            border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '14px', fontWeight: 600,
             cursor: loading ? 'default' : 'pointer',
           }}
         >
@@ -67,11 +67,11 @@ export default function VendorSearch({ onCreateNew, onSelectExisting, onBack }) 
       {searched && (
         <div style={{ marginBottom: '16px' }}>
           {results.length === 0 ? (
-            <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '4px', padding: '14px 16px', fontSize: '13px', color: '#15803D' }}>
+            <div style={{ background: 'var(--moss-bg)', border: '1px solid var(--moss-border)', borderRadius: 'var(--radius-sm)', padding: '14px 16px', fontSize: '13px', color: 'var(--moss-text)' }}>
               No existing vendor found. You can proceed to create a new one.
             </div>
           ) : (
-            <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '4px', padding: '14px 16px', marginBottom: '12px', fontSize: '13px', color: '#92400E' }}>
+            <div style={{ background: 'var(--gold-bg)', border: '1px solid var(--gold-border)', borderRadius: 'var(--radius-sm)', padding: '14px 16px', marginBottom: '12px', fontSize: '13px', color: 'var(--gold-text)' }}>
               We found {results.length} existing vendor{results.length !== 1 ? 's' : ''}. Is this the vendor you meant?
             </div>
           )}
@@ -80,7 +80,7 @@ export default function VendorSearch({ onCreateNew, onSelectExisting, onBack }) 
             <div
               key={v.id}
               style={{
-                background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '4px',
+                background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)',
                 padding: '14px 16px', marginBottom: '8px', cursor: 'pointer',
                 transition: 'border-color 0.15s',
               }}
@@ -88,11 +88,11 @@ export default function VendorSearch({ onCreateNew, onSelectExisting, onBack }) 
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
-                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#1A1F36', marginBottom: '4px' }}>{v.org_name}</div>
-                  <div style={{ fontSize: '12px', color: '#6B7280' }}>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink)', marginBottom: '4px' }}>{v.org_name}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                     PAN: {v.pan_number} &nbsp;·&nbsp; {v.email} &nbsp;·&nbsp; {v.phone}
                   </div>
-                  <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '3px', fontFamily: 'monospace' }}>{v.vendor_id}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px', fontFamily: 'monospace' }}>{v.vendor_id}</div>
                 </div>
                 <VendorStatusBadge status={v.status} />
               </div>
@@ -105,15 +105,15 @@ export default function VendorSearch({ onCreateNew, onSelectExisting, onBack }) 
         <button
           onClick={onCreateNew}
           style={{
-            height: '40px', padding: '0 24px', background: '#8C3225', color: '#FFFFFF',
-            border: 'none', borderRadius: '4px', fontSize: '14px', fontWeight: 600,
+            height: '40px', padding: '0 24px', background: 'var(--action)', color: 'var(--surface-card)',
+            border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '14px', fontWeight: 600,
             cursor: 'pointer',
           }}
         >
           Create New Vendor
         </button>
         {!searched && (
-          <span style={{ fontSize: '12px', color: '#9CA3AF', alignSelf: 'center' }}>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)', alignSelf: 'center' }}>
             Search first to avoid duplicates
           </span>
         )}
@@ -122,10 +122,10 @@ export default function VendorSearch({ onCreateNew, onSelectExisting, onBack }) 
       {/* Fills the otherwise-empty space below the search box with a preview
           of what the form will ask for, so nothing about search above changes. */}
       <div style={{
-        marginTop: '32px', background: '#F9FAFB', border: '1px solid #E3E8EF',
-        borderRadius: '6px', padding: '18px 20px',
+        marginTop: '32px', background: 'var(--taupe-50)', border: '1px solid var(--taupe-200)',
+        borderRadius: 'var(--radius-md)', padding: '18px 20px',
       }}>
-        <div style={{ fontSize: '11px', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px' }}>
+        <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px' }}>
           What you'll need before you start
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 20px' }}>
@@ -139,13 +139,13 @@ export default function VendorSearch({ onCreateNew, onSelectExisting, onBack }) 
             'MSME certificate — only if MSME-registered',
             'Contact person, phone and email for the vendor',
           ].map(item => (
-            <div key={item} style={{ display: 'flex', gap: '8px', fontSize: '12px', color: '#4B5563', lineHeight: '1.4' }}>
-              <span style={{ color: '#8C3225', flexShrink: 0 }}>○</span>
+            <div key={item} style={{ display: 'flex', gap: '8px', fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+              <span style={{ color: 'var(--action)', flexShrink: 0 }}>○</span>
               <span>{item}</span>
             </div>
           ))}
         </div>
-        <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '12px' }}>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '12px' }}>
           Don't have everything yet? You can save the form as a draft and finish it later.
         </div>
       </div>

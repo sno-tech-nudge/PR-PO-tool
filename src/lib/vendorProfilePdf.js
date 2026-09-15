@@ -41,7 +41,7 @@ export async function generateVendorProfilePDF({ documents = [], onProgress } = 
 
   onProgress?.('Rendering overview…')
   const canvas = await html2canvas(element, {
-    scale: 1.5, useCORS: true, allowTaint: true, backgroundColor: '#ffffff', logging: false,
+    scale: 1.5, useCORS: true, allowTaint: true, backgroundColor: 'var(--surface-card)', logging: false,
     onclone: (clonedDoc) => {
       const el = clonedDoc.getElementById('vendor-pdf-template')
       if (el) { el.style.display = 'block'; el.style.position = 'relative'; el.style.left = '0' }

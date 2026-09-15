@@ -247,9 +247,9 @@ export default function FeedbackWidget({ user, moduleName }) {
   }
 
   const inputStyle = {
-    width: '100%', height: '40px', border: '1px solid #E3E8EF', borderRadius: '4px',
-    padding: '0 12px', fontSize: '13px', color: '#1A1F36', outline: 'none',
-    boxSizing: 'border-box', background: '#FFFFFF', fontFamily: 'inherit',
+    width: '100%', height: '40px', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)',
+    padding: '0 12px', fontSize: '13px', color: 'var(--ink)', outline: 'none',
+    boxSizing: 'border-box', background: 'var(--surface-card)', fontFamily: 'inherit',
   }
 
   const contextChips = [
@@ -273,8 +273,8 @@ export default function FeedbackWidget({ user, moduleName }) {
             position: 'fixed', zIndex: 150,
             ...(buttonPos ? { top: `${buttonPos.top}px`, left: `${buttonPos.left}px` } : { bottom: '20px', right: '20px' }),
             height: '40px', padding: '0 16px', borderRadius: '20px',
-            background: '#8C3225', color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '8px',
-            cursor: dragging ? 'grabbing' : 'grab', boxShadow: '0 4px 14px rgba(0,0,0,0.2)', fontSize: '13px', fontWeight: 600,
+            background: 'var(--action)', color: 'var(--surface-card)', display: 'flex', alignItems: 'center', gap: '8px',
+            cursor: dragging ? 'grabbing' : 'grab', boxShadow: '0 4px 14px rgba(54, 32, 26,0.2)', fontSize: '13px', fontWeight: 600,
             userSelect: 'none', touchAction: 'none',
           }}
         >
@@ -292,15 +292,15 @@ export default function FeedbackWidget({ user, moduleName }) {
             ref={drawerRef}
             onClick={e => e.stopPropagation()}
             style={{
-              width: '440px', maxWidth: '100%', height: '100vh', background: '#FFFFFF',
-              boxShadow: '-4px 0 24px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column',
+              width: '440px', maxWidth: '100%', height: '100vh', background: 'var(--surface-card)',
+              boxShadow: '-4px 0 24px rgba(54, 32, 26,0.15)', display: 'flex', flexDirection: 'column',
               overflowY: 'auto',
             }}
           >
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 20px', borderBottom: '1px solid #E3E8EF', flexShrink: 0 }}>
-              <div style={{ fontSize: '16px', fontWeight: 700, color: '#1A1F36' }}>Share feedback</div>
-              <div onClick={handleClose} style={{ cursor: 'pointer', fontSize: '18px', color: '#6B7280', lineHeight: 1 }}>×</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 20px', borderBottom: '1px solid var(--taupe-200)', flexShrink: 0 }}>
+              <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--ink)' }}>Share feedback</div>
+              <div onClick={handleClose} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--text-muted)', lineHeight: 1 }}>×</div>
             </div>
 
             <div style={{ padding: '20px', flex: 1 }}>
@@ -311,13 +311,13 @@ export default function FeedbackWidget({ user, moduleName }) {
                     key={c.key}
                     onClick={() => setCategory(c.key)}
                     style={{
-                      flex: 1, border: `1.5px solid ${category === c.key ? '#8C3225' : '#E3E8EF'}`,
-                      background: category === c.key ? '#fdf0ed' : '#FFFFFF', borderRadius: '6px',
+                      flex: 1, border: `1.5px solid ${category === c.key ? 'var(--action)' : 'var(--taupe-200)'}`,
+                      background: category === c.key ? 'var(--action-bg)' : 'var(--surface-card)', borderRadius: 'var(--radius-md)',
                       padding: '14px 8px', textAlign: 'center', cursor: 'pointer',
                     }}
                   >
-                    <div style={{ fontSize: '18px', color: category === c.key ? '#8C3225' : '#6B7280', marginBottom: '6px' }}>{c.icon}</div>
-                    <div style={{ fontSize: '12px', fontWeight: 600, color: category === c.key ? '#8C3225' : '#374151' }}>{c.label}</div>
+                    <div style={{ fontSize: '18px', color: category === c.key ? 'var(--action)' : 'var(--text-muted)', marginBottom: '6px' }}>{c.icon}</div>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: category === c.key ? 'var(--action)' : 'var(--ink)' }}>{c.label}</div>
                   </div>
                 ))}
               </div>
@@ -326,8 +326,8 @@ export default function FeedbackWidget({ user, moduleName }) {
                 <>
                   {/* Title */}
                   <div style={{ marginBottom: '16px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '5px', display: 'block' }}>
-                      Title<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: '5px', display: 'block' }}>
+                      Title<span style={{ color: 'var(--clay-text)', marginLeft: '2px' }}>*</span>
                     </label>
                     <input
                       type="text"
@@ -340,8 +340,8 @@ export default function FeedbackWidget({ user, moduleName }) {
 
                   {/* Description */}
                   <div style={{ marginBottom: '18px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '5px', display: 'block' }}>
-                      Description<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: '5px', display: 'block' }}>
+                      Description<span style={{ color: 'var(--clay-text)', marginLeft: '2px' }}>*</span>
                     </label>
                     <textarea
                       value={description}
@@ -355,17 +355,17 @@ export default function FeedbackWidget({ user, moduleName }) {
                   {/* Severity — bug only */}
                   {category === 'bug' && (
                     <div style={{ marginBottom: '18px' }}>
-                      <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '7px', display: 'block' }}>Severity</label>
+                      <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: '7px', display: 'block' }}>Severity</label>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         {SEVERITIES.map(s => (
                           <div
                             key={s}
                             onClick={() => setSeverity(prev => prev === s ? null : s)}
                             style={{
-                              flex: 1, textAlign: 'center', padding: '8px 6px', borderRadius: '16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
-                              border: `1.5px solid ${severity === s ? '#8C3225' : '#E3E8EF'}`,
-                              background: severity === s ? '#8C3225' : '#FFFFFF',
-                              color: severity === s ? '#FFFFFF' : '#374151',
+                              flex: 1, textAlign: 'center', padding: '8px 6px', borderRadius: 'var(--radius-xl)', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+                              border: `1.5px solid ${severity === s ? 'var(--action)' : 'var(--taupe-200)'}`,
+                              background: severity === s ? 'var(--action)' : 'var(--surface-card)',
+                              color: severity === s ? 'var(--surface-card)' : 'var(--ink)',
                             }}
                           >
                             {s}
@@ -377,17 +377,17 @@ export default function FeedbackWidget({ user, moduleName }) {
 
                   {/* Time frame */}
                   <div style={{ marginBottom: '18px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '7px', display: 'block' }}>When did this happen</label>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: '7px', display: 'block' }}>When did this happen</label>
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                       {TIME_OPTIONS.map(t => (
                         <div
                           key={t}
                           onClick={() => setTimeFrame(prev => prev === t ? null : t)}
                           style={{
-                            padding: '7px 12px', borderRadius: '4px', fontSize: '12px', cursor: 'pointer',
-                            border: `1.5px solid ${timeFrame === t ? '#8C3225' : '#E3E8EF'}`,
-                            background: timeFrame === t ? '#fdf0ed' : '#FFFFFF',
-                            color: timeFrame === t ? '#8C3225' : '#374151', fontWeight: timeFrame === t ? 600 : 400,
+                            padding: '7px 12px', borderRadius: 'var(--radius-sm)', fontSize: '12px', cursor: 'pointer',
+                            border: `1.5px solid ${timeFrame === t ? 'var(--action)' : 'var(--taupe-200)'}`,
+                            background: timeFrame === t ? 'var(--action-bg)' : 'var(--surface-card)',
+                            color: timeFrame === t ? 'var(--action)' : 'var(--ink)', fontWeight: timeFrame === t ? 600 : 400,
                           }}
                         >
                           {t}
@@ -406,19 +406,19 @@ export default function FeedbackWidget({ user, moduleName }) {
 
                   {/* Screenshot */}
                   <div style={{ marginBottom: '18px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '7px', display: 'block' }}>Screenshot (optional)</label>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: '7px', display: 'block' }}>Screenshot (optional)</label>
                     <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
                       <button
                         type="button"
                         onClick={handleCaptureScreen}
-                        style={{ flex: 1, height: '36px', border: '1px solid #E3E8EF', borderRadius: '4px', background: '#FFFFFF', color: '#374151', fontSize: '12px', cursor: 'pointer' }}
+                        style={{ flex: 1, height: '36px', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', background: 'var(--surface-card)', color: 'var(--ink)', fontSize: '12px', cursor: 'pointer' }}
                       >
                         Capture current screen
                       </button>
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        style={{ flex: 1, height: '36px', border: '1px solid #E3E8EF', borderRadius: '4px', background: '#FFFFFF', color: '#374151', fontSize: '12px', cursor: 'pointer' }}
+                        style={{ flex: 1, height: '36px', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', background: 'var(--surface-card)', color: 'var(--ink)', fontSize: '12px', cursor: 'pointer' }}
                       >
                         Upload image
                       </button>
@@ -432,12 +432,12 @@ export default function FeedbackWidget({ user, moduleName }) {
                     </div>
 
                     {screenshotPreview ? (
-                      <div style={{ border: '1px solid #E3E8EF', borderRadius: '4px', padding: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <img src={screenshotPreview} alt="Screenshot preview" style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '3px', flexShrink: 0 }} />
-                        <div style={{ fontSize: '12px', color: '#6B7280', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <img src={screenshotPreview} alt="Screenshot preview" style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: 'var(--radius-sm)', flexShrink: 0 }} />
+                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {screenshotFile?.name}
                         </div>
-                        <span onClick={removeScreenshot} style={{ fontSize: '12px', color: '#B91C1C', cursor: 'pointer', flexShrink: 0 }}>Remove</span>
+                        <span onClick={removeScreenshot} style={{ fontSize: '12px', color: 'var(--clay-text)', cursor: 'pointer', flexShrink: 0 }}>Remove</span>
                       </div>
                     ) : (
                       <div
@@ -445,25 +445,25 @@ export default function FeedbackWidget({ user, moduleName }) {
                         onDragLeave={() => setDragOver(false)}
                         onDrop={e => { e.preventDefault(); setDragOver(false); applyScreenshotFile(e.dataTransfer.files?.[0]) }}
                         style={{
-                          border: `1.5px dashed ${dragOver ? '#8C3225' : '#D1D5DB'}`, borderRadius: '4px',
-                          padding: '14px', textAlign: 'center', fontSize: '11px', color: '#9CA3AF',
-                          background: dragOver ? '#fdf0ed' : '#FAFAFA',
+                          border: `1.5px dashed ${dragOver ? 'var(--action)' : 'var(--taupe-400)'}`, borderRadius: 'var(--radius-sm)',
+                          padding: '14px', textAlign: 'center', fontSize: '11px', color: 'var(--text-muted)',
+                          background: dragOver ? 'var(--action-bg)' : 'var(--taupe-50)',
                         }}
                       >
                         Drag & drop, or paste (Ctrl/Cmd+V) an image
                       </div>
                     )}
                     {screenshotError && (
-                      <div style={{ fontSize: '11px', color: '#DC2626', marginTop: '6px' }}>{screenshotError}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--clay-text)', marginTop: '6px' }}>{screenshotError}</div>
                     )}
                   </div>
 
                   {/* Auto-attached context */}
                   <div style={{ marginBottom: '8px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '7px', display: 'block' }}>Auto-attached context</label>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: '7px', display: 'block' }}>Auto-attached context</label>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                       {contextChips.map(([label, value]) => (
-                        <div key={label} style={{ fontSize: '11px', color: '#6B7280', background: '#F3F4F6', borderRadius: '3px', padding: '4px 8px' }}>
+                        <div key={label} style={{ fontSize: '11px', color: 'var(--text-muted)', background: 'var(--taupe-100)', borderRadius: 'var(--radius-sm)', padding: '4px 8px' }}>
                           <span style={{ fontWeight: 600 }}>{label}:</span> {value}
                         </div>
                       ))}
@@ -474,20 +474,20 @@ export default function FeedbackWidget({ user, moduleName }) {
             </div>
 
             {/* Footer */}
-            <div style={{ display: 'flex', gap: '10px', padding: '16px 20px', borderTop: '1px solid #E3E8EF', flexShrink: 0 }}>
+            <div style={{ display: 'flex', gap: '10px', padding: '16px 20px', borderTop: '1px solid var(--taupe-200)', flexShrink: 0 }}>
               <button
                 onClick={handleSubmit}
                 disabled={!canSubmit}
                 style={{
-                  flex: 1, height: '42px', borderRadius: '4px', fontSize: '13px', fontWeight: 600, border: 'none',
-                  background: canSubmit ? '#8C3225' : '#9CA3AF', color: '#FFFFFF', cursor: canSubmit ? 'pointer' : 'default',
+                  flex: 1, height: '42px', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 600, border: 'none',
+                  background: canSubmit ? 'var(--action)' : 'var(--text-muted)', color: 'var(--surface-card)', cursor: canSubmit ? 'pointer' : 'default',
                 }}
               >
                 {submitting ? 'Submitting…' : 'Submit'}
               </button>
               <button
                 onClick={handleClose}
-                style={{ height: '42px', padding: '0 20px', border: '1px solid #D1D5DB', borderRadius: '4px', background: '#FFFFFF', color: '#374151', fontSize: '13px', cursor: 'pointer' }}
+                style={{ height: '42px', padding: '0 20px', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', background: 'var(--surface-card)', color: 'var(--ink)', fontSize: '13px', cursor: 'pointer' }}
               >
                 Cancel
               </button>
@@ -499,13 +499,13 @@ export default function FeedbackWidget({ user, moduleName }) {
       {toast && (
         <div style={{
           position: 'fixed', bottom: '20px', right: '20px', zIndex: 250,
-          background: '#FFFFFF', border: `1px solid ${toast.type === 'success' ? '#16A34A' : '#DC2626'}`,
-          borderRadius: '6px', padding: '12px 16px', fontSize: '13px', color: '#1A1A1A',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', gap: '10px', maxWidth: '320px',
+          background: 'var(--surface-card)', border: `1px solid ${toast.type === 'success' ? 'var(--moss)' : 'var(--clay-text)'}`,
+          borderRadius: 'var(--radius-md)', padding: '12px 16px', fontSize: '13px', color: 'var(--text)',
+          boxShadow: '0 4px 16px rgba(54, 32, 26,0.15)', display: 'flex', alignItems: 'center', gap: '10px', maxWidth: '320px',
         }}>
-          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: toast.type === 'success' ? '#16A34A' : '#DC2626', flexShrink: 0 }} />
+          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: toast.type === 'success' ? 'var(--moss)' : 'var(--clay-text)', flexShrink: 0 }} />
           <div style={{ flex: 1 }}>{toast.message}</div>
-          <span onClick={() => setToast(null)} style={{ cursor: 'pointer', color: '#6B7280', flexShrink: 0 }}>×</span>
+          <span onClick={() => setToast(null)} style={{ cursor: 'pointer', color: 'var(--text-muted)', flexShrink: 0 }}>×</span>
         </div>
       )}
     </>

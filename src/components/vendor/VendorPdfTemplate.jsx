@@ -11,8 +11,8 @@ function PdfRow({ label, value }) {
   if (!value) return null
   return (
     <div style={{ display: 'flex', padding: '6px 0', borderBottom: '1px solid #F0F0F0' }}>
-      <div style={{ width: '220px', flexShrink: 0, fontSize: '10px', color: '#6B6B6B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
-      <div style={{ fontSize: '12px', color: '#1A1A1A' }}>{value}</div>
+      <div style={{ width: '220px', flexShrink: 0, fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
+      <div style={{ fontSize: '12px', color: 'var(--text)' }}>{value}</div>
     </div>
   )
 }
@@ -20,7 +20,7 @@ function PdfRow({ label, value }) {
 function PdfSection({ title, children }) {
   return (
     <div style={{ marginBottom: '20px' }}>
-      <div style={{ fontSize: '13px', fontWeight: 700, color: '#1A1A1A', marginBottom: '8px', paddingBottom: '6px', borderBottom: '2px solid #1A1A1A' }}>
+      <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)', marginBottom: '8px', paddingBottom: '6px', borderBottom: '2px solid var(--text)' }}>
         {title}
       </div>
       {children}
@@ -41,25 +41,25 @@ export default function VendorPdfTemplate({ vendor, panSiblingsCount = 0 }) {
       id="vendor-pdf-template"
       style={{
         position: 'absolute', left: '-9999px', top: 0,
-        width: '794px', background: '#FFFFFF', boxSizing: 'border-box',
+        width: '794px', background: 'var(--surface-card)', boxSizing: 'border-box',
         padding: '40px', fontFamily: 'system-ui, -apple-system, sans-serif',
       }}
     >
-      <div style={{ fontSize: '11px', fontWeight: 600, color: '#6B6B6B', letterSpacing: '0.15em' }}>
+      <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.15em' }}>
         THE/NUDGE INSTITUTE — VENDOR PROFILE
       </div>
-      <div style={{ height: '1px', background: '#E8E8E8', margin: '8px 0 24px' }} />
+      <div style={{ height: '1px', background: 'var(--taupe-200)', margin: '8px 0 24px' }} />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
         <div>
-          <div style={{ fontSize: '11px', color: '#9CA3AF', fontFamily: 'monospace', marginBottom: '4px' }}>{vendor.vendor_id}</div>
-          <div style={{ fontSize: '24px', fontWeight: 700, color: '#1A1A1A' }}>{vendor.org_name}</div>
-          <div style={{ fontSize: '13px', color: '#6B6B6B', marginTop: '2px' }}>{vendor.org_type}</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace', marginBottom: '4px' }}>{vendor.vendor_id}</div>
+          <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text)' }}>{vendor.org_name}</div>
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>{vendor.org_type}</div>
         </div>
         <div style={{
-          fontSize: '11px', fontWeight: 700, padding: '4px 12px', borderRadius: '2px',
-          background: vendor.status === 'approved' ? '#F0FDF4' : vendor.status === 'rejected' ? '#FEF2F2' : '#FFFBEB',
-          color: vendor.status === 'approved' ? '#15803D' : vendor.status === 'rejected' ? '#B91C1C' : '#B45309',
+          fontSize: '11px', fontWeight: 700, padding: '4px 12px', borderRadius: 'var(--radius-xs)',
+          background: vendor.status === 'approved' ? 'var(--moss-bg)' : vendor.status === 'rejected' ? 'var(--clay-bg)' : 'var(--gold-bg)',
+          color: vendor.status === 'approved' ? 'var(--moss-text)' : vendor.status === 'rejected' ? 'var(--clay-text)' : 'var(--gold-text)',
           textTransform: 'uppercase',
         }}>
           {vendor.status}
@@ -113,7 +113,7 @@ export default function VendorPdfTemplate({ vendor, panSiblingsCount = 0 }) {
         {vendor.status === 'approved' && vendor.notes && <PdfRow label="Finance Comment" value={vendor.notes} />}
       </PdfSection>
 
-      <div style={{ fontSize: '10px', color: '#9CA3AF', marginTop: '32px', paddingTop: '12px', borderTop: '1px solid #E8E8E8' }}>
+      <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '32px', paddingTop: '12px', borderTop: '1px solid var(--taupe-200)' }}>
         Generated {new Date().toLocaleString('en-IN')} · attached documents follow on the pages after this overview
       </div>
     </div>

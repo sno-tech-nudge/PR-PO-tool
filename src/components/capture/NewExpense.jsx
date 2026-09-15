@@ -207,15 +207,15 @@ export default function NewExpense({ user, onContinueToDetails, onBack }) {
       {syncNotification && (
         <div style={{
           position: 'fixed', bottom: '20px', left: '50%', transform: 'translateX(-50%)',
-          background: '#8C3225', color: '#FFFFFF', fontSize: '13px',
-          padding: '10px 20px', borderRadius: '4px', zIndex: 60,
+          background: 'var(--action)', color: 'var(--surface-card)', fontSize: '13px',
+          padding: '10px 20px', borderRadius: 'var(--radius-sm)', zIndex: 60,
         }}>
           Your saved documents have been uploaded
         </div>
       )}
 
       {showTabs && (
-        <div style={{ display: 'flex', borderBottom: '1px solid #E8E8E8', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--taupe-200)', marginBottom: '20px' }}>
           {[['single', 'Add Expense'], ['bulk', 'Bulk Add Expenses']].map(([key, label]) => (
             <div
               key={key}
@@ -223,8 +223,8 @@ export default function NewExpense({ user, onContinueToDetails, onBack }) {
               style={{
                 padding: '10px 16px', fontSize: '13px', cursor: 'pointer',
                 fontWeight: activeTab === key ? 600 : 400,
-                color: activeTab === key ? '#1A1A1A' : '#6B6B6B',
-                borderBottom: activeTab === key ? '2px solid #8C3225' : '2px solid transparent',
+                color: activeTab === key ? 'var(--text)' : 'var(--text-muted)',
+                borderBottom: activeTab === key ? '2px solid var(--action)' : '2px solid transparent',
                 marginBottom: '-1px',
               }}
             >
@@ -249,22 +249,22 @@ export default function NewExpense({ user, onContinueToDetails, onBack }) {
       {step === STEPS.UPI_PROMPT && (
         <div>
           <div style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+            position: 'fixed', inset: 0, background: 'rgba(54, 32, 26,0.5)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 40, padding: '20px',
           }}>
-            <div style={{ background: '#FFFFFF', padding: '24px', maxWidth: '360px', width: '100%', borderRadius: '4px' }}>
-              <div style={{ fontSize: '15px', fontWeight: 500, color: '#1A1A1A', marginBottom: '8px' }}>
+            <div style={{ background: 'var(--surface-card)', padding: '24px', maxWidth: '360px', width: '100%', borderRadius: 'var(--radius-sm)' }}>
+              <div style={{ fontSize: '15px', fontWeight: 500, color: 'var(--text)', marginBottom: '8px' }}>
                 This could work as both documents
               </div>
-              <div style={{ fontSize: '13px', color: '#4A4A4A', marginBottom: '20px' }}>
+              <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>
                 This UPI screenshot contains vendor information. You may not need a separate receipt.
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <button
                   onClick={handleUpiSingleDoc}
                   style={{
-                    width: '100%', height: '44px', background: '#8C3225', color: '#FFFFFF',
-                    border: 'none', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: '4px',
+                    width: '100%', height: '44px', background: 'var(--action)', color: 'var(--surface-card)',
+                    border: 'none', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: 'var(--radius-sm)',
                   }}
                 >
                   Use as single document
@@ -272,8 +272,8 @@ export default function NewExpense({ user, onContinueToDetails, onBack }) {
                 <button
                   onClick={handleUpiKeepBoth}
                   style={{
-                    width: '100%', height: '44px', border: '1px solid #E8E8E8', background: '#FFFFFF',
-                    color: '#1A1A1A', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: '4px',
+                    width: '100%', height: '44px', border: '1px solid var(--taupe-200)', background: 'var(--surface-card)',
+                    color: 'var(--text)', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: 'var(--radius-sm)',
                   }}
                 >
                   Keep both documents

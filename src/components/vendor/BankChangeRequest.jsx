@@ -95,9 +95,9 @@ export default function BankChangeRequest({ vendor, user, onBack, onSubmitted })
       onBlur={opts.onBlur}
       placeholder={placeholder}
       style={{
-        width: '100%', height: '38px', border: `1px solid ${errors[field] ? '#EF4444' : '#D1D5DB'}`,
-        borderRadius: '4px', padding: '0 10px', fontSize: '13px', color: '#1A1F36',
-        background: '#FFFFFF', outline: 'none', boxSizing: 'border-box',
+        width: '100%', height: '38px', border: `1px solid ${errors[field] ? 'var(--clay)' : 'var(--taupe-400)'}`,
+        borderRadius: 'var(--radius-sm)', padding: '0 10px', fontSize: '13px', color: 'var(--ink)',
+        background: 'var(--surface-card)', outline: 'none', boxSizing: 'border-box',
         fontFamily: opts.mono ? 'monospace' : 'inherit',
       }}
     />
@@ -106,27 +106,27 @@ export default function BankChangeRequest({ vendor, user, onBack, onSubmitted })
   return (
     <div style={{ maxWidth: '560px', margin: '0 auto', padding: '24px 20px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
-        <button onClick={onBack} style={{ background: 'none', border: 'none', fontSize: '13px', color: '#8C3225', cursor: 'pointer', padding: 0 }}>Back</button>
-        <span style={{ color: '#9CA3AF' }}>/</span>
-        <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#1A1F36', margin: 0 }}>Request Bank Detail Change</h2>
+        <button onClick={onBack} style={{ background: 'none', border: 'none', fontSize: '13px', color: 'var(--action)', cursor: 'pointer', padding: 0 }}>Back</button>
+        <span style={{ color: 'var(--text-muted)' }}>/</span>
+        <h2 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--ink)', margin: 0 }}>Request Bank Detail Change</h2>
       </div>
 
-      <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '4px', padding: '12px 14px', marginBottom: '20px', fontSize: '12px', color: '#92400E' }}>
+      <div style={{ background: 'var(--gold-bg)', border: '1px solid var(--gold-border)', borderRadius: 'var(--radius-sm)', padding: '12px 14px', marginBottom: '20px', fontSize: '12px', color: 'var(--gold-text)' }}>
         Bank detail changes require re-approval by Finance before taking effect. Please fill in the new details below.
       </div>
 
-      <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '20px', marginBottom: '16px' }}>
-        <div style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Current Bank Details (for reference)</div>
+      <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '20px', marginBottom: '16px' }}>
+        <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Current Bank Details (for reference)</div>
         {[['Beneficiary', vendor.beneficiary_name], ['Account No.', vendor.account_number], ['IFSC', vendor.ifsc_code], ['Bank', vendor.bank_name], ['Branch', vendor.branch]].map(([l, v]) => (
           <div key={l} style={{ display: 'flex', gap: '12px', marginBottom: '6px', fontSize: '12px' }}>
-            <span style={{ color: '#9CA3AF', width: '100px', flexShrink: 0 }}>{l}</span>
-            <span style={{ color: '#374151', fontFamily: l === 'Account No.' || l === 'IFSC' ? 'monospace' : 'inherit' }}>{v}</span>
+            <span style={{ color: 'var(--text-muted)', width: '100px', flexShrink: 0 }}>{l}</span>
+            <span style={{ color: 'var(--ink)', fontFamily: l === 'Account No.' || l === 'IFSC' ? 'monospace' : 'inherit' }}>{v}</span>
           </div>
         ))}
       </div>
 
-      <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '20px', marginBottom: '16px' }}>
-        <div style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>New Bank Details</div>
+      <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '20px', marginBottom: '16px' }}>
+        <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>New Bank Details</div>
         {[
           ['Beneficiary Name', 'beneficiary_name', 'Name as on new account'],
           ['Account Number', 'account_number', '', { mono: true }],
@@ -135,16 +135,16 @@ export default function BankChangeRequest({ vendor, user, onBack, onSubmitted })
           ['Branch', 'branch', 'e.g. MG Road, Bangalore'],
         ].map(([label, field, placeholder, opts]) => (
           <div key={field} style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '5px' }}>{label}</label>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: '5px' }}>{label}</label>
             {inp(field, placeholder, opts || {})}
-            {errors[field] && <div style={{ fontSize: '11px', color: '#DC2626', marginTop: '3px' }}>{errors[field]}</div>}
+            {errors[field] && <div style={{ fontSize: '11px', color: 'var(--clay-text)', marginTop: '3px' }}>{errors[field]}</div>}
           </div>
         ))}
-        {ifscLooking && <div style={{ fontSize: '11px', color: '#6B7280' }}>Looking up IFSC…</div>}
+        {ifscLooking && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Looking up IFSC…</div>}
       </div>
 
       {(errors.general || saveError) && (
-        <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '4px', padding: '10px 14px', marginBottom: '14px', fontSize: '13px', color: '#B91C1C' }}>
+        <div style={{ background: 'var(--clay-bg)', border: '1px solid var(--clay-border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', marginBottom: '14px', fontSize: '13px', color: 'var(--clay-text)' }}>
           {errors.general || saveError}
         </div>
       )}
@@ -153,11 +153,11 @@ export default function BankChangeRequest({ vendor, user, onBack, onSubmitted })
         <button
           onClick={handleSubmit}
           disabled={saving}
-          style={{ height: '40px', padding: '0 24px', background: saving ? '#9CA3AF' : '#1565C0', color: '#FFFFFF', border: 'none', borderRadius: '4px', fontSize: '14px', fontWeight: 600, cursor: saving ? 'default' : 'pointer' }}
+          style={{ height: '40px', padding: '0 24px', background: saving ? 'var(--text-muted)' : 'var(--action)', color: 'var(--surface-card)', border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '14px', fontWeight: 600, cursor: saving ? 'default' : 'pointer' }}
         >
           {saving ? 'Submitting…' : 'Submit Change Request'}
         </button>
-        <button onClick={onBack} style={{ height: '40px', padding: '0 20px', background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '14px', cursor: 'pointer' }}>
+        <button onClick={onBack} style={{ height: '40px', padding: '0 20px', background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', fontSize: '14px', cursor: 'pointer' }}>
           Cancel
         </button>
       </div>

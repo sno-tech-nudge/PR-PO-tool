@@ -15,19 +15,19 @@ function SummaryBar({ expenses }) {
   return (
     <div style={{
       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      padding: '12px 16px', background: '#F9FAFB', borderRadius: '8px',
-      border: '1px solid #E8E8E8', marginBottom: '16px',
+      padding: '12px 16px', background: 'var(--taupe-50)', borderRadius: 'var(--radius-lg)',
+      border: '1px solid var(--taupe-200)', marginBottom: '16px',
     }}>
       <div>
-        <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '2px' }}>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>
           {expenses.length} expense{expenses.length !== 1 ? 's' : ''}
         </div>
-        <div style={{ fontSize: '16px', fontWeight: 600, color: '#1A1A1A' }}>
+        <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text)' }}>
           ₹{total.toLocaleString('en-IN')}
         </div>
       </div>
-      <div style={{ fontSize: '11px', color: '#6B6B6B', textAlign: 'right' }}>
-        {expenses[0]?.brand && <div style={{ fontWeight: 500, color: '#1A1A1A' }}>{expenses[0].brand}</div>}
+      <div style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'right' }}>
+        {expenses[0]?.brand && <div style={{ fontWeight: 500, color: 'var(--text)' }}>{expenses[0].brand}</div>}
         <div>{new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
       </div>
     </div>
@@ -122,21 +122,21 @@ export default function PolicyResult({ results, expenses, onSubmitted, onProceed
         <div style={{ textAlign: 'center', padding: '20px 0 16px' }}>
           <div style={{
             width: '44px', height: '44px', borderRadius: '50%',
-            background: '#F0FDF4', border: '2px solid #86EFAC',
+            background: 'var(--moss-bg)', border: '2px solid #86EFAC',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             margin: '0 auto 10px', fontSize: '18px',
           }}>
             ✓
           </div>
-          <div style={{ fontSize: '17px', fontWeight: 600, color: '#111827', marginBottom: '4px' }}>All clear</div>
-          <div style={{ fontSize: '13px', color: '#6B7280' }}>All expenses passed policy checks.</div>
+          <div style={{ fontSize: '17px', fontWeight: 600, color: 'var(--ink)', marginBottom: '4px' }}>All clear</div>
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>All expenses passed policy checks.</div>
         </div>
       ) : (
         <div style={{ marginBottom: '16px' }}>
-          <div style={{ fontSize: '17px', fontWeight: 600, color: '#111827', marginBottom: '4px' }}>
+          <div style={{ fontSize: '17px', fontWeight: 600, color: 'var(--ink)', marginBottom: '4px' }}>
             Policy review
           </div>
-          <div style={{ fontSize: '13px', color: '#6B7280' }}>
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
             {hasViolations
               ? `${allViolations.length} item${allViolations.length !== 1 ? 's' : ''} flagged for your attention. These are advisory — you can still submit.`
               : 'A few advisory notes. You can still submit.'}
@@ -150,7 +150,7 @@ export default function PolicyResult({ results, expenses, onSubmitted, onProceed
       {hasViolations && (
         <div style={{ marginBottom: '12px' }}>
           <div style={{
-            fontSize: '11px', fontWeight: 600, color: '#B45309',
+            fontSize: '11px', fontWeight: 600, color: 'var(--gold-text)',
             textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px',
           }}>
             Policy flags — for your awareness
@@ -165,7 +165,7 @@ export default function PolicyResult({ results, expenses, onSubmitted, onProceed
       {visibleFlags.length > 0 && (
         <div style={{ marginBottom: '12px' }}>
           <div style={{
-            fontSize: '11px', fontWeight: 600, color: '#6B7280',
+            fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)',
             textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px',
           }}>
             Notes
@@ -179,7 +179,7 @@ export default function PolicyResult({ results, expenses, onSubmitted, onProceed
       <ApprovalRoute route={approvalRoute} />
 
       {submitError && (
-        <div style={{ fontSize: '12px', color: '#DC2626', marginBottom: '12px', textAlign: 'center' }}>{submitError}</div>
+        <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginBottom: '12px', textAlign: 'center' }}>{submitError}</div>
       )}
 
       {/* Single always-enabled continue button */}
@@ -189,10 +189,10 @@ export default function PolicyResult({ results, expenses, onSubmitted, onProceed
           disabled={submitting}
           style={{
             width: '100%', height: '48px',
-            background: submitting ? '#9CA3AF' : '#111827',
-            color: '#FFFFFF', border: 'none',
+            background: submitting ? 'var(--text-muted)' : 'var(--ink)',
+            color: 'var(--surface-card)', border: 'none',
             fontSize: '14px', fontWeight: 600,
-            cursor: submitting ? 'default' : 'pointer', borderRadius: '6px',
+            cursor: submitting ? 'default' : 'pointer', borderRadius: 'var(--radius-md)',
           }}
         >
           {submitting ? 'Submitting…' : onProceedToReport ? 'Continue to report' : 'Submit for approval'}
@@ -202,9 +202,9 @@ export default function PolicyResult({ results, expenses, onSubmitted, onProceed
           <button
             onClick={onBack}
             style={{
-              width: '100%', height: '40px', background: '#FFFFFF', color: '#6B7280',
-              border: '1px solid #E5E7EB', fontSize: '13px',
-              cursor: 'pointer', borderRadius: '6px',
+              width: '100%', height: '40px', background: 'var(--surface-card)', color: 'var(--text-muted)',
+              border: '1px solid var(--taupe-200)', fontSize: '13px',
+              cursor: 'pointer', borderRadius: 'var(--radius-md)',
             }}
           >
             Back to expenses

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import wordmarkLogo from './assets/logos/thenudge-wordmark-cream.png'
 import { supabase } from './lib/supabase'
 import { getSession, canAccessApprovals, canAccessFinance, canCreatePR, isObserver, signOut } from './lib/auth'
 import { preloadDirectory } from './lib/directory'
@@ -313,13 +314,13 @@ export default function App() {
   }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#F4F5F7' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--taupe-50)' }}>
 
       {/* ── Left sidebar ── */}
       <div style={{
         width: SIDEBAR_W,
         minHeight: '100vh',
-        background: '#1C0A06',
+        background: 'var(--surface-hot)',
         position: 'fixed',
         top: 0, left: 0, bottom: 0,
         display: 'flex',
@@ -329,10 +330,8 @@ export default function App() {
       }}>
         {/* Logo */}
         <div style={{ padding: '22px 20px 18px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-          <div style={{ fontSize: '14px', fontWeight: 700, color: '#FFFFFF', lineHeight: 1.3 }}>
-            The Nudge Institute
-          </div>
-          <div style={{ fontSize: '10px', color: '#c4826f', marginTop: '3px', letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+          <img src={wordmarkLogo} alt="The/Nudge" style={{ height: '20px', width: 'auto', display: 'block' }} />
+          <div style={{ fontSize: '10px', color: 'var(--text-on-dark-muted)', marginTop: '8px', letterSpacing: '0.3px', textTransform: 'uppercase' }}>
             Expense Tracker
           </div>
         </div>
@@ -351,7 +350,7 @@ export default function App() {
                   cursor: 'pointer',
                   borderLeft: active ? '3px solid #E8A090' : '3px solid transparent',
                   background: active ? 'rgba(140,50,37,0.25)' : 'transparent',
-                  color: active ? '#FFFFFF' : '#c4826f',
+                  color: active ? 'var(--surface-card)' : 'var(--text-on-dark-muted)',
                   fontSize: '13px', fontWeight: active ? 600 : 400,
                   transition: 'all 0.1s',
                   userSelect: 'none',
@@ -386,7 +385,7 @@ export default function App() {
                 style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
                   padding: '9px 16px 9px 17px', cursor: 'pointer',
-                  color: '#c4826f', fontSize: '13px',
+                  color: 'var(--text-on-dark-muted)', fontSize: '13px',
                   userSelect: 'none',
                 }}
               >
@@ -407,12 +406,12 @@ export default function App() {
             onOpenPO={(id) => { setAppScreen('po-list'); openPODetail(id) }}
           />
           <div style={{
-            fontSize: '12px', fontWeight: 600, color: '#FFFFFF',
+            fontSize: '12px', fontWeight: 600, color: 'var(--surface-card)',
             marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
             {user.name}
           </div>
-          <div style={{ fontSize: '10px', color: '#c4826f', marginBottom: '10px' }}>
+          <div style={{ fontSize: '10px', color: 'var(--text-on-dark-muted)', marginBottom: '10px' }}>
             {user.roleLabel}
           </div>
           <button
@@ -421,7 +420,7 @@ export default function App() {
               width: '100%', padding: '6px 0',
               background: 'transparent',
               border: '1px solid rgba(196,130,111,0.35)',
-              color: '#c4826f', borderRadius: '5px',
+              color: 'var(--text-on-dark-muted)', borderRadius: 'var(--radius-md)',
               fontSize: '11px', cursor: 'pointer',
             }}
           >
@@ -458,29 +457,29 @@ export default function App() {
         {appScreen === 'list' && (
           <div style={{ maxWidth: '680px', margin: '0 auto', padding: '32px 24px' }}>
             <div style={{ marginBottom: '28px' }}>
-              <div style={{ fontSize: '22px', fontWeight: 700, color: '#111827' }}>
+              <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--ink)' }}>
                 Hello, {user.name.split(' ')[0]} 👋
               </div>
-              <div style={{ fontSize: '13px', color: '#9CA3AF', marginTop: '4px' }}>
+              <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
                 {user.roleLabel} · {user.email}
               </div>
             </div>
 
             {user.role === 'employee' ? (
-              <div style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '10px', padding: '20px', marginBottom: '28px' }}>
-                <div style={{ fontSize: '16px', fontWeight: 700, color: '#111827', marginBottom: '16px' }}>Quick Add</div>
+              <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '20px', marginBottom: '28px' }}>
+                <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--ink)', marginBottom: '16px' }}>Quick Add</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                   <div
                     onClick={openPRQuickAdd}
                     style={{
-                      border: '1px solid #E5E7EB', borderRadius: '10px', padding: '28px 12px',
+                      border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '28px 12px',
                       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                       cursor: 'pointer', minHeight: '148px', boxSizing: 'border-box', textAlign: 'center',
                     }}
                   >
                     <div style={{
-                      width: '44px', height: '44px', borderRadius: '50%', background: '#fdf0ed',
-                      color: '#8C3225', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: '44px', height: '44px', borderRadius: '50%', background: 'var(--action-bg)',
+                      color: 'var(--action)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       marginBottom: '10px',
                     }}>
                       <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -491,20 +490,20 @@ export default function App() {
                         <path d="M16 17H8" />
                       </svg>
                     </div>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#1A1F36' }}>New PR</div>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink)' }}>New PR</div>
                   </div>
 
                   <div
                     onClick={openVendorQuickAdd}
                     style={{
-                      border: '1px solid #E5E7EB', borderRadius: '10px', padding: '28px 12px',
+                      border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '28px 12px',
                       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                       cursor: 'pointer', minHeight: '148px', boxSizing: 'border-box', textAlign: 'center',
                     }}
                   >
                     <div style={{
-                      width: '44px', height: '44px', borderRadius: '50%', background: '#fdf0ed',
-                      color: '#8C3225', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: '44px', height: '44px', borderRadius: '50%', background: 'var(--action-bg)',
+                      color: 'var(--action)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       marginBottom: '10px',
                     }}>
                       <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -517,50 +516,50 @@ export default function App() {
                         <path d="M10 18h4" />
                       </svg>
                     </div>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#1A1F36' }}>New Vendor</div>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink)' }}>New Vendor</div>
                   </div>
                 </div>
               </div>
             ) : (
-              <div style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '10px', padding: '20px', marginBottom: '28px' }}>
-                <div style={{ fontSize: '16px', fontWeight: 700, color: '#111827', marginBottom: '16px' }}>Quick Add</div>
+              <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '20px', marginBottom: '28px' }}>
+                <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--ink)', marginBottom: '16px' }}>Quick Add</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '14px' }}>
                   <QuickAddDropzone onReady={handleQuickReceipt} />
 
                   <div
                     onClick={handleAddAnother}
                     style={{
-                      border: '1px solid #E5E7EB', borderRadius: '10px', padding: '28px 12px',
+                      border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '28px 12px',
                       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                       cursor: 'pointer', minHeight: '148px', boxSizing: 'border-box', textAlign: 'center',
                     }}
                   >
                     <div style={{
-                      width: '40px', height: '40px', borderRadius: '50%', background: '#fdf0ed',
-                      color: '#8C3225', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: '40px', height: '40px', borderRadius: '50%', background: 'var(--action-bg)',
+                      color: 'var(--action)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: '18px', fontWeight: 700, marginBottom: '10px',
                     }}>
                       +
                     </div>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#1A1F36' }}>New Expense</div>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink)' }}>New Expense</div>
                   </div>
 
                   <div
                     onClick={handleNewReport}
                     style={{
-                      border: '1px solid #E5E7EB', borderRadius: '10px', padding: '28px 12px',
+                      border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '28px 12px',
                       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                       cursor: 'pointer', minHeight: '148px', boxSizing: 'border-box', textAlign: 'center',
                     }}
                   >
                     <div style={{
-                      width: '40px', height: '40px', borderRadius: '50%', background: '#fdf0ed',
-                      color: '#8C3225', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: '40px', height: '40px', borderRadius: '50%', background: 'var(--action-bg)',
+                      color: 'var(--action)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: '16px', marginBottom: '10px',
                     }}>
                       ◷
                     </div>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#1A1F36' }}>New Report</div>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink)' }}>New Report</div>
                   </div>
                 </div>
               </div>
@@ -653,7 +652,7 @@ export default function App() {
           <div>
             <div style={{
               display: 'flex', padding: '0 24px',
-              background: '#FFFFFF', borderBottom: '1px solid #E8E8E8',
+              background: 'var(--surface-card)', borderBottom: '1px solid var(--taupe-200)',
             }}>
               {[['expenses', 'Expense Reports'], ['prs', 'Purchase Requests']].map(([key, label]) => (
                 <div
@@ -662,8 +661,8 @@ export default function App() {
                   style={{
                     padding: '14px 16px', fontSize: '13px', cursor: 'pointer',
                     fontWeight: approvalsTab === key ? 600 : 400,
-                    color: approvalsTab === key ? '#1A1A1A' : '#6B6B6B',
-                    borderBottom: approvalsTab === key ? '2px solid #8C3225' : '2px solid transparent',
+                    color: approvalsTab === key ? 'var(--text)' : 'var(--text-muted)',
+                    borderBottom: approvalsTab === key ? '2px solid var(--action)' : '2px solid transparent',
                     marginBottom: '-1px',
                   }}
                 >

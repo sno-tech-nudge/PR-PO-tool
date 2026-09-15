@@ -11,7 +11,7 @@ const PURPOSE_OPTIONS = [
 
 function SectionLabel({ children, mt }) {
   return (
-    <div style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A1A', marginTop: mt || 0, marginBottom: '12px' }}>
+    <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)', marginTop: mt || 0, marginBottom: '12px' }}>
       {children}
     </div>
   )
@@ -25,22 +25,22 @@ function TapCard({ selected, onClick, main, sub, fullWidth }) {
         flex: fullWidth ? undefined : 1,
         width: fullWidth ? '100%' : undefined,
         padding: '12px 14px', cursor: 'pointer', marginBottom: fullWidth ? '8px' : 0,
-        border: `1.5px solid ${selected ? '#1A1A1A' : '#E8E8E8'}`,
-        background: selected ? '#F7F7F7' : '#FFFFFF',
-        borderRadius: '4px',
+        border: `1.5px solid ${selected ? 'var(--text)' : 'var(--taupe-200)'}`,
+        background: selected ? 'var(--taupe-50)' : 'var(--surface-card)',
+        borderRadius: 'var(--radius-sm)',
       }}
     >
-      <div style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A1A' }}>{main}</div>
-      {sub && <div style={{ fontSize: '11px', color: '#6B6B6B', marginTop: '2px' }}>{sub}</div>}
+      <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>{main}</div>
+      {sub && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{sub}</div>}
     </div>
   )
 }
 
 function PendingBalanceNote({ total, poPending, poLoading }) {
-  if (poLoading) return <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '6px' }}>Checking pending balance…</div>
+  if (poLoading) return <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>Checking pending balance…</div>
   if (!poPending) return null
   return (
-    <div style={{ fontSize: '12px', color: total > poPending.pending ? '#DC2626' : '#4A4A4A', marginTop: '8px' }}>
+    <div style={{ fontSize: '12px', color: total > poPending.pending ? 'var(--clay-text)' : 'var(--text-muted)', marginTop: '8px' }}>
       PO amount {fmtAmt(poPending.amount)} · pending {fmtAmt(poPending.pending)}
       {total > poPending.pending && ` — this report's ${fmtAmt(total)} exceeds what's still pending on this PO.`}
     </div>
@@ -50,17 +50,17 @@ function PendingBalanceNote({ total, poPending, poLoading }) {
 function TextInput({ value, onChange, placeholder, label }) {
   return (
     <div style={{ marginTop: '8px' }}>
-      {label && <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '4px' }}>{label}</div>}
+      {label && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>{label}</div>}
       <input
         type="text"
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         style={{
-          width: '100%', height: '44px', border: '1px solid #E8E8E8',
-          borderRadius: '4px', padding: '0 12px', fontSize: '13px',
-          color: '#1A1A1A', outline: 'none', boxSizing: 'border-box',
-          background: '#FFFFFF', fontFamily: 'inherit',
+          width: '100%', height: '44px', border: '1px solid var(--taupe-200)',
+          borderRadius: 'var(--radius-sm)', padding: '0 12px', fontSize: '13px',
+          color: 'var(--text)', outline: 'none', boxSizing: 'border-box',
+          background: 'var(--surface-card)', fontFamily: 'inherit',
         }}
       />
     </div>
@@ -188,10 +188,10 @@ export default function ReportDetails({ expenses, reportMeta, user, onContinue, 
   }
 
   const inputStyle = {
-    width: '100%', height: '44px', border: '1px solid #E8E8E8',
-    borderRadius: '4px', padding: '0 12px', fontSize: '13px',
-    color: '#1A1A1A', outline: 'none', boxSizing: 'border-box',
-    background: '#FFFFFF', fontFamily: 'inherit',
+    width: '100%', height: '44px', border: '1px solid var(--taupe-200)',
+    borderRadius: 'var(--radius-sm)', padding: '0 12px', fontSize: '13px',
+    color: 'var(--text)', outline: 'none', boxSizing: 'border-box',
+    background: 'var(--surface-card)', fontFamily: 'inherit',
   }
 
   return (
@@ -199,68 +199,68 @@ export default function ReportDetails({ expenses, reportMeta, user, onContinue, 
       {/* Back */}
       <div
         onClick={onBack}
-        style={{ fontSize: '13px', color: '#4A4A4A', cursor: 'pointer', textDecoration: 'underline', marginBottom: '20px' }}
+        style={{ fontSize: '13px', color: 'var(--text-muted)', cursor: 'pointer', textDecoration: 'underline', marginBottom: '20px' }}
       >
         ← Back
       </div>
 
       {/* Header */}
-      <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '4px' }}>Report Details</div>
-      <div style={{ fontSize: '20px', fontWeight: 500, color: '#1A1A1A', marginBottom: '4px' }}>
+      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Report Details</div>
+      <div style={{ fontSize: '20px', fontWeight: 500, color: 'var(--text)', marginBottom: '4px' }}>
         Tell us about this report
       </div>
-      <div style={{ fontSize: '13px', color: '#4A4A4A', marginBottom: '6px' }}>
+      <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '6px' }}>
         These details apply to all {count} selected expense{count !== 1 ? 's' : ''}.
       </div>
-      <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '20px' }}>Step 2 of 3 · Everything below is required</div>
+      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px' }}>Step 2 of 3 · Everything below is required</div>
 
       {reportMeta && (
-        <div style={{ border: '1px solid #E8E8E8', marginBottom: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid #E8E8E8' }}>
-            <span style={{ fontSize: '12px', color: '#6B6B6B' }}>Report Name</span>
-            <span style={{ fontSize: '13px', color: '#1A1A1A', fontFamily: 'monospace' }}>{reportMeta.report_reference}</span>
+        <div style={{ border: '1px solid var(--taupe-200)', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--taupe-200)' }}>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Report Name</span>
+            <span style={{ fontSize: '13px', color: 'var(--text)', fontFamily: 'monospace' }}>{reportMeta.report_reference}</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid #E8E8E8', background: '#F7F7F7' }}>
-            <span style={{ fontSize: '12px', color: '#6B6B6B' }}>Business Purpose</span>
-            <span style={{ fontSize: '13px', color: '#1A1A1A', textAlign: 'right', maxWidth: '65%' }}>{reportMeta.business_purpose || '—'}</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--taupe-200)', background: 'var(--taupe-50)' }}>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Business Purpose</span>
+            <span style={{ fontSize: '13px', color: 'var(--text)', textAlign: 'right', maxWidth: '65%' }}>{reportMeta.business_purpose || '—'}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px' }}>
-            <span style={{ fontSize: '12px', color: '#6B6B6B' }}>Duration</span>
-            <span style={{ fontSize: '13px', color: '#1A1A1A' }}>{formatDuration(reportMeta.duration_start, reportMeta.duration_end)}</span>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Duration</span>
+            <span style={{ fontSize: '13px', color: 'var(--text)' }}>{formatDuration(reportMeta.duration_start, reportMeta.duration_end)}</span>
           </div>
         </div>
       )}
 
-      <div style={{ height: '1px', background: '#E8E8E8', marginBottom: '24px' }} />
+      <div style={{ height: '1px', background: 'var(--taupe-200)', marginBottom: '24px' }} />
 
       {/* SECTION 0 — PO relation. Answered already at report creation for
           any report made through NewReportModal — shown read-only with a
           "Change" option; only genuinely asked here for an older report
           that never got asked (po_related still null). */}
-      <SectionLabel>Purchase Order{editingPO && <span style={{ color: '#DC2626' }}> *</span>}</SectionLabel>
+      <SectionLabel>Purchase Order{editingPO && <span style={{ color: 'var(--clay-text)' }}> *</span>}</SectionLabel>
 
       {!editingPO ? (
-        <div style={{ border: '1px solid #E8E8E8', borderRadius: '4px', padding: '12px 14px', marginBottom: '12px' }}>
+        <div style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '12px 14px', marginBottom: '12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
             <div>
               {poRelated ? (
                 <>
-                  <div style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A1A' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>
                     Related to {poOptions.find(p => p.id === selectedPOId)?.po_number || 'a Purchase Order'}
                   </div>
                   {poOptions.find(p => p.id === selectedPOId)?.vendors?.org_name && (
-                    <div style={{ fontSize: '11px', color: '#6B6B6B', marginTop: '2px' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
                       {poOptions.find(p => p.id === selectedPOId).vendors.org_name}
                     </div>
                   )}
                 </>
               ) : (
-                <div style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A1A' }}>Not related to a Purchase Order</div>
+                <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>Not related to a Purchase Order</div>
               )}
             </div>
             <span
               onClick={() => setEditingPO(true)}
-              style={{ fontSize: '12px', color: '#8C3225', cursor: 'pointer', textDecoration: 'underline', flexShrink: 0 }}
+              style={{ fontSize: '12px', color: 'var(--action)', cursor: 'pointer', textDecoration: 'underline', flexShrink: 0 }}
             >
               Change
             </span>
@@ -276,7 +276,7 @@ export default function ReportDetails({ expenses, reportMeta, user, onContinue, 
 
           {poRelated === true && (
             <div style={{ marginBottom: '12px' }}>
-              <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '8px' }}>Which Purchase Order</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>Which Purchase Order</div>
               <select
                 value={selectedPOId}
                 onChange={e => handleSelectPO(e.target.value)}
@@ -290,16 +290,16 @@ export default function ReportDetails({ expenses, reportMeta, user, onContinue, 
 
               <PendingBalanceNote total={total} poPending={poPending} poLoading={poLoading} />
 
-              {poError && <div style={{ fontSize: '12px', color: '#DC2626', marginTop: '8px' }}>{poError}</div>}
+              {poError && <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginTop: '8px' }}>{poError}</div>}
             </div>
           )}
         </>
       )}
 
-      <div style={{ height: '1px', background: '#E8E8E8', marginBottom: '24px' }} />
+      <div style={{ height: '1px', background: 'var(--taupe-200)', marginBottom: '24px' }} />
 
       {/* SECTION B — Purpose (required) */}
-      <SectionLabel>What were these expenses for<span style={{ color: '#DC2626' }}> *</span></SectionLabel>
+      <SectionLabel>What were these expenses for<span style={{ color: 'var(--clay-text)' }}> *</span></SectionLabel>
       {PURPOSE_OPTIONS.map(opt => (
         <div key={opt.key}>
           <TapCard
@@ -320,7 +320,7 @@ export default function ReportDetails({ expenses, reportMeta, user, onContinue, 
       ))}
 
       {/* SECTION F — Reimbursement (required) */}
-      <SectionLabel mt={24}>How would you like to be reimbursed<span style={{ color: '#DC2626' }}> *</span></SectionLabel>
+      <SectionLabel mt={24}>How would you like to be reimbursed<span style={{ color: 'var(--clay-text)' }}> *</span></SectionLabel>
       <TapCard selected={reimbType === 'bank_transfer'} onClick={() => setReimbType(reimbType === 'bank_transfer' ? null : 'bank_transfer')} main="Bank transfer" sub="Transferred to your registered account" fullWidth />
       <TapCard selected={reimbType === 'petty_cash'} onClick={() => setReimbType(reimbType === 'petty_cash' ? null : 'petty_cash')} main="Petty cash" sub="Collected from finance team in person" fullWidth />
 
@@ -328,25 +328,25 @@ export default function ReportDetails({ expenses, reportMeta, user, onContinue, 
       <div style={{ position: 'fixed', bottom: 0, left: '220px', right: 0, zIndex: 10 }}>
         <div style={{
           maxWidth: '480px', margin: '0 auto',
-          background: '#FFFFFF', borderTop: '1px solid #E8E8E8', padding: '16px',
+          background: 'var(--surface-card)', borderTop: '1px solid var(--taupe-200)', padding: '16px',
         }}>
           {poRelated === null && (
-            <div style={{ fontSize: '12px', color: '#DC2626', marginBottom: '8px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginBottom: '8px' }}>
               Answer whether this report is related to a Purchase Order before continuing.
             </div>
           )}
           {poRelated === true && !selectedPOId && (
-            <div style={{ fontSize: '12px', color: '#DC2626', marginBottom: '8px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginBottom: '8px' }}>
               Select which Purchase Order this report is related to before continuing.
             </div>
           )}
           {poSectionValid && !purposeValid && (
-            <div style={{ fontSize: '12px', color: '#DC2626', marginBottom: '8px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginBottom: '8px' }}>
               Answer what these expenses were for before continuing.
             </div>
           )}
           {poSectionValid && purposeValid && !reimbValid && (
-            <div style={{ fontSize: '12px', color: '#DC2626', marginBottom: '8px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginBottom: '8px' }}>
               Choose how you'd like to be reimbursed before continuing.
             </div>
           )}
@@ -355,10 +355,10 @@ export default function ReportDetails({ expenses, reportMeta, user, onContinue, 
             disabled={!allValid}
             style={{
               width: '100%', height: '48px',
-              background: allValid ? '#8C3225' : '#E8E8E8',
-              color: allValid ? '#FFFFFF' : '#9CA3AF',
+              background: allValid ? 'var(--action)' : 'var(--taupe-200)',
+              color: allValid ? 'var(--surface-card)' : 'var(--text-muted)',
               border: 'none', fontSize: '14px', fontWeight: 500,
-              cursor: allValid ? 'pointer' : 'default', borderRadius: '4px',
+              cursor: allValid ? 'pointer' : 'default', borderRadius: 'var(--radius-sm)',
             }}
           >
             Continue to preview

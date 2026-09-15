@@ -99,27 +99,27 @@ export default function QuoteUpload({ onExtracted, onFileUploaded, skipExtractio
       </div>
 
       {extracting && (
-        <div style={{ background: '#fdf0ed', border: '1px solid #BFDBFE', borderRadius: '4px', padding: '12px 14px', fontSize: '13px', color: '#1E40AF' }}>
+        <div style={{ background: 'var(--action-bg)', border: '1px solid var(--action-bg)', borderRadius: 'var(--radius-sm)', padding: '12px 14px', fontSize: '13px', color: 'var(--action)' }}>
           Extracting data from document…
         </div>
       )}
 
       {notice && (
-        <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '4px', padding: '10px 14px', fontSize: '12px', color: '#4B5563', marginBottom: '8px' }}>
+        <div style={{ background: 'var(--taupe-50)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
           {notice}
         </div>
       )}
 
       {error && (
-        <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '4px', padding: '10px 14px', fontSize: '12px', color: '#B91C1C', marginBottom: '8px' }}>
+        <div style={{ background: 'var(--clay-bg)', border: '1px solid var(--clay-border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', fontSize: '12px', color: 'var(--clay-text)', marginBottom: '8px' }}>
           {error}
         </div>
       )}
 
       {extracted && (
-        <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '4px', padding: '14px', marginBottom: '10px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: '#15803D', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Extracted from document</div>
-          <div style={{ fontSize: '11px', color: '#4B5563', marginBottom: '10px', lineHeight: 1.5 }}>
+        <div style={{ background: 'var(--moss-bg)', border: '1px solid var(--moss-border)', borderRadius: 'var(--radius-sm)', padding: '14px', marginBottom: '10px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--moss-text)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Extracted from document</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px', lineHeight: 1.5 }}>
             ⚠ Auto-filled from the document — double check the fields below against it before submitting.
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
@@ -130,14 +130,14 @@ export default function QuoteUpload({ onExtracted, onFileUploaded, skipExtractio
               ['Total Amount', extracted.total_amount != null ? `INR ${Number(extracted.total_amount).toLocaleString('en-IN')}` : null],
             ].map(([label, val]) => val ? (
               <div key={label}>
-                <div style={{ fontSize: '10px', color: '#15803D', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1px' }}>{label}</div>
+                <div style={{ fontSize: '10px', color: 'var(--moss-text)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1px' }}>{label}</div>
                 <div style={{ fontSize: '13px', color: '#14532D', fontWeight: 500 }}>{val}</div>
               </div>
             ) : null)}
           </div>
           {extracted.line_items && extracted.line_items.length > 0 && (
             <div style={{ marginTop: '10px' }}>
-              <div style={{ fontSize: '10px', color: '#15803D', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>Line Items</div>
+              <div style={{ fontSize: '10px', color: 'var(--moss-text)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>Line Items</div>
               {extracted.line_items.map((item, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#14532D', marginBottom: '2px' }}>
                   <span>{item.description}</span>
@@ -152,13 +152,13 @@ export default function QuoteUpload({ onExtracted, onFileUploaded, skipExtractio
       {file && !uploading && !uploaded && (
         <button
           onClick={handleUpload}
-          style={{ height: '34px', padding: '0 16px', background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}
+          style={{ height: '34px', padding: '0 16px', background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', fontSize: '12px', cursor: 'pointer' }}
         >
           Upload to system
         </button>
       )}
-      {uploading && <div style={{ fontSize: '12px', color: '#6B7280' }}>Uploading…</div>}
-      {uploaded && <div style={{ fontSize: '12px', color: '#15803D', fontWeight: 500 }}>Uploaded successfully</div>}
+      {uploading && <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Uploading…</div>}
+      {uploaded && <div style={{ fontSize: '12px', color: 'var(--moss-text)', fontWeight: 500 }}>Uploaded successfully</div>}
     </div>
   )
 }

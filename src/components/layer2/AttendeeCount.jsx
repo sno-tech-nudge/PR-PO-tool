@@ -20,12 +20,12 @@ export default function AttendeeCount({ amount, onContinue, onBack }) {
             key={c}
             onClick={() => setSelected(c)}
             style={{
-              width: '52px', height: '52px', border: selected === c ? '1px solid #1A1A1A' : '1px solid #E8E8E8',
-              background: selected === c ? '#1A1A1A' : '#FFFFFF',
+              width: '52px', height: '52px', border: selected === c ? '1px solid var(--text)' : '1px solid var(--taupe-200)',
+              background: selected === c ? 'var(--text)' : 'var(--surface-card)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', borderRadius: '4px', flexShrink: 0,
+              cursor: 'pointer', borderRadius: 'var(--radius-sm)', flexShrink: 0,
               fontSize: '18px', fontWeight: 500,
-              color: selected === c ? '#FFFFFF' : '#1A1A1A',
+              color: selected === c ? 'var(--surface-card)' : 'var(--text)',
             }}
           >
             {c}
@@ -42,22 +42,22 @@ export default function AttendeeCount({ amount, onContinue, onBack }) {
           onKeyDown={blockNonNumericKey}
           onPaste={sanitizeNumericPaste}
           style={{
-            width: '100%', height: '44px', border: '1px solid #E8E8E8',
-            fontSize: '14px', padding: '0 12px', borderRadius: '4px',
+            width: '100%', height: '44px', border: '1px solid var(--taupe-200)',
+            fontSize: '14px', padding: '0 12px', borderRadius: 'var(--radius-sm)',
             outline: 'none', marginBottom: '12px',
           }}
         />
       )}
 
       {perPerson && (
-        <div style={{ fontSize: '13px', color: '#4A4A4A', marginBottom: '16px' }}>
+        <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
           Per person: ₹{perPerson.toLocaleString('en-IN')}
         </div>
       )}
 
       {selected && (
         <div style={{ marginBottom: '20px' }}>
-          <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '6px' }}>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px' }}>
             Names of attendees (optional)
           </div>
           <input
@@ -66,8 +66,8 @@ export default function AttendeeCount({ amount, onContinue, onBack }) {
             value={names}
             onChange={(e) => setNames(e.target.value)}
             style={{
-              width: '100%', height: '44px', border: '1px solid #E8E8E8',
-              fontSize: '13px', padding: '0 12px', borderRadius: '4px', outline: 'none',
+              width: '100%', height: '44px', border: '1px solid var(--taupe-200)',
+              fontSize: '13px', padding: '0 12px', borderRadius: 'var(--radius-sm)', outline: 'none',
             }}
           />
         </div>
@@ -77,8 +77,8 @@ export default function AttendeeCount({ amount, onContinue, onBack }) {
         <button
           onClick={() => onContinue({ attendee_count: effectiveCount, per_person_amount: perPerson, attendee_names: names || null })}
           style={{
-            width: '100%', height: '48px', background: '#8C3225', color: '#FFFFFF',
-            border: 'none', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: '4px',
+            width: '100%', height: '48px', background: 'var(--action)', color: 'var(--surface-card)',
+            border: 'none', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: 'var(--radius-sm)',
           }}
         >
           Continue

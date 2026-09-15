@@ -15,9 +15,9 @@ export default function PercentInput({ value, onChange, placeholder = '0', error
         onPaste={sanitizeNumericPaste}
         placeholder={placeholder}
         style={{
-          width: '100%', height: '38px', border: `1px solid ${error ? '#DC2626' : '#D1D5DB'}`,
-          borderRadius: '4px', fontSize: '13px', color: '#1A1F36',
-          background: '#FFFFFF', outline: 'none', boxSizing: 'border-box',
+          width: '100%', height: '38px', border: `1px solid ${error ? 'var(--clay-text)' : 'var(--taupe-400)'}`,
+          borderRadius: 'var(--radius-sm)', fontSize: '13px', color: 'var(--ink)',
+          background: 'var(--surface-card)', outline: 'none', boxSizing: 'border-box',
           ...inputStyle,
           // Always reserved for the trailing "%" and right-alignment — never
           // overridable by a caller's inputStyle, otherwise they overlap.
@@ -27,7 +27,7 @@ export default function PercentInput({ value, onChange, placeholder = '0', error
       />
       <span style={{
         position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
-        fontSize: '13px', color: '#6B7280', fontFamily: 'monospace', pointerEvents: 'none',
+        fontSize: '13px', color: 'var(--text-muted)', fontFamily: 'monospace', pointerEvents: 'none',
       }}>
         %
       </span>

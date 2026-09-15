@@ -7,8 +7,8 @@ function DetailRow({ label, value }) {
   if (!value && value !== 0) return null
   return (
     <div style={{ marginBottom: '10px' }}>
-      <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '2px' }}>{label}</div>
-      <div style={{ fontSize: '12px', color: '#1A1A1A' }}>{value}</div>
+      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>{label}</div>
+      <div style={{ fontSize: '12px', color: 'var(--text)' }}>{value}</div>
     </div>
   )
 }
@@ -43,45 +43,45 @@ export default function ExpenseApprovalCard({ expense, result, onFlag, onRemove 
   }
 
   return (
-    <div style={{ border: '1px solid #E8E8E8', padding: '16px', marginBottom: '8px' }}>
+    <div style={{ border: '1px solid var(--taupe-200)', padding: '16px', marginBottom: '8px' }}>
       {/* Top row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
-        <div style={{ fontSize: '14px', fontWeight: 500, color: '#1A1A1A', flex: 1, marginRight: '12px' }}>
+        <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text)', flex: 1, marginRight: '12px' }}>
           {expense.vendor || 'Unknown vendor'}
         </div>
-        <div style={{ fontSize: '14px', fontWeight: 500, color: '#1A1A1A', flexShrink: 0 }}>
+        <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text)', flexShrink: 0 }}>
           {expense.amount ? `₹${Number(expense.amount).toLocaleString('en-IN')}` : '—'}
         </div>
       </div>
 
       {/* Second row */}
-      <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '4px' }}>
+      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>
         {[expense.category, expense.date, expense.entity].filter(Boolean).join(' · ')}
       </div>
 
       {/* Description */}
       {expense.description && (
-        <div style={{ fontSize: '12px', color: '#4A4A4A', lineHeight: '1.4', marginBottom: '8px' }}>
+        <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.4', marginBottom: '8px' }}>
           {expense.description.length > 80 ? expense.description.slice(0, 80) + '…' : expense.description}
         </div>
       )}
 
       {/* Policy status */}
       {hasViolation ? (
-        <div style={{ fontSize: '11px', color: '#DC2626', marginBottom: '4px' }}>Policy issue flagged</div>
+        <div style={{ fontSize: '11px', color: 'var(--clay-text)', marginBottom: '4px' }}>Policy issue flagged</div>
       ) : hasFlagPrev ? (
-        <div style={{ fontSize: '11px', color: '#CA8A04', marginBottom: '4px' }}>Flagged for review</div>
+        <div style={{ fontSize: '11px', color: 'var(--gold-text)', marginBottom: '4px' }}>Flagged for review</div>
       ) : (
-        <div style={{ fontSize: '11px', color: '#16A34A', marginBottom: '4px' }}>Policy passed</div>
+        <div style={{ fontSize: '11px', color: 'var(--moss)', marginBottom: '4px' }}>Policy passed</div>
       )}
 
       {/* Actual policy note text — not just the coarse pass/flag/issue badge */}
       {[...violations, ...flagsForApprover].map((f, i) => (
         <div key={i} style={{
-          fontSize: '11px', color: f.passed === false ? '#DC2626' : '#CA8A04',
-          background: f.passed === false ? '#FEF2F2' : '#FEFCE8',
-          border: `1px solid ${f.passed === false ? '#FECACA' : '#FDE68A'}`,
-          borderRadius: '3px', padding: '6px 8px', marginBottom: '6px', lineHeight: '1.4',
+          fontSize: '11px', color: f.passed === false ? 'var(--clay-text)' : 'var(--gold-text)',
+          background: f.passed === false ? 'var(--clay-bg)' : 'var(--gold-bg)',
+          border: `1px solid ${f.passed === false ? 'var(--clay-border)' : 'var(--gold-border)'}`,
+          borderRadius: 'var(--radius-sm)', padding: '6px 8px', marginBottom: '6px', lineHeight: '1.4',
         }}>
           {f.message}
         </div>
@@ -93,14 +93,14 @@ export default function ExpenseApprovalCard({ expense, result, onFlag, onRemove 
       {expense.capture_id ? (
         <ReceiptDocuments captureId={expense.capture_id} />
       ) : (expense.po_pdf_link || expense.vr_pdf_link || expense.er_pdf_link) ? null : (
-        <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '8px' }}>No receipt linked</div>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>No receipt linked</div>
       )}
       <ExternalAttachmentLinks poLink={expense.po_pdf_link} vrLink={expense.vr_pdf_link} erLink={expense.er_pdf_link} />
 
       {/* All compulsory details this expense was filed with */}
       <div
         onClick={() => setExpanded(e => !e)}
-        style={{ fontSize: '11px', color: '#6B6B6B', cursor: 'pointer', textDecoration: 'underline', marginTop: '6px', marginBottom: expanded ? '10px' : '0' }}
+        style={{ fontSize: '11px', color: 'var(--text-muted)', cursor: 'pointer', textDecoration: 'underline', marginTop: '6px', marginBottom: expanded ? '10px' : '0' }}
       >
         {expanded ? 'Hide details' : 'View details'}
       </div>
@@ -141,7 +141,7 @@ export default function ExpenseApprovalCard({ expense, result, onFlag, onRemove 
             placeholder="Note for this expense..."
             rows={2}
             style={{
-              width: '100%', border: '1px solid #E8E8E8', padding: '8px',
+              width: '100%', border: '1px solid var(--taupe-200)', padding: '8px',
               fontSize: '12px', resize: 'none', fontFamily: 'system-ui, -apple-system, sans-serif',
               outline: 'none', boxSizing: 'border-box', borderRadius: 0,
             }}
@@ -151,8 +151,8 @@ export default function ExpenseApprovalCard({ expense, result, onFlag, onRemove 
               onClick={handleFlagSubmit}
               style={{
                 height: '32px', padding: '0 12px',
-                background: '#CA8A04', color: '#FFFFFF',
-                border: 'none', fontSize: '11px', cursor: 'pointer', borderRadius: '2px',
+                background: 'var(--gold-text)', color: 'var(--surface-card)',
+                border: 'none', fontSize: '11px', cursor: 'pointer', borderRadius: 'var(--radius-xs)',
               }}
             >
               Add note
@@ -161,8 +161,8 @@ export default function ExpenseApprovalCard({ expense, result, onFlag, onRemove 
               onClick={() => setFlagging(false)}
               style={{
                 height: '32px', padding: '0 12px',
-                background: '#FFFFFF', color: '#4A4A4A',
-                border: '1px solid #E8E8E8', fontSize: '11px', cursor: 'pointer', borderRadius: '2px',
+                background: 'var(--surface-card)', color: 'var(--text-muted)',
+                border: '1px solid var(--taupe-200)', fontSize: '11px', cursor: 'pointer', borderRadius: 'var(--radius-xs)',
               }}
             >
               Cancel
@@ -172,7 +172,7 @@ export default function ExpenseApprovalCard({ expense, result, onFlag, onRemove 
       )}
 
       {flagged && (
-        <div style={{ fontSize: '11px', color: '#CA8A04', marginBottom: '8px' }}>Note added</div>
+        <div style={{ fontSize: '11px', color: 'var(--gold-text)', marginBottom: '8px' }}>Note added</div>
       )}
 
       {/* Inline actions */}
@@ -180,14 +180,14 @@ export default function ExpenseApprovalCard({ expense, result, onFlag, onRemove 
         {!flagged && !flagging && (
           <div
             onClick={() => setFlagging(true)}
-            style={{ fontSize: '11px', color: '#CA8A04', cursor: 'pointer', textDecoration: 'underline' }}
+            style={{ fontSize: '11px', color: 'var(--gold-text)', cursor: 'pointer', textDecoration: 'underline' }}
           >
             Flag this expense
           </div>
         )}
         <div
           onClick={handleRemove}
-          style={{ fontSize: '11px', color: '#DC2626', cursor: 'pointer', textDecoration: 'underline' }}
+          style={{ fontSize: '11px', color: 'var(--clay-text)', cursor: 'pointer', textDecoration: 'underline' }}
         >
           Remove from report
         </div>

@@ -27,11 +27,11 @@ function fmtAmt(n) {
 }
 
 const STATUS = {
-  pending_approval: { label: 'Pending Approval', color: '#B45309', bg: '#FFFBEB' },
-  issued:           { label: 'Issued',           color: '#8C3225', bg: '#fdf0ed' },
-  completed:        { label: 'Completed',        color: '#15803D', bg: '#F0FDF4' },
-  cancelled:        { label: 'Cancelled',        color: '#B91C1C', bg: '#FEF2F2' },
-  rejected:         { label: 'Rejected',         color: '#B91C1C', bg: '#FEF2F2' },
+  pending_approval: { label: 'Pending Approval', color: 'var(--gold-text)', bg: 'var(--gold-bg)' },
+  issued:           { label: 'Issued',           color: 'var(--action)', bg: 'var(--action-bg)' },
+  completed:        { label: 'Completed',        color: 'var(--moss-text)', bg: 'var(--moss-bg)' },
+  cancelled:        { label: 'Cancelled',        color: 'var(--clay-text)', bg: 'var(--clay-bg)' },
+  rejected:         { label: 'Rejected',         color: 'var(--clay-text)', bg: 'var(--clay-bg)' },
 }
 
 const TABS = [
@@ -106,16 +106,16 @@ export default function POList({ user, onViewPO }) {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <div>
-          <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Procurement</div>
-          <div style={{ fontSize: '22px', fontWeight: 700, color: '#111827' }}>Purchase Orders</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Procurement</div>
+          <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--ink)' }}>Purchase Orders</div>
         </div>
         {isFinance && (
           <button
             onClick={() => setShowExportModal(true)}
             style={{
               height: '36px', padding: '0 16px', fontSize: '13px', fontWeight: 600,
-              background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB',
-              borderRadius: '6px', cursor: 'pointer',
+              background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-400)',
+              borderRadius: 'var(--radius-md)', cursor: 'pointer',
             }}
           >
             Export CSV
@@ -124,7 +124,7 @@ export default function POList({ user, onViewPO }) {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid #E5E7EB', marginBottom: '16px', gap: 0 }}>
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--taupe-200)', marginBottom: '16px', gap: 0 }}>
         {TABS.map(([key, label]) => (
           <div
             key={key}
@@ -132,15 +132,15 @@ export default function POList({ user, onViewPO }) {
             style={{
               padding: '10px 16px', fontSize: '13px', cursor: 'pointer',
               fontWeight: tab === key ? 600 : 400,
-              color: tab === key ? '#111827' : '#6B7280',
-              borderBottom: tab === key ? '2px solid #8C3225' : '2px solid transparent',
+              color: tab === key ? 'var(--ink)' : 'var(--text-muted)',
+              borderBottom: tab === key ? '2px solid var(--action)' : '2px solid transparent',
               marginBottom: '-1px',
             }}
           >
             {label}
             <span style={{
               marginLeft: '6px', fontSize: '11px', fontWeight: 500,
-              color: tab === key ? '#1D4ED8' : '#9CA3AF',
+              color: tab === key ? '#1D4ED8' : 'var(--text-muted)',
             }}>
               {tabCount(key)}
             </span>
@@ -156,30 +156,30 @@ export default function POList({ user, onViewPO }) {
           value={search}
           onChange={e => setSearch(e.target.value)}
           style={{
-            width: '320px', height: '34px', border: '1px solid #E5E7EB',
-            borderRadius: '6px', padding: '0 12px', fontSize: '13px',
-            outline: 'none', boxSizing: 'border-box', color: '#111827',
+            width: '320px', height: '34px', border: '1px solid var(--taupe-200)',
+            borderRadius: 'var(--radius-md)', padding: '0 12px', fontSize: '13px',
+            outline: 'none', boxSizing: 'border-box', color: 'var(--ink)',
           }}
         />
       </div>
 
       {/* Table */}
       {loading ? (
-        <div style={{ padding: '60px', textAlign: 'center', fontSize: '13px', color: '#9CA3AF' }}>Loading…</div>
+        <div style={{ padding: '60px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>Loading…</div>
       ) : filtered.length === 0 ? (
-        <div style={{ padding: '60px', textAlign: 'center', fontSize: '13px', color: '#9CA3AF' }}>
+        <div style={{ padding: '60px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>
           {search ? 'No purchase orders match your search.' : 'No purchase orders yet.'}
         </div>
       ) : (
-        <div style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '8px', overflow: 'hidden' }}>
+        <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '700px' }}>
               <thead>
-                <tr style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
+                <tr style={{ background: 'var(--taupe-50)', borderBottom: '1px solid var(--taupe-200)' }}>
                   {['PO Number', 'Vendor', 'Linked PR', 'Entity', 'Amount', 'Date', 'Status', ''].map(h => (
                     <th key={h} style={{
                       padding: '10px 14px', textAlign: 'left',
-                      fontSize: '11px', fontWeight: 600, color: '#6B7280',
+                      fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)',
                       textTransform: 'uppercase', letterSpacing: '0.04em',
                       whiteSpace: 'nowrap',
                     }}>
@@ -195,33 +195,33 @@ export default function POList({ user, onViewPO }) {
                     <tr
                       key={po.id}
                       style={{
-                        borderBottom: i < filtered.length - 1 ? '1px solid #F3F4F6' : 'none',
-                        background: '#FFFFFF',
+                        borderBottom: i < filtered.length - 1 ? '1px solid var(--taupe-100)' : 'none',
+                        background: 'var(--surface-card)',
                       }}
                     >
-                      <td style={{ padding: '12px 14px', fontFamily: 'monospace', fontSize: '12px', color: '#8C3225', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '12px 14px', fontFamily: 'monospace', fontSize: '12px', color: 'var(--action)', fontWeight: 600, whiteSpace: 'nowrap' }}>
                         {po.po_number}
                       </td>
-                      <td style={{ padding: '12px 14px', fontSize: '13px', color: '#111827', maxWidth: '160px' }}>
+                      <td style={{ padding: '12px 14px', fontSize: '13px', color: 'var(--ink)', maxWidth: '160px' }}>
                         <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {po.vendors?.org_name || '—'}
                         </div>
                       </td>
-                      <td style={{ padding: '12px 14px', fontFamily: 'monospace', fontSize: '12px', color: '#6B7280', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '12px 14px', fontFamily: 'monospace', fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                         {po.purchase_requests?.pr_number || '—'}
                       </td>
-                      <td style={{ padding: '12px 14px', fontSize: '13px', color: '#374151', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '12px 14px', fontSize: '13px', color: 'var(--ink)', whiteSpace: 'nowrap' }}>
                         {po.entity || '—'}
                       </td>
-                      <td style={{ padding: '12px 14px', fontSize: '13px', color: '#111827', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '12px 14px', fontSize: '13px', color: 'var(--ink)', fontWeight: 600, whiteSpace: 'nowrap' }}>
                         {fmtAmt(po.amount)}
                       </td>
-                      <td style={{ padding: '12px 14px', fontSize: '12px', color: '#6B7280', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '12px 14px', fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                         {fmtDate(po.generated_at)}
                       </td>
                       <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
                         <span style={{
-                          display: 'inline-block', padding: '3px 8px', borderRadius: '4px',
+                          display: 'inline-block', padding: '3px 8px', borderRadius: 'var(--radius-sm)',
                           fontSize: '11px', fontWeight: 600,
                           color: st.color, background: st.bg,
                         }}>
@@ -233,8 +233,8 @@ export default function POList({ user, onViewPO }) {
                           onClick={() => onViewPO(po.id)}
                           style={{
                             padding: '5px 12px', fontSize: '12px', fontWeight: 500,
-                            background: 'transparent', border: '1px solid #E5E7EB',
-                            borderRadius: '5px', cursor: 'pointer', color: '#374151',
+                            background: 'transparent', border: '1px solid var(--taupe-200)',
+                            borderRadius: 'var(--radius-md)', cursor: 'pointer', color: 'var(--ink)',
                           }}
                         >
                           View

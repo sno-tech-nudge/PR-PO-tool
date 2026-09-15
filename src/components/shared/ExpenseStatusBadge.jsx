@@ -1,11 +1,11 @@
 const STATUS_CONFIG = {
-  saved:        { label: 'Saved',        color: '#374151', bg: '#F9FAFB' },
-  submitted:    { label: 'Submitted',    color: '#B45309', bg: '#FFFBEB' },
-  under_review: { label: 'Under Review', color: '#8C3225', bg: '#fdf0ed' },
-  approved:     { label: 'Approved',     color: '#15803D', bg: '#F0FDF4' },
-  rejected:     { label: 'Rejected',     color: '#B91C1C', bg: '#FEF2F2' },
-  processing:   { label: 'Processing',   color: '#6D28D9', bg: '#F5F3FF' },
-  reimbursed:   { label: 'Reimbursed',   color: '#15803D', bg: '#F0FDF4' },
+  saved:        { label: 'Saved',        color: 'var(--ink)', bg: 'var(--taupe-50)' },
+  submitted:    { label: 'Submitted',    color: 'var(--gold-text)', bg: 'var(--gold-bg)' },
+  under_review: { label: 'Under Review', color: 'var(--action)', bg: 'var(--action-bg)' },
+  approved:     { label: 'Approved',     color: 'var(--moss-text)', bg: 'var(--moss-bg)' },
+  rejected:     { label: 'Rejected',     color: 'var(--clay-text)', bg: 'var(--clay-bg)' },
+  processing:   { label: 'Processing',   color: 'var(--gold-text)', bg: 'var(--gold-bg)' },
+  reimbursed:   { label: 'Reimbursed',   color: 'var(--moss-text)', bg: 'var(--moss-bg)' },
 }
 
 // sourceStatus (when present) overrides the computed label — used for
@@ -16,11 +16,11 @@ const STATUS_CONFIG = {
 // closed out).
 export default function StatusBadge({ status, sourceStatus }) {
   const sc = sourceStatus
-    ? STATUS_CONFIG[sourceStatus.toLowerCase()] || { label: sourceStatus, color: '#15803D', bg: '#F0FDF4' }
-    : STATUS_CONFIG[status] || { label: status, color: '#6B7280', bg: '#F9FAFB' }
+    ? STATUS_CONFIG[sourceStatus.toLowerCase()] || { label: sourceStatus, color: 'var(--moss-text)', bg: 'var(--moss-bg)' }
+    : STATUS_CONFIG[status] || { label: status, color: 'var(--text-muted)', bg: 'var(--taupe-50)' }
   return (
     <span style={{
-      fontSize: '10px', fontWeight: 600, padding: '2px 7px', borderRadius: '4px',
+      fontSize: '10px', fontWeight: 600, padding: '2px 7px', borderRadius: 'var(--radius-sm)',
       background: sc.bg, color: sc.color,
     }}>
       {sc.label}

@@ -17,11 +17,11 @@ function Row({ label, value, alt, valueStyle }) {
     <div style={{
       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       padding: '12px 16px', minHeight: '44px',
-      background: alt ? '#F7F7F7' : '#FFFFFF',
-      borderBottom: '1px solid #E8E8E8',
+      background: alt ? 'var(--taupe-50)' : 'var(--surface-card)',
+      borderBottom: '1px solid var(--taupe-200)',
     }}>
-      <div style={{ fontSize: '12px', color: '#6B6B6B' }}>{label}</div>
-      <div style={{ fontSize: '13px', color: '#1A1A1A', textAlign: 'right', maxWidth: '55%', ...valueStyle }}>
+      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{label}</div>
+      <div style={{ fontSize: '13px', color: 'var(--text)', textAlign: 'right', maxWidth: '55%', ...valueStyle }}>
         {value}
       </div>
     </div>
@@ -43,7 +43,7 @@ export default function ReportSummaryCard({ reference, entity, period, expenseCo
   const duration = formatDuration(durationStart, durationEnd)
 
   return (
-    <div style={{ border: '1px solid #E8E8E8', marginBottom: '20px', overflow: 'hidden' }}>
+    <div style={{ border: '1px solid var(--taupe-200)', marginBottom: '20px', overflow: 'hidden' }}>
       <Row label="Reference" value={reference} alt={false} />
       <Row label="Entity" value={entity || '—'} alt={true} />
       <Row label="Period" value={period} alt={false} />

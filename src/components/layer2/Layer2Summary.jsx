@@ -79,29 +79,29 @@ export default function Layer2Summary({ formData, onSaved, onAddAnother, onBack 
         onClick={onBack}
         style={{
           background: 'none', border: 'none', cursor: 'pointer',
-          fontSize: '13px', color: '#4A4A4A', padding: 0, marginBottom: '20px', display: 'block',
+          fontSize: '13px', color: 'var(--text-muted)', padding: 0, marginBottom: '20px', display: 'block',
         }}
       >
         Back
       </button>
 
-      <div style={{ fontSize: '20px', fontWeight: 500, color: '#1A1A1A', marginBottom: '20px' }}>
+      <div style={{ fontSize: '20px', fontWeight: 500, color: 'var(--text)', marginBottom: '20px' }}>
         Review your expense
       </div>
 
-      <div style={{ border: '1px solid #E8E8E8', borderRadius: '4px', marginBottom: '20px', overflow: 'hidden' }}>
+      <div style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', marginBottom: '20px', overflow: 'hidden' }}>
         {rows.map((row, i) => (
           <div
             key={row.label}
             style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               padding: '0 16px', minHeight: '56px',
-              background: i % 2 === 0 ? '#FFFFFF' : '#F7F7F7',
-              borderBottom: i < rows.length - 1 ? '1px solid #E8E8E8' : 'none',
+              background: i % 2 === 0 ? 'var(--surface-card)' : 'var(--taupe-50)',
+              borderBottom: i < rows.length - 1 ? '1px solid var(--taupe-200)' : 'none',
             }}
           >
-            <span style={{ fontSize: '12px', color: '#6B6B6B' }}>{row.label}</span>
-            <span style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A1A', textAlign: 'right', maxWidth: '60%' }}>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{row.label}</span>
+            <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)', textAlign: 'right', maxWidth: '60%' }}>
               {String(row.value)}
             </span>
           </div>
@@ -109,7 +109,7 @@ export default function Layer2Summary({ formData, onSaved, onAddAnother, onBack 
       </div>
 
       {error && (
-        <div style={{ fontSize: '13px', color: '#DC2626', marginBottom: '12px' }}>{error}</div>
+        <div style={{ fontSize: '13px', color: 'var(--clay-text)', marginBottom: '12px' }}>{error}</div>
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -117,9 +117,9 @@ export default function Layer2Summary({ formData, onSaved, onAddAnother, onBack 
           onClick={handleSave}
           disabled={saving}
           style={{
-            width: '100%', height: '48px', background: '#8C3225', color: '#FFFFFF',
+            width: '100%', height: '48px', background: 'var(--action)', color: 'var(--surface-card)',
             border: 'none', fontSize: '14px', fontWeight: 500, cursor: saving ? 'default' : 'pointer',
-            borderRadius: '4px', opacity: saving ? 0.7 : 1,
+            borderRadius: 'var(--radius-sm)', opacity: saving ? 0.7 : 1,
           }}
         >
           {saving ? 'Saving...' : 'Save expense'}
@@ -127,9 +127,9 @@ export default function Layer2Summary({ formData, onSaved, onAddAnother, onBack 
         <button
           onClick={onAddAnother}
           style={{
-            width: '100%', height: '48px', background: '#FFFFFF', color: '#1A1A1A',
-            border: '1px solid #8C3225', fontSize: '14px', fontWeight: 500,
-            cursor: 'pointer', borderRadius: '4px',
+            width: '100%', height: '48px', background: 'var(--surface-card)', color: 'var(--text)',
+            border: '1px solid var(--action)', fontSize: '14px', fontWeight: 500,
+            cursor: 'pointer', borderRadius: 'var(--radius-sm)',
           }}
         >
           Add another expense

@@ -87,25 +87,25 @@ function HorizontalTracker({ steps }) {
         const isDone = step.state === 'done'
         const isCurrent = step.state === 'current'
         const isRejected = step.state === 'rejected'
-        const activeColor = isRejected ? '#DC2626' : isDone ? '#15803D' : isCurrent ? '#B45309' : null
+        const activeColor = isRejected ? 'var(--clay-text)' : isDone ? 'var(--moss-text)' : isCurrent ? 'var(--gold-text)' : null
 
         return (
           <div key={step.key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
             {i > 0 && (
               <div style={{
                 position: 'absolute', top: '10px', right: '50%', width: '100%', height: '2px',
-                background: isDone || isRejected ? activeColor : '#E5E7EB', zIndex: 0,
+                background: isDone || isRejected ? activeColor : 'var(--taupe-200)', zIndex: 0,
               }} />
             )}
             <div style={{
               width: '22px', height: '22px', borderRadius: '50%', zIndex: 1, position: 'relative', flexShrink: 0,
-              background: activeColor || '#FFFFFF',
-              border: `2px solid ${activeColor || '#D1D5DB'}`,
+              background: activeColor || 'var(--surface-card)',
+              border: `2px solid ${activeColor || 'var(--taupe-400)'}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               animation: isCurrent ? 'prStatusPulse 2s ease-in-out infinite' : 'none',
             }}>
               {(isDone || isRejected) && (
-                <span style={{ color: '#FFFFFF', fontSize: '12px', fontWeight: 700, lineHeight: 1 }}>
+                <span style={{ color: 'var(--surface-card)', fontSize: '12px', fontWeight: 700, lineHeight: 1 }}>
                   {isRejected ? '✕' : '✓'}
                 </span>
               )}
@@ -113,16 +113,16 @@ function HorizontalTracker({ steps }) {
             <div style={{
               fontSize: '10px', fontWeight: 700, textAlign: 'center', marginTop: '8px', lineHeight: '1.3',
               textTransform: 'uppercase', letterSpacing: '0.04em',
-              color: isCurrent ? '#9CA3AF' : activeColor || '#9CA3AF',
+              color: isCurrent ? 'var(--text-muted)' : activeColor || 'var(--text-muted)',
               paddingLeft: '4px', paddingRight: '4px',
             }}>
               {step.label}
             </div>
             {step.date && (
-              <div style={{ fontSize: '10px', color: '#9CA3AF', marginTop: '3px' }}>{fmtShort(step.date)}</div>
+              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '3px' }}>{fmtShort(step.date)}</div>
             )}
             {step.actor && (
-              <div style={{ fontSize: '10px', color: isCurrent ? '#B45309' : '#6B7280', marginTop: '1px', textAlign: 'center' }}>{step.actor}</div>
+              <div style={{ fontSize: '10px', color: isCurrent ? 'var(--gold-text)' : 'var(--text-muted)', marginTop: '1px', textAlign: 'center' }}>{step.actor}</div>
             )}
           </div>
         )
@@ -134,12 +134,12 @@ function HorizontalTracker({ steps }) {
 function VerticalTimeline({ pr, steps }) {
   return (
     <div style={{
-      background: '#FFFFFF', borderRadius: '16px', width: '400px', maxWidth: '100%',
-      boxShadow: '0 12px 32px rgba(0,0,0,0.18)', overflow: 'hidden',
+      background: 'var(--surface-card)', borderRadius: 'var(--radius-xl)', width: '400px', maxWidth: '100%',
+      boxShadow: '0 12px 32px rgba(54, 32, 26,0.18)', overflow: 'hidden',
     }}>
-      <div style={{ padding: '20px 22px 16px', borderBottom: '1px solid #F3F4F6' }}>
-        <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '2px' }}>Purchase Request</div>
-        <div style={{ fontSize: '15px', fontWeight: 700, color: '#1A1F36', fontFamily: 'monospace' }}>{pr.pr_number || 'Draft'}</div>
+      <div style={{ padding: '20px 22px 16px', borderBottom: '1px solid var(--taupe-100)' }}>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>Purchase Request</div>
+        <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--ink)', fontFamily: 'monospace' }}>{pr.pr_number || 'Draft'}</div>
       </div>
       <div style={{ padding: '20px 22px 22px' }}>
         {steps.map((step, i) => {
@@ -147,7 +147,7 @@ function VerticalTimeline({ pr, steps }) {
           const isCurrent = step.state === 'current'
           const isRejected = step.state === 'rejected'
           const isWaiting = step.state === 'waiting'
-          const dotColor = isRejected ? '#DC2626' : (isDone || isCurrent) ? '#15803D' : '#D1D5DB'
+          const dotColor = isRejected ? 'var(--clay-text)' : (isDone || isCurrent) ? 'var(--moss-text)' : 'var(--taupe-400)'
           const big = isCurrent || isRejected || (isDone && i === steps.length - 1)
 
           return (
@@ -155,37 +155,37 @@ function VerticalTimeline({ pr, steps }) {
               <div style={{ width: '58px', flexShrink: 0, textAlign: 'right', paddingTop: '1px' }}>
                 {step.date ? (
                   <>
-                    <div style={{ fontSize: '10px', color: '#9CA3AF', lineHeight: '1.4' }}>{fmtDateLine(step.date)}</div>
-                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#374151' }}>{fmtTimeLine(step.date)}</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', lineHeight: '1.4' }}>{fmtDateLine(step.date)}</div>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--ink)' }}>{fmtTimeLine(step.date)}</div>
                   </>
-                ) : <div style={{ fontSize: '10px', color: '#D1D5DB' }}>—</div>}
+                ) : <div style={{ fontSize: '10px', color: 'var(--taupe-400)' }}>—</div>}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
                 <div style={{
                   width: big ? '14px' : '10px', height: big ? '14px' : '10px', borderRadius: '50%', flexShrink: 0,
-                  background: isWaiting ? '#FFFFFF' : dotColor,
-                  border: `2px solid ${isWaiting ? '#E5E7EB' : dotColor}`,
+                  background: isWaiting ? 'var(--surface-card)' : dotColor,
+                  border: `2px solid ${isWaiting ? 'var(--taupe-200)' : dotColor}`,
                   marginTop: big ? '0' : '2px',
                   animation: isCurrent ? 'prStatusPulse 2s ease-in-out infinite' : 'none',
                 }} />
                 {i < steps.length - 1 && (
-                  <div style={{ width: '2px', flex: 1, minHeight: '30px', background: isWaiting ? '#F3F4F6' : '#E5E7EB', marginTop: '2px' }} />
+                  <div style={{ width: '2px', flex: 1, minHeight: '30px', background: isWaiting ? 'var(--taupe-100)' : 'var(--taupe-200)', marginTop: '2px' }} />
                 )}
               </div>
               <div style={{ paddingBottom: '18px', flex: 1 }}>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: isWaiting ? '#D1D5DB' : '#1A1F36' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: isWaiting ? 'var(--taupe-400)' : 'var(--ink)' }}>
                   {step.label.toUpperCase()}
                 </div>
                 {!isWaiting && step.actor && (
-                  <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '2px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
                     {step.actor}{step.role ? <span style={{ fontStyle: 'italic' }}> — ({step.role})</span> : null}
                   </div>
                 )}
                 {isCurrent && (
-                  <div style={{ fontSize: '11px', color: '#B45309', marginTop: '2px', fontWeight: 600 }}>Awaiting decision</div>
+                  <div style={{ fontSize: '11px', color: 'var(--gold-text)', marginTop: '2px', fontWeight: 600 }}>Awaiting decision</div>
                 )}
                 {step.note && (
-                  <div style={{ fontSize: '11px', color: '#B91C1C', marginTop: '4px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '4px', padding: '6px 8px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--clay-text)', marginTop: '4px', background: 'var(--clay-bg)', border: '1px solid var(--clay-border)', borderRadius: 'var(--radius-sm)', padding: '6px 8px' }}>
                     Reason: {step.note}
                   </div>
                 )}
@@ -231,22 +231,22 @@ export default function PRStatusModal({ pr, onClose }) {
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{ width: '620px', maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto', borderRadius: '10px', boxShadow: '0 20px 60px rgba(0,0,0,0.35)' }}
+        style={{ width: '620px', maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto', borderRadius: 'var(--radius-lg)', boxShadow: '0 20px 60px rgba(54, 32, 26,0.35)' }}
       >
-        <div style={{ background: '#FFFFFF', borderRadius: '10px 10px 0 0' }}>
+        <div style={{ background: 'var(--surface-card)', borderRadius: '10px 10px 0 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px 0' }}>
-            <div style={{ fontSize: '15px', fontWeight: 700, color: '#1A1A1A' }}>{pr.vendors?.org_name || pr.pr_number || 'Purchase Request'}</div>
-            <span onClick={onClose} style={{ cursor: 'pointer', fontSize: '18px', color: '#9CA3AF', lineHeight: 1 }}>×</span>
+            <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text)' }}>{pr.vendors?.org_name || pr.pr_number || 'Purchase Request'}</div>
+            <span onClick={onClose} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--text-muted)', lineHeight: 1 }}>×</span>
           </div>
           {loading ? (
-            <div style={{ padding: '40px 24px', textAlign: 'center', fontSize: '13px', color: '#9CA3AF' }}>Loading…</div>
+            <div style={{ padding: '40px 24px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>Loading…</div>
           ) : (
             <HorizontalTracker steps={steps} />
           )}
         </div>
 
         {!loading && (
-          <div style={{ background: '#8C3225', padding: '36px 24px', display: 'flex', justifyContent: 'center', borderRadius: '0 0 10px 10px' }}>
+          <div style={{ background: 'var(--action)', padding: '36px 24px', display: 'flex', justifyContent: 'center', borderRadius: '0 0 10px 10px' }}>
             <VerticalTimeline pr={pr} steps={steps} />
           </div>
         )}

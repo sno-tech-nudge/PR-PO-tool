@@ -17,7 +17,7 @@ export default function ConfirmationScreen({ receiptExtracted, paymentData, matc
   const paymentMethod = paymentData?.paymentType ? PAYMENT_LABELS[paymentData.paymentType] || paymentData.paymentType : 'Unknown'
   const docLabel = singleDocument ? 'Single UPI document' : 'Receipt + Payment proof'
   const statusText = isOffline ? 'Saved offline' : 'Ready to submit'
-  const statusColor = isOffline ? '#CA8A04' : '#16A34A'
+  const statusColor = isOffline ? 'var(--gold-text)' : 'var(--moss)'
 
   const rows = [
     { label: 'Amount', value: amount ? `${amount.toLocaleString('en-IN')} rupees` : 'Not detected' },
@@ -30,11 +30,11 @@ export default function ConfirmationScreen({ receiptExtracted, paymentData, matc
 
   return (
     <div>
-      <div style={{ fontSize: '20px', fontWeight: 500, color: '#1A1A1A', marginBottom: '20px' }}>
+      <div style={{ fontSize: '20px', fontWeight: 500, color: 'var(--text)', marginBottom: '20px' }}>
         Documents saved
       </div>
 
-      <div style={{ border: '1px solid #E8E8E8', padding: '20px', borderRadius: '4px', marginBottom: '16px' }}>
+      <div style={{ border: '1px solid var(--taupe-200)', padding: '20px', borderRadius: 'var(--radius-sm)', marginBottom: '16px' }}>
         {rows.map((row, i) => (
           <div
             key={row.label}
@@ -44,23 +44,23 @@ export default function ConfirmationScreen({ receiptExtracted, paymentData, matc
               alignItems: 'center',
               paddingTop: i > 0 ? '12px' : 0,
               marginTop: i > 0 ? '12px' : 0,
-              borderTop: i > 0 ? '1px solid #F7F7F7' : 'none',
+              borderTop: i > 0 ? '1px solid var(--taupe-50)' : 'none',
             }}
           >
-            <span style={{ fontSize: '12px', color: '#6B6B6B' }}>{row.label}</span>
-            <span style={{ fontSize: '13px', fontWeight: 500, color: row.color || '#1A1A1A' }}>{row.value}</span>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{row.label}</span>
+            <span style={{ fontSize: '13px', fontWeight: 500, color: row.color || 'var(--text)' }}>{row.value}</span>
           </div>
         ))}
       </div>
 
       {isOffline && (
         <div style={{
-          border: '1px solid #CA8A04',
-          background: '#FEFCE8',
+          border: '1px solid var(--gold-text)',
+          background: 'var(--gold-bg)',
           padding: '12px',
-          borderRadius: '4px',
+          borderRadius: 'var(--radius-sm)',
           fontSize: '13px',
-          color: '#CA8A04',
+          color: 'var(--gold-text)',
           marginBottom: '16px',
         }}>
           Saved to your device. Will sync when you reconnect.
@@ -80,8 +80,8 @@ export default function ConfirmationScreen({ receiptExtracted, paymentData, matc
           single_document: singleDocument ?? false,
         })}
         style={{
-          width: '100%', height: '48px', background: '#8C3225', color: '#FFFFFF',
-          border: 'none', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: '4px',
+          width: '100%', height: '48px', background: 'var(--action)', color: 'var(--surface-card)',
+          border: 'none', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: 'var(--radius-sm)',
         }}
       >
         Continue to expense details

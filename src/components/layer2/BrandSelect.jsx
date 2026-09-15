@@ -19,11 +19,11 @@ export default function BrandSelect({ onContinue, onBack }) {
             key={brand}
             onClick={() => handleSelect(brand)}
             style={{
-              border: selected === brand ? '1px solid #1A1A1A' : '1px solid #E8E8E8',
-              background: selected === brand ? '#F7F7F7' : '#FFFFFF',
-              padding: '16px', height: '64px', cursor: 'pointer', borderRadius: '4px',
+              border: selected === brand ? '1px solid var(--text)' : '1px solid var(--taupe-200)',
+              background: selected === brand ? 'var(--taupe-50)' : 'var(--surface-card)',
+              padding: '16px', height: '64px', cursor: 'pointer', borderRadius: 'var(--radius-sm)',
               display: 'flex', alignItems: 'center',
-              fontSize: '14px', fontWeight: 500, color: '#1A1A1A',
+              fontSize: '14px', fontWeight: 500, color: 'var(--text)',
             }}
           >
             {brand}

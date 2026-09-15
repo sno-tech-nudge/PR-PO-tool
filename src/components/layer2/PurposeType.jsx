@@ -20,18 +20,18 @@ export default function PurposeType({ onContinue, onBack }) {
             <div
               onClick={() => { setSelected(opt.id); setDescription('') }}
               style={{
-                border: selected === opt.id ? '1px solid #1A1A1A' : '1px solid #E8E8E8',
-                background: selected === opt.id ? '#F7F7F7' : '#FFFFFF',
-                padding: '16px', height: '64px', cursor: 'pointer', borderRadius: '4px',
+                border: selected === opt.id ? '1px solid var(--text)' : '1px solid var(--taupe-200)',
+                background: selected === opt.id ? 'var(--taupe-50)' : 'var(--surface-card)',
+                padding: '16px', height: '64px', cursor: 'pointer', borderRadius: 'var(--radius-sm)',
                 display: 'flex', alignItems: 'center',
-                fontSize: '14px', fontWeight: 500, color: '#1A1A1A',
+                fontSize: '14px', fontWeight: 500, color: 'var(--text)',
               }}
             >
               {opt.label}
             </div>
             {selected === opt.id && (
               <div style={{ marginTop: '8px' }}>
-                <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '6px' }}>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px' }}>
                   Brief description
                 </div>
                 <input
@@ -41,8 +41,8 @@ export default function PurposeType({ onContinue, onBack }) {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   style={{
-                    width: '100%', height: '44px', border: '1px solid #E8E8E8',
-                    fontSize: '13px', padding: '0 12px', borderRadius: '4px', outline: 'none',
+                    width: '100%', height: '44px', border: '1px solid var(--taupe-200)',
+                    fontSize: '13px', padding: '0 12px', borderRadius: 'var(--radius-sm)', outline: 'none',
                   }}
                 />
               </div>
@@ -55,8 +55,8 @@ export default function PurposeType({ onContinue, onBack }) {
         <button
           onClick={() => onContinue({ purpose_type: selected, description: description || null })}
           style={{
-            width: '100%', height: '48px', background: '#8C3225', color: '#FFFFFF',
-            border: 'none', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: '4px',
+            width: '100%', height: '48px', background: 'var(--action)', color: 'var(--surface-card)',
+            border: 'none', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: 'var(--radius-sm)',
           }}
         >
           Continue

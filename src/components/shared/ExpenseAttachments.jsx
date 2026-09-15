@@ -33,8 +33,8 @@ export function ReceiptDocuments({ captureId }) {
     return () => { cancelled = true }
   }, [captureId])
 
-  if (loading) return <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '8px' }}>Loading receipt…</div>
-  if (!urls?.receipt && !urls?.payment) return <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '8px' }}>No documents found</div>
+  if (loading) return <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>Loading receipt…</div>
+  if (!urls?.receipt && !urls?.payment) return <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>No documents found</div>
 
   return (
     <div style={{ display: 'flex', gap: '12px', marginBottom: '8px' }}>
@@ -43,9 +43,9 @@ export function ReceiptDocuments({ captureId }) {
           <img
             src={urls.receipt}
             alt="Receipt"
-            style={{ maxWidth: '140px', maxHeight: '110px', objectFit: 'contain', border: '1px solid #E8E8E8', display: 'block', borderRadius: '3px' }}
+            style={{ maxWidth: '140px', maxHeight: '110px', objectFit: 'contain', border: '1px solid var(--taupe-200)', display: 'block', borderRadius: 'var(--radius-sm)' }}
           />
-          <div style={{ fontSize: '10px', color: '#6B6B6B', marginTop: '4px' }}>Receipt</div>
+          <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>Receipt</div>
         </a>
       )}
       {urls.payment && (
@@ -53,9 +53,9 @@ export function ReceiptDocuments({ captureId }) {
           <img
             src={urls.payment}
             alt="Payment proof"
-            style={{ maxWidth: '140px', maxHeight: '110px', objectFit: 'contain', border: '1px solid #E8E8E8', display: 'block', borderRadius: '3px' }}
+            style={{ maxWidth: '140px', maxHeight: '110px', objectFit: 'contain', border: '1px solid var(--taupe-200)', display: 'block', borderRadius: 'var(--radius-sm)' }}
           />
-          <div style={{ fontSize: '10px', color: '#6B6B6B', marginTop: '4px' }}>Payment proof</div>
+          <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>Payment proof</div>
         </a>
       )}
     </div>
@@ -85,23 +85,23 @@ export function SupportingAttachments({ attachments }) {
     return (
       <div
         onClick={load}
-        style={{ fontSize: '11px', color: '#6B6B6B', cursor: 'pointer', textDecoration: 'underline', marginBottom: '8px' }}
+        style={{ fontSize: '11px', color: 'var(--text-muted)', cursor: 'pointer', textDecoration: 'underline', marginBottom: '8px' }}
       >
         View other attachments ({attachments.length})
       </div>
     )
   }
-  if (loading) return <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '8px' }}>Loading…</div>
+  if (loading) return <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>Loading…</div>
 
   return (
     <div style={{ marginBottom: '8px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
       {attachments.map((a, i) => (
         urls[a.path] ? (
-          <a key={i} href={urls[a.path]} target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px', color: '#8C3225', textDecoration: 'underline' }}>
+          <a key={i} href={urls[a.path]} target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px', color: 'var(--action)', textDecoration: 'underline' }}>
             View {a.label}
           </a>
         ) : (
-          <span key={i} style={{ fontSize: '11px', color: '#9CA3AF' }}>{a.label} not found</span>
+          <span key={i} style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{a.label} not found</span>
         )
       ))}
     </div>
@@ -132,7 +132,7 @@ export function ExternalAttachmentLinks({ poLink, vrLink, erLink }) {
           href={l.url}
           target="_blank"
           rel="noopener noreferrer"
-          style={{ fontSize: '11px', color: '#8C3225', textDecoration: 'underline' }}
+          style={{ fontSize: '11px', color: 'var(--action)', textDecoration: 'underline' }}
         >
           {links.length > 1 ? l.label : 'View Attachment'}
         </a>
@@ -186,11 +186,11 @@ export function DownloadAttachmentsButton({ captureId, attachments }) {
     <div style={{ marginBottom: '8px' }}>
       <div
         onClick={busy ? undefined : handleDownload}
-        style={{ fontSize: '11px', color: busy ? '#9CA3AF' : '#8C3225', cursor: busy ? 'default' : 'pointer', textDecoration: 'underline', display: 'inline-block' }}
+        style={{ fontSize: '11px', color: busy ? 'var(--text-muted)' : 'var(--action)', cursor: busy ? 'default' : 'pointer', textDecoration: 'underline', display: 'inline-block' }}
       >
         {busy ? (step || 'Preparing PDF…') : 'Download attachments (PDF)'}
       </div>
-      {error && <div style={{ fontSize: '11px', color: '#DC2626', marginTop: '4px' }}>{error}</div>}
+      {error && <div style={{ fontSize: '11px', color: 'var(--clay-text)', marginTop: '4px' }}>{error}</div>}
     </div>
   )
 }

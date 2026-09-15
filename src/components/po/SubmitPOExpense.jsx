@@ -20,8 +20,8 @@ function fmtAmt(n) {
 function Field({ label, required, children }) {
   return (
     <div style={{ marginBottom: '14px' }}>
-      <div style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>
-        {label}{required && <span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>}
+      <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: '6px' }}>
+        {label}{required && <span style={{ color: 'var(--clay-text)', marginLeft: '2px' }}>*</span>}
       </div>
       {children}
     </div>
@@ -30,17 +30,17 @@ function Field({ label, required, children }) {
 
 function SectionCard({ title, sub, children }) {
   return (
-    <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '20px', marginBottom: '14px' }}>
-      <div style={{ fontSize: '11px', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>{title}</div>
-      {sub && <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '14px' }}>{sub}</div>}
+    <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '20px', marginBottom: '14px' }}>
+      <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>{title}</div>
+      {sub && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '14px' }}>{sub}</div>}
       {!sub && <div style={{ marginBottom: '10px' }} />}
       {children}
     </div>
   )
 }
 
-const inputStyle = { width: '100%', height: '38px', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '0 10px', fontSize: '13px', color: '#1A1F36', outline: 'none', boxSizing: 'border-box' }
-const textareaStyle = { width: '100%', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '10px', fontSize: '13px', color: '#1A1F36', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }
+const inputStyle = { width: '100%', height: '38px', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', padding: '0 10px', fontSize: '13px', color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }
+const textareaStyle = { width: '100%', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', padding: '10px', fontSize: '13px', color: 'var(--ink)', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }
 
 // Two-stage tranche/invoice capture against an already-issued PO. Stage 1
 // is a quick popup for the core invoice numbers; Stage 2 is a full-screen
@@ -176,17 +176,17 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
       >
         <div
           onClick={e => e.stopPropagation()}
-          style={{ background: '#FFFFFF', borderRadius: '6px', padding: '24px', width: '100%', maxWidth: '440px' }}
+          style={{ background: 'var(--surface-card)', borderRadius: 'var(--radius-md)', padding: '24px', width: '100%', maxWidth: '440px' }}
         >
-          <div style={{ fontSize: '16px', fontWeight: 700, color: '#1A1F36', marginBottom: '4px' }}>
+          <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--ink)', marginBottom: '4px' }}>
             Submit expense for this PO
           </div>
-          <div style={{ fontSize: '12px', color: '#6B7280', fontFamily: 'monospace', marginBottom: '16px' }}>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'monospace', marginBottom: '16px' }}>
             {po.po_number} · pending {fmtAmt(pending)}
           </div>
 
           {stage1Error && (
-            <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '3px', padding: '10px 14px', marginBottom: '14px', fontSize: '13px', color: '#B91C1C' }}>
+            <div style={{ background: 'var(--clay-bg)', border: '1px solid var(--clay-border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', marginBottom: '14px', fontSize: '13px', color: 'var(--clay-text)' }}>
               {stage1Error}
             </div>
           )}
@@ -194,7 +194,7 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
           <Field label="Invoice Amount" required>
             <AmountInput value={amount} onChange={setAmount} error={overPending} inputStyle={{ height: '40px', fontSize: '14px' }} />
             {overPending && (
-              <div style={{ fontSize: '11px', color: '#B91C1C', marginTop: '4px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--clay-text)', marginTop: '4px' }}>
                 Exceeds pending balance of {fmtAmt(pending)}.
               </div>
             )}
@@ -211,13 +211,13 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
           <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
             <button
               onClick={handleContinue}
-              style={{ height: '40px', padding: '0 24px', borderRadius: '4px', fontSize: '13px', fontWeight: 600, background: '#8C3225', color: '#FFFFFF', border: 'none', cursor: 'pointer' }}
+              style={{ height: '40px', padding: '0 24px', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 600, background: 'var(--action)', color: 'var(--surface-card)', border: 'none', cursor: 'pointer' }}
             >
               Continue
             </button>
             <button
               onClick={onClose}
-              style={{ height: '40px', padding: '0 20px', background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '13px', cursor: 'pointer' }}
+              style={{ height: '40px', padding: '0 20px', background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', fontSize: '13px', cursor: 'pointer' }}
             >
               Cancel
             </button>
@@ -229,15 +229,15 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
 
   // ── Stage 2: full-screen takeover ──
   return (
-    <div style={{ position: 'fixed', inset: 0, background: '#F4F5F7', zIndex: 250, overflowY: 'auto' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'var(--taupe-50)', zIndex: 250, overflowY: 'auto' }}>
       <div style={{ maxWidth: '720px', margin: '0 auto', padding: '28px 24px 60px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-          <span onClick={() => setStage(1)} style={{ fontSize: '12px', color: '#8C3225', cursor: 'pointer' }}>← Back</span>
-          <span style={{ fontSize: '12px', color: '#9CA3AF' }}>/</span>
-          <span onClick={onClose} style={{ fontSize: '12px', color: '#9CA3AF', cursor: 'pointer' }}>Cancel</span>
+          <span onClick={() => setStage(1)} style={{ fontSize: '12px', color: 'var(--action)', cursor: 'pointer' }}>← Back</span>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>/</span>
+          <span onClick={onClose} style={{ fontSize: '12px', color: 'var(--text-muted)', cursor: 'pointer' }}>Cancel</span>
         </div>
-        <div style={{ fontSize: '20px', fontWeight: 700, color: '#1A1F36', marginBottom: '4px' }}>Capture Invoice</div>
-        <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '20px' }}>
+        <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--ink)', marginBottom: '4px' }}>Capture Invoice</div>
+        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px' }}>
           <span style={{ fontFamily: 'monospace' }}>{po.po_number}</span>
           {pr?.pr_number ? ` · ${pr.pr_number}` : ''}
           {vendor?.org_name ? ` · ${vendor.org_name}` : ''}
@@ -245,7 +245,7 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
         </div>
 
         {error && (
-          <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '3px', padding: '10px 14px', marginBottom: '14px', fontSize: '13px', color: '#B91C1C' }}>
+          <div style={{ background: 'var(--clay-bg)', border: '1px solid var(--clay-border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', marginBottom: '14px', fontSize: '13px', color: 'var(--clay-text)' }}>
             {error}
           </div>
         )}
@@ -302,24 +302,24 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
                 <button
                   onClick={() => removeAttachment(i)}
                   title="Remove"
-                  style={{ height: '38px', width: '34px', flexShrink: 0, background: '#FFFFFF', color: '#B91C1C', border: '1px solid #FECACA', borderRadius: '4px', fontSize: '15px', cursor: 'pointer' }}
+                  style={{ height: '38px', width: '34px', flexShrink: 0, background: 'var(--surface-card)', color: 'var(--clay-text)', border: '1px solid var(--clay-border)', borderRadius: 'var(--radius-sm)', fontSize: '15px', cursor: 'pointer' }}
                 >
                   ×
                 </button>
               )}
             </div>
           ))}
-          {attachments.length === 1 && <div style={{ fontSize: '11px', color: '#DC2626', marginBottom: '10px' }}>* First attachment (Invoice) is required</div>}
+          {attachments.length === 1 && <div style={{ fontSize: '11px', color: 'var(--clay-text)', marginBottom: '10px' }}>* First attachment (Invoice) is required</div>}
           <button
             type="button"
             onClick={addAttachment}
-            style={{ height: '32px', padding: '0 14px', background: '#FFFFFF', color: '#8C3225', border: '1px solid #8C3225', borderRadius: '4px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+            style={{ height: '32px', padding: '0 14px', background: 'var(--surface-card)', color: 'var(--action)', border: '1px solid var(--action)', borderRadius: 'var(--radius-sm)', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
           >
             + Add another attachment
           </button>
         </SectionCard>
 
-        <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '14px', lineHeight: 1.5 }}>
+        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: 1.5 }}>
           This saves the invoice — it won't be submitted for approval yet. Add it to a report
           (any time, on its own or alongside other expenses) from Home whenever you're ready.
         </div>
@@ -329,8 +329,8 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
             onClick={handleSave}
             disabled={saving}
             style={{
-              height: '42px', padding: '0 28px', borderRadius: '4px', fontSize: '13px', fontWeight: 600,
-              background: saving ? '#9CA3AF' : '#8C3225', color: '#FFFFFF', border: 'none',
+              height: '42px', padding: '0 28px', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 600,
+              background: saving ? 'var(--text-muted)' : 'var(--action)', color: 'var(--surface-card)', border: 'none',
               cursor: saving ? 'default' : 'pointer',
             }}
           >
@@ -338,7 +338,7 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
           </button>
           <button
             onClick={() => setStage(1)}
-            style={{ height: '42px', padding: '0 20px', background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '13px', cursor: 'pointer' }}
+            style={{ height: '42px', padding: '0 20px', background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', fontSize: '13px', cursor: 'pointer' }}
           >
             Back
           </button>

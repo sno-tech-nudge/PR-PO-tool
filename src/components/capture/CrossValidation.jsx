@@ -31,7 +31,7 @@ export default function CrossValidation({ receiptExtracted, paymentData, onConfi
   if (phase === 'loading') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '200px', gap: '12px' }}>
-        <div style={{ fontSize: '13px', color: '#4A4A4A' }}>Verifying documents</div>
+        <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Verifying documents</div>
         <div className="spinner" />
       </div>
     )
@@ -40,11 +40,11 @@ export default function CrossValidation({ receiptExtracted, paymentData, onConfi
   if (phase === 'match') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '200px', gap: '8px' }}>
-        <div style={{ fontSize: '15px', color: '#16A34A' }}>Documents match</div>
-        <div style={{ fontSize: '40px', fontWeight: 500, color: '#1A1A1A' }}>
+        <div style={{ fontSize: '15px', color: 'var(--moss)' }}>Documents match</div>
+        <div style={{ fontSize: '40px', fontWeight: 500, color: 'var(--text)' }}>
           {receiptAmount?.toLocaleString('en-IN')}
         </div>
-        <div style={{ fontSize: '13px', color: '#6B6B6B' }}>rupees</div>
+        <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>rupees</div>
       </div>
     )
   }
@@ -52,16 +52,16 @@ export default function CrossValidation({ receiptExtracted, paymentData, onConfi
   if (phase === 'mismatch') {
     return (
       <div>
-        <div style={{ fontSize: '20px', fontWeight: 500, color: '#1A1A1A', marginBottom: '6px' }}>Amount mismatch</div>
-        <div style={{ fontSize: '13px', color: '#4A4A4A', marginBottom: '20px' }}>
+        <div style={{ fontSize: '20px', fontWeight: 500, color: 'var(--text)', marginBottom: '6px' }}>Amount mismatch</div>
+        <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>
           Your receipt shows {receiptAmount} but your payment proof shows {paymentAmount}. Please check your documents.
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <button
             onClick={onRetakeReceipt}
             style={{
-              width: '100%', height: '44px', border: '1px solid #E8E8E8', background: '#FFFFFF',
-              color: '#1A1A1A', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: '4px',
+              width: '100%', height: '44px', border: '1px solid var(--taupe-200)', background: 'var(--surface-card)',
+              color: 'var(--text)', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: 'var(--radius-sm)',
             }}
           >
             Retake receipt
@@ -69,8 +69,8 @@ export default function CrossValidation({ receiptExtracted, paymentData, onConfi
           <button
             onClick={onRetakePayment}
             style={{
-              width: '100%', height: '44px', background: '#8C3225', color: '#FFFFFF',
-              border: 'none', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: '4px',
+              width: '100%', height: '44px', background: 'var(--action)', color: 'var(--surface-card)',
+              border: 'none', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: 'var(--radius-sm)',
             }}
           >
             Retake payment proof
@@ -83,7 +83,7 @@ export default function CrossValidation({ receiptExtracted, paymentData, onConfi
   if (phase === 'unreadable') {
     return (
       <div>
-        <div style={{ fontSize: '13px', color: '#4A4A4A', marginBottom: '20px' }}>
+        <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>
           Could not read the amount from one of your documents.
         </div>
         {showManualInput && (
@@ -100,8 +100,8 @@ export default function CrossValidation({ receiptExtracted, paymentData, onConfi
           <button
             onClick={onRetakeReceipt}
             style={{
-              width: '100%', height: '44px', border: '1px solid #E8E8E8', background: '#FFFFFF',
-              color: '#1A1A1A', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: '4px',
+              width: '100%', height: '44px', border: '1px solid var(--taupe-200)', background: 'var(--surface-card)',
+              color: 'var(--text)', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: 'var(--radius-sm)',
             }}
           >
             Retake receipt
@@ -109,8 +109,8 @@ export default function CrossValidation({ receiptExtracted, paymentData, onConfi
           <button
             onClick={onRetakePayment}
             style={{
-              width: '100%', height: '44px', border: '1px solid #E8E8E8', background: '#FFFFFF',
-              color: '#1A1A1A', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: '4px',
+              width: '100%', height: '44px', border: '1px solid var(--taupe-200)', background: 'var(--surface-card)',
+              color: 'var(--text)', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: 'var(--radius-sm)',
             }}
           >
             Retake payment proof
@@ -119,8 +119,8 @@ export default function CrossValidation({ receiptExtracted, paymentData, onConfi
             <button
               onClick={() => setShowManualInput(true)}
               style={{
-                width: '100%', height: '44px', background: '#8C3225', color: '#FFFFFF',
-                border: 'none', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: '4px',
+                width: '100%', height: '44px', background: 'var(--action)', color: 'var(--surface-card)',
+                border: 'none', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: 'var(--radius-sm)',
               }}
             >
               Enter amount manually
@@ -130,8 +130,8 @@ export default function CrossValidation({ receiptExtracted, paymentData, onConfi
             <button
               onClick={() => onConfirm({ matchedAmount: parseFloat(manualAmount) || null, amountsMatch: false })}
               style={{
-                width: '100%', height: '44px', background: '#8C3225', color: '#FFFFFF',
-                border: 'none', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: '4px',
+                width: '100%', height: '44px', background: 'var(--action)', color: 'var(--surface-card)',
+                border: 'none', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: 'var(--radius-sm)',
               }}
             >
               Confirm amount

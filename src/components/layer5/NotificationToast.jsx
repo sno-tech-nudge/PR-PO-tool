@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 
 const TYPE_STYLE = {
-  approved: { border: '#16A34A', dot: '#16A34A' },
-  rejected: { border: '#DC2626', dot: '#DC2626' },
-  info: { border: '#E8E8E8', dot: '#6B6B6B' },
+  approved: { border: 'var(--moss)', dot: 'var(--moss)' },
+  rejected: { border: 'var(--clay-text)', dot: 'var(--clay-text)' },
+  info: { border: 'var(--taupe-200)', dot: 'var(--text-muted)' },
 }
 
 export default function NotificationToast({ message, type = 'info', onDismiss }) {
@@ -41,7 +41,7 @@ export default function NotificationToast({ message, type = 'info', onDismiss })
       zIndex: 200,
     }}>
       <div style={{
-        background: '#FFFFFF',
+        background: 'var(--surface-card)',
         border: `1px solid ${s.border}`,
         padding: '12px 16px',
         display: 'flex',
@@ -52,12 +52,12 @@ export default function NotificationToast({ message, type = 'info', onDismiss })
           width: '8px', height: '8px', borderRadius: '50%',
           background: s.dot, flexShrink: 0,
         }} />
-        <div style={{ fontSize: '13px', color: '#1A1A1A', flex: 1, lineHeight: '1.4' }}>
+        <div style={{ fontSize: '13px', color: 'var(--text)', flex: 1, lineHeight: '1.4' }}>
           {message}
         </div>
         <div
           onClick={() => { setLeaving(true); setTimeout(onDismiss, 300) }}
-          style={{ fontSize: '12px', color: '#6B6B6B', cursor: 'pointer', flexShrink: 0 }}
+          style={{ fontSize: '12px', color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0 }}
         >
           ×
         </div>

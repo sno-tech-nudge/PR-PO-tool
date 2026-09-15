@@ -8,13 +8,13 @@ import Confetti from '../shared/Confetti'
 import ExpenseDetailModal from '../layer2/ExpenseDetailModal'
 
 const STATUS_BADGE = {
-  draft: { bg: '#F3F4F6', color: '#6B7280', label: 'Draft', icon: '●' },
-  submitted: { bg: '#F7F7F7', color: '#1A1A1A', label: 'Submitted', icon: '◷' },
-  under_review: { bg: '#fdf0ed', color: '#8C3225', label: 'Under Review', icon: '◷' },
-  approved: { bg: '#F0FDF4', color: '#16A34A', label: 'Approved', icon: '✓' },
-  rejected: { bg: '#FEF2F2', color: '#DC2626', label: 'Rejected', icon: '✕' },
-  processing: { bg: '#FEFCE8', color: '#CA8A04', label: 'Processing', icon: '◷' },
-  reimbursed: { bg: '#F0FDF4', color: '#16A34A', label: 'Reimbursed', icon: '✓' },
+  draft: { bg: 'var(--taupe-100)', color: 'var(--text-muted)', label: 'Draft', icon: '●' },
+  submitted: { bg: 'var(--taupe-50)', color: 'var(--text)', label: 'Submitted', icon: '◷' },
+  under_review: { bg: 'var(--action-bg)', color: 'var(--action)', label: 'Under Review', icon: '◷' },
+  approved: { bg: 'var(--moss-bg)', color: 'var(--moss)', label: 'Approved', icon: '✓' },
+  rejected: { bg: 'var(--clay-bg)', color: 'var(--clay-text)', label: 'Rejected', icon: '✕' },
+  processing: { bg: 'var(--gold-bg)', color: 'var(--gold-text)', label: 'Processing', icon: '◷' },
+  reimbursed: { bg: 'var(--moss-bg)', color: 'var(--moss)', label: 'Reimbursed', icon: '✓' },
 }
 
 function getStatusMessage(status, reviewedBy) {
@@ -36,11 +36,11 @@ function ActivityItem({ text, timestamp }) {
     <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
       <div style={{
         width: '6px', height: '6px', borderRadius: '50%',
-        background: '#E8E8E8', flexShrink: 0, marginTop: '5px',
+        background: 'var(--taupe-200)', flexShrink: 0, marginTop: '5px',
       }} />
       <div>
-        <div style={{ fontSize: '12px', color: '#4A4A4A' }}>{text}</div>
-        <div style={{ fontSize: '11px', color: '#6B6B6B', marginTop: '2px' }}>{timestamp}</div>
+        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{text}</div>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{timestamp}</div>
       </div>
     </div>
   )
@@ -155,14 +155,14 @@ export default function ReportStatus({ reportId, onBack, onStartNew, onViewPO })
   if (!report && !reportId) {
     return (
       <div style={{ maxWidth: '480px', margin: '0 auto', padding: '40px 20px', textAlign: 'center' }}>
-        <div style={{ fontSize: '14px', color: '#4A4A4A', marginBottom: '16px' }}>
+        <div style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '16px' }}>
           This report could not be found.
         </div>
         <button
           onClick={onBack}
           style={{
-            width: '100%', height: '48px', background: '#8C3225', color: '#FFFFFF',
-            border: 'none', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: '4px',
+            width: '100%', height: '48px', background: 'var(--action)', color: 'var(--surface-card)',
+            border: 'none', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: 'var(--radius-sm)',
           }}
         >
           Go home
@@ -203,22 +203,22 @@ export default function ReportStatus({ reportId, onBack, onStartNew, onViewPO })
 
       {/* Header */}
       <div style={{ marginBottom: '16px' }}>
-        <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '4px' }}>Report Status</div>
-        <div style={{ fontSize: '12px', color: '#6B6B6B' }}>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Report Status</div>
+        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
           {report?.report_reference || '—'} · {report?.created_at ? new Date(report.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
         </div>
       </div>
 
       {linkedPO && (
-        <div style={{ border: '1px solid #E8E8E8', marginBottom: '16px', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ border: '1px solid var(--taupe-200)', marginBottom: '16px', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '2px' }}>Purchase Order</div>
-            <div style={{ fontSize: '13px', color: '#1A1A1A' }}>{linkedPO.po_number}</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>Purchase Order</div>
+            <div style={{ fontSize: '13px', color: 'var(--text)' }}>{linkedPO.po_number}</div>
           </div>
           {onViewPO && (
             <div
               onClick={() => onViewPO(linkedPO.id)}
-              style={{ fontSize: '13px', color: '#8C3225', cursor: 'pointer', textDecoration: 'underline' }}
+              style={{ fontSize: '13px', color: 'var(--action)', cursor: 'pointer', textDecoration: 'underline' }}
             >
               View PO
             </div>
@@ -227,17 +227,17 @@ export default function ReportStatus({ reportId, onBack, onStartNew, onViewPO })
       )}
 
       {(report?.business_purpose || report?.duration_start || report?.duration_end) && (
-        <div style={{ border: '1px solid #E8E8E8', marginBottom: '16px', overflow: 'hidden' }}>
+        <div style={{ border: '1px solid var(--taupe-200)', marginBottom: '16px', overflow: 'hidden' }}>
           {report?.business_purpose && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', borderBottom: report?.duration_start || report?.duration_end ? '1px solid #E8E8E8' : 'none' }}>
-              <span style={{ fontSize: '12px', color: '#6B6B6B' }}>Business Purpose</span>
-              <span style={{ fontSize: '13px', color: '#1A1A1A', textAlign: 'right', maxWidth: '65%' }}>{report.business_purpose}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', borderBottom: report?.duration_start || report?.duration_end ? '1px solid var(--taupe-200)' : 'none' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Business Purpose</span>
+              <span style={{ fontSize: '13px', color: 'var(--text)', textAlign: 'right', maxWidth: '65%' }}>{report.business_purpose}</span>
             </div>
           )}
           {(report?.duration_start || report?.duration_end) && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: '#F7F7F7' }}>
-              <span style={{ fontSize: '12px', color: '#6B6B6B' }}>Duration</span>
-              <span style={{ fontSize: '13px', color: '#1A1A1A' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--taupe-50)' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Duration</span>
+              <span style={{ fontSize: '13px', color: 'var(--text)' }}>
                 {[report.duration_start, report.duration_end].filter(Boolean).map(d => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })).join(' – ')}
               </span>
             </div>
@@ -246,7 +246,7 @@ export default function ReportStatus({ reportId, onBack, onStartNew, onViewPO })
       )}
 
       {polling && (
-        <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '8px' }}>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>
           Live updates paused. Refreshing every 30 seconds.
         </div>
       )}
@@ -257,20 +257,20 @@ export default function ReportStatus({ reportId, onBack, onStartNew, onViewPO })
           display: 'inline-flex', alignItems: 'center', gap: '6px',
           background: badge.bg, color: badge.color,
           padding: '6px 16px', fontSize: '13px', fontWeight: 500,
-          borderRadius: '2px', marginBottom: '8px',
+          borderRadius: 'var(--radius-xs)', marginBottom: '8px',
         }}>
           <span style={{ fontSize: '13px' }}>{badge.icon}</span>
           {badge.label}
         </div>
-        <div style={{ fontSize: '13px', color: '#4A4A4A', lineHeight: '1.5' }}>
+        <div style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.5' }}>
           {getStatusMessage(status, report?.reviewed_by)}
         </div>
       </div>
 
       {status === 'reimbursed' && (
         <div style={{
-          border: '1px solid #BBF7D0', background: '#F0FDF4', borderRadius: '6px',
-          padding: '12px 16px', marginBottom: '16px', fontSize: '13px', color: '#15803D',
+          border: '1px solid var(--moss-border)', background: 'var(--moss-bg)', borderRadius: 'var(--radius-md)',
+          padding: '12px 16px', marginBottom: '16px', fontSize: '13px', color: 'var(--moss-text)',
         }}>
           🎉 ₹{Number(report?.total_amount || 0).toLocaleString('en-IN')} reimbursed — this report is fully settled.
         </div>
@@ -279,16 +279,16 @@ export default function ReportStatus({ reportId, onBack, onStartNew, onViewPO })
       {/* Rejection card */}
       {isRejected && report?.rejection_reason && (
         <div style={{
-          border: '1px solid #DC2626', padding: '16px',
+          border: '1px solid var(--clay-text)', padding: '16px',
           marginBottom: '16px',
         }}>
-          <div style={{ fontSize: '13px', fontWeight: 500, color: '#DC2626', marginBottom: '8px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--clay-text)', marginBottom: '8px' }}>
             Returned for revision
           </div>
-          <div style={{ fontSize: '13px', color: '#1A1A1A', marginBottom: '8px', lineHeight: '1.5' }}>
+          <div style={{ fontSize: '13px', color: 'var(--text)', marginBottom: '8px', lineHeight: '1.5' }}>
             {report.rejection_reason}
           </div>
-          <div style={{ fontSize: '11px', color: '#6B6B6B' }}>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
             Returned by {report.reviewed_by || 'approver'}{report.rejected_at ? ` on ${new Date(report.rejected_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}
           </div>
         </div>
@@ -299,18 +299,18 @@ export default function ReportStatus({ reportId, onBack, onStartNew, onViewPO })
           <button
             onClick={onStartNew}
             style={{
-              width: '100%', height: '48px', background: '#8C3225', color: '#FFFFFF',
+              width: '100%', height: '48px', background: 'var(--action)', color: 'var(--surface-card)',
               border: 'none', fontSize: '14px', fontWeight: 500,
-              cursor: 'pointer', borderRadius: '4px',
+              cursor: 'pointer', borderRadius: 'var(--radius-sm)',
             }}
           >
             Edit and resubmit
           </button>
           <button
             style={{
-              width: '100%', height: '48px', background: '#FFFFFF', color: '#1A1A1A',
-              border: '1px solid #8C3225', fontSize: '14px', fontWeight: 500,
-              cursor: 'pointer', borderRadius: '4px',
+              width: '100%', height: '48px', background: 'var(--surface-card)', color: 'var(--text)',
+              border: '1px solid var(--action)', fontSize: '14px', fontWeight: 500,
+              cursor: 'pointer', borderRadius: 'var(--radius-sm)',
             }}
           >
             Download original report
@@ -319,7 +319,7 @@ export default function ReportStatus({ reportId, onBack, onStartNew, onViewPO })
       )}
 
       {/* Timeline */}
-      <div style={{ border: '1px solid #E8E8E8', padding: '16px', marginBottom: '20px' }}>
+      <div style={{ border: '1px solid var(--taupe-200)', padding: '16px', marginBottom: '20px' }}>
         <StatusTimeline currentStep={currentStep} />
       </div>
 
@@ -339,46 +339,46 @@ export default function ReportStatus({ reportId, onBack, onStartNew, onViewPO })
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             marginBottom: '12px',
           }}>
-            <div style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A1A' }}>
+            <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>
               Expenses in this report
             </div>
             {expenses.length > 3 && (
               <div
                 onClick={() => setShowAll(s => !s)}
-                style={{ fontSize: '13px', color: '#4A4A4A', cursor: 'pointer', textDecoration: 'underline' }}
+                style={{ fontSize: '13px', color: 'var(--text-muted)', cursor: 'pointer', textDecoration: 'underline' }}
               >
                 {showAll ? 'Show less' : 'Show all'}
               </div>
             )}
           </div>
 
-          <div style={{ border: '1px solid #E8E8E8', overflow: 'hidden' }}>
+          <div style={{ border: '1px solid var(--taupe-200)', overflow: 'hidden' }}>
             {displayedExpenses.map((exp, i) => (
               <div
                 key={exp.id}
                 onClick={() => setSelectedExpense(exp)}
                 style={{
                   padding: '12px 16px', cursor: 'pointer',
-                  borderBottom: i < displayedExpenses.length - 1 ? '1px solid #E8E8E8' : 'none',
-                  background: i % 2 === 0 ? '#FFFFFF' : '#F7F7F7',
+                  borderBottom: i < displayedExpenses.length - 1 ? '1px solid var(--taupe-200)' : 'none',
+                  background: i % 2 === 0 ? 'var(--surface-card)' : 'var(--taupe-50)',
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                  <div style={{ fontSize: '14px', fontWeight: 500, color: '#1A1A1A' }}>
+                  <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text)' }}>
                     {exp.vendor || 'Unknown vendor'}
                   </div>
-                  <div style={{ fontSize: '14px', fontWeight: 500, color: '#1A1A1A' }}>
+                  <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text)' }}>
                     {exp.amount ? `₹${Number(exp.amount).toLocaleString('en-IN')}` : '—'}
                   </div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontSize: '12px', color: '#6B6B6B' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                     {[exp.category, exp.date].filter(Boolean).join(' · ')}
                   </div>
                   <div style={{
-                    fontSize: '11px', fontWeight: 500, padding: '2px 8px', borderRadius: '2px',
-                    background: exp.policy_status === 'blocked' ? '#FEF2F2' : exp.policy_status === 'flagged' ? '#FEFCE8' : '#F0FDF4',
-                    color: exp.policy_status === 'blocked' ? '#DC2626' : exp.policy_status === 'flagged' ? '#CA8A04' : '#16A34A',
+                    fontSize: '11px', fontWeight: 500, padding: '2px 8px', borderRadius: 'var(--radius-xs)',
+                    background: exp.policy_status === 'blocked' ? 'var(--clay-bg)' : exp.policy_status === 'flagged' ? 'var(--gold-bg)' : 'var(--moss-bg)',
+                    color: exp.policy_status === 'blocked' ? 'var(--clay-text)' : exp.policy_status === 'flagged' ? 'var(--gold-text)' : 'var(--moss)',
                   }}>
                     {exp.policy_status === 'blocked' ? 'Issue' : exp.policy_status === 'flagged' ? 'Flagged' : 'Passed'}
                   </div>
@@ -392,13 +392,13 @@ export default function ReportStatus({ reportId, onBack, onStartNew, onViewPO })
       {/* Vouched indicator */}
       {report?.vouched_at && (
         <div style={{
-          border: '1px solid #BBF7D0', borderRadius: '8px',
+          border: '1px solid var(--moss-border)', borderRadius: 'var(--radius-lg)',
           padding: '12px 16px', marginBottom: '16px',
-          background: '#F0FDF4',
+          background: 'var(--moss-bg)',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         }}>
           <div>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: '#15803D' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--moss-text)' }}>
               Verified by Finance
             </div>
             <div style={{ fontSize: '11px', color: '#166534', marginTop: '2px' }}>
@@ -411,14 +411,14 @@ export default function ReportStatus({ reportId, onBack, onStartNew, onViewPO })
       {/* Finance notes visible to employee */}
       {report?.finance_notes && (
         <div style={{
-          border: '1px solid #E5E7EB', borderRadius: '8px',
+          border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)',
           padding: '12px 16px', marginBottom: '16px',
-          background: '#F9FAFB',
+          background: 'var(--taupe-50)',
         }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             Finance Note
           </div>
-          <div style={{ fontSize: '13px', color: '#374151', lineHeight: 1.5 }}>
+          <div style={{ fontSize: '13px', color: 'var(--ink)', lineHeight: 1.5 }}>
             {report.finance_notes}
           </div>
         </div>
@@ -426,7 +426,7 @@ export default function ReportStatus({ reportId, onBack, onStartNew, onViewPO })
 
       {/* Chat thread with finance */}
       {reportId && (
-        <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '16px', marginBottom: '16px' }}>
+        <div style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '16px', marginBottom: '16px' }}>
           <ReportChat
             reportId={reportId}
             currentRole="employee"
@@ -440,9 +440,9 @@ export default function ReportStatus({ reportId, onBack, onStartNew, onViewPO })
         onClick={onBack}
         style={{
           width: '100%', height: '48px',
-          background: '#FFFFFF', color: '#1A1A1A',
-          border: '1px solid #E8E8E8', fontSize: '14px', fontWeight: 500,
-          cursor: 'pointer', borderRadius: '4px',
+          background: 'var(--surface-card)', color: 'var(--text)',
+          border: '1px solid var(--taupe-200)', fontSize: '14px', fontWeight: 500,
+          cursor: 'pointer', borderRadius: 'var(--radius-sm)',
         }}
       >
         Go home

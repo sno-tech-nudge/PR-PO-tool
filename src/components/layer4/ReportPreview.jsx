@@ -238,15 +238,15 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
         <div
           onClick={onBack}
           style={{
-            fontSize: '13px', color: '#4A4A4A', cursor: 'pointer',
+            fontSize: '13px', color: 'var(--text-muted)', cursor: 'pointer',
             textDecoration: 'underline', flexShrink: 0,
           }}
         >
           ← Back
         </div>
         <div>
-          <div style={{ fontSize: '11px', color: '#6B6B6B' }}>Expense Report</div>
-          <div style={{ fontSize: '12px', color: '#6B6B6B', fontFamily: 'monospace' }}>{reference}</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Expense Report</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{reference}</div>
         </div>
       </div>
 
@@ -265,7 +265,7 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
           durationEnd={reportDetails?.duration_end}
         />
 
-        <div style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A1A', margin: '20px 0 12px' }}>
+        <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)', margin: '20px 0 12px' }}>
           Expenses included
         </div>
 
@@ -279,18 +279,18 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
 
         {entityViolations.length > 0 && (
           <div style={{ marginTop: '20px' }}>
-            <div style={{ fontSize: '13px', fontWeight: 500, color: '#DC2626', marginBottom: '10px' }}>
+            <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--clay-text)', marginBottom: '10px' }}>
               Policy notes
             </div>
             {entityViolations.map((v, i) => (
               <div key={i} style={{
-                border: '1px solid #DC2626', background: '#FEF2F2',
+                border: '1px solid var(--clay-text)', background: 'var(--clay-bg)',
                 padding: '12px 16px', marginBottom: '8px',
               }}>
-                <div style={{ fontSize: '12px', fontWeight: 500, color: '#1A1A1A', marginBottom: '4px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text)', marginBottom: '4px' }}>
                   {v.expense?.vendor} {v.expense?.amount ? `· ₹${Number(v.expense.amount).toLocaleString('en-IN')}` : ''}
                 </div>
-                <div style={{ fontSize: '12px', color: '#DC2626', lineHeight: '1.4' }}>
+                <div style={{ fontSize: '12px', color: 'var(--clay-text)', lineHeight: '1.4' }}>
                   Policy note — {v.message}
                 </div>
               </div>
@@ -300,18 +300,18 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
 
         {allFlags.length > 0 && (
           <div style={{ marginTop: '20px' }}>
-            <div style={{ fontSize: '13px', fontWeight: 500, color: '#CA8A04', marginBottom: '10px' }}>
+            <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--gold-text)', marginBottom: '10px' }}>
               Notes for approver
             </div>
             {allFlags.map((flag, i) => (
               <div key={i} style={{
-                border: '1px solid #CA8A04', background: '#FEFCE8',
+                border: '1px solid var(--gold-text)', background: 'var(--gold-bg)',
                 padding: '12px 16px', marginBottom: '8px',
               }}>
-                <div style={{ fontSize: '12px', fontWeight: 500, color: '#1A1A1A', marginBottom: '4px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text)', marginBottom: '4px' }}>
                   {flag.expense?.vendor} {flag.expense?.amount ? `· ₹${Number(flag.expense.amount).toLocaleString('en-IN')}` : ''}
                 </div>
-                <div style={{ fontSize: '12px', color: '#CA8A04', lineHeight: '1.4' }}>
+                <div style={{ fontSize: '12px', color: 'var(--gold-text)', lineHeight: '1.4' }}>
                   {flag.message}
                 </div>
               </div>
@@ -324,22 +324,22 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
       <div style={{ position: 'fixed', bottom: 0, left: '220px', right: 0, zIndex: 10 }}>
         <div style={{
           maxWidth: '480px', margin: '0 auto',
-          background: '#FFFFFF', borderTop: '1px solid #E8E8E8', padding: '16px',
+          background: 'var(--surface-card)', borderTop: '1px solid var(--taupe-200)', padding: '16px',
         }}>
-          <div style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A1A', marginBottom: '10px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)', marginBottom: '10px' }}>
             {expenses.length} expense{expenses.length !== 1 ? 's' : ''} · ₹{Number(total).toLocaleString('en-IN')}
           </div>
 
           {downloadedMsg && (
-            <div style={{ fontSize: '12px', color: '#16A34A', marginBottom: '8px' }}>PDF downloaded</div>
+            <div style={{ fontSize: '12px', color: 'var(--moss)', marginBottom: '8px' }}>PDF downloaded</div>
           )}
           {downloadError && (
-            <div style={{ fontSize: '12px', color: '#DC2626', marginBottom: '8px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginBottom: '8px' }}>
               Could not generate PDF. Please try again.
             </div>
           )}
           {submitError && (
-            <div style={{ fontSize: '12px', color: '#DC2626', marginBottom: '8px' }}>{submitError}</div>
+            <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginBottom: '8px' }}>{submitError}</div>
           )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -348,10 +348,10 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
               disabled={generating}
               style={{
                 width: '100%', height: '48px',
-                background: '#FFFFFF', color: generating ? '#9CA3AF' : '#1A1A1A',
-                border: `1px solid ${generating ? '#E8E8E8' : '#1A1A1A'}`,
+                background: 'var(--surface-card)', color: generating ? 'var(--text-muted)' : 'var(--text)',
+                border: `1px solid ${generating ? 'var(--taupe-200)' : 'var(--text)'}`,
                 fontSize: '14px', fontWeight: 500,
-                cursor: generating ? 'default' : 'pointer', borderRadius: '4px',
+                cursor: generating ? 'default' : 'pointer', borderRadius: 'var(--radius-sm)',
               }}
             >
               Download PDF
@@ -361,10 +361,10 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
               disabled={submitting}
               style={{
                 width: '100%', height: '48px',
-                background: submitting ? '#9CA3AF' : '#1A1A1A',
-                color: '#FFFFFF', border: 'none',
+                background: submitting ? 'var(--text-muted)' : 'var(--text)',
+                color: 'var(--surface-card)', border: 'none',
                 fontSize: '14px', fontWeight: 500,
-                cursor: submitting ? 'default' : 'pointer', borderRadius: '4px',
+                cursor: submitting ? 'default' : 'pointer', borderRadius: 'var(--radius-sm)',
               }}
             >
               {submitting ? 'Submitting…' : 'Submit for approval'}

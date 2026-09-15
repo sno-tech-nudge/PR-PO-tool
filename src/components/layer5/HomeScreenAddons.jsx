@@ -10,13 +10,13 @@ const POLICY_REMINDERS = [
 ]
 
 const STATUS_BADGE = {
-  draft:        { label: 'Draft',      color: '#6B7280', bg: '#F3F4F6' },
-  submitted:    { label: 'Submitted',  color: '#B45309', bg: '#FFFBEB' },
-  under_review: { label: 'In Review',  color: '#8C3225', bg: '#fdf0ed' },
-  approved:     { label: 'Approved',   color: '#15803D', bg: '#F0FDF4' },
-  rejected:     { label: 'Returned',   color: '#B91C1C', bg: '#FEF2F2' },
-  processing:   { label: 'Processing', color: '#6D28D9', bg: '#F5F3FF' },
-  reimbursed:   { label: 'Reimbursed', color: '#15803D', bg: '#F0FDF4' },
+  draft:        { label: 'Draft',      color: 'var(--text-muted)', bg: 'var(--taupe-100)' },
+  submitted:    { label: 'Submitted',  color: 'var(--gold-text)', bg: 'var(--gold-bg)' },
+  under_review: { label: 'In Review',  color: 'var(--action)', bg: 'var(--action-bg)' },
+  approved:     { label: 'Approved',   color: 'var(--moss-text)', bg: 'var(--moss-bg)' },
+  rejected:     { label: 'Returned',   color: 'var(--clay-text)', bg: 'var(--clay-bg)' },
+  processing:   { label: 'Processing', color: 'var(--gold-text)', bg: 'var(--gold-bg)' },
+  reimbursed:   { label: 'Reimbursed', color: 'var(--moss-text)', bg: 'var(--moss-bg)' },
 }
 
 function TaskRow({ title, subtitle, badge, badgeColor, badgeBg, last, onClick }) {
@@ -25,29 +25,29 @@ function TaskRow({ title, subtitle, badge, badgeColor, badgeBg, last, onClick })
       onClick={onClick}
       style={{
         padding: '13px 16px',
-        borderBottom: last ? 'none' : '1px solid #F3F4F6',
-        background: '#FFFFFF',
+        borderBottom: last ? 'none' : '1px solid var(--taupe-100)',
+        background: 'var(--surface-card)',
         cursor: onClick ? 'pointer' : 'default',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px',
       }}
     >
       <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827', marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)', marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {title}
         </div>
-        <div style={{ fontSize: '12px', color: '#9CA3AF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <div style={{ fontSize: '12px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {subtitle}
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
         <span style={{
           fontSize: '11px', fontWeight: 600,
-          padding: '3px 8px', borderRadius: '5px',
+          padding: '3px 8px', borderRadius: 'var(--radius-md)',
           background: badgeBg, color: badgeColor,
         }}>
           {badge}
         </span>
-        <span style={{ fontSize: '16px', color: '#D1D5DB' }}>›</span>
+        <span style={{ fontSize: '16px', color: 'var(--taupe-400)' }}>›</span>
       </div>
     </div>
   )
@@ -145,8 +145,8 @@ export default function HomeScreenAddons({
 
   if (loading) return (
     <div>
-      <div style={{ height: '76px', background: '#F3F4F6', borderRadius: '10px', marginBottom: '20px' }} />
-      <div style={{ height: '130px', background: '#F3F4F6', borderRadius: '10px' }} />
+      <div style={{ height: '76px', background: 'var(--taupe-100)', borderRadius: 'var(--radius-lg)', marginBottom: '20px' }} />
+      <div style={{ height: '130px', background: 'var(--taupe-100)', borderRadius: 'var(--radius-lg)' }} />
     </div>
   )
 
@@ -155,14 +155,14 @@ export default function HomeScreenAddons({
       {/* Expense reporting stats/history are out of scope for this testing
           round (Vendor/PR/PO only) — show a plain status card instead. */}
       {hideExpenseFeatures && (
-        <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '10px', padding: '16px 18px', marginBottom: '24px' }}>
+        <div style={{ background: 'var(--taupe-50)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '16px 18px', marginBottom: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: '#111827' }}>Expense reporting</span>
-            <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '5px', background: '#F3F4F6', color: '#6B7280' }}>
+            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--ink)' }}>Expense reporting</span>
+            <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: 'var(--radius-md)', background: 'var(--taupe-100)', color: 'var(--text-muted)' }}>
               Coming soon
             </span>
           </div>
-          <div style={{ fontSize: '12px', color: '#9CA3AF', lineHeight: 1.5 }}>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
             We're currently testing Vendor, Purchase Request, and Purchase Order workflows. Expense capture and reports will open up here soon.
           </div>
         </div>
@@ -171,19 +171,19 @@ export default function HomeScreenAddons({
       {/* Stat cards */}
       {!hideExpenseFeatures && stats && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '24px' }}>
-          <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '10px', padding: '14px 12px' }}>
-            <div style={{ fontSize: '24px', fontWeight: 800, color: '#111827', lineHeight: 1 }}>{stats.unreported}</div>
-            <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '5px', lineHeight: 1.3 }}>Unreported</div>
+          <div style={{ background: 'var(--taupe-50)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '14px 12px' }}>
+            <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--ink)', lineHeight: 1 }}>{stats.unreported}</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '5px', lineHeight: 1.3 }}>Unreported</div>
           </div>
-          <div style={{ background: '#fdf0ed', border: '1px solid #BFDBFE', borderRadius: '10px', padding: '14px 12px' }}>
-            <div style={{ fontSize: '24px', fontWeight: 800, color: '#8C3225', lineHeight: 1 }}>{stats.inReview}</div>
-            <div style={{ fontSize: '11px', color: '#8C3225', opacity: 0.8, marginTop: '5px', lineHeight: 1.3 }}>In Review</div>
+          <div style={{ background: 'var(--action-bg)', border: '1px solid var(--action-bg)', borderRadius: 'var(--radius-lg)', padding: '14px 12px' }}>
+            <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--action)', lineHeight: 1 }}>{stats.inReview}</div>
+            <div style={{ fontSize: '11px', color: 'var(--action)', opacity: 0.8, marginTop: '5px', lineHeight: 1.3 }}>In Review</div>
           </div>
-          <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '10px', padding: '14px 12px' }}>
-            <div style={{ fontSize: stats.reimbursed >= 10000 ? '15px' : '20px', fontWeight: 800, color: '#15803D', lineHeight: 1 }}>
+          <div style={{ background: 'var(--moss-bg)', border: '1px solid var(--moss-border)', borderRadius: 'var(--radius-lg)', padding: '14px 12px' }}>
+            <div style={{ fontSize: stats.reimbursed >= 10000 ? '15px' : '20px', fontWeight: 800, color: 'var(--moss-text)', lineHeight: 1 }}>
               ₹{stats.reimbursed.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
             </div>
-            <div style={{ fontSize: '11px', color: '#15803D', opacity: 0.8, marginTop: '5px', lineHeight: 1.3 }}>Reimbursed</div>
+            <div style={{ fontSize: '11px', color: 'var(--moss-text)', opacity: 0.8, marginTop: '5px', lineHeight: 1.3 }}>Reimbursed</div>
           </div>
         </div>
       )}
@@ -193,17 +193,17 @@ export default function HomeScreenAddons({
           something to do, so Home stays uncluttered otherwise. */}
       {hasTasks && (
         <div style={{ marginBottom: '24px' }}>
-          <div style={{ fontSize: '12px', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
             Pending Tasks
           </div>
-          <div style={{ border: '1px solid #E5E7EB', borderRadius: '10px', overflow: 'hidden' }}>
+          <div style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
             {tasks.draftPRs.map((pr, i, arr) => (
               <TaskRow
                 key={`pr-draft-${pr.id}`}
                 title={pr.vendors?.org_name || pr.pr_number || 'Purchase Request draft'}
                 subtitle={`${pr.pr_number || 'Draft'}${pr.amount ? ` · ₹${Number(pr.amount).toLocaleString('en-IN')}` : ''}`}
                 badge="Draft"
-                badgeColor="#6B7280" badgeBg="#F3F4F6"
+                badgeColor="var(--text-muted)" badgeBg="var(--taupe-100)"
                 last={i === arr.length - 1 && tasks.draftVendors.length === 0 && tasks.pendingExpenseReports === 0 && tasks.pendingPRs === 0 && tasks.pendingPOs === 0}
                 onClick={() => onResumePRDraft?.(pr.id)}
               />
@@ -214,7 +214,7 @@ export default function HomeScreenAddons({
                 title={v.org_name || 'Vendor draft'}
                 subtitle={v.vendor_id || 'Not yet submitted'}
                 badge="Draft"
-                badgeColor="#6B7280" badgeBg="#F3F4F6"
+                badgeColor="var(--text-muted)" badgeBg="var(--taupe-100)"
                 last={i === arr.length - 1 && tasks.pendingExpenseReports === 0 && tasks.pendingPRs === 0 && tasks.pendingPOs === 0}
                 onClick={() => onResumeVendorDraft?.(v.id)}
               />
@@ -224,7 +224,7 @@ export default function HomeScreenAddons({
                 title="Expense reports awaiting your review"
                 subtitle={`${tasks.pendingExpenseReports} report${tasks.pendingExpenseReports === 1 ? '' : 's'} pending`}
                 badge={tasks.pendingExpenseReports}
-                badgeColor="#8C3225" badgeBg="#fdf0ed"
+                badgeColor="var(--action)" badgeBg="var(--action-bg)"
                 last={tasks.pendingPRs === 0 && tasks.pendingPOs === 0}
                 onClick={onOpenExpenseApprovals}
               />
@@ -234,7 +234,7 @@ export default function HomeScreenAddons({
                 title="Purchase requests awaiting your review"
                 subtitle={`${tasks.pendingPRs} request${tasks.pendingPRs === 1 ? '' : 's'} pending`}
                 badge={tasks.pendingPRs}
-                badgeColor="#8C3225" badgeBg="#fdf0ed"
+                badgeColor="var(--action)" badgeBg="var(--action-bg)"
                 last={tasks.pendingPOs === 0}
                 onClick={onOpenPRApprovals}
               />
@@ -244,7 +244,7 @@ export default function HomeScreenAddons({
                 title="Purchase orders awaiting approval"
                 subtitle={`${tasks.pendingPOs} order${tasks.pendingPOs === 1 ? '' : 's'} pending`}
                 badge={tasks.pendingPOs}
-                badgeColor="#8C3225" badgeBg="#fdf0ed"
+                badgeColor="var(--action)" badgeBg="var(--action-bg)"
                 last
                 onClick={onOpenFinance}
               />
@@ -256,10 +256,10 @@ export default function HomeScreenAddons({
       {/* Recent reports */}
       {!hideExpenseFeatures && recentReports.length > 0 && (
         <div style={{ marginBottom: '24px' }}>
-          <div style={{ fontSize: '12px', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
             Recent Reports
           </div>
-          <div style={{ border: '1px solid #E5E7EB', borderRadius: '10px', overflow: 'hidden' }}>
+          <div style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
             {recentReports.map((rep, i) => {
               const badge = STATUS_BADGE[rep.status] || STATUS_BADGE.submitted
               return (
@@ -268,17 +268,17 @@ export default function HomeScreenAddons({
                   onClick={() => onViewReport && onViewReport(rep.id)}
                   style={{
                     padding: '13px 16px',
-                    borderBottom: i < recentReports.length - 1 ? '1px solid #F3F4F6' : 'none',
-                    background: '#FFFFFF',
+                    borderBottom: i < recentReports.length - 1 ? '1px solid var(--taupe-100)' : 'none',
+                    background: 'var(--surface-card)',
                     cursor: 'pointer',
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                   }}
                 >
                   <div>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827', fontFamily: 'monospace', marginBottom: '2px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)', fontFamily: 'monospace', marginBottom: '2px' }}>
                       {rep.report_reference}
                     </div>
-                    <div style={{ fontSize: '12px', color: '#9CA3AF' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                       {rep.total_amount ? `₹${Number(rep.total_amount).toLocaleString('en-IN')}` : '—'}
                       {rep.brand ? ` · ${rep.brand}` : ''}
                     </div>
@@ -286,12 +286,12 @@ export default function HomeScreenAddons({
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span style={{
                       fontSize: '11px', fontWeight: 600,
-                      padding: '3px 8px', borderRadius: '5px',
+                      padding: '3px 8px', borderRadius: 'var(--radius-md)',
                       background: badge.bg, color: badge.color,
                     }}>
                       {badge.label}
                     </span>
-                    <span style={{ fontSize: '16px', color: '#D1D5DB' }}>›</span>
+                    <span style={{ fontSize: '16px', color: 'var(--taupe-400)' }}>›</span>
                   </div>
                 </div>
               )
@@ -303,17 +303,17 @@ export default function HomeScreenAddons({
       {/* Policy reminders */}
       {!hideExpenseFeatures && (
         <div>
-          <div style={{ fontSize: '12px', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
             Policy Reminders
           </div>
-          <div style={{ border: '1px solid #E5E7EB', borderRadius: '10px', overflow: 'hidden' }}>
+          <div style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
             {POLICY_REMINDERS.map((r, i) => (
               <div key={i} style={{
                 padding: '11px 14px',
-                borderBottom: i < POLICY_REMINDERS.length - 1 ? '1px solid #F3F4F6' : 'none',
-                background: '#FAFAFA',
+                borderBottom: i < POLICY_REMINDERS.length - 1 ? '1px solid var(--taupe-100)' : 'none',
+                background: 'var(--taupe-50)',
               }}>
-                <span style={{ fontSize: '12px', color: '#4B5563', lineHeight: '18px' }}>{r.text}</span>
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '18px' }}>{r.text}</span>
               </div>
             ))}
           </div>

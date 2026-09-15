@@ -12,15 +12,15 @@ function initials(name) {
 function Row({ label, value }) {
   return (
     <div style={{ marginBottom: '16px' }}>
-      <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '3px' }}>{label}</div>
-      <div style={{ fontSize: '14px', color: '#1A1F36' }}>{value || '—'}</div>
+      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>{label}</div>
+      <div style={{ fontSize: '14px', color: 'var(--ink)' }}>{value || '—'}</div>
     </div>
   )
 }
 
 function SectionLabel({ children }) {
   return (
-    <div style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '16px' }}>
+    <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ink)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '16px' }}>
       {children}
     </div>
   )
@@ -50,15 +50,15 @@ export default function MyProfile({ user, members = [] }) {
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '28px' }}>
         <div style={{
-          width: '52px', height: '52px', borderRadius: '50%', background: '#fdf0ed',
-          color: '#8C3225', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          width: '52px', height: '52px', borderRadius: '50%', background: 'var(--action-bg)',
+          color: 'var(--action)', display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: '18px', fontWeight: 700, flexShrink: 0,
         }}>
           {initials(user.name) || '?'}
         </div>
         <div>
-          <div style={{ fontSize: '17px', fontWeight: 700, color: '#1A1F36' }}>{user.name}</div>
-          <div style={{ fontSize: '12px', color: '#6B7280' }}>{user.roleLabel || getRoleLabel(user.role)}</div>
+          <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--ink)' }}>{user.name}</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{user.roleLabel || getRoleLabel(user.role)}</div>
         </div>
       </div>
 
@@ -78,7 +78,7 @@ export default function MyProfile({ user, members = [] }) {
         </div>
       </div>
 
-      <div style={{ marginTop: '12px', paddingTop: '24px', borderTop: '1px solid #E3E8EF' }}>
+      <div style={{ marginTop: '12px', paddingTop: '24px', borderTop: '1px solid var(--taupe-200)' }}>
         <SectionLabel>Access & Permissions</SectionLabel>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {permissions.map(p => (
@@ -86,11 +86,11 @@ export default function MyProfile({ user, members = [] }) {
               <span style={{
                 width: '18px', height: '18px', borderRadius: '50%', flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700,
-                background: p.on ? '#F0FDF4' : '#F9FAFB', color: p.on ? '#15803D' : '#D1D5DB',
+                background: p.on ? 'var(--moss-bg)' : 'var(--taupe-50)', color: p.on ? 'var(--moss-text)' : 'var(--taupe-400)',
               }}>
                 {p.on ? '✓' : '—'}
               </span>
-              <span style={{ color: p.on ? '#1A1F36' : '#9CA3AF' }}>{p.label}</span>
+              <span style={{ color: p.on ? 'var(--ink)' : 'var(--text-muted)' }}>{p.label}</span>
             </div>
           ))}
         </div>

@@ -21,9 +21,9 @@ function countField(val, onChange, placeholder, invalid) {
       placeholder={placeholder}
       min="0"
       style={{
-        width: '100%', height: '38px', border: `1px solid ${invalid ? '#DC2626' : '#D1D5DB'}`,
-        borderRadius: '4px', padding: '0 10px', fontSize: '13px', color: '#1A1F36',
-        background: '#FFFFFF', outline: 'none', boxSizing: 'border-box',
+        width: '100%', height: '38px', border: `1px solid ${invalid ? 'var(--clay-text)' : 'var(--taupe-400)'}`,
+        borderRadius: 'var(--radius-sm)', padding: '0 10px', fontSize: '13px', color: 'var(--ink)',
+        background: 'var(--surface-card)', outline: 'none', boxSizing: 'border-box',
       }}
     />
   )
@@ -58,21 +58,21 @@ export default function AmountBreakdown({ value = {}, onChange, errors = {} }) {
         {items.map((it, i) => {
           const rowAmount = (Number(it.quantity) || 0) * (Number(it.ratePerUnit) || 0)
           return (
-            <div key={i} style={{ border: '1px solid #E3E8EF', borderRadius: '4px', padding: '10px 12px', background: '#FAFBFC' }}>
+            <div key={i} style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', background: '#FAFBFC' }}>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
                 <input
                   type="text"
                   value={it.description}
                   onChange={e => updateItem(i, { description: e.target.value })}
                   placeholder={`Item ${i + 1} description (optional)`}
-                  style={{ flex: 1, height: '34px', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '0 10px', fontSize: '13px', color: '#1A1F36', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box' }}
+                  style={{ flex: 1, height: '34px', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', padding: '0 10px', fontSize: '13px', color: 'var(--ink)', background: 'var(--surface-card)', outline: 'none', boxSizing: 'border-box' }}
                 />
                 {items.length > 1 && (
                   <button
                     type="button"
                     onClick={() => removeItem(i)}
                     title="Remove this line item"
-                    style={{ height: '34px', width: '34px', flexShrink: 0, background: '#FFFFFF', color: '#B91C1C', border: '1px solid #FECACA', borderRadius: '4px', fontSize: '15px', cursor: 'pointer', lineHeight: 1 }}
+                    style={{ height: '34px', width: '34px', flexShrink: 0, background: 'var(--surface-card)', color: 'var(--clay-text)', border: '1px solid var(--clay-border)', borderRadius: 'var(--radius-sm)', fontSize: '15px', cursor: 'pointer', lineHeight: 1 }}
                   >
                     ×
                   </button>
@@ -80,22 +80,22 @@ export default function AmountBreakdown({ value = {}, onChange, errors = {} }) {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#6B7280', marginBottom: '4px' }}>
-                    Quantity<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>
+                    Quantity<span style={{ color: 'var(--clay-text)', marginLeft: '2px' }}>*</span>
                   </label>
                   {countField(it.quantity, v => updateItem(i, { quantity: v }), '1', !!errors.base)}
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#6B7280', marginBottom: '4px' }}>
-                    Category of Service<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>
+                    Category of Service<span style={{ color: 'var(--clay-text)', marginLeft: '2px' }}>*</span>
                   </label>
                   <select
                     value={it.category || ''}
                     onChange={e => updateItem(i, { category: e.target.value })}
                     style={{
-                      width: '100%', height: '38px', border: `1px solid ${errors.category && !it.category ? '#DC2626' : '#D1D5DB'}`,
-                      borderRadius: '4px', padding: '0 8px', fontSize: '13px', color: it.category ? '#1A1F36' : '#9CA3AF',
-                      background: '#FFFFFF', outline: 'none', boxSizing: 'border-box',
+                      width: '100%', height: '38px', border: `1px solid ${errors.category && !it.category ? 'var(--clay-text)' : 'var(--taupe-400)'}`,
+                      borderRadius: 'var(--radius-sm)', padding: '0 8px', fontSize: '13px', color: it.category ? 'var(--ink)' : 'var(--text-muted)',
+                      background: 'var(--surface-card)', outline: 'none', boxSizing: 'border-box',
                     }}
                   >
                     <option value="">Select…</option>
@@ -103,15 +103,15 @@ export default function AmountBreakdown({ value = {}, onChange, errors = {} }) {
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#6B7280', marginBottom: '4px' }}>
-                    Rate per Unit (without tax)<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>
+                    Rate per Unit (without tax)<span style={{ color: 'var(--clay-text)', marginLeft: '2px' }}>*</span>
                   </label>
                   <AmountInput value={it.ratePerUnit} onChange={v => updateItem(i, { ratePerUnit: v })} error={!!errors.base} />
                 </div>
               </div>
               {it.quantity !== '' && it.ratePerUnit !== '' && (
-                <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '6px' }}>
-                  Amount: <strong style={{ color: '#1A1F36' }}>₹{rowAmount.toLocaleString('en-IN')}</strong>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
+                  Amount: <strong style={{ color: 'var(--ink)' }}>₹{rowAmount.toLocaleString('en-IN')}</strong>
                 </div>
               )}
             </div>
@@ -122,26 +122,26 @@ export default function AmountBreakdown({ value = {}, onChange, errors = {} }) {
       <button
         type="button"
         onClick={addItem}
-        style={{ height: '32px', padding: '0 14px', marginBottom: '14px', background: '#FFFFFF', color: '#8C3225', border: '1px solid #8C3225', borderRadius: '4px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+        style={{ height: '32px', padding: '0 14px', marginBottom: '14px', background: 'var(--surface-card)', color: 'var(--action)', border: '1px solid var(--action)', borderRadius: 'var(--radius-sm)', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
       >
         + Add Line Item
       </button>
 
       {computedBase > 0 && (
-        <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '12px' }}>
-          Base Amount ({items.length} item{items.length > 1 ? 's' : ''}): <strong style={{ color: '#1A1F36' }}>₹{computedBase.toLocaleString('en-IN')}</strong>
+        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+          Base Amount ({items.length} item{items.length > 1 ? 's' : ''}): <strong style={{ color: 'var(--ink)' }}>₹{computedBase.toLocaleString('en-IN')}</strong>
         </div>
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
         <div>
-          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '5px' }}>
-            Tax (GST)<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: '5px' }}>
+            Tax (GST)<span style={{ color: 'var(--clay-text)', marginLeft: '2px' }}>*</span>
           </label>
           <AmountInput value={value.tax ?? ''} onChange={v => set({ tax: v })} error={!!errors.tax} />
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '5px' }}>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: '5px' }}>
             Incidentals
           </label>
           <AmountInput value={value.incidental ?? ''} onChange={v => set({ incidental: v })} placeholder="Optional" />
@@ -149,14 +149,14 @@ export default function AmountBreakdown({ value = {}, onChange, errors = {} }) {
       </div>
 
       {(errors.base || errors.tax) && (
-        <div style={{ fontSize: '11px', color: '#DC2626', marginTop: '4px' }}>
+        <div style={{ fontSize: '11px', color: 'var(--clay-text)', marginTop: '4px' }}>
           {errors.base || errors.tax}
         </div>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', padding: '10px 12px', background: '#F9FAFB', borderRadius: '4px' }}>
-        <span style={{ fontSize: '12px', color: '#6B7280' }}>Total Amount (base + tax + incidentals)</span>
-        <span style={{ fontSize: '15px', fontWeight: 700, color: '#1A1F36', fontFamily: 'monospace' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', padding: '10px 12px', background: 'var(--taupe-50)', borderRadius: 'var(--radius-sm)' }}>
+        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Total Amount (base + tax + incidentals)</span>
+        <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--ink)', fontFamily: 'monospace' }}>
           ₹{total.toLocaleString('en-IN')}
         </span>
       </div>

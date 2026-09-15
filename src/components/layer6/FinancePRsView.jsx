@@ -26,22 +26,22 @@ function PRRow({ pr, onClick }) {
   return (
     <div
       onClick={() => onClick(pr.id)}
-      style={{ border: '1px solid #E3E8EF', borderRadius: '4px', marginBottom: '10px', padding: '14px 16px', cursor: 'pointer', background: '#FFFFFF' }}
+      style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', marginBottom: '10px', padding: '14px 16px', cursor: 'pointer', background: 'var(--surface-card)' }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
-        <div style={{ fontSize: '13px', fontWeight: 600, color: '#1A1F36' }}>{pr.vendors?.org_name || 'Unknown Vendor'}</div>
-        <div style={{ fontSize: '14px', fontWeight: 700, color: '#1A1F36' }}>INR {Number(pr.amount || 0).toLocaleString('en-IN')}</div>
+        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)' }}>{pr.vendors?.org_name || 'Unknown Vendor'}</div>
+        <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--ink)' }}>INR {Number(pr.amount || 0).toLocaleString('en-IN')}</div>
       </div>
-      <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>{pr.purpose?.substring(0, 90)}{pr.purpose?.length > 90 ? '…' : ''}</div>
+      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>{pr.purpose?.substring(0, 90)}{pr.purpose?.length > 90 ? '…' : ''}</div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: '11px', color: '#9CA3AF' }}>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
           <span style={{ fontFamily: 'monospace' }}>{pr.pr_number}</span> · {getDisplayName(pr.requested_by)} · {fmtDate(pr.submitted_at)}
         </div>
-        <div style={{ fontSize: '11px', color: '#6B7280', background: '#F3F4F6', padding: '2px 8px', borderRadius: '2px' }}>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', background: 'var(--taupe-100)', padding: '2px 8px', borderRadius: 'var(--radius-xs)' }}>
           {pr.category}
         </div>
       </div>
-      <div style={{ fontSize: '11px', fontWeight: 600, color: '#8C3225', marginTop: '6px' }}>
+      <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--action)', marginTop: '6px' }}>
         {currentStageLabel(pr)}
       </div>
     </div>
@@ -113,10 +113,10 @@ export default function FinancePRsView({ onViewPR }) {
         placeholder="Search PR number, vendor, requester…"
         value={search}
         onChange={e => setSearch(e.target.value)}
-        style={{ width: '100%', height: '36px', border: '1px solid #E3E8EF', borderRadius: '4px', padding: '0 12px', fontSize: '13px', color: '#1A1F36', outline: 'none', background: '#FFFFFF', boxSizing: 'border-box', marginBottom: '16px' }}
+        style={{ width: '100%', height: '36px', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '0 12px', fontSize: '13px', color: 'var(--ink)', outline: 'none', background: 'var(--surface-card)', boxSizing: 'border-box', marginBottom: '16px' }}
       />
 
-      <div style={{ display: 'flex', borderBottom: '1px solid #E3E8EF', marginBottom: '16px', gap: '0' }}>
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--taupe-200)', marginBottom: '16px', gap: '0' }}>
         {tabs.map(([key, label]) => (
           <div
             key={key}
@@ -124,22 +124,22 @@ export default function FinancePRsView({ onViewPR }) {
             style={{
               padding: '10px 16px', fontSize: '13px', cursor: 'pointer',
               fontWeight: tab === key ? 600 : 400,
-              color: tab === key ? '#1A1F36' : '#6B7280',
-              borderBottom: tab === key ? '2px solid #8C3225' : '2px solid transparent',
+              color: tab === key ? 'var(--ink)' : 'var(--text-muted)',
+              borderBottom: tab === key ? '2px solid var(--action)' : '2px solid transparent',
               marginBottom: '-1px',
             }}
           >
-            {label} {buckets[key].length > 0 && <span style={{ fontSize: '10px', color: '#9CA3AF' }}>({buckets[key].length})</span>}
+            {label} {buckets[key].length > 0 && <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>({buckets[key].length})</span>}
           </div>
         ))}
       </div>
 
-      {loading && <div style={{ fontSize: '13px', color: '#6B7280', textAlign: 'center', padding: '40px 0' }}>Loading…</div>}
+      {loading && <div style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', padding: '40px 0' }}>Loading…</div>}
 
       {!loading && filtered.length === 0 && (
         <div style={{
-          background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '4px',
-          padding: '48px 0', textAlign: 'center', fontSize: '13px', color: '#9CA3AF',
+          background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)',
+          padding: '48px 0', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)',
         }}>
           No purchase requests in this bucket.
         </div>

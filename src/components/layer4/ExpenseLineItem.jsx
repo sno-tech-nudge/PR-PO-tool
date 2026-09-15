@@ -1,17 +1,17 @@
 import { useState } from 'react'
 
 const POLICY_BADGE = {
-  passed: { label: 'Passed', color: '#16A34A', bg: '#F0FDF4' },
-  flagged: { label: 'Flagged', color: '#CA8A04', bg: '#FEFCE8' },
-  blocked: { label: 'Issue', color: '#DC2626', bg: '#FEF2F2' },
+  passed: { label: 'Passed', color: 'var(--moss)', bg: 'var(--moss-bg)' },
+  flagged: { label: 'Flagged', color: 'var(--gold-text)', bg: 'var(--gold-bg)' },
+  blocked: { label: 'Issue', color: 'var(--clay-text)', bg: 'var(--clay-bg)' },
 }
 
 function DetailRow({ label, value }) {
   if (!value && value !== 0) return null
   return (
     <div style={{ marginBottom: '10px' }}>
-      <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '2px' }}>{label}</div>
-      <div style={{ fontSize: '12px', color: '#1A1A1A' }}>{value}</div>
+      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>{label}</div>
+      <div style={{ fontSize: '12px', color: 'var(--text)' }}>{value}</div>
     </div>
   )
 }
@@ -28,25 +28,25 @@ export default function ExpenseLineItem({ expense, result }) {
   const shortDesc = description.length > 60 ? description.slice(0, 60) + '…' : description
 
   return (
-    <div style={{ border: '1px solid #E8E8E8', padding: '16px', marginBottom: '8px' }}>
+    <div style={{ border: '1px solid var(--taupe-200)', padding: '16px', marginBottom: '8px' }}>
       {/* Top row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
-        <div style={{ fontSize: '14px', fontWeight: 500, color: '#1A1A1A', flex: 1, marginRight: '12px' }}>
+        <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text)', flex: 1, marginRight: '12px' }}>
           {expense.vendor || 'Unknown vendor'}
         </div>
-        <div style={{ fontSize: '14px', fontWeight: 500, color: '#1A1A1A', flexShrink: 0 }}>
+        <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text)', flexShrink: 0 }}>
           {expense.amount ? `₹${Number(expense.amount).toLocaleString('en-IN')}` : '—'}
         </div>
       </div>
 
       {/* Category + date row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-        <div style={{ fontSize: '12px', color: '#6B6B6B' }}>
+        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
           {[expense.category, expense.date].filter(Boolean).join(' · ')}
         </div>
         <div style={{
           fontSize: '11px', fontWeight: 500,
-          padding: '2px 8px', borderRadius: '2px',
+          padding: '2px 8px', borderRadius: 'var(--radius-xs)',
           background: badge.bg, color: badge.color, flexShrink: 0,
         }}>
           {badge.label}
@@ -55,7 +55,7 @@ export default function ExpenseLineItem({ expense, result }) {
 
       {/* Team row */}
       {expense.attendee_count > 1 && (
-        <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '4px' }}>
+        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>
           {expense.attendee_count} people
           {expense.per_person_amount ? ` · ₹${Number(expense.per_person_amount).toLocaleString('en-IN')} per person` : ''}
         </div>
@@ -63,14 +63,14 @@ export default function ExpenseLineItem({ expense, result }) {
 
       {/* Description preview */}
       {description && !expanded && (
-        <div style={{ fontSize: '12px', color: '#4A4A4A', marginBottom: '8px', lineHeight: '1.4' }}>
+        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px', lineHeight: '1.4' }}>
           {shortDesc}
         </div>
       )}
 
       {/* Expanded details */}
       {expanded && (
-        <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #E8E8E8' }}>
+        <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--taupe-200)' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
             <DetailRow label="Amount" value={expense.amount ? `₹${Number(expense.amount).toLocaleString('en-IN')}` : null} />
             <DetailRow label="Vendor" value={expense.vendor} />
@@ -105,9 +105,9 @@ export default function ExpenseLineItem({ expense, result }) {
 
           {result?.flags?.filter(f => !f.internalOnly).length > 0 && (
             <div style={{ marginTop: '8px' }}>
-              <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '4px' }}>Policy notes</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Policy notes</div>
               {result.flags.filter(f => !f.internalOnly).map((f, i) => (
-                <div key={i} style={{ fontSize: '11px', color: '#CA8A04', marginBottom: '2px' }}>
+                <div key={i} style={{ fontSize: '11px', color: 'var(--gold-text)', marginBottom: '2px' }}>
                   · {f.message}
                 </div>
               ))}
@@ -117,7 +117,7 @@ export default function ExpenseLineItem({ expense, result }) {
           {/* Document thumbnails */}
           {(expense.receipt_url || expense.payment_url) && (
             <div style={{ marginTop: '12px' }}>
-              <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '8px', fontWeight: 600 }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 600 }}>
                 Documents
               </div>
               <div style={{ display: 'flex', gap: '12px' }}>
@@ -129,11 +129,11 @@ export default function ExpenseLineItem({ expense, result }) {
                       crossOrigin="anonymous"
                       style={{
                         maxWidth: '120px', maxHeight: '90px',
-                        objectFit: 'contain', border: '1px solid #E8E8E8', display: 'block',
+                        objectFit: 'contain', border: '1px solid var(--taupe-200)', display: 'block',
                       }}
                       onError={e => { e.target.style.display = 'none' }}
                     />
-                    <div style={{ fontSize: '10px', color: '#6B6B6B', marginTop: '4px' }}>Receipt</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>Receipt</div>
                   </div>
                 )}
                 {expense.payment_url && (
@@ -144,11 +144,11 @@ export default function ExpenseLineItem({ expense, result }) {
                       crossOrigin="anonymous"
                       style={{
                         maxWidth: '120px', maxHeight: '90px',
-                        objectFit: 'contain', border: '1px solid #E8E8E8', display: 'block',
+                        objectFit: 'contain', border: '1px solid var(--taupe-200)', display: 'block',
                       }}
                       onError={e => { e.target.style.display = 'none' }}
                     />
-                    <div style={{ fontSize: '10px', color: '#6B6B6B', marginTop: '4px' }}>Payment proof</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>Payment proof</div>
                   </div>
                 )}
               </div>
@@ -161,7 +161,7 @@ export default function ExpenseLineItem({ expense, result }) {
       <div
         onClick={() => setExpanded(e => !e)}
         style={{
-          fontSize: '11px', color: '#6B6B6B',
+          fontSize: '11px', color: 'var(--text-muted)',
           textAlign: 'right', marginTop: '8px',
           cursor: 'pointer', textDecoration: 'underline',
         }}

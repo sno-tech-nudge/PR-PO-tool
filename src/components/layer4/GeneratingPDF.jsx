@@ -24,11 +24,11 @@ export default function GeneratingPDF({ visible, text = 'Preparing your report' 
     }}>
       <div style={{
         width: '28px', height: '28px', borderRadius: '50%',
-        border: '2px solid #E8E8E8', borderTopColor: '#1A1A1A',
+        border: '2px solid var(--taupe-200)', borderTopColor: 'var(--text)',
         animation: 'spin 0.8s linear infinite',
       }} />
-      <div style={{ fontSize: '14px', color: '#4A4A4A' }}>{text}</div>
-      <div style={{ fontSize: '12px', color: '#6B6B6B' }}>
+      <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>{text}</div>
+      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
         {longRunning ? 'Almost ready' : 'This takes a moment'}
       </div>
     </div>

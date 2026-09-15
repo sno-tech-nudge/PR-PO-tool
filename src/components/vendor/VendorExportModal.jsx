@@ -19,40 +19,40 @@ export default function VendorExportModal({ selectedKeys, onExport, onClose }) {
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{ background: '#FFFFFF', width: '100%', maxWidth: '420px', borderRadius: '8px', overflow: 'hidden' }}
+        style={{ background: 'var(--surface-card)', width: '100%', maxWidth: '420px', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}
       >
-        <div style={{ padding: '18px 20px', borderBottom: '1px solid #E3E8EF' }}>
-          <div style={{ fontSize: '15px', fontWeight: 700, color: '#1A1F36' }}>Export to CSV</div>
-          <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>Choose which fields to include — independent of the columns shown on screen.</div>
+        <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--taupe-200)' }}>
+          <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--ink)' }}>Export to CSV</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Choose which fields to include — independent of the columns shown on screen.</div>
         </div>
 
         <div style={{ padding: '16px 20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <span onClick={toggleAll} style={{ fontSize: '12px', color: '#8C3225', cursor: 'pointer', textDecoration: 'underline' }}>
+            <span onClick={toggleAll} style={{ fontSize: '12px', color: 'var(--action)', cursor: 'pointer', textDecoration: 'underline' }}>
               {keys.length === VENDOR_EXPORT_FIELDS.length ? 'Deselect all' : 'Select all'}
             </span>
-            <span style={{ fontSize: '11px', color: '#9CA3AF' }}>{keys.length} of {VENDOR_EXPORT_FIELDS.length} fields</span>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{keys.length} of {VENDOR_EXPORT_FIELDS.length} fields</span>
           </div>
           <div style={{ maxHeight: '320px', overflowY: 'auto' }}>
             {VENDOR_EXPORT_FIELDS.map(f => (
-              <label key={f.key} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 2px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>
+              <label key={f.key} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 2px', cursor: 'pointer', fontSize: '13px', color: 'var(--ink)' }}>
                 <input type="checkbox" checked={keys.includes(f.key)} onChange={() => toggle(f.key)} />
                 {f.label}
                 {f.key === 'aadhaar_number' && (
-                  <span style={{ fontSize: '10px', color: '#9CA3AF' }}>(masked)</span>
+                  <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>(masked)</span>
                 )}
               </label>
             ))}
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', padding: '16px 20px', borderTop: '1px solid #E3E8EF' }}>
+        <div style={{ display: 'flex', gap: '10px', padding: '16px 20px', borderTop: '1px solid var(--taupe-200)' }}>
           <button
             onClick={() => onExport(keys)}
             disabled={keys.length === 0}
             style={{
               height: '42px', padding: '0 20px',
-              background: keys.length === 0 ? '#9CA3AF' : '#8C3225', color: '#FFFFFF', border: 'none', borderRadius: '6px',
+              background: keys.length === 0 ? 'var(--text-muted)' : 'var(--action)', color: 'var(--surface-card)', border: 'none', borderRadius: 'var(--radius-md)',
               fontSize: '13px', fontWeight: 700, cursor: keys.length === 0 ? 'default' : 'pointer',
             }}
           >
@@ -62,7 +62,7 @@ export default function VendorExportModal({ selectedKeys, onExport, onClose }) {
             onClick={onClose}
             style={{
               height: '42px', padding: '0 20px',
-              background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '6px',
+              background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-md)',
               fontSize: '13px', fontWeight: 600, cursor: 'pointer',
             }}
           >

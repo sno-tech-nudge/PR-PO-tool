@@ -27,7 +27,7 @@ const TABS = [
   { key: 'analytics', label: 'Analytics' },
 ]
 
-const shellStyle = { background: '#F4F5F7', minHeight: '100vh' }
+const shellStyle = { background: 'var(--taupe-50)', minHeight: '100vh' }
 const shellInnerStyle = { maxWidth: '960px', margin: '0 auto', padding: '24px 20px' }
 
 export default function FinanceDashboard({ user, showToast, onBack }) {
@@ -247,12 +247,12 @@ export default function FinanceDashboard({ user, showToast, onBack }) {
   const pendingTotal = pendingReports.reduce((s, r) => s + (r.total_amount || 0), 0)
 
   return (
-    <div style={{ background: '#F4F5F7', minHeight: '100vh' }}>
+    <div style={{ background: 'var(--taupe-50)', minHeight: '100vh' }}>
 
       {/* Top header bar */}
       <div style={{
-        background: '#FFFFFF',
-        borderBottom: '1px solid #E3E8EF',
+        background: 'var(--surface-card)',
+        borderBottom: '1px solid var(--taupe-200)',
         padding: '0 28px',
       }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
@@ -262,19 +262,19 @@ export default function FinanceDashboard({ user, showToast, onBack }) {
               <>
                 <span
                   onClick={onBack}
-                  style={{ fontSize: '12px', color: '#8C3225', cursor: 'pointer' }}
+                  style={{ fontSize: '12px', color: 'var(--action)', cursor: 'pointer' }}
                 >
                   Expenses
                 </span>
-                <span style={{ fontSize: '12px', color: '#9CA3AF' }}>/</span>
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>/</span>
               </>
             )}
-            <span style={{ fontSize: '12px', color: '#6B7280' }}>Finance Admin</span>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Finance Admin</span>
           </div>
 
           {/* Title row */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '0' }}>
-            <h1 style={{ fontSize: '18px', fontWeight: 700, color: '#1A1F36', margin: 0, padding: '8px 0' }}>
+            <h1 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--ink)', margin: 0, padding: '8px 0' }}>
               Finance Dashboard
             </h1>
             {pendingCount > 0 && (
@@ -283,12 +283,12 @@ export default function FinanceDashboard({ user, showToast, onBack }) {
                 style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
                   background: '#FFF7ED', border: '1px solid #FED7AA',
-                  padding: '6px 14px', cursor: 'pointer', borderRadius: '4px',
+                  padding: '6px 14px', cursor: 'pointer', borderRadius: 'var(--radius-sm)',
                 }}
               >
                 <div style={{
                   width: '8px', height: '8px', borderRadius: '50%',
-                  background: '#EA580C', flexShrink: 0,
+                  background: 'var(--clay)', flexShrink: 0,
                 }} />
                 <span style={{ fontSize: '12px', color: '#9A3412', fontWeight: 500 }}>
                   {pendingCount} report{pendingCount !== 1 ? 's' : ''} awaiting payment
@@ -310,8 +310,8 @@ export default function FinanceDashboard({ user, showToast, onBack }) {
                   padding: '10px 18px',
                   fontSize: '13px',
                   fontWeight: tab === t.key ? 600 : 400,
-                  color: tab === t.key ? '#1565C0' : '#6B7280',
-                  borderBottom: tab === t.key ? '2px solid #1565C0' : '2px solid transparent',
+                  color: tab === t.key ? 'var(--action)' : 'var(--text-muted)',
+                  borderBottom: tab === t.key ? '2px solid var(--action)' : '2px solid transparent',
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
                   position: 'relative',
@@ -323,8 +323,8 @@ export default function FinanceDashboard({ user, showToast, onBack }) {
                 {t.key === 'pending' && pendingCount > 0 && (
                   <span style={{
                     fontSize: '10px', fontWeight: 700,
-                    background: '#DC2626', color: '#FFFFFF',
-                    borderRadius: '10px', padding: '1px 6px', lineHeight: '16px',
+                    background: 'var(--clay-text)', color: 'var(--surface-card)',
+                    borderRadius: 'var(--radius-lg)', padding: '1px 6px', lineHeight: '16px',
                   }}>
                     {pendingCount}
                   </span>
@@ -346,7 +346,7 @@ export default function FinanceDashboard({ user, showToast, onBack }) {
 
         {tab === 'pending' && (
           pendingLoading
-            ? <div style={{ fontSize: '13px', color: '#6B7280', padding: '40px 0', textAlign: 'center' }}>Loading…</div>
+            ? <div style={{ fontSize: '13px', color: 'var(--text-muted)', padding: '40px 0', textAlign: 'center' }}>Loading…</div>
             : <ReimbursementBatch reports={pendingReports} onReimbursed={handleReimbursed} />
         )}
 

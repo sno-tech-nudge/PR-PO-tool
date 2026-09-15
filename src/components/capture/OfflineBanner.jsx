@@ -10,12 +10,12 @@ export default function OfflineBanner() {
       left: 0,
       right: 0,
       zIndex: 50,
-      background: '#FEFCE8',
-      borderBottom: '1px solid #CA8A04',
+      background: 'var(--gold-bg)',
+      borderBottom: '1px solid var(--gold-text)',
       padding: '8px',
       textAlign: 'center',
       fontSize: '12px',
-      color: '#CA8A04',
+      color: 'var(--gold-text)',
     }}>
       You are offline. Documents will be saved to your device.
     </div>

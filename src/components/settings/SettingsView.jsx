@@ -29,17 +29,17 @@ export default function SettingsView({ user }) {
   // since there's nothing else for them here.
   if (!isAdmin) {
     return (
-      <div style={{ background: '#F4F5F7', minHeight: '100vh' }}>
-        <div style={{ background: '#FFFFFF', borderBottom: '1px solid #E3E8EF', padding: '0 28px' }}>
+      <div style={{ background: 'var(--taupe-50)', minHeight: '100vh' }}>
+        <div style={{ background: 'var(--surface-card)', borderBottom: '1px solid var(--taupe-200)', padding: '0 28px' }}>
           <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '14px 0' }}>
-            <h1 style={{ fontSize: '18px', fontWeight: 700, color: '#1A1F36', margin: 0 }}>My Profile</h1>
+            <h1 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--ink)', margin: 0 }}>My Profile</h1>
           </div>
         </div>
         <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 28px' }}>
           {loading ? (
-            <div style={{ fontSize: '13px', color: '#6B7280', padding: '40px 0', textAlign: 'center' }}>Loading…</div>
+            <div style={{ fontSize: '13px', color: 'var(--text-muted)', padding: '40px 0', textAlign: 'center' }}>Loading…</div>
           ) : (
-            <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '28px' }}>
+            <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '28px' }}>
               <MyProfile user={user} members={members} />
             </div>
           )}
@@ -97,15 +97,15 @@ export default function SettingsView({ user }) {
   }
 
   const selectStyle = {
-    height: '30px', border: '1px solid #E3E8EF', borderRadius: '3px',
-    padding: '0 8px', fontSize: '12px', color: '#1A1F36', background: '#FFFFFF',
+    height: '30px', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)',
+    padding: '0 8px', fontSize: '12px', color: 'var(--ink)', background: 'var(--surface-card)',
   }
 
   return (
-    <div style={{ background: '#F4F5F7', minHeight: '100vh' }}>
-      <div style={{ background: '#FFFFFF', borderBottom: '1px solid #E3E8EF', padding: '0 28px' }}>
+    <div style={{ background: 'var(--taupe-50)', minHeight: '100vh' }}>
+      <div style={{ background: 'var(--surface-card)', borderBottom: '1px solid var(--taupe-200)', padding: '0 28px' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '14px 0 0' }}>
-          <h1 style={{ fontSize: '18px', fontWeight: 700, color: '#1A1F36', margin: '0 0 8px' }}>Settings</h1>
+          <h1 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--ink)', margin: '0 0 8px' }}>Settings</h1>
           <div style={{ display: 'flex', gap: '4px' }}>
             {[['profile', 'My Profile'], ['team', 'Team & Roles']].map(([key, label]) => (
               <div
@@ -114,8 +114,8 @@ export default function SettingsView({ user }) {
                 style={{
                   padding: '10px 16px', fontSize: '13px', cursor: 'pointer',
                   fontWeight: tab === key ? 600 : 400,
-                  color: tab === key ? '#8C3225' : '#6B7280',
-                  borderBottom: tab === key ? '2px solid #8C3225' : '2px solid transparent',
+                  color: tab === key ? 'var(--action)' : 'var(--text-muted)',
+                  borderBottom: tab === key ? '2px solid var(--action)' : '2px solid transparent',
                   marginBottom: '-1px',
                 }}
               >
@@ -129,9 +129,9 @@ export default function SettingsView({ user }) {
       {tab === 'profile' && (
         <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 28px' }}>
           {loading ? (
-            <div style={{ fontSize: '13px', color: '#6B7280', padding: '40px 0', textAlign: 'center' }}>Loading…</div>
+            <div style={{ fontSize: '13px', color: 'var(--text-muted)', padding: '40px 0', textAlign: 'center' }}>Loading…</div>
           ) : (
-            <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '28px' }}>
+            <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '28px' }}>
               <MyProfile user={user} members={members} />
             </div>
           )}
@@ -144,8 +144,8 @@ export default function SettingsView({ user }) {
           <button
             onClick={() => { setShowAdd(v => !v); setError(null) }}
             style={{
-              height: '34px', padding: '0 16px', background: '#8C3225', color: '#FFFFFF',
-              border: 'none', borderRadius: '3px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+              height: '34px', padding: '0 16px', background: 'var(--action)', color: 'var(--surface-card)',
+              border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
             }}
           >
             {showAdd ? 'Cancel' : '+ Add Member'}
@@ -156,29 +156,29 @@ export default function SettingsView({ user }) {
           <form
             onSubmit={handleAdd}
             style={{
-              background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '3px',
+              background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)',
               padding: '20px', marginBottom: '16px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'flex-end',
             }}
           >
             <div>
-              <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '4px' }}>Name</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Name</div>
               <input
                 type="text" value={form.name}
                 onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                style={{ height: '34px', border: '1px solid #E3E8EF', borderRadius: '3px', padding: '0 10px', fontSize: '13px', width: '200px' }}
+                style={{ height: '34px', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '0 10px', fontSize: '13px', width: '200px' }}
               />
             </div>
             <div>
-              <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '4px' }}>Email</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Email</div>
               <input
                 type="email" value={form.email}
                 onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                 placeholder="name@thenudge.org"
-                style={{ height: '34px', border: '1px solid #E3E8EF', borderRadius: '3px', padding: '0 10px', fontSize: '13px', width: '240px' }}
+                style={{ height: '34px', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '0 10px', fontSize: '13px', width: '240px' }}
               />
             </div>
             <div>
-              <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '4px' }}>Role</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Role</div>
               <select
                 value={form.role}
                 onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
@@ -188,7 +188,7 @@ export default function SettingsView({ user }) {
               </select>
             </div>
             {form.role === 'finance' && (
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#374151', paddingBottom: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--ink)', paddingBottom: '8px' }}>
                 <input
                   type="checkbox" checked={form.can_approve_vendors}
                   onChange={e => setForm(f => ({ ...f, can_approve_vendors: e.target.checked }))}
@@ -199,25 +199,25 @@ export default function SettingsView({ user }) {
             <button
               type="submit" disabled={saving}
               style={{
-                height: '34px', padding: '0 16px', background: saving ? '#E5E7EB' : '#1A1F36', color: '#FFFFFF',
-                border: 'none', borderRadius: '3px', fontSize: '13px', fontWeight: 600, cursor: saving ? 'default' : 'pointer',
+                height: '34px', padding: '0 16px', background: saving ? 'var(--taupe-200)' : 'var(--ink)', color: 'var(--surface-card)',
+                border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 600, cursor: saving ? 'default' : 'pointer',
               }}
             >
               {saving ? 'Saving…' : 'Add'}
             </button>
-            {error && <div style={{ fontSize: '12px', color: '#B91C1C', width: '100%' }}>{error}</div>}
+            {error && <div style={{ fontSize: '12px', color: 'var(--clay-text)', width: '100%' }}>{error}</div>}
           </form>
         )}
 
         {loading ? (
-          <div style={{ fontSize: '13px', color: '#6B7280', padding: '40px 0', textAlign: 'center' }}>Loading…</div>
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)', padding: '40px 0', textAlign: 'center' }}>Loading…</div>
         ) : (
-          <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '3px', overflow: 'hidden' }}>
+          <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ background: '#F8F9FA', borderBottom: '1px solid #E3E8EF' }}>
+                <tr style={{ background: 'var(--taupe-50)', borderBottom: '1px solid var(--taupe-200)' }}>
                   {['Name', 'Email', 'Role', 'Can Approve Vendors', ''].map(h => (
-                    <th key={h} style={{ padding: '10px 14px', fontSize: '10px', fontWeight: 600, color: '#6B7280', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <th key={h} style={{ padding: '10px 14px', fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       {h}
                     </th>
                   ))}
@@ -227,9 +227,9 @@ export default function SettingsView({ user }) {
                 {members.map((m, i) => {
                   const isSelf = m.email.toLowerCase() === user.email.toLowerCase()
                   return (
-                    <tr key={m.id} style={{ borderBottom: i < members.length - 1 ? '1px solid #F3F4F6' : 'none', background: i % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}>
-                      <td style={{ padding: '10px 14px', fontSize: '12px', color: '#1A1F36', fontWeight: 500 }}>{m.name}</td>
-                      <td style={{ padding: '10px 14px', fontSize: '12px', color: '#374151', fontFamily: 'monospace' }}>{m.email}</td>
+                    <tr key={m.id} style={{ borderBottom: i < members.length - 1 ? '1px solid var(--taupe-100)' : 'none', background: i % 2 === 0 ? 'var(--surface-card)' : 'var(--taupe-50)' }}>
+                      <td style={{ padding: '10px 14px', fontSize: '12px', color: 'var(--ink)', fontWeight: 500 }}>{m.name}</td>
+                      <td style={{ padding: '10px 14px', fontSize: '12px', color: 'var(--ink)', fontFamily: 'monospace' }}>{m.email}</td>
                       <td style={{ padding: '10px 14px' }}>
                         <select
                           value={m.role}
@@ -241,14 +241,14 @@ export default function SettingsView({ user }) {
                       </td>
                       <td style={{ padding: '10px 14px' }}>
                         {m.role === 'admin' ? (
-                          <span style={{ fontSize: '12px', color: '#9CA3AF' }}>always</span>
+                          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>always</span>
                         ) : m.role === 'finance' ? (
                           <input
                             type="checkbox" checked={!!m.can_approve_vendors}
                             onChange={e => handleApproveToggle(m, e.target.checked)}
                           />
                         ) : (
-                          <span style={{ fontSize: '12px', color: '#D1D5DB' }}>—</span>
+                          <span style={{ fontSize: '12px', color: 'var(--taupe-400)' }}>—</span>
                         )}
                       </td>
                       <td style={{ padding: '10px 14px', textAlign: 'right', whiteSpace: 'nowrap' }}>
@@ -256,8 +256,8 @@ export default function SettingsView({ user }) {
                           onClick={() => handleResetAnalytics(m)}
                           title={m.analytics_reset_at ? `Last reset ${new Date(m.analytics_reset_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}` : 'Never reset'}
                           style={{
-                            height: '28px', padding: '0 12px', background: '#FFFFFF', color: '#374151',
-                            border: '1px solid #E3E8EF', borderRadius: '3px', fontSize: '12px', cursor: 'pointer', marginRight: '8px',
+                            height: '28px', padding: '0 12px', background: 'var(--surface-card)', color: 'var(--ink)',
+                            border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', fontSize: '12px', cursor: 'pointer', marginRight: '8px',
                           }}
                         >
                           Reset Analytics
@@ -267,8 +267,8 @@ export default function SettingsView({ user }) {
                             onClick={() => handleRemove(m)}
                             disabled={removingId === m.id}
                             style={{
-                              height: '28px', padding: '0 12px', background: '#FFFFFF', color: '#B91C1C',
-                              border: '1px solid #FECACA', borderRadius: '3px', fontSize: '12px', cursor: 'pointer',
+                              height: '28px', padding: '0 12px', background: 'var(--surface-card)', color: 'var(--clay-text)',
+                              border: '1px solid var(--clay-border)', borderRadius: 'var(--radius-sm)', fontSize: '12px', cursor: 'pointer',
                             }}
                           >
                             {removingId === m.id ? 'Removing…' : 'Remove'}

@@ -15,20 +15,20 @@ export default function AttachmentDropzone({
     <label
       style={{
         display: 'block', cursor: disabled ? 'default' : 'pointer',
-        border: `2px dashed ${hasFile ? '#15803D' : '#D1D5DB'}`,
-        borderRadius: '6px', padding: '16px', textAlign: 'center',
-        background: hasFile ? '#F0FDF4' : '#FAFAFA',
+        border: `2px dashed ${hasFile ? 'var(--moss-text)' : 'var(--taupe-400)'}`,
+        borderRadius: 'var(--radius-md)', padding: '16px', textAlign: 'center',
+        background: hasFile ? 'var(--moss-bg)' : 'var(--taupe-50)',
         opacity: disabled ? 0.6 : 1, transition: '0.15s', boxSizing: 'border-box',
       }}
     >
-      <div style={{ fontSize: '12px', color: hasFile ? '#15803D' : '#6B7280', marginBottom: hasFile ? 0 : '8px' }}>
+      <div style={{ fontSize: '12px', color: hasFile ? 'var(--moss-text)' : 'var(--text-muted)', marginBottom: hasFile ? 0 : '8px' }}>
         {file ? `✓ ${file.name}` : uploadedLabel ? `✓ ${uploadedLabel}` : placeholder}
       </div>
       {!hasFile && (
         <span style={{
-          display: 'inline-block', padding: '5px 14px', background: '#FFFFFF',
-          border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '12px',
-          color: '#374151', fontWeight: 500,
+          display: 'inline-block', padding: '5px 14px', background: 'var(--surface-card)',
+          border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', fontSize: '12px',
+          color: 'var(--ink)', fontWeight: 500,
         }}>
           Choose File
         </span>

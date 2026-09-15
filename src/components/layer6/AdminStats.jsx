@@ -2,21 +2,21 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 
 const CAT_COLORS = {
-  'Travel':                  '#1565C0',
-  'Accommodation':           '#6D28D9',
-  'Meals':                   '#B45309',
+  'Travel':                  'var(--action)',
+  'Accommodation':           'var(--gold-text)',
+  'Meals':                   'var(--gold-text)',
   'Learning and Development':'#0D7943',
-  'Printing and Stationery': '#374151',
-  'Rent Expense':            '#B91C1C',
+  'Printing and Stationery': 'var(--ink)',
+  'Rent Expense':            'var(--clay-text)',
   'Subgranting':             '#BE185D',
   'Client Entertainment':    '#C2410C',
   'Field Visit':             '#0E7490',
   'Office Supplies':         '#4D7C0F',
-  'Other':                   '#6B7280',
+  'Other':                   'var(--text-muted)',
 }
 
 function getColor(cat) {
-  return CAT_COLORS[cat] || '#6B7280'
+  return CAT_COLORS[cat] || 'var(--text-muted)'
 }
 
 function fmtINR(n) {
@@ -35,20 +35,20 @@ function fmtShort(n) {
 function KPICard({ label, value, sub, subColor, borderColor }) {
   return (
     <div style={{
-      background: '#FFFFFF',
-      border: '1px solid #E3E8EF',
-      borderLeft: `3px solid ${borderColor || '#1565C0'}`,
-      borderRadius: '3px',
+      background: 'var(--surface-card)',
+      border: '1px solid var(--taupe-200)',
+      borderLeft: `3px solid ${borderColor || 'var(--action)'}`,
+      borderRadius: 'var(--radius-sm)',
       padding: '16px 20px',
     }}>
-      <div style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
+      <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
         {label}
       </div>
-      <div style={{ fontSize: '24px', fontWeight: 700, color: '#1A1F36', lineHeight: 1, marginBottom: '6px', letterSpacing: '-0.5px' }}>
+      <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--ink)', lineHeight: 1, marginBottom: '6px', letterSpacing: '-0.5px' }}>
         {value}
       </div>
       {sub && (
-        <div style={{ fontSize: '11px', color: subColor || '#9CA3AF' }}>
+        <div style={{ fontSize: '11px', color: subColor || 'var(--text-muted)' }}>
           {sub}
         </div>
       )}
@@ -116,11 +116,11 @@ export default function AdminStats() {
   if (loading) return (
     <div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '16px' }}>
-        {[1,2,3,4].map(i => <div key={i} style={{ height: '88px', background: '#E5E7EB', borderRadius: '3px' }} />)}
+        {[1,2,3,4].map(i => <div key={i} style={{ height: '88px', background: 'var(--taupe-200)', borderRadius: 'var(--radius-sm)' }} />)}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-        <div style={{ height: '240px', background: '#E5E7EB', borderRadius: '3px' }} />
-        <div style={{ height: '240px', background: '#E5E7EB', borderRadius: '3px' }} />
+        <div style={{ height: '240px', background: 'var(--taupe-200)', borderRadius: 'var(--radius-sm)' }} />
+        <div style={{ height: '240px', background: 'var(--taupe-200)', borderRadius: 'var(--radius-sm)' }} />
       </div>
     </div>
   )
@@ -146,33 +146,33 @@ export default function AdminStats() {
           label="Pending Payment"
           value={fmtShort(stats.pendingPayTotal)}
           sub={`${stats.byStatus['approved'] || 0} approved report${(stats.byStatus['approved'] || 0) !== 1 ? 's' : ''}`}
-          borderColor="#EA580C"
+          borderColor="var(--clay)"
         />
         <KPICard
           label="Spend This Month"
           value={fmtShort(stats.thisMonthTotal)}
           sub={mom !== null ? `${momUp ? '+' : ''}${mom}% vs last month` : 'no prior month data'}
-          subColor={mom !== null ? (momUp ? '#B91C1C' : '#15803D') : '#9CA3AF'}
-          borderColor="#1565C0"
+          subColor={mom !== null ? (momUp ? 'var(--clay-text)' : 'var(--moss-text)') : 'var(--text-muted)'}
+          borderColor="var(--action)"
         />
         <KPICard
           label="Total Reimbursed"
           value={fmtShort(stats.reimbursedTotal)}
           sub={`${stats.byStatus['reimbursed'] || 0} report${(stats.byStatus['reimbursed'] || 0) !== 1 ? 's' : ''}`}
-          borderColor="#15803D"
+          borderColor="var(--moss-text)"
         />
         <KPICard
           label="Policy Violations"
           value={stats.policyViolations}
           sub={stats.policyFlags > 0 ? `${stats.policyFlags} flagged` : 'no flags'}
-          subColor={stats.policyViolations > 0 ? '#B91C1C' : '#15803D'}
-          borderColor={stats.policyViolations > 0 ? '#B91C1C' : '#15803D'}
+          subColor={stats.policyViolations > 0 ? 'var(--clay-text)' : 'var(--moss-text)'}
+          borderColor={stats.policyViolations > 0 ? 'var(--clay-text)' : 'var(--moss-text)'}
         />
         <KPICard
           label="Awaiting Review"
           value={pendingReview}
           sub={`${stats.total} total reports`}
-          borderColor="#B45309"
+          borderColor="var(--gold-text)"
         />
       </div>
 
@@ -180,24 +180,24 @@ export default function AdminStats() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
 
         {/* Spend by category */}
-        <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '3px', padding: '20px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '16px', borderBottom: '1px solid #F3F4F6', paddingBottom: '10px' }}>
+        <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '20px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ink)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '16px', borderBottom: '1px solid var(--taupe-100)', paddingBottom: '10px' }}>
             Spend by Category
           </div>
           {topCats.length === 0 ? (
-            <div style={{ fontSize: '13px', color: '#9CA3AF', padding: '20px 0', textAlign: 'center' }}>No data</div>
+            <div style={{ fontSize: '13px', color: 'var(--text-muted)', padding: '20px 0', textAlign: 'center' }}>No data</div>
           ) : topCats.map(([cat, amt]) => (
             <div key={cat} style={{ marginBottom: '11px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                <span style={{ fontSize: '12px', color: '#374151', maxWidth: '65%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: '12px', color: 'var(--ink)', maxWidth: '65%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {cat}
                 </span>
-                <span style={{ fontSize: '12px', fontWeight: 600, color: '#1A1F36' }}>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ink)' }}>
                   ₹{fmtINR(amt)}
                 </span>
               </div>
-              <div style={{ height: '4px', background: '#F3F4F6', borderRadius: '2px' }}>
-                <div style={{ height: '100%', width: `${(amt / maxCat) * 100}%`, background: getColor(cat), borderRadius: '2px' }} />
+              <div style={{ height: '4px', background: 'var(--taupe-100)', borderRadius: 'var(--radius-xs)' }}>
+                <div style={{ height: '100%', width: `${(amt / maxCat) * 100}%`, background: getColor(cat), borderRadius: 'var(--radius-xs)' }} />
               </div>
             </div>
           ))}
@@ -207,26 +207,26 @@ export default function AdminStats() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
           {/* Status table */}
-          <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '3px', padding: '20px' }}>
-            <div style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '12px', borderBottom: '1px solid #F3F4F6', paddingBottom: '10px' }}>
+          <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '20px' }}>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ink)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '12px', borderBottom: '1px solid var(--taupe-100)', paddingBottom: '10px' }}>
               Report Pipeline
             </div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <tbody>
                 {[
-                  { key: 'submitted',    label: 'Submitted',    color: '#B45309' },
-                  { key: 'under_review', label: 'Under Review', color: '#8C3225' },
-                  { key: 'approved',     label: 'Approved',     color: '#15803D' },
-                  { key: 'rejected',     label: 'Rejected',     color: '#B91C1C' },
-                  { key: 'processing',   label: 'Processing',   color: '#6D28D9' },
-                  { key: 'reimbursed',   label: 'Reimbursed',   color: '#374151' },
+                  { key: 'submitted',    label: 'Submitted',    color: 'var(--gold-text)' },
+                  { key: 'under_review', label: 'Under Review', color: 'var(--action)' },
+                  { key: 'approved',     label: 'Approved',     color: 'var(--moss-text)' },
+                  { key: 'rejected',     label: 'Rejected',     color: 'var(--clay-text)' },
+                  { key: 'processing',   label: 'Processing',   color: 'var(--gold-text)' },
+                  { key: 'reimbursed',   label: 'Reimbursed',   color: 'var(--ink)' },
                 ].map(s => (
-                  <tr key={s.key} style={{ borderBottom: '1px solid #F9FAFB' }}>
+                  <tr key={s.key} style={{ borderBottom: '1px solid var(--taupe-50)' }}>
                     <td style={{ padding: '7px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: s.color, flexShrink: 0 }} />
-                      <span style={{ fontSize: '12px', color: '#374151' }}>{s.label}</span>
+                      <span style={{ fontSize: '12px', color: 'var(--ink)' }}>{s.label}</span>
                     </td>
-                    <td style={{ padding: '7px 0', textAlign: 'right', fontSize: '12px', fontWeight: 600, color: '#1A1F36' }}>
+                    <td style={{ padding: '7px 0', textAlign: 'right', fontSize: '12px', fontWeight: 600, color: 'var(--ink)' }}>
                       {stats.byStatus[s.key] || 0}
                     </td>
                   </tr>
@@ -236,23 +236,23 @@ export default function AdminStats() {
           </div>
 
           {/* Monthly comparison */}
-          <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '3px', padding: '20px' }}>
-            <div style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '12px', borderBottom: '1px solid #F3F4F6', paddingBottom: '10px' }}>
+          <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '20px' }}>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ink)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '12px', borderBottom: '1px solid var(--taupe-100)', paddingBottom: '10px' }}>
               Monthly Comparison
             </div>
             <div style={{ display: 'flex', gap: '0' }}>
-              <div style={{ flex: 1, paddingRight: '16px', borderRight: '1px solid #F3F4F6' }}>
-                <div style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>This month</div>
-                <div style={{ fontSize: '20px', fontWeight: 700, color: '#1A1F36' }}>₹{fmtINR(stats.thisMonthTotal)}</div>
+              <div style={{ flex: 1, paddingRight: '16px', borderRight: '1px solid var(--taupe-100)' }}>
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>This month</div>
+                <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--ink)' }}>₹{fmtINR(stats.thisMonthTotal)}</div>
                 {mom !== null && (
-                  <div style={{ fontSize: '11px', color: momUp ? '#B91C1C' : '#15803D', marginTop: '4px', fontWeight: 500 }}>
+                  <div style={{ fontSize: '11px', color: momUp ? 'var(--clay-text)' : 'var(--moss-text)', marginTop: '4px', fontWeight: 500 }}>
                     {momUp ? '+' : ''}{mom}%
                   </div>
                 )}
               </div>
               <div style={{ flex: 1, paddingLeft: '16px' }}>
-                <div style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Last month</div>
-                <div style={{ fontSize: '20px', fontWeight: 700, color: '#6B7280' }}>₹{fmtINR(stats.lastMonthTotal)}</div>
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Last month</div>
+                <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-muted)' }}>₹{fmtINR(stats.lastMonthTotal)}</div>
               </div>
             </div>
           </div>
@@ -261,18 +261,18 @@ export default function AdminStats() {
 
       {/* Entity breakdown table */}
       {topEntities.length > 0 && (
-        <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '3px', overflow: 'hidden' }}>
-          <div style={{ padding: '14px 20px', borderBottom: '1px solid #E3E8EF', background: '#F8F9FA' }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+        <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--taupe-200)', background: 'var(--taupe-50)' }}>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ink)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
               Spend by Entity
             </span>
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ background: '#F8F9FA', borderBottom: '1px solid #E3E8EF' }}>
-                <th style={{ padding: '8px 20px', fontSize: '11px', color: '#6B7280', fontWeight: 600, textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Entity</th>
-                <th style={{ padding: '8px 20px', fontSize: '11px', color: '#6B7280', fontWeight: 600, textAlign: 'right', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Spend (INR)</th>
-                <th style={{ padding: '8px 20px', fontSize: '11px', color: '#6B7280', fontWeight: 600, textAlign: 'right', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Share</th>
+              <tr style={{ background: 'var(--taupe-50)', borderBottom: '1px solid var(--taupe-200)' }}>
+                <th style={{ padding: '8px 20px', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Entity</th>
+                <th style={{ padding: '8px 20px', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textAlign: 'right', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Spend (INR)</th>
+                <th style={{ padding: '8px 20px', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textAlign: 'right', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Share</th>
               </tr>
             </thead>
             <tbody>
@@ -280,13 +280,13 @@ export default function AdminStats() {
                 const totalAll = topEntities.reduce((s, [, a]) => s + a, 0)
                 const pct = totalAll > 0 ? ((amt / totalAll) * 100).toFixed(1) : '0'
                 return (
-                  <tr key={entity} style={{ borderBottom: i < topEntities.length - 1 ? '1px solid #F3F4F6' : 'none', background: i % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}>
-                    <td style={{ padding: '10px 20px', fontSize: '13px', color: '#1A1F36' }}>{entity}</td>
-                    <td style={{ padding: '10px 20px', fontSize: '13px', fontWeight: 600, color: '#1A1F36', textAlign: 'right', fontFamily: 'monospace' }}>
+                  <tr key={entity} style={{ borderBottom: i < topEntities.length - 1 ? '1px solid var(--taupe-100)' : 'none', background: i % 2 === 0 ? 'var(--surface-card)' : 'var(--taupe-50)' }}>
+                    <td style={{ padding: '10px 20px', fontSize: '13px', color: 'var(--ink)' }}>{entity}</td>
+                    <td style={{ padding: '10px 20px', fontSize: '13px', fontWeight: 600, color: 'var(--ink)', textAlign: 'right', fontFamily: 'monospace' }}>
                       {fmtINR(amt)}
                     </td>
                     <td style={{ padding: '10px 20px', textAlign: 'right' }}>
-                      <span style={{ fontSize: '12px', color: '#6B7280' }}>{pct}%</span>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{pct}%</span>
                     </td>
                   </tr>
                 )
@@ -296,7 +296,7 @@ export default function AdminStats() {
         </div>
       )}
 
-      <div style={{ marginTop: '12px', fontSize: '11px', color: '#9CA3AF', textAlign: 'right' }}>
+      <div style={{ marginTop: '12px', fontSize: '11px', color: 'var(--text-muted)', textAlign: 'right' }}>
         {stats.total} total report{stats.total !== 1 ? 's' : ''} · all time
       </div>
     </div>

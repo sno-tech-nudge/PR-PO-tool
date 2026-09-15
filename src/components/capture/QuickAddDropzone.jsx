@@ -77,9 +77,9 @@ export default function QuickAddDropzone({ onReady }) {
         handleFile(e.dataTransfer.files?.[0])
       }}
       style={{
-        border: `1.5px dashed ${dragOver ? '#8C3225' : '#D1D5DB'}`,
-        borderRadius: '10px', padding: '28px 20px', textAlign: 'center',
-        cursor: busy ? 'default' : 'pointer', background: dragOver ? '#fdf0ed' : '#FAFAFA',
+        border: `1.5px dashed ${dragOver ? 'var(--action)' : 'var(--taupe-400)'}`,
+        borderRadius: 'var(--radius-lg)', padding: '28px 20px', textAlign: 'center',
+        cursor: busy ? 'default' : 'pointer', background: dragOver ? 'var(--action-bg)' : 'var(--taupe-50)',
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         minHeight: '148px', boxSizing: 'border-box',
       }}
@@ -95,28 +95,28 @@ export default function QuickAddDropzone({ onReady }) {
       {busy ? (
         <>
           <div className="spinner" style={{ marginBottom: '10px' }} />
-          <div style={{ fontSize: '13px', color: '#6B7280' }}>{busyText}</div>
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{busyText}</div>
         </>
       ) : (
         <>
           <div style={{
-            width: '40px', height: '40px', borderRadius: '50%', background: '#8C3225',
-            color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: '40px', height: '40px', borderRadius: '50%', background: 'var(--action)',
+            color: 'var(--surface-card)', display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '18px', marginBottom: '10px',
           }}>
             ↑
           </div>
-          <div style={{ fontSize: '15px', fontWeight: 600, color: '#1A1F36', marginBottom: '4px' }}>
+          <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--ink)', marginBottom: '4px' }}>
             Drag Receipts
           </div>
-          <div style={{ fontSize: '12px', color: '#6B7280' }}>
-            or <span style={{ color: '#8C3225', fontWeight: 600 }}>click here</span> to attach
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            or <span style={{ color: 'var(--action)', fontWeight: 600 }}>click here</span> to attach
           </div>
         </>
       )}
 
       {error && (
-        <div style={{ fontSize: '11px', color: '#DC2626', marginTop: '10px' }}>{error}</div>
+        <div style={{ fontSize: '11px', color: 'var(--clay-text)', marginTop: '10px' }}>{error}</div>
       )}
     </div>
   )

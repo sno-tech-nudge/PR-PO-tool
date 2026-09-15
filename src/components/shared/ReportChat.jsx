@@ -9,9 +9,9 @@ function fmtTime(ts) {
 }
 
 const ROLE_CONFIG = {
-  finance:  { label: 'Finance',  bg: '#fdf0ed', border: '#BFDBFE', color: '#8C3225' },
-  approver: { label: 'Approver', bg: '#F5F3FF', border: '#DDD6FE', color: '#6D28D9' },
-  employee: { label: 'Employee', bg: '#F9FAFB', border: '#E5E7EB', color: '#374151' },
+  finance:  { label: 'Finance',  bg: 'var(--action-bg)', border: 'var(--action-bg)', color: 'var(--action)' },
+  approver: { label: 'Approver', bg: 'var(--gold-bg)', border: '#DDD6FE', color: 'var(--gold-text)' },
+  employee: { label: 'Employee', bg: 'var(--taupe-50)', border: 'var(--taupe-200)', color: 'var(--ink)' },
 }
 
 export default function ReportChat({ reportId, currentRole, currentName }) {
@@ -101,14 +101,14 @@ export default function ReportChat({ reportId, currentRole, currentName }) {
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         marginBottom: '12px',
       }}>
-        <div style={{ fontSize: '11px', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
           Comments {comments.length > 0 && `(${comments.length})`}
         </div>
         {openActions.length > 0 && (
           <div style={{
-            fontSize: '11px', fontWeight: 600, color: '#B91C1C',
-            background: '#FEF2F2', border: '1px solid #FECACA',
-            borderRadius: '4px', padding: '2px 8px',
+            fontSize: '11px', fontWeight: 600, color: 'var(--clay-text)',
+            background: 'var(--clay-bg)', border: '1px solid var(--clay-border)',
+            borderRadius: 'var(--radius-sm)', padding: '2px 8px',
           }}>
             {openActions.length} action{openActions.length !== 1 ? 's' : ''} required
           </div>
@@ -117,15 +117,15 @@ export default function ReportChat({ reportId, currentRole, currentName }) {
 
       {/* Thread */}
       <div style={{
-        border: '1px solid #E5E7EB', borderRadius: '8px',
+        border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)',
         overflow: 'hidden', marginBottom: '12px',
       }}>
         {loading && (
-          <div style={{ padding: '16px', fontSize: '12px', color: '#9CA3AF' }}>Loading comments...</div>
+          <div style={{ padding: '16px', fontSize: '12px', color: 'var(--text-muted)' }}>Loading comments...</div>
         )}
 
         {!loading && comments.length === 0 && (
-          <div style={{ padding: '20px 16px', fontSize: '12px', color: '#9CA3AF', textAlign: 'center' }}>
+          <div style={{ padding: '20px 16px', fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center' }}>
             No comments yet
           </div>
         )}
@@ -135,26 +135,26 @@ export default function ReportChat({ reportId, currentRole, currentName }) {
           return (
             <div key={c.id} style={{
               padding: '12px 16px',
-              borderBottom: i < comments.length - 1 ? '1px solid #F3F4F6' : 'none',
-              background: c.requires_action && !c.resolved ? '#FFFBEB' : '#FFFFFF',
+              borderBottom: i < comments.length - 1 ? '1px solid var(--taupe-100)' : 'none',
+              background: c.requires_action && !c.resolved ? 'var(--gold-bg)' : 'var(--surface-card)',
             }}>
               {/* Author row */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span style={{
                     fontSize: '10px', fontWeight: 600, padding: '2px 6px',
-                    borderRadius: '3px', background: rc.bg, color: rc.color,
+                    borderRadius: 'var(--radius-sm)', background: rc.bg, color: rc.color,
                     border: `1px solid ${rc.border}`,
                   }}>
                     {rc.label}
                   </span>
-                  <span style={{ fontSize: '12px', fontWeight: 500, color: '#374151' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--ink)' }}>
                     {c.author_name}
                   </span>
                   {c.requires_action && !c.resolved && (
                     <span style={{
-                      fontSize: '10px', fontWeight: 600, color: '#B91C1C',
-                      background: '#FEF2F2', padding: '1px 6px', borderRadius: '3px',
+                      fontSize: '10px', fontWeight: 600, color: 'var(--clay-text)',
+                      background: 'var(--clay-bg)', padding: '1px 6px', borderRadius: 'var(--radius-sm)',
                     }}>
                       Action required
                     </span>
@@ -163,11 +163,11 @@ export default function ReportChat({ reportId, currentRole, currentName }) {
                     <span style={{ fontSize: '10px', color: '#10B981' }}>Resolved</span>
                   )}
                 </div>
-                <span style={{ fontSize: '10px', color: '#9CA3AF' }}>{fmtTime(c.created_at)}</span>
+                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{fmtTime(c.created_at)}</span>
               </div>
 
               {/* Message */}
-              <div style={{ fontSize: '13px', color: '#111827', lineHeight: 1.5 }}>
+              <div style={{ fontSize: '13px', color: 'var(--ink)', lineHeight: 1.5 }}>
                 {c.message}
               </div>
 
@@ -177,8 +177,8 @@ export default function ReportChat({ reportId, currentRole, currentName }) {
                   onClick={() => handleResolve(c.id)}
                   style={{
                     marginTop: '8px', height: '26px', padding: '0 10px',
-                    borderRadius: '4px', border: '1px solid #E5E7EB',
-                    background: '#FFFFFF', color: '#374151', fontSize: '11px',
+                    borderRadius: 'var(--radius-sm)', border: '1px solid var(--taupe-200)',
+                    background: 'var(--surface-card)', color: 'var(--ink)', fontSize: '11px',
                     cursor: 'pointer',
                   }}
                 >
@@ -201,8 +201,8 @@ export default function ReportChat({ reportId, currentRole, currentName }) {
             : 'Reply to finance team…'}
           rows={2}
           style={{
-            width: '100%', border: '1px solid #E5E7EB', borderRadius: '6px',
-            padding: '10px 12px', fontSize: '13px', color: '#111827',
+            width: '100%', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)',
+            padding: '10px 12px', fontSize: '13px', color: 'var(--ink)',
             outline: 'none', resize: 'none', fontFamily: 'inherit',
             lineHeight: 1.5, boxSizing: 'border-box',
           }}
@@ -219,14 +219,14 @@ export default function ReportChat({ reportId, currentRole, currentName }) {
               onChange={e => setRequiresAction(e.target.checked)}
               style={{ width: '14px', height: '14px', cursor: 'pointer' }}
             />
-            <span style={{ fontSize: '12px', color: '#374151' }}>
+            <span style={{ fontSize: '12px', color: 'var(--ink)' }}>
               Requires employee action
             </span>
           </label>
         )}
 
         {error && (
-          <div style={{ fontSize: '11px', color: '#B91C1C' }}>{error}</div>
+          <div style={{ fontSize: '11px', color: 'var(--clay-text)' }}>{error}</div>
         )}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -234,9 +234,9 @@ export default function ReportChat({ reportId, currentRole, currentName }) {
             onClick={handlePost}
             disabled={posting || !message.trim()}
             style={{
-              height: '34px', padding: '0 18px', borderRadius: '6px',
-              background: message.trim() ? '#111827' : '#F3F4F6',
-              color: message.trim() ? '#FFFFFF' : '#9CA3AF',
+              height: '34px', padding: '0 18px', borderRadius: 'var(--radius-md)',
+              background: message.trim() ? 'var(--ink)' : 'var(--taupe-100)',
+              color: message.trim() ? 'var(--surface-card)' : 'var(--text-muted)',
               border: 'none', fontSize: '12px', fontWeight: 600,
               cursor: message.trim() ? 'pointer' : 'default',
             }}

@@ -25,25 +25,25 @@ function ExpenseRow({ exp, onClick, compact }) {
     <div
       onClick={onClick}
       style={{
-        border: compact ? 'none' : '1px solid #E5E7EB',
-        borderTop: compact ? '1px solid #F3F4F6' : undefined,
+        border: compact ? 'none' : '1px solid var(--taupe-200)',
+        borderTop: compact ? '1px solid var(--taupe-100)' : undefined,
         borderRadius: compact ? 0 : '8px',
         marginBottom: compact ? 0 : '8px',
         padding: compact ? '10px 4px' : '12px 14px',
-        background: '#FFFFFF', cursor: 'pointer',
+        background: 'var(--surface-card)', cursor: 'pointer',
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: compact ? '12px' : '13px', fontWeight: 600, color: '#111827' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: compact ? '12px' : '13px', fontWeight: 600, color: 'var(--ink)' }}>
           {hasAttachment(exp) && <span title="Has an attachment" style={{ fontSize: '11px' }}>📎</span>}
           {exp.vendor || 'Unknown vendor'}
         </div>
-        <div style={{ fontSize: compact ? '13px' : '14px', fontWeight: 700, color: '#111827' }}>
+        <div style={{ fontSize: compact ? '13px' : '14px', fontWeight: 700, color: 'var(--ink)' }}>
           ₹{Number(exp.amount || 0).toLocaleString('en-IN')}
         </div>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: '11px', color: '#6B7280' }}>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
           {exp.category} · {fmtDate(exp.date)}
         </div>
         <StatusBadge status={exp.status} sourceStatus={exp.source_status} />
@@ -51,7 +51,7 @@ function ExpenseRow({ exp, onClick, compact }) {
       {exp.policy_status && exp.policy_status !== 'pending' && exp.policy_status !== 'passed' && (
         <div style={{
           marginTop: '6px', fontSize: '11px', fontWeight: 500,
-          color: exp.policy_status === 'violation' ? '#B91C1C' : '#B45309',
+          color: exp.policy_status === 'violation' ? 'var(--clay-text)' : 'var(--gold-text)',
         }}>
           Policy: {exp.policy_status}
         </div>
@@ -146,32 +146,32 @@ export default function ExpenseHistoryScreen({ user, onViewReport, onBack }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
         <button
           onClick={onBack}
-          style={{ background: 'none', border: 'none', fontSize: '13px', color: '#6B7280', cursor: 'pointer', padding: 0, flexShrink: 0 }}
+          style={{ background: 'none', border: 'none', fontSize: '13px', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, flexShrink: 0 }}
         >
           Back
         </button>
         <div>
-          <div style={{ fontSize: '11px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em' }}>My Activity</div>
-          <div style={{ fontSize: '20px', fontWeight: 700, color: '#111827' }}>Expense History</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>My Activity</div>
+          <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--ink)' }}>Expense History</div>
         </div>
       </div>
 
       {/* Summary cards */}
       {!loading && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '20px' }}>
-          <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '10px', padding: '12px' }}>
-            <div style={{ fontSize: '18px', fontWeight: 800, color: '#111827' }}>{expenses.length}</div>
-            <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '2px' }}>Expenses</div>
+          <div style={{ background: 'var(--taupe-50)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '12px' }}>
+            <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--ink)' }}>{expenses.length}</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Expenses</div>
           </div>
-          <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '10px', padding: '12px' }}>
-            <div style={{ fontSize: '18px', fontWeight: 800, color: '#111827' }}>{reports.length}</div>
-            <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '2px' }}>Reports</div>
+          <div style={{ background: 'var(--taupe-50)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '12px' }}>
+            <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--ink)' }}>{reports.length}</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Reports</div>
           </div>
-          <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '10px', padding: '12px' }}>
-            <div style={{ fontSize: '14px', fontWeight: 800, color: '#111827' }}>
+          <div style={{ background: 'var(--taupe-50)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '12px' }}>
+            <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--ink)' }}>
               ₹{totalSpend.toLocaleString('en-IN')}
             </div>
-            <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '2px' }}>Submitted</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Submitted</div>
           </div>
         </div>
       )}
@@ -184,10 +184,10 @@ export default function ExpenseHistoryScreen({ user, onViewReport, onBack }) {
         if (needsAttention.length === 0) return null
         return (
           <div style={{ marginBottom: '20px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: '#B91C1C', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--clay-text)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
               Needs Attention ({needsAttention.length})
             </div>
-            <div style={{ border: '1.5px solid #FECACA', borderRadius: '10px', overflow: 'hidden' }}>
+            <div style={{ border: '1.5px solid var(--clay-border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
               {needsAttention.map((r, i) => (
                 <div
                   key={r.id}
@@ -200,13 +200,13 @@ export default function ExpenseHistoryScreen({ user, onViewReport, onBack }) {
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: r.finance_notes ? '6px' : 0 }}>
-                    <span style={{ fontSize: '13px', fontWeight: 600, color: '#111827', fontFamily: 'monospace' }}>{r.report_reference}</span>
-                    <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 7px', borderRadius: '4px', background: '#FEE2E2', color: '#B91C1C' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)', fontFamily: 'monospace' }}>{r.report_reference}</span>
+                    <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 7px', borderRadius: 'var(--radius-sm)', background: '#FEE2E2', color: 'var(--clay-text)' }}>
                       {r.status === 'rejected' ? 'Returned' : 'Note'}
                     </span>
                   </div>
                   {r.finance_notes && (
-                    <div style={{ fontSize: '12px', color: '#7F1D1D', lineHeight: 1.4 }}>
+                    <div style={{ fontSize: '12px', color: 'var(--clay-text)', lineHeight: 1.4 }}>
                       {r.finance_notes}
                     </div>
                   )}
@@ -224,16 +224,16 @@ export default function ExpenseHistoryScreen({ user, onViewReport, onBack }) {
         value={search}
         onChange={e => setSearch(e.target.value)}
         style={{
-          width: '100%', height: '38px', border: '1px solid #E5E7EB', borderRadius: '6px',
-          padding: '0 12px', fontSize: '13px', color: '#111827', outline: 'none',
-          marginBottom: '14px', boxSizing: 'border-box', background: '#FFFFFF',
+          width: '100%', height: '38px', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)',
+          padding: '0 12px', fontSize: '13px', color: 'var(--ink)', outline: 'none',
+          marginBottom: '14px', boxSizing: 'border-box', background: 'var(--surface-card)',
         }}
       />
 
       {/* Tabs */}
       <div style={{
         display: 'flex', gap: '4px', marginBottom: '16px',
-        background: '#F3F4F6', borderRadius: '8px', padding: '3px',
+        background: 'var(--taupe-100)', borderRadius: 'var(--radius-lg)', padding: '3px',
       }}>
         {[
           { key: 'expenses', label: `Expenses (${expenses.length})` },
@@ -243,12 +243,12 @@ export default function ExpenseHistoryScreen({ user, onViewReport, onBack }) {
             key={t.key}
             onClick={() => { setTab(t.key); setSearch('') }}
             style={{
-              flex: 1, textAlign: 'center', padding: '8px', borderRadius: '6px',
+              flex: 1, textAlign: 'center', padding: '8px', borderRadius: 'var(--radius-md)',
               fontSize: '13px', fontWeight: tab === t.key ? 600 : 400,
-              color: tab === t.key ? '#111827' : '#6B7280',
-              background: tab === t.key ? '#FFFFFF' : 'transparent',
+              color: tab === t.key ? 'var(--ink)' : 'var(--text-muted)',
+              background: tab === t.key ? 'var(--surface-card)' : 'transparent',
               cursor: 'pointer',
-              boxShadow: tab === t.key ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+              boxShadow: tab === t.key ? '0 1px 3px rgba(54, 32, 26,0.08)' : 'none',
             }}
           >
             {t.label}
@@ -259,7 +259,7 @@ export default function ExpenseHistoryScreen({ user, onViewReport, onBack }) {
       {loading && (
         <div style={{ padding: '20px 0' }}>
           {[1,2,3].map(i => (
-            <div key={i} style={{ height: '60px', background: '#F3F4F6', borderRadius: '8px', marginBottom: '8px' }} />
+            <div key={i} style={{ height: '60px', background: 'var(--taupe-100)', borderRadius: 'var(--radius-lg)', marginBottom: '8px' }} />
           ))}
         </div>
       )}
@@ -268,7 +268,7 @@ export default function ExpenseHistoryScreen({ user, onViewReport, onBack }) {
       {!loading && tab === 'expenses' && (
         <>
           {filteredExpenses.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '40px 0', fontSize: '13px', color: '#9CA3AF' }}>
+            <div style={{ textAlign: 'center', padding: '40px 0', fontSize: '13px', color: 'var(--text-muted)' }}>
               No expenses found
             </div>
           )}
@@ -285,7 +285,7 @@ export default function ExpenseHistoryScreen({ user, onViewReport, onBack }) {
       {!loading && tab === 'reports' && (
         <>
           {filteredReports.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '40px 0', fontSize: '13px', color: '#9CA3AF' }}>
+            <div style={{ textAlign: 'center', padding: '40px 0', fontSize: '13px', color: 'var(--text-muted)' }}>
               No reports found
             </div>
           )}
@@ -299,52 +299,52 @@ export default function ExpenseHistoryScreen({ user, onViewReport, onBack }) {
             return (
               <div
                 key={report.id}
-                style={{ border: '1px solid #E5E7EB', borderRadius: '8px', marginBottom: '8px', background: '#FFFFFF', overflow: 'hidden' }}
+                style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', marginBottom: '8px', background: 'var(--surface-card)', overflow: 'hidden' }}
               >
                 <div onClick={() => toggleReport(report.id)} style={{ padding: '12px 14px', cursor: 'pointer' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '11px', color: '#9CA3AF' }}>{isExpanded ? '▾' : '▸'}</span>
-                      <span style={{ fontSize: '13px', fontWeight: 600, color: '#111827', fontFamily: 'monospace' }}>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{isExpanded ? '▾' : '▸'}</span>
+                      <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)', fontFamily: 'monospace' }}>
                         {report.report_reference}
                       </span>
                       {anyAttachment && <span title="Has an attachment" style={{ fontSize: '11px' }}>📎</span>}
                       {report.vouched_at && (
-                        <span style={{ fontSize: '10px', color: '#15803D', fontWeight: 600 }}>
+                        <span style={{ fontSize: '10px', color: 'var(--moss-text)', fontWeight: 600 }}>
                           Vouched
                         </span>
                       )}
                     </div>
-                    <span style={{ fontSize: '14px', fontWeight: 700, color: '#111827' }}>
+                    <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--ink)' }}>
                       ₹{Number(report.total_amount || 0).toLocaleString('en-IN')}
                     </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: report.vouched_at ? '4px' : 0 }}>
-                    <div style={{ fontSize: '11px', color: '#6B7280' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                       {report.brand || ''}{report.brand ? ' · ' : ''}{report.expense_count || 0} expense{report.expense_count !== 1 ? 's' : ''} · {fmtDate(report.created_at)}
                     </div>
                     <StatusBadge status={report.status} />
                   </div>
                   {report.vouched_at && (
-                    <div style={{ fontSize: '11px', color: '#15803D' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--moss-text)' }}>
                       Verified by {report.vouched_by || 'Finance'} on {fmtDate(report.vouched_at)}
                     </div>
                   )}
                   {report.finance_notes && (
                     <div style={{
-                      marginTop: '6px', fontSize: '11px', color: '#374151',
-                      background: '#F9FAFB', borderRadius: '4px', padding: '6px 8px',
-                      borderLeft: '2px solid #E5E7EB',
+                      marginTop: '6px', fontSize: '11px', color: 'var(--ink)',
+                      background: 'var(--taupe-50)', borderRadius: 'var(--radius-sm)', padding: '6px 8px',
+                      borderLeft: '2px solid var(--taupe-200)',
                     }}>
-                      <span style={{ color: '#6B7280' }}>Finance note: </span>{report.finance_notes}
+                      <span style={{ color: 'var(--text-muted)' }}>Finance note: </span>{report.finance_notes}
                     </div>
                   )}
                 </div>
 
                 {isExpanded && (
-                  <div style={{ padding: '0 14px 12px', background: '#FAFAFA', borderTop: '1px solid #F3F4F6' }}>
+                  <div style={{ padding: '0 14px 12px', background: 'var(--taupe-50)', borderTop: '1px solid var(--taupe-100)' }}>
                     {reportExpenses.length === 0 ? (
-                      <div style={{ fontSize: '11px', color: '#9CA3AF', padding: '10px 4px' }}>No expenses found for this report</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', padding: '10px 4px' }}>No expenses found for this report</div>
                     ) : (
                       reportExpenses.map(exp => (
                         <ExpenseRow key={exp.id} exp={exp} compact onClick={() => setSelectedExpense(exp)} />
@@ -352,7 +352,7 @@ export default function ExpenseHistoryScreen({ user, onViewReport, onBack }) {
                     )}
                     <div
                       onClick={() => onViewReport && onViewReport(report.id)}
-                      style={{ fontSize: '11px', color: '#8C3225', textDecoration: 'underline', cursor: 'pointer', paddingTop: '8px' }}
+                      style={{ fontSize: '11px', color: 'var(--action)', textDecoration: 'underline', cursor: 'pointer', paddingTop: '8px' }}
                     >
                       View full report status →
                     </div>

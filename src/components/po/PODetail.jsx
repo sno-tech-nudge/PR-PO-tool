@@ -22,18 +22,18 @@ function fmtAmt(n) {
 function Row({ label, value, mono }) {
   return (
     <div style={{ display: 'flex', gap: '12px', marginBottom: '10px', fontSize: '13px' }}>
-      <span style={{ color: '#9CA3AF', width: '140px', flexShrink: 0, fontSize: '12px', paddingTop: '1px' }}>{label}</span>
-      <span style={{ color: '#1A1F36', fontFamily: mono ? 'monospace' : 'inherit' }}>{value || '—'}</span>
+      <span style={{ color: 'var(--text-muted)', width: '140px', flexShrink: 0, fontSize: '12px', paddingTop: '1px' }}>{label}</span>
+      <span style={{ color: 'var(--ink)', fontFamily: mono ? 'monospace' : 'inherit' }}>{value || '—'}</span>
     </div>
   )
 }
 
 const STATUS = {
-  pending_approval: { label: 'Pending Approval', color: '#B45309', bg: '#FFFBEB' },
-  issued:           { label: 'Issued',           color: '#8C3225', bg: '#fdf0ed' },
-  completed:        { label: 'Completed',        color: '#15803D', bg: '#F0FDF4' },
-  cancelled:        { label: 'Cancelled',        color: '#B91C1C', bg: '#FEF2F2' },
-  rejected:         { label: 'Rejected',         color: '#B91C1C', bg: '#FEF2F2' },
+  pending_approval: { label: 'Pending Approval', color: 'var(--gold-text)', bg: 'var(--gold-bg)' },
+  issued:           { label: 'Issued',           color: 'var(--action)', bg: 'var(--action-bg)' },
+  completed:        { label: 'Completed',        color: 'var(--moss-text)', bg: 'var(--moss-bg)' },
+  cancelled:        { label: 'Cancelled',        color: 'var(--clay-text)', bg: 'var(--clay-bg)' },
+  rejected:         { label: 'Rejected',         color: 'var(--clay-text)', bg: 'var(--clay-bg)' },
 }
 
 export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
@@ -143,14 +143,14 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
     setMarkingDone(false)
   }
 
-  if (loading) return <div style={{ padding: '60px', textAlign: 'center', fontSize: '13px', color: '#9CA3AF' }}>Loading…</div>
+  if (loading) return <div style={{ padding: '60px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>Loading…</div>
   // Mirrors POList's "employees only see their own POs" scoping — that list
   // filter alone doesn't stop someone from reaching another PO's detail via
   // a stale link/notification, so enforce it here too. Reported the same as
   // "not found" rather than a distinct "forbidden" message, so it doesn't
   // confirm to an employee that a PO they can't see does exist.
   if (!po || (user.role === 'employee' && pr && pr.requested_by !== user.email)) {
-    return <div style={{ padding: '60px', textAlign: 'center', fontSize: '13px', color: '#9CA3AF' }}>Purchase order not found.</div>
+    return <div style={{ padding: '60px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>Purchase order not found.</div>
   }
 
   const st = STATUS[po.status] || STATUS.issued
@@ -173,24 +173,24 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
 
       {/* Breadcrumb */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '20px' }}>
-        <span onClick={onBack} style={{ fontSize: '12px', color: '#8C3225', cursor: 'pointer' }}>
+        <span onClick={onBack} style={{ fontSize: '12px', color: 'var(--action)', cursor: 'pointer' }}>
           Purchase Orders
         </span>
-        <span style={{ fontSize: '12px', color: '#9CA3AF' }}>/</span>
-        <span style={{ fontSize: '12px', color: '#6B7280', fontFamily: 'monospace' }}>{po.po_number}</span>
+        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>/</span>
+        <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{po.po_number}</span>
       </div>
 
       {/* Header card */}
-      <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '8px', padding: '24px', marginBottom: '16px' }}>
+      <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '24px', marginBottom: '16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
           <div>
-            <div style={{ fontSize: '11px', color: '#9CA3AF', fontFamily: 'monospace', marginBottom: '4px' }}>{po.po_number}</div>
-            <div style={{ fontSize: '26px', fontWeight: 700, color: '#1A1F36' }}>{fmtAmt(po.amount)}</div>
-            <div style={{ fontSize: '13px', color: '#6B7280', marginTop: '2px' }}>{vendor?.org_name}</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace', marginBottom: '4px' }}>{po.po_number}</div>
+            <div style={{ fontSize: '26px', fontWeight: 700, color: 'var(--ink)' }}>{fmtAmt(po.amount)}</div>
+            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>{vendor?.org_name}</div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
             <span style={{
-              display: 'inline-block', padding: '4px 12px', borderRadius: '5px',
+              display: 'inline-block', padding: '4px 12px', borderRadius: 'var(--radius-md)',
               fontSize: '12px', fontWeight: 600, color: st.color, background: st.bg,
             }}>
               {st.label}
@@ -202,8 +202,8 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
                 rel="noopener noreferrer"
                 style={{
                   padding: '6px 14px', fontSize: '12px', fontWeight: 600,
-                  background: '#FFFFFF', color: '#8C3225',
-                  border: '1px solid #8C3225', borderRadius: '5px',
+                  background: 'var(--surface-card)', color: 'var(--action)',
+                  border: '1px solid var(--action)', borderRadius: 'var(--radius-md)',
                   textDecoration: 'none', display: 'inline-block',
                 }}
               >
@@ -217,8 +217,8 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
                 title="Finance/admin only — downloads the PO PDF, all quotation/comparative attachments, and the approval flow as one ZIP"
                 style={{
                   padding: '6px 14px', fontSize: '12px', fontWeight: 600,
-                  background: bundling ? '#9CA3AF' : '#8C3225', color: '#FFFFFF',
-                  border: 'none', borderRadius: '5px', cursor: bundling ? 'default' : 'pointer',
+                  background: bundling ? 'var(--text-muted)' : 'var(--action)', color: 'var(--surface-card)',
+                  border: 'none', borderRadius: 'var(--radius-md)', cursor: bundling ? 'default' : 'pointer',
                 }}
               >
                 {bundling ? 'Preparing…' : '↓ Download PO + Attachments + Approval Flow'}
@@ -230,19 +230,19 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
                 title="Admin only — full Vendor → PR → PO → Expense Report audit trail"
                 style={{
                   padding: '6px 14px', fontSize: '12px', fontWeight: 600,
-                  background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '5px', cursor: 'pointer',
+                  background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-md)', cursor: 'pointer',
                 }}
               >
                 Audit Trail
               </button>
             )}
             {bundleError && (
-              <div style={{ fontSize: '11px', color: '#B91C1C', textAlign: 'right', maxWidth: '220px' }}>{bundleError}</div>
+              <div style={{ fontSize: '11px', color: 'var(--clay-text)', textAlign: 'right', maxWidth: '220px' }}>{bundleError}</div>
             )}
           </div>
         </div>
 
-        <div style={{ height: '1px', background: '#F3F4F6', marginBottom: '16px' }} />
+        <div style={{ height: '1px', background: 'var(--taupe-100)', marginBottom: '16px' }} />
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 32px' }}>
           <div>
@@ -266,8 +266,8 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
 
       {/* Vendor card */}
       {vendor && (
-        <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '8px', padding: '20px', marginBottom: '16px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '14px' }}>
+        <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '20px', marginBottom: '16px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '14px' }}>
             Vendor Details
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 32px' }}>
@@ -288,8 +288,8 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
 
       {/* Bank details */}
       {vendor?.account_number && (
-        <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '8px', padding: '20px', marginBottom: '16px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '14px' }}>
+        <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '20px', marginBottom: '16px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '14px' }}>
             Payment Details
           </div>
           <Row label="Beneficiary"   value={vendor.beneficiary_name} />
@@ -303,14 +303,14 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
           Finance has already seen the underlying quotes, not just a link
           that used to not exist on this page at all. */}
       {pr && (
-        <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '8px', padding: '16px 20px', marginBottom: '16px' }}>
+        <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '16px 20px', marginBottom: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ fontSize: '11px', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               Quotations & Attachments
             </div>
             <button
               onClick={() => setShowAttachments(true)}
-              style={{ height: '30px', padding: '0 14px', background: '#FFFFFF', color: '#8C3225', border: '1px solid #E3E8EF', borderRadius: '5px', fontSize: '12px', cursor: 'pointer' }}
+              style={{ height: '30px', padding: '0 14px', background: 'var(--surface-card)', color: 'var(--action)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', fontSize: '12px', cursor: 'pointer' }}
             >
               View Attachments
             </button>
@@ -325,20 +325,20 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
       {/* PO approval — vendor legitimacy, quotation selection rationale, documentation
           compliance for audit purposes are checked here before a PO is issued */}
       {po.status === 'rejected' && po.rejection_reason && (
-        <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderLeft: '3px solid #EF4444', borderRadius: '2px', padding: '10px 14px', marginBottom: '16px' }}>
-          <div style={{ fontSize: '10px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>Rejection Reason</div>
-          <div style={{ fontSize: '12px', color: '#B91C1C' }}>{po.rejection_reason}</div>
+        <div style={{ background: 'var(--clay-bg)', border: '1px solid var(--clay-border)', borderLeft: '3px solid var(--clay)', borderRadius: 'var(--radius-xs)', padding: '10px 14px', marginBottom: '16px' }}>
+          <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>Rejection Reason</div>
+          <div style={{ fontSize: '12px', color: 'var(--clay-text)' }}>{po.rejection_reason}</div>
         </div>
       )}
 
       {isPOApprover && po.status === 'pending_approval' && (
-        <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '8px', padding: '20px', marginBottom: '16px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '14px' }}>
+        <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '20px', marginBottom: '16px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ink)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '14px' }}>
             Purchase Order Approval
           </div>
 
           {poError && (
-            <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '3px', padding: '10px 14px', marginBottom: '12px', fontSize: '13px', color: '#B91C1C' }}>
+            <div style={{ background: 'var(--clay-bg)', border: '1px solid var(--clay-border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', marginBottom: '12px', fontSize: '13px', color: 'var(--clay-text)' }}>
               {poError}
             </div>
           )}
@@ -348,39 +348,39 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
               <button
                 onClick={handleApprovePO}
                 disabled={approvingPO}
-                style={{ height: '40px', padding: '0 24px', background: approvingPO ? '#9CA3AF' : '#15803D', color: '#FFFFFF', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: approvingPO ? 'default' : 'pointer' }}
+                style={{ height: '40px', padding: '0 24px', background: approvingPO ? 'var(--text-muted)' : 'var(--moss-text)', color: 'var(--surface-card)', border: 'none', borderRadius: 'var(--radius-md)', fontSize: '13px', fontWeight: 600, cursor: approvingPO ? 'default' : 'pointer' }}
               >
                 {approvingPO ? 'Approving…' : 'Approve PO'}
               </button>
               <button
                 onClick={() => setRejectingPO(true)}
                 disabled={approvingPO}
-                style={{ height: '40px', padding: '0 20px', background: '#FFFFFF', color: '#B91C1C', border: '1px solid #FECACA', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}
+                style={{ height: '40px', padding: '0 20px', background: 'var(--surface-card)', color: 'var(--clay-text)', border: '1px solid var(--clay-border)', borderRadius: 'var(--radius-md)', fontSize: '13px', cursor: 'pointer' }}
               >
                 Reject PO
               </button>
             </div>
           ) : (
             <div>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>Rejection reason</div>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)', marginBottom: '8px' }}>Rejection reason</div>
               <textarea
                 value={poRejectReason}
                 onChange={e => setPoRejectReason(e.target.value)}
                 rows={3}
                 placeholder="Why is this purchase order being rejected? (e.g. vendor legitimacy concerns, missing documentation)"
-                style={{ width: '100%', border: '1px solid #E3E8EF', borderRadius: '4px', padding: '10px 12px', fontSize: '13px', color: '#1A1F36', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit', marginBottom: '12px' }}
+                style={{ width: '100%', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', fontSize: '13px', color: 'var(--ink)', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit', marginBottom: '12px' }}
               />
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button
                   onClick={handleRejectPO}
                   disabled={approvingPO}
-                  style={{ height: '38px', padding: '0 24px', background: approvingPO ? '#9CA3AF' : '#B91C1C', color: '#FFFFFF', border: 'none', borderRadius: '4px', fontSize: '13px', fontWeight: 600, cursor: approvingPO ? 'default' : 'pointer' }}
+                  style={{ height: '38px', padding: '0 24px', background: approvingPO ? 'var(--text-muted)' : 'var(--clay-text)', color: 'var(--surface-card)', border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 600, cursor: approvingPO ? 'default' : 'pointer' }}
                 >
                   {approvingPO ? 'Saving…' : 'Confirm Rejection'}
                 </button>
                 <button
                   onClick={() => { setRejectingPO(false); setPoRejectReason('') }}
-                  style={{ height: '38px', padding: '0 18px', background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '13px', cursor: 'pointer' }}
+                  style={{ height: '38px', padding: '0 18px', background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', fontSize: '13px', cursor: 'pointer' }}
                 >
                   Cancel
                 </button>
@@ -392,15 +392,15 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
 
       {/* Expense submissions against this PO — tranche payments */}
       {po.status === 'issued' && (
-        <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '8px', padding: '20px', marginBottom: '16px' }}>
+        <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '20px', marginBottom: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-            <div style={{ fontSize: '11px', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               Expense Submissions
             </div>
             {pendingAmount > 0 && (
               <button
                 onClick={() => setShowSubmitExpense(true)}
-                style={{ height: '32px', padding: '0 14px', fontSize: '12px', fontWeight: 600, background: '#8C3225', color: '#FFFFFF', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
+                style={{ height: '32px', padding: '0 14px', fontSize: '12px', fontWeight: 600, background: 'var(--action)', color: 'var(--surface-card)', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}
               >
                 Submit Expense for this PO
               </button>
@@ -409,38 +409,38 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0 20px', marginBottom: (linkedExpenses.length || savedExpenses.length) ? '16px' : '0' }}>
             <div>
-              <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '2px' }}>Approved</div>
-              <div style={{ fontSize: '15px', fontWeight: 600, color: '#1A1F36' }}>{fmtAmt(po.amount)}</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>Approved</div>
+              <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--ink)' }}>{fmtAmt(po.amount)}</div>
             </div>
             <div>
-              <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '2px' }}>Total Submitted</div>
-              <div style={{ fontSize: '15px', fontWeight: 600, color: '#1A1F36' }}>{fmtAmt(totalSubmitted)}</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>Total Submitted</div>
+              <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--ink)' }}>{fmtAmt(totalSubmitted)}</div>
             </div>
             <div>
-              <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '2px' }}>Pending</div>
-              <div style={{ fontSize: '15px', fontWeight: 600, color: pendingAmount > 0 ? '#B45309' : '#15803D' }}>{fmtAmt(pendingAmount)}</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>Pending</div>
+              <div style={{ fontSize: '15px', fontWeight: 600, color: pendingAmount > 0 ? 'var(--gold-text)' : 'var(--moss-text)' }}>{fmtAmt(pendingAmount)}</div>
             </div>
           </div>
 
           {linkedExpenses.length > 0 && (
-            <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: '12px' }}>
+            <div style={{ borderTop: '1px solid var(--taupe-100)', paddingTop: '12px' }}>
               {linkedExpenses.map(e => (
                 <div key={e.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '6px 0' }}>
-                  <span style={{ fontFamily: 'monospace', color: '#6B7280' }}>{e.report_reference}</span>
-                  <span style={{ color: '#374151' }}>{fmtAmt(e.total_amount)}</span>
-                  <span style={{ color: e.status === 'rejected' ? '#B91C1C' : '#6B7280', textTransform: 'capitalize' }}>{e.status}</span>
+                  <span style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>{e.report_reference}</span>
+                  <span style={{ color: 'var(--ink)' }}>{fmtAmt(e.total_amount)}</span>
+                  <span style={{ color: e.status === 'rejected' ? 'var(--clay-text)' : 'var(--text-muted)', textTransform: 'capitalize' }}>{e.status}</span>
                 </div>
               ))}
             </div>
           )}
 
           {savedExpenses.length > 0 && (
-            <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: '12px', marginTop: linkedExpenses.length > 0 ? '4px' : 0 }}>
+            <div style={{ borderTop: '1px solid var(--taupe-100)', paddingTop: '12px', marginTop: linkedExpenses.length > 0 ? '4px' : 0 }}>
               {savedExpenses.map(e => (
                 <div key={e.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '6px 0' }}>
-                  <span style={{ color: '#374151' }}>{e.vendor || 'Invoice'}{e.invoice_number ? ` — ${e.invoice_number}` : ''}</span>
-                  <span style={{ color: '#374151' }}>{fmtAmt(e.amount)}</span>
-                  <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 6px', borderRadius: '2px', background: '#FFFBEB', color: '#B45309' }}>
+                  <span style={{ color: 'var(--ink)' }}>{e.vendor || 'Invoice'}{e.invoice_number ? ` — ${e.invoice_number}` : ''}</span>
+                  <span style={{ color: 'var(--ink)' }}>{fmtAmt(e.amount)}</span>
+                  <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 6px', borderRadius: 'var(--radius-xs)', background: 'var(--gold-bg)', color: 'var(--gold-text)' }}>
                     Saved — not yet in a report
                   </span>
                 </div>
@@ -470,8 +470,8 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
             disabled={markingDone}
             style={{
               height: '38px', padding: '0 20px', fontSize: '13px', fontWeight: 600,
-              background: '#16A34A', color: '#FFFFFF', border: 'none',
-              borderRadius: '6px', cursor: 'pointer', opacity: markingDone ? 0.6 : 1,
+              background: 'var(--moss)', color: 'var(--surface-card)', border: 'none',
+              borderRadius: 'var(--radius-md)', cursor: 'pointer', opacity: markingDone ? 0.6 : 1,
             }}
           >
             Mark as Completed
@@ -481,8 +481,8 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
             disabled={markingDone}
             style={{
               height: '38px', padding: '0 20px', fontSize: '13px', fontWeight: 500,
-              background: '#FFFFFF', color: '#DC2626',
-              border: '1px solid #FECACA', borderRadius: '6px', cursor: 'pointer',
+              background: 'var(--surface-card)', color: 'var(--clay-text)',
+              border: '1px solid var(--clay-border)', borderRadius: 'var(--radius-md)', cursor: 'pointer',
               opacity: markingDone ? 0.6 : 1,
             }}
           >

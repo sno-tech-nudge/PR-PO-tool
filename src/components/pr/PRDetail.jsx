@@ -23,16 +23,16 @@ function fmtDate(d) {
 function Row({ label, value }) {
   return (
     <div style={{ display: 'flex', gap: '12px', marginBottom: '8px', fontSize: '13px' }}>
-      <span style={{ color: '#9CA3AF', width: '130px', flexShrink: 0, fontSize: '12px', paddingTop: '1px' }}>{label}</span>
-      <span style={{ color: '#1A1F36' }}>{value || '—'}</span>
+      <span style={{ color: 'var(--text-muted)', width: '130px', flexShrink: 0, fontSize: '12px', paddingTop: '1px' }}>{label}</span>
+      <span style={{ color: 'var(--ink)' }}>{value || '—'}</span>
     </div>
   )
 }
 
 const LINK_CONF = {
-  high:   { label: 'High confidence',   color: '#15803D', bg: '#F0FDF4' },
-  medium: { label: 'Medium confidence', color: '#B45309', bg: '#FFFBEB' },
-  manual: { label: 'Manually linked',   color: '#8C3225', bg: '#fdf0ed' },
+  high:   { label: 'High confidence',   color: 'var(--moss-text)', bg: 'var(--moss-bg)' },
+  medium: { label: 'Medium confidence', color: 'var(--gold-text)', bg: 'var(--gold-bg)' },
+  manual: { label: 'Manually linked',   color: 'var(--action)', bg: 'var(--action-bg)' },
 }
 
 export default function PRDetail({ prId, user, onBack, onEdit, showToast, onViewVendor, onViewPO, backLabel = 'My Requests' }) {
@@ -170,13 +170,13 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
     setSaving(false)
   }
 
-  if (loading) return <div style={{ padding: '40px', textAlign: 'center', fontSize: '13px', color: '#6B7280' }}>Loading…</div>
+  if (loading) return <div style={{ padding: '40px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>Loading…</div>
   // Mirrors PRList's "My Requests" scoping (employees only ever see their
   // own PRs there) — that list filter alone doesn't stop someone from
   // reaching another PR's detail via a stale link/notification, so enforce
   // it here too. Reported the same as "not found" rather than "forbidden".
   if (!pr || (user.role === 'employee' && pr.requested_by !== user.email)) {
-    return <div style={{ padding: '40px', textAlign: 'center', fontSize: '13px', color: '#9CA3AF' }}>Request not found.</div>
+    return <div style={{ padding: '40px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>Request not found.</div>
   }
 
   const canEdit = user.email === pr.requested_by && pr.status === 'rejected'
@@ -198,30 +198,30 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
     <div style={{ maxWidth: '640px', margin: '0 auto', padding: '24px 20px 60px' }}>
       {/* Breadcrumb */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '20px' }}>
-        <span onClick={onBack} style={{ fontSize: '12px', color: '#8C3225', cursor: 'pointer' }}>{backLabel}</span>
-        <span style={{ fontSize: '12px', color: '#9CA3AF' }}>/</span>
-        <span style={{ fontSize: '12px', color: '#6B7280', fontFamily: 'monospace' }}>{pr.pr_number}</span>
+        <span onClick={onBack} style={{ fontSize: '12px', color: 'var(--action)', cursor: 'pointer' }}>{backLabel}</span>
+        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>/</span>
+        <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{pr.pr_number}</span>
       </div>
 
       {/* Header */}
-      <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '20px', marginBottom: '12px' }}>
+      <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '20px', marginBottom: '12px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
           <div>
-            <div style={{ fontSize: '11px', color: '#9CA3AF', fontFamily: 'monospace', marginBottom: '4px' }}>{pr.pr_number}</div>
-            <div style={{ fontSize: '22px', fontWeight: 700, color: '#1A1F36' }}>INR {Number(pr.amount || 0).toLocaleString('en-IN')}</div>
-            <div style={{ fontSize: '13px', color: '#6B7280', marginTop: '2px' }}>{pr.vendors?.org_name}</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace', marginBottom: '4px' }}>{pr.pr_number}</div>
+            <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--ink)' }}>INR {Number(pr.amount || 0).toLocaleString('en-IN')}</div>
+            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>{pr.vendors?.org_name}</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
             {user.email !== pr.requested_by && (
-              <div style={{ fontSize: '11px', color: '#6B7280', textAlign: 'right' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'right' }}>
                 <div>Requested by</div>
-                <div style={{ color: '#374151', fontWeight: 600 }}>{getDisplayName(pr.requested_by)}</div>
+                <div style={{ color: 'var(--ink)', fontWeight: 600 }}>{getDisplayName(pr.requested_by)}</div>
               </div>
             )}
             {canEdit && (
               <button
                 onClick={() => onEdit(pr)}
-                style={{ height: '32px', padding: '0 14px', background: '#FFFFFF', color: '#374151', border: '1px solid #E3E8EF', borderRadius: '3px', fontSize: '12px', cursor: 'pointer' }}
+                style={{ height: '32px', padding: '0 14px', background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', fontSize: '12px', cursor: 'pointer' }}
               >
                 Edit & Resubmit
               </button>
@@ -231,23 +231,23 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
         <PRStatusTimeline status={pr.status} approvals={approvals} />
 
         {pr.status === 'rejected' && pr.rejection_reason && (
-          <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderLeft: '3px solid #EF4444', borderRadius: '2px', padding: '10px 14px', marginTop: '12px' }}>
-            <div style={{ fontSize: '10px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>Rejection Reason</div>
-            <div style={{ fontSize: '12px', color: '#B91C1C' }}>{pr.rejection_reason}</div>
+          <div style={{ background: 'var(--clay-bg)', border: '1px solid var(--clay-border)', borderLeft: '3px solid var(--clay)', borderRadius: 'var(--radius-xs)', padding: '10px 14px', marginTop: '12px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>Rejection Reason</div>
+            <div style={{ fontSize: '12px', color: 'var(--clay-text)' }}>{pr.rejection_reason}</div>
           </div>
         )}
 
         {pr.status === 'submitted' && pr.rejection_reason && (
-          <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderLeft: '3px solid #F59E0B', borderRadius: '2px', padding: '10px 14px', marginTop: '12px' }}>
-            <div style={{ fontSize: '10px', color: '#92400E', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>Previously Rejected — Resubmitted</div>
-            <div style={{ fontSize: '12px', color: '#92400E' }}>{pr.rejection_reason}</div>
+          <div style={{ background: 'var(--gold-bg)', border: '1px solid var(--gold-border)', borderLeft: '3px solid var(--gold)', borderRadius: 'var(--radius-xs)', padding: '10px 14px', marginTop: '12px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--gold-text)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>Previously Rejected — Resubmitted</div>
+            <div style={{ fontSize: '12px', color: 'var(--gold-text)' }}>{pr.rejection_reason}</div>
           </div>
         )}
 
         {Number(pr.advance_percent) >= 100 && (
-          <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderLeft: '4px solid #EF4444', borderRadius: '2px', padding: '10px 14px', marginTop: '12px' }}>
-            <div style={{ fontSize: '10px', fontWeight: 700, color: '#B91C1C', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>100% Advance — FL Email Approval Required</div>
-            <div style={{ fontSize: '12px', color: '#7F1D1D', lineHeight: 1.6 }}>
+          <div style={{ background: 'var(--clay-bg)', border: '1px solid var(--clay-border)', borderLeft: '4px solid var(--clay)', borderRadius: 'var(--radius-xs)', padding: '10px 14px', marginTop: '12px' }}>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--clay-text)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>100% Advance — FL Email Approval Required</div>
+            <div style={{ fontSize: '12px', color: 'var(--clay-text)', lineHeight: 1.6 }}>
               This request asks for full payment in advance. Explicit Functional Leader approval over email is required before it proceeds.
               {pr.advance_fl_email_ack ? ' Requester has confirmed email approval has been / will be obtained.' : ' Requester has not confirmed email approval.'}
               {pr.advance_approval_screenshot_path ? ' Approval screenshot attached.' : ' No approval screenshot attached.'}
@@ -256,16 +256,16 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
         )}
 
         {pr.ai_summary && (
-          <div style={{ background: '#F8F9FA', border: '1px solid #E3E8EF', borderRadius: '3px', padding: '10px 14px', marginTop: '12px' }}>
-            <div style={{ fontSize: '10px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>AI Summary</div>
-            <div style={{ fontSize: '12px', color: '#374151', lineHeight: 1.5 }}>{pr.ai_summary}</div>
+          <div style={{ background: 'var(--taupe-50)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', marginTop: '12px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>AI Summary</div>
+            <div style={{ fontSize: '12px', color: 'var(--ink)', lineHeight: 1.5 }}>{pr.ai_summary}</div>
           </div>
         )}
       </div>
 
       {/* Request Details */}
-      <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '20px', marginBottom: '12px' }}>
-        <div style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '14px' }}>Request Details</div>
+      <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '20px', marginBottom: '12px' }}>
+        <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ink)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '14px' }}>Request Details</div>
         <Row label="Budgeted" value={pr.budgeted == null ? '—' : pr.budgeted ? 'Budgeted' : 'Not Budgeted'} />
         <Row label="Expense Nature" value={pr.expense_type} />
         <Row label="Categories" value={pr.category} />
@@ -281,14 +281,14 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
 
         {/* Amount breakdown */}
         {(pr.base_amount != null || pr.tax_amount != null || pr.incidental_amount != null) && (
-          <div style={{ marginTop: '12px', borderTop: '1px solid #F3F4F6', paddingTop: '12px' }}>
-            <div style={{ fontSize: '10px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Amount Breakdown</div>
+          <div style={{ marginTop: '12px', borderTop: '1px solid var(--taupe-100)', paddingTop: '12px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Amount Breakdown</div>
             {pr.line_items?.length > 0 ? (
               <div style={{ marginBottom: '8px' }}>
                 {pr.line_items.map((it, i) => (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
-                    <span style={{ color: '#1A1F36' }}>{it.description || `Item ${i + 1}`}{it.category ? ` (${it.category})` : ''} — {it.quantity} × ₹{Number(it.rate_per_unit || 0).toLocaleString('en-IN')}</span>
-                    <span style={{ color: '#1A1F36', fontWeight: 600 }}>₹{((Number(it.quantity) || 0) * (Number(it.rate_per_unit) || 0)).toLocaleString('en-IN')}</span>
+                    <span style={{ color: 'var(--ink)' }}>{it.description || `Item ${i + 1}`}{it.category ? ` (${it.category})` : ''} — {it.quantity} × ₹{Number(it.rate_per_unit || 0).toLocaleString('en-IN')}</span>
+                    <span style={{ color: 'var(--ink)', fontWeight: 600 }}>₹{((Number(it.quantity) || 0) * (Number(it.rate_per_unit) || 0)).toLocaleString('en-IN')}</span>
                   </div>
                 ))}
               </div>
@@ -307,8 +307,8 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
 
         {/* Payment terms — advance split plus the mandatory credit term covering the after-delivery portion */}
         {pr.advance_percent != null && (
-          <div style={{ marginTop: '12px', borderTop: '1px solid #F3F4F6', paddingTop: '12px' }}>
-            <div style={{ fontSize: '10px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Payment Terms</div>
+          <div style={{ marginTop: '12px', borderTop: '1px solid var(--taupe-100)', paddingTop: '12px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Payment Terms</div>
             <Row label="Advance" value={`${Number(pr.advance_percent)}%`} />
             <Row label="After delivery" value={`${pr.after_delivery_percent != null ? Number(pr.after_delivery_percent) : 100 - Number(pr.advance_percent)}%`} />
             {Number(pr.advance_percent) >= 100 ? (
@@ -320,7 +320,7 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
               </>
             )}
             {Number(pr.advance_percent) >= 100 && (
-              <div style={{ fontSize: '11px', color: '#B91C1C', marginTop: '4px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--clay-text)', marginTop: '4px' }}>
                 100% advance — FL email approval required{pr.advance_fl_email_ack ? ' (acknowledged)' : ''}.
                 {pr.advance_approval_screenshot_path ? ' Approval screenshot attached.' : ' No approval screenshot attached.'}
               </div>
@@ -331,10 +331,10 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
 
       {/* Donor / Programme Allocation */}
       {pr.donor_allocations?.length > 0 && (
-        <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '20px', marginBottom: '12px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '14px' }}>Donor / Programme Allocation</div>
+        <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '20px', marginBottom: '12px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ink)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '14px' }}>Donor / Programme Allocation</div>
           {pr.donor_allocations.map((a, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#374151', marginBottom: '6px' }}>
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--ink)', marginBottom: '6px' }}>
               <span>{[a.entity, a.program, a.subprogram, a.donor].filter(Boolean).join(' / ') || '—'}</span>
               <span style={{ fontWeight: 600, flexShrink: 0, marginLeft: '12px' }}>{a.percent}%</span>
             </div>
@@ -344,15 +344,15 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
 
       {/* Vendor */}
       {pr.vendors && (
-        <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '20px', marginBottom: '12px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '14px' }}>Vendor</div>
+        <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '20px', marginBottom: '12px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ink)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '14px' }}>Vendor</div>
           <div
             onClick={() => onViewVendor?.(pr.vendor_id)}
             style={onViewVendor ? { cursor: 'pointer' } : undefined}
           >
             <Row label="Organisation" value={
               onViewVendor
-                ? <span style={{ color: '#8C3225', textDecoration: 'underline' }}>{pr.vendors.org_name}</span>
+                ? <span style={{ color: 'var(--action)', textDecoration: 'underline' }}>{pr.vendors.org_name}</span>
                 : pr.vendors.org_name
             } />
           </div>
@@ -369,14 +369,14 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
       {/* Attachments — shown before the approval trail/action panel so
           whoever is about to approve or reject has already seen the
           underlying quotations, not just a link buried below the decision. */}
-      <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '16px 20px', marginBottom: '12px' }}>
+      <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '16px 20px', marginBottom: '12px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ink)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
             Quotations & Attachments
           </div>
           <button
             onClick={() => setShowAttachments(true)}
-            style={{ height: '30px', padding: '0 14px', background: '#FFFFFF', color: '#8C3225', border: '1px solid #E3E8EF', borderRadius: '3px', fontSize: '12px', cursor: 'pointer' }}
+            style={{ height: '30px', padding: '0 14px', background: 'var(--surface-card)', color: 'var(--action)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', fontSize: '12px', cursor: 'pointer' }}
           >
             View Attachments
           </button>
@@ -385,27 +385,27 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
 
       {/* Approvals */}
       {approvals.length > 0 && (
-        <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', overflow: 'hidden', marginBottom: '12px' }}>
-          <div style={{ padding: '12px 20px', background: '#F8F9FA', borderBottom: '1px solid #E3E8EF' }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Approval Trail</span>
+        <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', overflow: 'hidden', marginBottom: '12px' }}>
+          <div style={{ padding: '12px 20px', background: 'var(--taupe-50)', borderBottom: '1px solid var(--taupe-200)' }}>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ink)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Approval Trail</span>
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ background: '#F8F9FA' }}>
+              <tr style={{ background: 'var(--taupe-50)' }}>
                 {['Level','Approver','Status','Date'].map(h => (
-                  <th key={h} style={{ padding: '8px 14px', fontSize: '10px', fontWeight: 600, color: '#6B7280', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                  <th key={h} style={{ padding: '8px 14px', fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {approvals.map((a, i) => {
-                const statusColor = a.status === 'approved' ? '#15803D' : a.status === 'rejected' ? '#B91C1C' : a.status === 'waiting' ? '#9CA3AF' : '#B45309'
+                const statusColor = a.status === 'approved' ? 'var(--moss-text)' : a.status === 'rejected' ? 'var(--clay-text)' : a.status === 'waiting' ? 'var(--text-muted)' : 'var(--gold-text)'
                 return (
-                  <tr key={a.id} style={{ borderBottom: i < approvals.length - 1 ? '1px solid #F3F4F6' : 'none' }}>
-                    <td style={{ padding: '10px 14px', fontSize: '12px', color: '#374151', fontWeight: 600 }}>{a.approver_name}</td>
-                    <td style={{ padding: '10px 14px', fontSize: '11px', color: '#6B7280' }}>{a.approver_email ? getDisplayName(a.approver_email) : '—'}</td>
+                  <tr key={a.id} style={{ borderBottom: i < approvals.length - 1 ? '1px solid var(--taupe-100)' : 'none' }}>
+                    <td style={{ padding: '10px 14px', fontSize: '12px', color: 'var(--ink)', fontWeight: 600 }}>{a.approver_name}</td>
+                    <td style={{ padding: '10px 14px', fontSize: '11px', color: 'var(--text-muted)' }}>{a.approver_email ? getDisplayName(a.approver_email) : '—'}</td>
                     <td style={{ padding: '10px 14px', fontSize: '11px', fontWeight: 600, color: statusColor }}>{a.status.charAt(0).toUpperCase() + a.status.slice(1)}</td>
-                    <td style={{ padding: '10px 14px', fontSize: '12px', color: '#9CA3AF' }}>{fmtDate(a.actioned_at)}</td>
+                    <td style={{ padding: '10px 14px', fontSize: '12px', color: 'var(--text-muted)' }}>{fmtDate(a.actioned_at)}</td>
                   </tr>
                 )
               })}
@@ -416,19 +416,19 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
 
       {/* Action panel — Approve / Reject, shown only when the viewer can act */}
       {canAction && (
-        <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '20px', marginBottom: '12px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '14px' }}>
+        <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '20px', marginBottom: '12px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ink)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '14px' }}>
             Your Decision — Level {currentPending?.approver_level} ({currentPending?.approver_name})
           </div>
 
           {reviewingBy && (
-            <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '3px', padding: '8px 12px', marginBottom: '12px', fontSize: '12px', color: '#92400E' }}>
+            <div style={{ background: 'var(--gold-bg)', border: '1px solid var(--gold-border)', borderRadius: 'var(--radius-sm)', padding: '8px 12px', marginBottom: '12px', fontSize: '12px', color: 'var(--gold-text)' }}>
               ⚠ This PR is already being reviewed by <strong>{reviewingBy.viewer_name || reviewingBy.viewer_email}</strong>. Check with them before acting to avoid a duplicate decision.
             </div>
           )}
 
           {error && (
-            <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '3px', padding: '10px 14px', marginBottom: '12px', fontSize: '13px', color: '#B91C1C' }}>
+            <div style={{ background: 'var(--clay-bg)', border: '1px solid var(--clay-border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', marginBottom: '12px', fontSize: '13px', color: 'var(--clay-text)' }}>
               {error}
             </div>
           )}
@@ -438,39 +438,39 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
               <button
                 onClick={handleApprove}
                 disabled={saving}
-                style={{ height: '40px', padding: '0 28px', background: saving ? '#9CA3AF' : '#15803D', color: '#FFFFFF', border: 'none', borderRadius: '3px', fontSize: '13px', fontWeight: 600, cursor: saving ? 'default' : 'pointer' }}
+                style={{ height: '40px', padding: '0 28px', background: saving ? 'var(--text-muted)' : 'var(--moss-text)', color: 'var(--surface-card)', border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 600, cursor: saving ? 'default' : 'pointer' }}
               >
                 {saving ? 'Saving…' : 'Approve'}
               </button>
               <button
                 onClick={() => setRejecting(true)}
                 disabled={saving}
-                style={{ height: '40px', padding: '0 24px', background: '#FFFFFF', color: '#B91C1C', border: '1px solid #FECACA', borderRadius: '3px', fontSize: '13px', cursor: 'pointer' }}
+                style={{ height: '40px', padding: '0 24px', background: 'var(--surface-card)', color: 'var(--clay-text)', border: '1px solid var(--clay-border)', borderRadius: 'var(--radius-sm)', fontSize: '13px', cursor: 'pointer' }}
               >
                 Reject
               </button>
             </div>
           ) : (
             <div>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>Rejection reason</div>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)', marginBottom: '8px' }}>Rejection reason</div>
               <textarea
                 value={reason}
                 onChange={e => setReason(e.target.value)}
                 rows={3}
                 placeholder="Explain why this purchase request is being rejected…"
-                style={{ width: '100%', border: '1px solid #E3E8EF', borderRadius: '3px', padding: '10px 12px', fontSize: '13px', color: '#1A1F36', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit', marginBottom: '12px' }}
+                style={{ width: '100%', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', fontSize: '13px', color: 'var(--ink)', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit', marginBottom: '12px' }}
               />
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button
                   onClick={handleReject}
                   disabled={saving}
-                  style={{ height: '38px', padding: '0 24px', background: saving ? '#9CA3AF' : '#B91C1C', color: '#FFFFFF', border: 'none', borderRadius: '3px', fontSize: '13px', fontWeight: 600, cursor: saving ? 'default' : 'pointer' }}
+                  style={{ height: '38px', padding: '0 24px', background: saving ? 'var(--text-muted)' : 'var(--clay-text)', color: 'var(--surface-card)', border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 600, cursor: saving ? 'default' : 'pointer' }}
                 >
                   {saving ? 'Saving…' : 'Confirm Rejection'}
                 </button>
                 <button
                   onClick={() => { setRejecting(false); setReason('') }}
-                  style={{ height: '38px', padding: '0 18px', background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '3px', fontSize: '13px', cursor: 'pointer' }}
+                  style={{ height: '38px', padding: '0 18px', background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', fontSize: '13px', cursor: 'pointer' }}
                 >
                   Cancel
                 </button>
@@ -481,8 +481,8 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
       )}
 
       {isFullyApproved && (
-        <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '6px', padding: '14px 18px', marginBottom: '12px' }}>
-          <div style={{ fontSize: '13px', fontWeight: 600, color: '#15803D' }}>
+        <div style={{ background: 'var(--moss-bg)', border: '1px solid var(--moss-border)', borderRadius: 'var(--radius-md)', padding: '14px 18px', marginBottom: '12px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--moss-text)' }}>
             {pr.status === 'po_generated' ? 'Purchase Order issued — see Purchase Orders for details.' : 'Fully approved — Purchase Order pending Finance approval.'}
           </div>
         </div>
@@ -490,8 +490,8 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
 
       {/* Purchase Orders */}
       {(pos.length > 0 || canCreatePO) && (
-        <div style={{ background: '#fdf0ed', border: '1px solid #BFDBFE', borderRadius: '6px', padding: '16px 20px', marginBottom: '12px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: '#1E40AF', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '10px' }}>
+        <div style={{ background: 'var(--action-bg)', border: '1px solid var(--action-bg)', borderRadius: 'var(--radius-md)', padding: '16px 20px', marginBottom: '12px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--action)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '10px' }}>
             Purchase Order{pos.length !== 1 ? 's' : ''}
           </div>
 
@@ -507,7 +507,7 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
             >
               <Row label="PO Number" value={
                 onViewPO
-                  ? <span style={{ fontWeight: 700, color: '#1E40AF', textDecoration: 'underline' }}>{p.po_number}</span>
+                  ? <span style={{ fontWeight: 700, color: 'var(--action)', textDecoration: 'underline' }}>{p.po_number}</span>
                   : p.po_number
               } />
               <Row label="Amount" value={`₹${Number(p.amount || 0).toLocaleString('en-IN')}`} />
@@ -516,7 +516,7 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
           ))}
 
           {pr.amount != null && (
-            <div style={{ fontSize: '12px', color: '#1E40AF', marginTop: '10px', paddingTop: '10px', borderTop: pos.length > 0 ? '1px solid rgba(30,64,175,0.15)' : 'none' }}>
+            <div style={{ fontSize: '12px', color: 'var(--action)', marginTop: '10px', paddingTop: '10px', borderTop: pos.length > 0 ? '1px solid rgba(30,64,175,0.15)' : 'none' }}>
               Allocated ₹{allocated.toLocaleString('en-IN')} of ₹{Number(pr.amount).toLocaleString('en-IN')} approved · ₹{remaining.toLocaleString('en-IN')} remaining
             </div>
           )}
@@ -526,13 +526,13 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
               {!creatingPO ? (
                 <button
                   onClick={() => setCreatingPO(true)}
-                  style={{ height: '34px', padding: '0 16px', background: '#FFFFFF', color: '#1E40AF', border: '1px solid #BFDBFE', borderRadius: '4px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                  style={{ height: '34px', padding: '0 16px', background: 'var(--surface-card)', color: 'var(--action)', border: '1px solid var(--action-bg)', borderRadius: 'var(--radius-sm)', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
                 >
                   + Create Additional PO
                 </button>
               ) : (
                 <div>
-                  {poError && <div style={{ fontSize: '12px', color: '#B91C1C', marginBottom: '8px' }}>{poError}</div>}
+                  {poError && <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginBottom: '8px' }}>{poError}</div>}
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <AmountInput
                       value={newPOAmount}
@@ -543,13 +543,13 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
                     />
                     <button
                       onClick={handleCreateAdditionalPO}
-                      style={{ height: '34px', padding: '0 16px', background: '#1E40AF', color: '#FFFFFF', border: 'none', borderRadius: '4px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                      style={{ height: '34px', padding: '0 16px', background: 'var(--action)', color: 'var(--surface-card)', border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
                     >
                       Create
                     </button>
                     <button
                       onClick={() => { setCreatingPO(false); setNewPOAmount(''); setPoError(null) }}
-                      style={{ height: '34px', padding: '0 14px', background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}
+                      style={{ height: '34px', padding: '0 14px', background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', fontSize: '12px', cursor: 'pointer' }}
                     >
                       Cancel
                     </button>
@@ -562,22 +562,22 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
       )}
 
       {/* Linked Expense Report */}
-      <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '20px', marginBottom: '12px' }}>
-        <div style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '10px' }}>Linked Expense Report</div>
+      <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '20px', marginBottom: '12px' }}>
+        <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ink)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '10px' }}>Linked Expense Report</div>
         {linkedReport ? (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: '#8C3225', fontFamily: 'monospace' }}>{linkedReport.report_reference}</span>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--action)', fontFamily: 'monospace' }}>{linkedReport.report_reference}</span>
               {lc && (
-                <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 6px', borderRadius: '2px', background: lc.bg, color: lc.color }}>{lc.label}</span>
+                <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 6px', borderRadius: 'var(--radius-xs)', background: lc.bg, color: lc.color }}>{lc.label}</span>
               )}
             </div>
-            <div style={{ fontSize: '12px', color: '#374151' }}>
+            <div style={{ fontSize: '12px', color: 'var(--ink)' }}>
               INR {Number(linkedReport.total_amount || 0).toLocaleString('en-IN')} · {linkedReport.brand} · {linkedReport.status}
             </div>
           </div>
         ) : (
-          <div style={{ fontSize: '13px', color: '#9CA3AF' }}>No expense report linked yet. Finance can manually link one if needed.</div>
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>No expense report linked yet. Finance can manually link one if needed.</div>
         )}
       </div>
 

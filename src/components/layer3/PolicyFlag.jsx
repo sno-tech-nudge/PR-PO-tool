@@ -1,6 +1,6 @@
 const SEVERITY_STYLES = {
-  high: { bg: '#FFF7ED', border: '#FED7AA', dot: '#EA580C', text: '#9A3412', label: '#C2410C' },
-  medium: { bg: '#FEFCE8', border: '#FDE68A', dot: '#CA8A04', text: '#78350F', label: '#92400E' },
+  high: { bg: '#FFF7ED', border: '#FED7AA', dot: 'var(--clay)', text: '#9A3412', label: '#C2410C' },
+  medium: { bg: 'var(--gold-bg)', border: 'var(--gold-border)', dot: 'var(--gold-text)', text: '#78350F', label: 'var(--gold-text)' },
   low: { bg: '#F0F9FF', border: '#BAE6FD', dot: '#0284C7', text: '#0C4A6E', label: '#075985' },
 }
 
@@ -21,7 +21,7 @@ export default function PolicyFlag({ flag, expense }) {
   return (
     <div style={{
       border: `1px solid ${s.border}`,
-      borderRadius: '8px',
+      borderRadius: 'var(--radius-lg)',
       background: s.bg,
       padding: '12px 14px',
       marginBottom: '8px',
@@ -36,7 +36,7 @@ export default function PolicyFlag({ flag, expense }) {
             {label}
           </div>
           {expense && (
-            <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '4px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>
               {expense.vendor || 'Unknown vendor'}{expense.amount ? ` · ₹${Number(expense.amount).toLocaleString('en-IN')}` : ''}
             </div>
           )}

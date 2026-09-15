@@ -63,10 +63,10 @@ function AttendeeMultiSelect({ selected, onChange, directoryEntries }) {
   }
 
   const inputStyle = {
-    width: '100%', height: '44px', border: '1px solid #E8E8E8',
-    borderRadius: '4px', padding: '0 12px', fontSize: '14px',
-    color: '#1A1A1A', outline: 'none', boxSizing: 'border-box',
-    background: '#FFFFFF', fontFamily: 'inherit',
+    width: '100%', height: '44px', border: '1px solid var(--taupe-200)',
+    borderRadius: 'var(--radius-sm)', padding: '0 12px', fontSize: '14px',
+    color: 'var(--text)', outline: 'none', boxSizing: 'border-box',
+    background: 'var(--surface-card)', fontFamily: 'inherit',
   }
 
   return (
@@ -80,21 +80,21 @@ function AttendeeMultiSelect({ selected, onChange, directoryEntries }) {
         style={inputStyle}
       />
       {trimmed && (
-        <div style={{ border: '1px solid #E8E8E8', borderRadius: '4px', marginTop: '4px', overflow: 'hidden' }}>
+        <div style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', marginTop: '4px', overflow: 'hidden' }}>
           {filtered.map(d => (
             <div
               key={d.email}
               onClick={() => addAttendee(d.name, d.email)}
-              style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '13px', borderBottom: '1px solid #F3F4F6', display: 'flex', justifyContent: 'space-between' }}
+              style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '13px', borderBottom: '1px solid var(--taupe-100)', display: 'flex', justifyContent: 'space-between' }}
             >
               <span>{d.name}</span>
-              <span style={{ color: '#9CA3AF', fontSize: '11px' }}>{d.email}</span>
+              <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{d.email}</span>
             </div>
           ))}
           {!exactMatch && (
             <div
               onClick={() => addAttendee(trimmed)}
-              style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '13px', color: '#8C3225' }}
+              style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '13px', color: 'var(--action)' }}
             >
               + Add "{trimmed}" (not in directory)
             </div>
@@ -108,12 +108,12 @@ function AttendeeMultiSelect({ selected, onChange, directoryEntries }) {
               key={a.name}
               title={a.email || ''}
               style={{
-                fontSize: '12px', color: '#374151', background: '#F3F4F6',
-                borderRadius: '3px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '6px',
+                fontSize: '12px', color: 'var(--ink)', background: 'var(--taupe-100)',
+                borderRadius: 'var(--radius-sm)', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '6px',
               }}
             >
               {a.name}
-              <span onClick={() => removeAttendee(a.name)} style={{ cursor: 'pointer', color: '#9CA3AF' }}>×</span>
+              <span onClick={() => removeAttendee(a.name)} style={{ cursor: 'pointer', color: 'var(--text-muted)' }}>×</span>
             </span>
           ))}
         </div>
@@ -357,8 +357,8 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
   }
 
   const errors = submitAttempted ? getErrors() : {}
-  const errorText = { fontSize: '11px', color: '#DC2626', marginTop: '5px' }
-  const errBorder = (key) => (errors[key] ? '1px solid #DC2626' : undefined)
+  const errorText = { fontSize: '11px', color: 'var(--clay-text)', marginTop: '5px' }
+  const errBorder = (key) => (errors[key] ? '1px solid var(--clay-text)' : undefined)
 
   async function handleSave() {
     setSubmitAttempted(true)
@@ -415,35 +415,35 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
   }
 
   const inputStyle = {
-    width: '100%', height: '44px', border: '1px solid #E8E8E8',
-    borderRadius: '4px', padding: '0 12px', fontSize: '14px',
-    color: '#1A1A1A', outline: 'none', boxSizing: 'border-box',
-    background: '#FFFFFF', fontFamily: 'inherit',
+    width: '100%', height: '44px', border: '1px solid var(--taupe-200)',
+    borderRadius: 'var(--radius-sm)', padding: '0 12px', fontSize: '14px',
+    color: 'var(--text)', outline: 'none', boxSizing: 'border-box',
+    background: 'var(--surface-card)', fontFamily: 'inherit',
   }
 
   const labelStyle = {
-    fontSize: '12px', color: '#6B6B6B', marginBottom: '6px', display: 'block',
+    fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px', display: 'block',
   }
 
   const fieldWrap = { marginBottom: '16px' }
-  const required = <span style={{ color: '#DC2626' }}> *</span>
+  const required = <span style={{ color: 'var(--clay-text)' }}> *</span>
 
   return (
     <div style={{ maxWidth: '480px', margin: '0 auto', padding: '20px', width: '100%', paddingBottom: '100px' }}>
       {/* Back */}
       <div
         onClick={onBack}
-        style={{ fontSize: '13px', color: '#4A4A4A', cursor: 'pointer', textDecoration: 'underline', marginBottom: '20px' }}
+        style={{ fontSize: '13px', color: 'var(--text-muted)', cursor: 'pointer', textDecoration: 'underline', marginBottom: '20px' }}
       >
         ← Back
       </div>
 
       {/* Header */}
-      <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '4px' }}>Expense Details</div>
-      <div style={{ fontSize: '20px', fontWeight: 500, color: '#1A1A1A', marginBottom: '16px' }}>
+      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Expense Details</div>
+      <div style={{ fontSize: '20px', fontWeight: 500, color: 'var(--text)', marginBottom: '16px' }}>
         {isEdit ? 'Edit expense' : 'Quick details before saving'}
       </div>
-      <div style={{ height: '1px', background: '#E8E8E8', marginBottom: '20px' }} />
+      <div style={{ height: '1px', background: 'var(--taupe-200)', marginBottom: '20px' }} />
 
       {/* ══ Required ══ */}
 
@@ -460,23 +460,23 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
               onClick={() => setPoRelated(true)}
               style={{
                 flex: 1, padding: '12px 14px', cursor: 'pointer',
-                border: `1.5px solid ${poRelated === true ? '#1A1A1A' : '#E8E8E8'}`,
-                background: poRelated === true ? '#F7F7F7' : '#FFFFFF', borderRadius: '4px',
+                border: `1.5px solid ${poRelated === true ? 'var(--text)' : 'var(--taupe-200)'}`,
+                background: poRelated === true ? 'var(--taupe-50)' : 'var(--surface-card)', borderRadius: 'var(--radius-sm)',
               }}
             >
-              <div style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A1A' }}>Yes</div>
-              <div style={{ fontSize: '11px', color: '#6B6B6B', marginTop: '2px' }}>Paying against an issued PO</div>
+              <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>Yes</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Paying against an issued PO</div>
             </div>
             <div
               onClick={() => { setPoRelated(false); setPoId(''); setPoNumber('') }}
               style={{
                 flex: 1, padding: '12px 14px', cursor: 'pointer',
-                border: `1.5px solid ${poRelated === false ? '#1A1A1A' : '#E8E8E8'}`,
-                background: poRelated === false ? '#F7F7F7' : '#FFFFFF', borderRadius: '4px',
+                border: `1.5px solid ${poRelated === false ? 'var(--text)' : 'var(--taupe-200)'}`,
+                background: poRelated === false ? 'var(--taupe-50)' : 'var(--surface-card)', borderRadius: 'var(--radius-sm)',
               }}
             >
-              <div style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A1A' }}>No</div>
-              <div style={{ fontSize: '11px', color: '#6B6B6B', marginTop: '2px' }}>A normal expense</div>
+              <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>No</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>A normal expense</div>
             </div>
           </div>
 
@@ -493,7 +493,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
                 ))}
               </select>
               {errors.poId && <div style={errorText}>{errors.poId}</div>}
-              {poLoading && <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '4px' }}>Filling in details from this PO…</div>}
+              {poLoading && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Filling in details from this PO…</div>}
             </div>
           )}
           {errors.poRelated && <div style={errorText}>{errors.poRelated}</div>}
@@ -511,7 +511,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
               <option key={po.id} value={po.id}>{poOptionLabel(po)}</option>
             ))}
           </select>
-          {poLoading && <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '4px' }}>Filling in details from this PO…</div>}
+          {poLoading && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Filling in details from this PO…</div>}
         </div>
       )}
 
@@ -548,9 +548,9 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
       {/* Category */}
       <div style={fieldWrap}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-          <span style={{ fontSize: '12px', color: '#6B6B6B' }}>Category{required}</span>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Category{required}</span>
           {suggestedCategory && category === suggestedCategory && (
-            <span style={{ fontSize: '11px', color: '#6B6B6B' }}>Suggested</span>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Suggested</span>
           )}
         </div>
         <select
@@ -570,7 +570,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
           <label style={{ ...labelStyle, marginBottom: 0 }}>Amount{required}</label>
           <span
             onClick={() => setItemized(v => !v)}
-            style={{ fontSize: '12px', color: '#8C3225', cursor: 'pointer', textDecoration: 'underline' }}
+            style={{ fontSize: '12px', color: 'var(--action)', cursor: 'pointer', textDecoration: 'underline' }}
           >
             {itemized ? 'Remove itemization' : 'Itemize'}
           </span>
@@ -601,7 +601,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
                 />
                 <div
                   onClick={() => removeItemLine(idx)}
-                  style={{ fontSize: '12px', color: '#6B6B6B', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '0 4px' }}
+                  style={{ fontSize: '12px', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '0 4px' }}
                 >
                   ✕
                 </div>
@@ -609,11 +609,11 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
             ))}
             <div
               onClick={addItemLine}
-              style={{ fontSize: '12px', color: '#4A4A4A', cursor: 'pointer', marginBottom: '8px' }}
+              style={{ fontSize: '12px', color: 'var(--text-muted)', cursor: 'pointer', marginBottom: '8px' }}
             >
               + Add line item
             </div>
-            <div style={{ fontSize: '13px', color: '#1A1A1A', fontWeight: 500 }}>
+            <div style={{ fontSize: '13px', color: 'var(--text)', fontWeight: 500 }}>
               Total: ₹{itemTotal.toFixed(2)}
             </div>
           </div>
@@ -689,13 +689,13 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
               onClick={() => setExpenseType(opt.key)}
               style={{
                 flex: 1, padding: '10px 12px', cursor: 'pointer',
-                border: `1.5px solid ${expenseType === opt.key ? '#1A1A1A' : '#E8E8E8'}`,
-                background: expenseType === opt.key ? '#F7F7F7' : '#FFFFFF',
-                borderRadius: '4px',
+                border: `1.5px solid ${expenseType === opt.key ? 'var(--text)' : 'var(--taupe-200)'}`,
+                background: expenseType === opt.key ? 'var(--taupe-50)' : 'var(--surface-card)',
+                borderRadius: 'var(--radius-sm)',
               }}
             >
-              <div style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A1A' }}>{opt.label}</div>
-              <div style={{ fontSize: '11px', color: '#6B6B6B', marginTop: '2px' }}>{opt.sub}</div>
+              <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>{opt.label}</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{opt.sub}</div>
             </div>
           ))}
         </div>
@@ -703,7 +703,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
 
         {expenseType === 'my_team' && (
           <div style={{ marginTop: '10px' }}>
-            <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '8px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
               How many people including you{required}
             </div>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -714,10 +714,10 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
                   style={{
                     width: '44px', height: '44px',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    border: `1.5px solid ${attendeeCount === n ? '#1A1A1A' : errors.attendeeCount ? '#DC2626' : '#E8E8E8'}`,
-                    background: attendeeCount === n ? '#1A1A1A' : '#FFFFFF',
-                    color: attendeeCount === n ? '#FFFFFF' : '#1A1A1A',
-                    fontSize: '13px', fontWeight: 500, cursor: 'pointer', borderRadius: '4px',
+                    border: `1.5px solid ${attendeeCount === n ? 'var(--text)' : errors.attendeeCount ? 'var(--clay-text)' : 'var(--taupe-200)'}`,
+                    background: attendeeCount === n ? 'var(--text)' : 'var(--surface-card)',
+                    color: attendeeCount === n ? 'var(--surface-card)' : 'var(--text)',
+                    fontSize: '13px', fontWeight: 500, cursor: 'pointer', borderRadius: 'var(--radius-sm)',
                   }}
                 >
                   {n}
@@ -737,13 +737,13 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
             )}
 
             {perPersonAmount && (
-              <div style={{ fontSize: '12px', color: '#4A4A4A', marginTop: '8px' }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>
                 ₹{Number(perPersonAmount).toLocaleString('en-IN')} per person
               </div>
             )}
 
             <div style={{ marginTop: '10px' }}>
-              <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '4px' }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>
                 Names of attendees{required}
               </div>
               <AttendeeMultiSelect selected={attendees} onChange={setAttendees} directoryEntries={directoryEntries} />
@@ -779,7 +779,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
           onChange={e => setReimbursable(e.target.checked)}
           style={{ width: '16px', height: '16px' }}
         />
-        <label htmlFor="claim-reimbursement" style={{ fontSize: '13px', color: '#1A1A1A', cursor: 'pointer' }}>
+        <label htmlFor="claim-reimbursement" style={{ fontSize: '13px', color: 'var(--text)', cursor: 'pointer' }}>
           Claim reimbursement
         </label>
       </div>
@@ -923,24 +923,24 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
       </div>
 
       {error && (
-        <div style={{ fontSize: '13px', color: '#DC2626', marginBottom: '8px' }}>{error}</div>
+        <div style={{ fontSize: '13px', color: 'var(--clay-text)', marginBottom: '8px' }}>{error}</div>
       )}
 
       {/* Fixed bottom */}
       <div style={{ position: 'fixed', bottom: 0, left: '220px', right: 0, zIndex: 10 }}>
         <div style={{
           maxWidth: '480px', margin: '0 auto',
-          background: '#FFFFFF', borderTop: '1px solid #E8E8E8', padding: '16px',
+          background: 'var(--surface-card)', borderTop: '1px solid var(--taupe-200)', padding: '16px',
         }}>
           <button
             onClick={handleSave}
             disabled={saving}
             style={{
               width: '100%', height: '48px',
-              background: saving ? '#9CA3AF' : '#1A1A1A',
-              color: '#FFFFFF', border: 'none',
+              background: saving ? 'var(--text-muted)' : 'var(--text)',
+              color: 'var(--surface-card)', border: 'none',
               fontSize: '14px', fontWeight: 500,
-              cursor: saving ? 'default' : 'pointer', borderRadius: '4px',
+              cursor: saving ? 'default' : 'pointer', borderRadius: 'var(--radius-sm)',
             }}
           >
             {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Save expense'}

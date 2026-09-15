@@ -51,7 +51,7 @@ export default function QuoteRows({ value = {}, onChange, requiredQuotes = 2, er
     <div>
       {/* Single-source toggle */}
       <div style={{ marginBottom: '16px' }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--ink)' }}>
           <input
             type="checkbox"
             checked={!!value.singleSource}
@@ -64,25 +64,25 @@ export default function QuoteRows({ value = {}, onChange, requiredQuotes = 2, er
 
       {value.singleSource ? (
         <div>
-          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '5px' }}>
-            Single Source Justification<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: '5px' }}>
+            Single Source Justification<span style={{ color: 'var(--clay-text)', marginLeft: '2px' }}>*</span>
           </label>
           <textarea
             value={value.singleSourceJustification || ''}
             onChange={e => set({ singleSourceJustification: e.target.value })}
             placeholder="Explain why this procurement can only be done from a single vendor (proprietary product, sole distributor, technical reasons, etc.)"
             rows={4}
-            style={{ width: '100%', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '10px', fontSize: '13px', color: '#1A1F36', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }}
+            style={{ width: '100%', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', padding: '10px', fontSize: '13px', color: 'var(--ink)', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }}
           />
 
           {/* Even a single-vendor purchase still needs its one quotation attached */}
-          <div style={{ marginTop: '14px', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '14px', background: '#FFFFFF' }}>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '10px' }}>Quotation</div>
+          <div style={{ marginTop: '14px', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '14px', background: 'var(--surface-card)' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: '10px' }}>Quotation</div>
             <QuoteUpload
               skipExtraction
               onFileUploaded={path => updateQuote(0, { quote_path: path, selected: true })}
             />
-            <div style={{ fontSize: '11px', color: quotes[0].quote_path ? '#15803D' : '#9CA3AF', marginTop: '6px' }}>
+            <div style={{ fontSize: '11px', color: quotes[0].quote_path ? 'var(--moss-text)' : 'var(--text-muted)', marginTop: '6px' }}>
               {quotes[0].quote_path ? '✓ Document uploaded' : 'Document not uploaded'}
             </div>
           </div>
@@ -90,9 +90,9 @@ export default function QuoteRows({ value = {}, onChange, requiredQuotes = 2, er
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {quotes.map((q, idx) => (
-            <div key={idx} style={{ border: '1px solid #E3E8EF', borderRadius: '6px', padding: '14px', background: q.selected ? '#F0FDF4' : '#FFFFFF' }}>
+            <div key={idx} style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '14px', background: q.selected ? 'var(--moss-bg)' : 'var(--surface-card)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, color: '#374151' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, color: 'var(--ink)' }}>
                   <input
                     type="radio"
                     name="quote-winner"
@@ -106,7 +106,7 @@ export default function QuoteRows({ value = {}, onChange, requiredQuotes = 2, er
                   <button
                     type="button"
                     onClick={() => removeRow(idx)}
-                    style={{ background: 'none', border: 'none', color: '#B91C1C', fontSize: '11px', cursor: 'pointer', padding: 0 }}
+                    style={{ background: 'none', border: 'none', color: 'var(--clay-text)', fontSize: '11px', cursor: 'pointer', padding: 0 }}
                   >
                     Remove
                   </button>
@@ -115,16 +115,16 @@ export default function QuoteRows({ value = {}, onChange, requiredQuotes = 2, er
 
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '8px', marginBottom: '10px' }}>
                 <div>
-                  <div style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '3px' }}>Vendor name</div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '3px' }}>Vendor name</div>
                   <input
                     value={q.vendor_name}
                     onChange={e => updateQuote(idx, { vendor_name: e.target.value })}
                     placeholder="Vendor / supplier"
-                    style={{ width: '100%', height: '34px', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '0 8px', fontSize: '12px', color: '#1A1F36', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', height: '34px', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', padding: '0 8px', fontSize: '12px', color: 'var(--ink)', background: 'var(--surface-card)', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
                 <div>
-                  <div style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '3px' }}>Quote amount</div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '3px' }}>Quote amount</div>
                   <AmountInput
                     value={q.amount}
                     onChange={v => updateQuote(idx, { amount: v })}
@@ -143,7 +143,7 @@ export default function QuoteRows({ value = {}, onChange, requiredQuotes = 2, er
                 }}
                 onFileUploaded={path => updateQuote(idx, { quote_path: path })}
               />
-              <div style={{ fontSize: '11px', color: q.quote_path ? '#15803D' : '#9CA3AF', marginTop: '6px' }}>
+              <div style={{ fontSize: '11px', color: q.quote_path ? 'var(--moss-text)' : 'var(--text-muted)', marginTop: '6px' }}>
                 {q.quote_path ? '✓ Document uploaded' : 'Document not uploaded'}
               </div>
             </div>
@@ -152,7 +152,7 @@ export default function QuoteRows({ value = {}, onChange, requiredQuotes = 2, er
           <button
             type="button"
             onClick={addRow}
-            style={{ alignSelf: 'flex-start', background: 'none', border: '1px dashed #C4826F', color: '#8C3225', fontSize: '12px', cursor: 'pointer', borderRadius: '4px', padding: '6px 12px' }}
+            style={{ alignSelf: 'flex-start', background: 'none', border: '1px dashed var(--text-on-dark-muted)', color: 'var(--action)', fontSize: '12px', cursor: 'pointer', borderRadius: 'var(--radius-sm)', padding: '6px 12px' }}
           >
             + Add another quote
           </button>
@@ -162,11 +162,11 @@ export default function QuoteRows({ value = {}, onChange, requiredQuotes = 2, er
               Word doc shipped with the app (public/), not user data. AIC has
               its own format, swapped in purely by which link/filename is
               shown; the upload/attach step itself is unchanged either way. */}
-          <div style={{ border: '1px solid #E3E8EF', borderRadius: '6px', padding: '14px', background: '#FFFFFF' }}>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>
-              Comparative Statement<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
+          <div style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '14px', background: 'var(--surface-card)' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: '4px' }}>
+              Comparative Statement<span style={{ color: 'var(--clay-text)', marginLeft: '2px' }}>*</span>
             </div>
-            <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '10px', lineHeight: 1.5 }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px', lineHeight: 1.5 }}>
               Download the format, fill in the details, and upload it back here as a PDF.
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '10px' }}>
@@ -175,9 +175,9 @@ export default function QuoteRows({ value = {}, onChange, requiredQuotes = 2, er
                 download={boilerplate.download}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: '6px',
-                  fontSize: '12px', fontWeight: 600, color: '#8C3225',
-                  border: '1px solid #f9c5b7', background: '#fdf0ed',
-                  borderRadius: '4px', padding: '7px 12px', textDecoration: 'none',
+                  fontSize: '12px', fontWeight: 600, color: 'var(--action)',
+                  border: '1px solid var(--taupe-300)', background: 'var(--action-bg)',
+                  borderRadius: 'var(--radius-sm)', padding: '7px 12px', textDecoration: 'none',
                 }}
               >
                 ↓ Download comparative statement format (.docx){entity === AIC_ENTITY ? ' — AIC' : ''}
@@ -191,9 +191,9 @@ export default function QuoteRows({ value = {}, onChange, requiredQuotes = 2, er
                 rel="noopener noreferrer"
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: '6px',
-                  fontSize: '12px', fontWeight: 600, color: '#374151',
-                  border: '1px solid #D1D5DB', background: '#FFFFFF',
-                  borderRadius: '4px', padding: '7px 12px', textDecoration: 'none',
+                  fontSize: '12px', fontWeight: 600, color: 'var(--ink)',
+                  border: '1px solid var(--taupe-400)', background: 'var(--surface-card)',
+                  borderRadius: 'var(--radius-sm)', padding: '7px 12px', textDecoration: 'none',
                 }}
               >
                 ↗ View sample comparative statement
@@ -203,7 +203,7 @@ export default function QuoteRows({ value = {}, onChange, requiredQuotes = 2, er
               skipExtraction
               onFileUploaded={path => set({ comparative_statement_path: path })}
             />
-            <div style={{ fontSize: '11px', color: value.comparative_statement_path ? '#15803D' : '#9CA3AF', marginTop: '6px' }}>
+            <div style={{ fontSize: '11px', color: value.comparative_statement_path ? 'var(--moss-text)' : 'var(--text-muted)', marginTop: '6px' }}>
               {value.comparative_statement_path ? '✓ Document uploaded' : 'Document not uploaded'}
             </div>
           </div>
@@ -211,7 +211,7 @@ export default function QuoteRows({ value = {}, onChange, requiredQuotes = 2, er
       )}
 
       {error && (
-        <div style={{ fontSize: '12px', color: '#DC2626', marginTop: '8px' }}>{error}</div>
+        <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginTop: '8px' }}>{error}</div>
       )}
     </div>
   )

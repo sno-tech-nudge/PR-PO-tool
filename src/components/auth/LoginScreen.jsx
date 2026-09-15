@@ -18,29 +18,29 @@ export default function LoginScreen({ onLogin }) {
 
   return (
     <div style={{
-      minHeight: '100vh', background: '#F9FAFB',
+      minHeight: '100vh', background: 'var(--taupe-50)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '24px',
     }}>
       <div style={{
         width: '100%', maxWidth: '380px',
-        background: '#FFFFFF', border: '1px solid #E5E7EB',
-        borderRadius: '12px', padding: '40px',
-        boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+        background: 'var(--surface-card)', border: '1px solid var(--taupe-200)',
+        borderRadius: 'var(--radius-xl)', padding: '40px',
+        boxShadow: '0 1px 4px rgba(54, 32, 26,0.06)',
       }}>
         {/* Brand */}
         <div style={{ marginBottom: '32px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: '#9CA3AF', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '4px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '4px' }}>
             The Nudge Institute
           </div>
-          <div style={{ fontSize: '22px', fontWeight: 800, color: '#111827' }}>
+          <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--ink)' }}>
             Expense Tracker
           </div>
         </div>
 
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Work email
             </label>
             <input
@@ -52,8 +52,8 @@ export default function LoginScreen({ onLogin }) {
               autoFocus
               style={{
                 width: '100%', height: '44px',
-                border: '1px solid #E5E7EB', borderRadius: '8px',
-                padding: '0 14px', fontSize: '14px', color: '#111827',
+                border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)',
+                padding: '0 14px', fontSize: '14px', color: 'var(--ink)',
                 outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
               }}
             />
@@ -61,9 +61,9 @@ export default function LoginScreen({ onLogin }) {
 
           {error && (
             <div style={{
-              fontSize: '12px', color: '#DC2626',
-              background: '#FEF2F2', border: '1px solid #FECACA',
-              borderRadius: '6px', padding: '10px 12px', marginBottom: '16px',
+              fontSize: '12px', color: 'var(--clay-text)',
+              background: 'var(--clay-bg)', border: '1px solid var(--clay-border)',
+              borderRadius: 'var(--radius-md)', padding: '10px 12px', marginBottom: '16px',
             }}>
               {error}
             </div>
@@ -74,9 +74,9 @@ export default function LoginScreen({ onLogin }) {
             disabled={!email.includes('@') || loading}
             style={{
               width: '100%', height: '44px',
-              background: !email.includes('@') || loading ? '#E5E7EB' : '#111827',
-              color: !email.includes('@') || loading ? '#9CA3AF' : '#FFFFFF',
-              border: 'none', borderRadius: '8px',
+              background: !email.includes('@') || loading ? 'var(--taupe-200)' : 'var(--ink)',
+              color: !email.includes('@') || loading ? 'var(--text-muted)' : 'var(--surface-card)',
+              border: 'none', borderRadius: 'var(--radius-lg)',
               fontSize: '14px', fontWeight: 600,
               cursor: !email.includes('@') || loading ? 'default' : 'pointer',
             }}
@@ -85,7 +85,7 @@ export default function LoginScreen({ onLogin }) {
           </button>
         </form>
 
-        <div style={{ marginTop: '20px', fontSize: '11px', color: '#9CA3AF', textAlign: 'center' }}>
+        <div style={{ marginTop: '20px', fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center' }}>
           Access restricted to authorised TNI staff only.
         </div>
       </div>

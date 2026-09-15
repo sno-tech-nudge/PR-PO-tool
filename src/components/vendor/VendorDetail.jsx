@@ -18,18 +18,18 @@ function fmtDate(d) {
 
 function Row({ label, value, mono }) {
   return (
-    <div style={{ padding: '10px 20px', borderBottom: '1px solid #F3F4F6', display: 'flex' }}>
-      <div style={{ width: '200px', fontSize: '11px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0, paddingTop: '1px' }}>{label}</div>
-      <div style={{ fontSize: '13px', color: '#1A1F36', fontFamily: mono ? 'monospace' : 'inherit', flex: 1 }}>{value || '—'}</div>
+    <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--taupe-100)', display: 'flex' }}>
+      <div style={{ width: '200px', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0, paddingTop: '1px' }}>{label}</div>
+      <div style={{ fontSize: '13px', color: 'var(--ink)', fontFamily: mono ? 'monospace' : 'inherit', flex: 1 }}>{value || '—'}</div>
     </div>
   )
 }
 
 function Section({ title, children }) {
   return (
-    <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '3px', marginBottom: '12px', overflow: 'hidden' }}>
-      <div style={{ padding: '12px 20px', background: '#F8F9FA', borderBottom: '1px solid #E3E8EF' }}>
-        <span style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{title}</span>
+    <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', marginBottom: '12px', overflow: 'hidden' }}>
+      <div style={{ padding: '12px 20px', background: 'var(--taupe-50)', borderBottom: '1px solid var(--taupe-200)' }}>
+        <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ink)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{title}</span>
       </div>
       {children}
     </div>
@@ -121,10 +121,10 @@ export default function VendorDetail({ vendorId, user, onBack, onEdit, onApprove
   }
 
   if (loading) return (
-    <div style={{ padding: '40px 28px', textAlign: 'center', fontSize: '13px', color: '#6B7280' }}>Loading…</div>
+    <div style={{ padding: '40px 28px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>Loading…</div>
   )
   if (!vendor) return (
-    <div style={{ padding: '40px 28px', textAlign: 'center', fontSize: '13px', color: '#9CA3AF' }}>Vendor not found.</div>
+    <div style={{ padding: '40px 28px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>Vendor not found.</div>
   )
 
   const canEdit = !canAccessFinance(user.role) && vendor.submitted_by === user.email && vendor.status !== 'approved'
@@ -133,22 +133,22 @@ export default function VendorDetail({ vendorId, user, onBack, onEdit, onApprove
     (canAccessFinance(user.role) || vendor.submitted_by === user.email)
 
   return (
-    <div style={{ background: '#F4F5F7', minHeight: '100vh', paddingBottom: '40px' }}>
+    <div style={{ background: 'var(--taupe-50)', minHeight: '100vh', paddingBottom: '40px' }}>
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px 28px' }}>
         {/* Breadcrumb */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '20px' }}>
-          <span onClick={onBack} style={{ fontSize: '12px', color: '#8C3225', cursor: 'pointer' }}>{backLabel}</span>
-          <span style={{ fontSize: '12px', color: '#9CA3AF' }}>/</span>
-          <span style={{ fontSize: '12px', color: '#6B7280', fontFamily: 'monospace' }}>{vendor.vendor_id}</span>
+          <span onClick={onBack} style={{ fontSize: '12px', color: 'var(--action)', cursor: 'pointer' }}>{backLabel}</span>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>/</span>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{vendor.vendor_id}</span>
         </div>
 
         {/* Header card */}
-        <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '3px', marginBottom: '12px', overflow: 'hidden' }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid #E3E8EF', background: '#F8F9FA', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', marginBottom: '12px', overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--taupe-200)', background: 'var(--taupe-50)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <div style={{ fontSize: '11px', color: '#9CA3AF', fontFamily: 'monospace', marginBottom: '4px' }}>{vendor.vendor_id}</div>
-              <div style={{ fontSize: '20px', fontWeight: 700, color: '#1A1F36' }}>{vendor.org_name}</div>
-              <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px' }}>{vendor.org_type}</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace', marginBottom: '4px' }}>{vendor.vendor_id}</div>
+              <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--ink)' }}>{vendor.org_name}</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{vendor.org_type}</div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
               <VendorStatusBadge status={vendor.status} size="lg" />
@@ -156,7 +156,7 @@ export default function VendorDetail({ vendorId, user, onBack, onEdit, onApprove
                 {canEdit && (
                   <button
                     onClick={() => onEdit(vendor)}
-                    style={{ height: '30px', padding: '0 14px', background: '#FFFFFF', color: '#374151', border: '1px solid #E3E8EF', borderRadius: '3px', fontSize: '12px', cursor: 'pointer' }}
+                    style={{ height: '30px', padding: '0 14px', background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', fontSize: '12px', cursor: 'pointer' }}
                   >
                     Edit & Resubmit
                   </button>
@@ -164,7 +164,7 @@ export default function VendorDetail({ vendorId, user, onBack, onEdit, onApprove
                 {canApprove && (
                   <button
                     onClick={() => onApprove(vendor)}
-                    style={{ height: '30px', padding: '0 14px', background: '#8C3225', color: '#FFFFFF', border: 'none', borderRadius: '3px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                    style={{ height: '30px', padding: '0 14px', background: 'var(--action)', color: 'var(--surface-card)', border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
                   >
                     Review Vendor
                   </button>
@@ -172,7 +172,7 @@ export default function VendorDetail({ vendorId, user, onBack, onEdit, onApprove
                 {canRequestBankChange && (
                   <button
                     onClick={() => onBankChange(vendor)}
-                    style={{ height: '30px', padding: '0 14px', background: '#FFFFFF', color: '#374151', border: '1px solid #E3E8EF', borderRadius: '3px', fontSize: '12px', cursor: 'pointer' }}
+                    style={{ height: '30px', padding: '0 14px', background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', fontSize: '12px', cursor: 'pointer' }}
                   >
                     Request Bank Detail Change
                   </button>
@@ -188,23 +188,23 @@ export default function VendorDetail({ vendorId, user, onBack, onEdit, onApprove
               vendor.approved_at ? { label: 'Approved By', value: getDisplayName(vendor.approved_by) } : null,
               vendor.approved_at ? { label: 'Approved On', value: fmtDate(vendor.approved_at) } : null,
             ].filter(Boolean).map((f, i) => (
-              <div key={i} style={{ padding: '12px 20px', borderRight: '1px solid #F3F4F6', borderBottom: '1px solid #F3F4F6' }}>
-                <div style={{ fontSize: '10px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>{f.label}</div>
-                <div style={{ fontWeight: 600, color: '#1A1F36', fontFamily: 'monospace', fontSize: '11px' }}>{f.value || '—'}</div>
+              <div key={i} style={{ padding: '12px 20px', borderRight: '1px solid var(--taupe-100)', borderBottom: '1px solid var(--taupe-100)' }}>
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>{f.label}</div>
+                <div style={{ fontWeight: 600, color: 'var(--ink)', fontFamily: 'monospace', fontSize: '11px' }}>{f.value || '—'}</div>
               </div>
             ))}
           </div>
 
           {vendor.rejection_reason && (
-            <div style={{ margin: '0 20px 16px', padding: '10px 14px', background: '#FEF2F2', borderRadius: '2px', borderLeft: '3px solid #EF4444' }}>
-              <div style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rejection Reason</div>
-              <div style={{ fontSize: '12px', color: '#B91C1C' }}>{vendor.rejection_reason}</div>
+            <div style={{ margin: '0 20px 16px', padding: '10px 14px', background: 'var(--clay-bg)', borderRadius: 'var(--radius-xs)', borderLeft: '3px solid var(--clay)' }}>
+              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rejection Reason</div>
+              <div style={{ fontSize: '12px', color: 'var(--clay-text)' }}>{vendor.rejection_reason}</div>
             </div>
           )}
           {vendor.status === 'approved' && vendor.notes && (
-            <div style={{ margin: '0 20px 16px', padding: '10px 14px', background: '#F0FDF4', borderRadius: '2px', borderLeft: '3px solid #15803D' }}>
-              <div style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Finance Comment</div>
-              <div style={{ fontSize: '12px', color: '#15803D' }}>{vendor.notes}</div>
+            <div style={{ margin: '0 20px 16px', padding: '10px 14px', background: 'var(--moss-bg)', borderRadius: 'var(--radius-xs)', borderLeft: '3px solid var(--moss-text)' }}>
+              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Finance Comment</div>
+              <div style={{ fontSize: '12px', color: 'var(--moss-text)' }}>{vendor.notes}</div>
             </div>
           )}
         </div>
@@ -213,11 +213,11 @@ export default function VendorDetail({ vendorId, user, onBack, onEdit, onApprove
           <Row label="Nature of Business" value={vendor.nature_of_business} />
           <Row label="PAN Number" value={vendor.pan_number} mono />
           {panSiblings.length > 0 && (
-            <div style={{ padding: '10px 20px', borderBottom: '1px solid #F3F4F6', display: 'flex' }}>
-              <div style={{ width: '200px', fontSize: '11px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0, paddingTop: '1px' }}>Other Vendors with this PAN</div>
+            <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--taupe-100)', display: 'flex' }}>
+              <div style={{ width: '200px', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0, paddingTop: '1px' }}>Other Vendors with this PAN</div>
               <div
                 onClick={() => setShowPanModal(true)}
-                style={{ fontSize: '13px', color: '#8C3225', cursor: 'pointer', textDecoration: 'underline' }}
+                style={{ fontSize: '13px', color: 'var(--action)', cursor: 'pointer', textDecoration: 'underline' }}
               >
                 {panSiblings.length} other vendor{panSiblings.length !== 1 ? 's' : ''} — View
               </div>
@@ -238,19 +238,19 @@ export default function VendorDetail({ vendorId, user, onBack, onEdit, onApprove
             <Row label="Aadhaar-PAN Linked" value={vendor.aadhaar_pan_linked ? 'Confirmed by vendor' : 'Not confirmed'} />
             <div style={{ padding: '16px 20px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
               {aadhaarUrl ? (
-                <a href={aadhaarUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: '#8C3225', textDecoration: 'underline' }}>
+                <a href={aadhaarUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: 'var(--action)', textDecoration: 'underline' }}>
                   View Aadhaar Copy
                 </a>
               ) : (
-                <span style={{ fontSize: '13px', color: '#9CA3AF' }}>Aadhaar copy not available</span>
+                <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Aadhaar copy not available</span>
               )}
               {vendor.aadhaar_pan_linked && (
                 aadhaarProofUrl ? (
-                  <a href={aadhaarProofUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: '#8C3225', textDecoration: 'underline' }}>
+                  <a href={aadhaarProofUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: 'var(--action)', textDecoration: 'underline' }}>
                     View Aadhaar-PAN Link Proof
                   </a>
                 ) : (
-                  <span style={{ fontSize: '13px', color: '#9CA3AF' }}>Link proof not available</span>
+                  <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Link proof not available</span>
                 )
               )}
             </div>
@@ -288,24 +288,24 @@ export default function VendorDetail({ vendorId, user, onBack, onEdit, onApprove
             ].filter(([label]) => label).map(([label, url]) => (
               url ? (
                 <a key={label} href={url} target="_blank" rel="noopener noreferrer"
-                  style={{ fontSize: '13px', color: '#8C3225', textDecoration: 'underline' }}>
+                  style={{ fontSize: '13px', color: 'var(--action)', textDecoration: 'underline' }}>
                   View {label}
                 </a>
               ) : (
-                <span key={label} style={{ fontSize: '13px', color: '#9CA3AF' }}>{label} not available</span>
+                <span key={label} style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{label} not available</span>
               )
             ))}
           </div>
         </Section>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-          {downloadError && <span style={{ fontSize: '12px', color: '#B91C1C' }}>{downloadError}</span>}
+          {downloadError && <span style={{ fontSize: '12px', color: 'var(--clay-text)' }}>{downloadError}</span>}
           <button
             onClick={handleDownloadPDF}
             disabled={downloading}
             style={{
-              height: '36px', padding: '0 16px', background: downloading ? '#9CA3AF' : '#FFFFFF',
-              color: downloading ? '#FFFFFF' : '#374151', border: '1px solid #D1D5DB', borderRadius: '3px',
+              height: '36px', padding: '0 16px', background: downloading ? 'var(--text-muted)' : 'var(--surface-card)',
+              color: downloading ? 'var(--surface-card)' : 'var(--ink)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)',
               fontSize: '12px', fontWeight: 600, cursor: downloading ? 'default' : 'pointer',
             }}
           >

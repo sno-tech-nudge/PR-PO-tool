@@ -90,12 +90,12 @@ export default function Step1Receipt({ onComplete }) {
 
   return (
     <div>
-      <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '4px' }}>New Expense</div>
-      <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '16px' }}>Step 1 of 2</div>
-      <div style={{ fontSize: '20px', fontWeight: 500, color: '#1A1A1A', marginBottom: '6px' }}>
+      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>New Expense</div>
+      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>Step 1 of 2</div>
+      <div style={{ fontSize: '20px', fontWeight: 500, color: 'var(--text)', marginBottom: '6px' }}>
         Add your receipt
       </div>
-      <div style={{ fontSize: '13px', color: '#4A4A4A', marginBottom: '20px' }}>
+      <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>
         Paper receipt, screenshot, or PDF from an online purchase
       </div>
 
@@ -104,8 +104,8 @@ export default function Step1Receipt({ onComplete }) {
           <button
             onClick={() => cameraRef.current?.click()}
             style={{
-              width: '100%', height: '48px', background: '#8C3225', color: '#FFFFFF',
-              border: 'none', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: '4px',
+              width: '100%', height: '48px', background: 'var(--action)', color: 'var(--surface-card)',
+              border: 'none', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: 'var(--radius-sm)',
             }}
           >
             Take photo
@@ -113,8 +113,8 @@ export default function Step1Receipt({ onComplete }) {
           <button
             onClick={() => galleryRef.current?.click()}
             style={{
-              width: '100%', height: '48px', background: '#FFFFFF', color: '#1A1A1A',
-              border: '1px solid #8C3225', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: '4px',
+              width: '100%', height: '48px', background: 'var(--surface-card)', color: 'var(--text)',
+              border: '1px solid var(--action)', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: 'var(--radius-sm)',
             }}
           >
             Upload from gallery or files
@@ -125,19 +125,19 @@ export default function Step1Receipt({ onComplete }) {
       )}
 
       {error && (
-        <div style={{ fontSize: '13px', color: '#DC2626', marginTop: '12px' }}>{error}</div>
+        <div style={{ fontSize: '13px', color: 'var(--clay-text)', marginTop: '12px' }}>{error}</div>
       )}
 
       {preview && (
         <div>
-          <div style={{ background: '#F7F7F7', marginBottom: '12px', position: 'relative' }}>
+          <div style={{ background: 'var(--taupe-50)', marginBottom: '12px', position: 'relative' }}>
             <img src={preview} alt="Receipt preview" style={{ width: '100%', maxHeight: '280px', objectFit: 'contain', display: 'block' }} />
             {loading && (
               <div style={{
                 position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.85)',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px',
               }}>
-                <div style={{ fontSize: '13px', color: '#4A4A4A' }}>{loadingText}</div>
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{loadingText}</div>
                 <div className="spinner" />
               </div>
             )}
@@ -147,8 +147,8 @@ export default function Step1Receipt({ onComplete }) {
               <button
                 onClick={handleRetake}
                 style={{
-                  width: '48%', height: '44px', border: '1px solid #E8E8E8', background: '#FFFFFF',
-                  color: '#1A1A1A', fontSize: '13px', cursor: 'pointer', borderRadius: '4px',
+                  width: '48%', height: '44px', border: '1px solid var(--taupe-200)', background: 'var(--surface-card)',
+                  color: 'var(--text)', fontSize: '13px', cursor: 'pointer', borderRadius: 'var(--radius-sm)',
                 }}
               >
                 Retake
@@ -156,8 +156,8 @@ export default function Step1Receipt({ onComplete }) {
               <button
                 onClick={handleUsePhoto}
                 style={{
-                  width: '48%', height: '44px', background: '#8C3225', color: '#FFFFFF',
-                  border: 'none', fontSize: '13px', cursor: 'pointer', borderRadius: '4px',
+                  width: '48%', height: '44px', background: 'var(--action)', color: 'var(--surface-card)',
+                  border: 'none', fontSize: '13px', cursor: 'pointer', borderRadius: 'var(--radius-sm)',
                 }}
               >
                 Use this photo

@@ -26,8 +26,8 @@ function Row({ label, value }) {
   if (!value && value !== 0) return null
   return (
     <div>
-      <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '2px' }}>{label}</div>
-      <div style={{ fontSize: '13px', color: '#111827' }}>{value}</div>
+      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>{label}</div>
+      <div style={{ fontSize: '13px', color: 'var(--ink)' }}>{value}</div>
     </div>
   )
 }
@@ -53,18 +53,18 @@ function AttachedPO({ poNumber }) {
   }, [poNumber])
 
   return (
-    <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px 14px', marginBottom: '16px' }}>
-      <div style={{ fontSize: '11px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
+    <div style={{ background: 'var(--taupe-50)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '12px 14px', marginBottom: '16px' }}>
+      <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
         Purchase Order
       </div>
-      <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827', fontFamily: 'monospace' }}>{poNumber}</div>
+      <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)', fontFamily: 'monospace' }}>{poNumber}</div>
       {po && (
-        <div style={{ fontSize: '12px', color: '#374151', marginTop: '4px' }}>
+        <div style={{ fontSize: '12px', color: 'var(--ink)', marginTop: '4px' }}>
           {po.vendors?.org_name}{po.vendors?.org_name ? ' · ' : ''}₹{Number(po.amount || 0).toLocaleString('en-IN')} · {po.status}
         </div>
       )}
       {po === null && (
-        <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '4px' }}>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
           On record from when this expense was filed — no matching PO found in this tool.
         </div>
       )}
@@ -93,23 +93,23 @@ export default function ExpenseDetailModal({ expense, onClose }) {
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{ background: '#FFFFFF', width: '100%', maxWidth: '440px', maxHeight: '85vh', borderRadius: '10px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+        style={{ background: 'var(--surface-card)', width: '100%', maxWidth: '440px', maxHeight: '85vh', borderRadius: 'var(--radius-lg)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
       >
         {/* Header */}
-        <div style={{ padding: '18px 20px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0 }}>
+        <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--taupe-200)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0 }}>
           <div>
-            <div style={{ fontSize: '15px', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>
+            <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--ink)', marginBottom: '4px' }}>
               {expense.vendor || 'Unknown vendor'}
             </div>
             <StatusBadge status={expense.status} sourceStatus={expense.source_status} />
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '16px', fontWeight: 700, color: '#111827' }}>
+            <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--ink)' }}>
               ₹{Number(expense.amount || 0).toLocaleString('en-IN')}
             </div>
             <div
               onClick={onClose}
-              style={{ fontSize: '12px', color: '#6B7280', cursor: 'pointer', marginTop: '4px' }}
+              style={{ fontSize: '12px', color: 'var(--text-muted)', cursor: 'pointer', marginTop: '4px' }}
             >
               Close ✕
             </div>
@@ -119,7 +119,7 @@ export default function ExpenseDetailModal({ expense, onClose }) {
         {/* Body */}
         <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
           {expense.description && (
-            <div style={{ fontSize: '13px', color: '#374151', lineHeight: 1.5, marginBottom: '16px' }}>
+            <div style={{ fontSize: '13px', color: 'var(--ink)', lineHeight: 1.5, marginBottom: '16px' }}>
               {expense.description}
             </div>
           )}
@@ -150,19 +150,19 @@ export default function ExpenseDetailModal({ expense, onClose }) {
           {/* When this was actually filed — useful for migrated/historical
               rows especially, where the expense date and the day it was
               recorded can be months apart. */}
-          <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: '10px', marginBottom: '14px' }}>
+          <div style={{ borderTop: '1px solid var(--taupe-100)', paddingTop: '10px', marginBottom: '14px' }}>
             <Row label="Filed on" value={fmtDateTime(expense.created_at)} />
           </div>
 
           {/* Receipt / attachments */}
-          <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: '14px' }}>
-            <div style={{ fontSize: '11px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+          <div style={{ borderTop: '1px solid var(--taupe-100)', paddingTop: '14px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
               Attachments
             </div>
             {expense.capture_id ? (
               <ReceiptDocuments captureId={expense.capture_id} />
             ) : (expense.po_pdf_link || expense.vr_pdf_link || expense.er_pdf_link) ? null : (
-              <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '8px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>
                 No receipt attached yet
               </div>
             )}

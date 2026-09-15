@@ -31,11 +31,11 @@ function SummaryRow({ label, value, alt }) {
     <div style={{
       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       padding: '10px 16px', minHeight: '40px',
-      background: alt ? '#F7F7F7' : '#FFFFFF',
-      borderBottom: '1px solid #E8E8E8',
+      background: alt ? 'var(--taupe-50)' : 'var(--surface-card)',
+      borderBottom: '1px solid var(--taupe-200)',
     }}>
-      <div style={{ fontSize: '12px', color: '#6B6B6B' }}>{label}</div>
-      <div style={{ fontSize: '13px', color: '#1A1A1A', textAlign: 'right', maxWidth: '55%' }}>{value || '—'}</div>
+      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{label}</div>
+      <div style={{ fontSize: '13px', color: 'var(--text)', textAlign: 'right', maxWidth: '55%' }}>{value || '—'}</div>
     </div>
   )
 }
@@ -176,7 +176,7 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-        <div style={{ fontSize: '13px', color: '#6B6B6B' }}>Loading report...</div>
+        <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Loading report...</div>
       </div>
     )
   }
@@ -184,8 +184,8 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
   if (!report) {
     return (
       <div style={{ maxWidth: '480px', margin: '0 auto', padding: '40px 20px', textAlign: 'center' }}>
-        <div style={{ fontSize: '14px', color: '#4A4A4A', marginBottom: '16px' }}>This report could not be found.</div>
-        <button onClick={onBack} style={{ width: '100%', height: '48px', background: '#8C3225', color: '#FFFFFF', border: 'none', fontSize: '14px', cursor: 'pointer', borderRadius: '4px' }}>
+        <div style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '16px' }}>This report could not be found.</div>
+        <button onClick={onBack} style={{ width: '100%', height: '48px', background: 'var(--action)', color: 'var(--surface-card)', border: 'none', fontSize: '14px', cursor: 'pointer', borderRadius: 'var(--radius-sm)' }}>
           Go back
         </button>
       </div>
@@ -210,65 +210,65 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
       )}
 
       {/* Header */}
-      <div onClick={onBack} style={{ fontSize: '13px', color: '#6B7280', cursor: 'pointer', marginBottom: '16px' }}>
+      <div onClick={onBack} style={{ fontSize: '13px', color: 'var(--text-muted)', cursor: 'pointer', marginBottom: '16px' }}>
         ← Approvals
       </div>
-      <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Review Report</div>
-      <div style={{ fontSize: '18px', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>
+      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Review Report</div>
+      <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--ink)', marginBottom: '4px' }}>
         ₹{Number(report.total_amount || 0).toLocaleString('en-IN')}
       </div>
-      <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '16px' }}>
+      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
         {report.brand || 'The Nudge Institute'} · <span style={{ fontFamily: 'monospace' }}>{report.report_reference}</span>
       </div>
 
       {/* AI Summary — auto-loads */}
       {(aiLoading || aiSummary) && (
         <div style={{
-          border: '1px solid #E5E7EB',
-          borderLeft: `3px solid ${aiSummary?.recommendation === 'approve' ? '#10B981' : '#F59E0B'}`,
-          borderRadius: '8px', padding: '14px 16px', marginBottom: '16px',
-          background: '#F9FAFB',
+          border: '1px solid var(--taupe-200)',
+          borderLeft: `3px solid ${aiSummary?.recommendation === 'approve' ? '#10B981' : 'var(--gold)'}`,
+          borderRadius: 'var(--radius-lg)', padding: '14px 16px', marginBottom: '16px',
+          background: 'var(--taupe-50)',
         }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
             AI Summary
           </div>
 
           {aiLoading && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {[100, 80, 60].map((w, i) => (
-                <div key={i} style={{ height: '12px', background: '#E5E7EB', borderRadius: '4px', width: `${w}%` }} />
+                <div key={i} style={{ height: '12px', background: 'var(--taupe-200)', borderRadius: 'var(--radius-sm)', width: `${w}%` }} />
               ))}
             </div>
           )}
 
           {!aiLoading && aiSummary && (
             <>
-              <div style={{ fontSize: '13px', fontWeight: 500, color: '#111827', marginBottom: '6px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--ink)', marginBottom: '6px' }}>
                 {aiSummary.headline}
               </div>
-              <div style={{ fontSize: '12px', color: '#374151', marginBottom: '6px', lineHeight: 1.5 }}>
+              <div style={{ fontSize: '12px', color: 'var(--ink)', marginBottom: '6px', lineHeight: 1.5 }}>
                 {aiSummary.breakdown}
               </div>
               {aiSummary.flags && (
-                <div style={{ fontSize: '12px', color: '#B45309', marginBottom: '8px' }}>
+                <div style={{ fontSize: '12px', color: 'var(--gold-text)', marginBottom: '8px' }}>
                   {aiSummary.flags}
                 </div>
               )}
               <div style={{
                 display: 'inline-flex', alignItems: 'center', gap: '6px',
-                background: aiSummary.recommendation === 'approve' ? '#F0FDF4' : '#FFFBEB',
-                border: `1px solid ${aiSummary.recommendation === 'approve' ? '#BBF7D0' : '#FDE68A'}`,
-                borderRadius: '4px', padding: '4px 10px',
+                background: aiSummary.recommendation === 'approve' ? 'var(--moss-bg)' : 'var(--gold-bg)',
+                border: `1px solid ${aiSummary.recommendation === 'approve' ? 'var(--moss-border)' : 'var(--gold-border)'}`,
+                borderRadius: 'var(--radius-sm)', padding: '4px 10px',
               }}>
                 <span style={{
                   fontSize: '11px', fontWeight: 700,
-                  color: aiSummary.recommendation === 'approve' ? '#15803D' : '#B45309',
+                  color: aiSummary.recommendation === 'approve' ? 'var(--moss-text)' : 'var(--gold-text)',
                 }}>
                   {aiSummary.recommendation === 'approve' ? 'Recommended for approval' : 'Suggest reviewing'}
                 </span>
               </div>
               {aiSummary.recommendation_note && (
-                <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '6px' }}>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
                   {aiSummary.recommendation_note}
                 </div>
               )}
@@ -278,7 +278,7 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
       )}
 
       {/* Summary */}
-      <div style={{ border: '1px solid #E8E8E8', overflow: 'hidden', marginBottom: '20px', borderRadius: '6px' }}>
+      <div style={{ border: '1px solid var(--taupe-200)', overflow: 'hidden', marginBottom: '20px', borderRadius: 'var(--radius-md)' }}>
         <SummaryRow label="Reference" value={<span style={{ fontFamily: 'monospace' }}>{report.report_reference}</span>} alt={false} />
         <SummaryRow label="Entity" value={report.brand || 'The Nudge Institute'} alt={true} />
         {(report.duration_start || report.duration_end) && (
@@ -313,7 +313,7 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
       </div>
 
       {/* Expenses */}
-      <div style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A1A', marginBottom: '12px' }}>Expenses</div>
+      <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)', marginBottom: '12px' }}>Expenses</div>
       {expenses.map(exp => (
         <ExpenseApprovalCard
           key={exp.id}
@@ -326,7 +326,7 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
 
       {/* Approve error */}
       {approveStatus === 'error' && (
-        <div style={{ fontSize: '12px', color: '#DC2626', marginBottom: '12px', textAlign: 'center' }}>
+        <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginBottom: '12px', textAlign: 'center' }}>
           Action could not be saved. Please try again.
         </div>
       )}
@@ -336,14 +336,14 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
         <div style={{ position: 'fixed', bottom: 0, left: '220px', right: 0, zIndex: 10 }}>
           <div style={{
             maxWidth: '480px', margin: '0 auto',
-            background: '#FFFFFF', borderTop: '1px solid #E8E8E8', padding: '16px',
+            background: 'var(--surface-card)', borderTop: '1px solid var(--taupe-200)', padding: '16px',
           }}>
-            <div style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A1A', marginBottom: '10px' }}>
+            <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)', marginBottom: '10px' }}>
               {expenses.length} expense{expenses.length !== 1 ? 's' : ''} · ₹{Number(total).toLocaleString('en-IN')}
             </div>
 
             {approveStatus === 'confirming' && (
-              <div style={{ fontSize: '12px', color: '#4A4A4A', marginBottom: '8px' }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
                 Confirming approval...
               </div>
             )}
@@ -354,10 +354,10 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
                 disabled={approving || approveStatus === 'done'}
                 style={{
                   width: '100%', height: '48px',
-                  background: approving ? '#9CA3AF' : '#16A34A',
-                  color: '#FFFFFF', border: 'none',
+                  background: approving ? 'var(--text-muted)' : 'var(--moss)',
+                  color: 'var(--surface-card)', border: 'none',
                   fontSize: '14px', fontWeight: 500,
-                  cursor: approving ? 'default' : 'pointer', borderRadius: '4px',
+                  cursor: approving ? 'default' : 'pointer', borderRadius: 'var(--radius-sm)',
                 }}
               >
                 {approveStatus === 'done' ? 'Approved' : approving ? 'Approving…' : 'Approve report'}
@@ -367,11 +367,11 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
                 disabled={approving}
                 style={{
                   width: '100%', height: '48px',
-                  background: '#FFFFFF',
-                  color: approving ? '#E8E8E8' : '#DC2626',
-                  border: `1px solid ${approving ? '#E8E8E8' : '#DC2626'}`,
+                  background: 'var(--surface-card)',
+                  color: approving ? 'var(--taupe-200)' : 'var(--clay-text)',
+                  border: `1px solid ${approving ? 'var(--taupe-200)' : 'var(--clay-text)'}`,
                   fontSize: '14px', fontWeight: 500,
-                  cursor: approving ? 'default' : 'pointer', borderRadius: '4px',
+                  cursor: approving ? 'default' : 'pointer', borderRadius: 'var(--radius-sm)',
                 }}
               >
                 Return to employee
@@ -384,10 +384,10 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
       {isAlreadyReviewed && (
         <div style={{
           padding: '12px 16px',
-          background: report.status === 'approved' ? '#F0FDF4' : '#FEF2F2',
-          border: `1px solid ${report.status === 'approved' ? '#16A34A' : '#DC2626'}`,
+          background: report.status === 'approved' ? 'var(--moss-bg)' : 'var(--clay-bg)',
+          border: `1px solid ${report.status === 'approved' ? 'var(--moss)' : 'var(--clay-text)'}`,
           fontSize: '13px',
-          color: report.status === 'approved' ? '#16A34A' : '#DC2626',
+          color: report.status === 'approved' ? 'var(--moss)' : 'var(--clay-text)',
         }}>
           This report has been {report.status}.
         </div>

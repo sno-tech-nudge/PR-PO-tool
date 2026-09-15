@@ -149,11 +149,11 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
   const columnsToShow = ALL_COLUMNS.filter(c => visibleColumns.includes(c.key))
 
   return (
-    <div style={{ background: '#F4F5F7', minHeight: '100vh' }}>
-      <div style={{ background: '#FFFFFF', borderBottom: '1px solid #E3E8EF', padding: '0 28px' }}>
+    <div style={{ background: 'var(--taupe-50)', minHeight: '100vh' }}>
+      <div style={{ background: 'var(--surface-card)', borderBottom: '1px solid var(--taupe-200)', padding: '0 28px' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div style={{ padding: '14px 0 0', marginBottom: '2px' }}>
-            <h1 style={{ fontSize: '18px', fontWeight: 700, color: '#1A1F36', margin: 0, padding: '8px 0' }}>
+            <h1 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--ink)', margin: 0, padding: '8px 0' }}>
               {isFinance ? 'Vendor Management' : 'My Vendors'}
             </h1>
           </div>
@@ -165,8 +165,8 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
                 style={{
                   padding: '10px 18px', fontSize: '13px',
                   fontWeight: filter === key ? 600 : 400,
-                  color: filter === key ? '#1565C0' : '#6B7280',
-                  borderBottom: filter === key ? '2px solid #1565C0' : '2px solid transparent',
+                  color: filter === key ? 'var(--action)' : 'var(--text-muted)',
+                  borderBottom: filter === key ? '2px solid var(--action)' : '2px solid transparent',
                   cursor: 'pointer', marginBottom: '-1px',
                   display: 'flex', alignItems: 'center', gap: '6px',
                 }}
@@ -175,9 +175,9 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
                 {counts[key] > 0 && (
                   <span style={{
                     fontSize: '10px', fontWeight: 700,
-                    background: key === 'pending' && counts.pending > 0 ? '#DC2626' : '#E5E7EB',
-                    color: key === 'pending' && counts.pending > 0 ? '#FFFFFF' : '#374151',
-                    borderRadius: '10px', padding: '1px 6px',
+                    background: key === 'pending' && counts.pending > 0 ? 'var(--clay-text)' : 'var(--taupe-200)',
+                    color: key === 'pending' && counts.pending > 0 ? 'var(--surface-card)' : 'var(--ink)',
+                    borderRadius: 'var(--radius-lg)', padding: '1px 6px',
                   }}>{counts[key]}</span>
                 )}
               </div>
@@ -194,9 +194,9 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
             value={search}
             onChange={e => setSearch(e.target.value)}
             style={{
-              height: '34px', border: '1px solid #E3E8EF', borderRadius: '3px',
-              padding: '0 12px', fontSize: '13px', color: '#1A1F36', outline: 'none',
-              background: '#FFFFFF', width: '280px',
+              height: '34px', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)',
+              padding: '0 12px', fontSize: '13px', color: 'var(--ink)', outline: 'none',
+              background: 'var(--surface-card)', width: '280px',
             }}
           />
           <div style={{ display: 'flex', gap: '10px' }}>
@@ -206,8 +206,8 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
                 <button
                   onClick={() => setShowExportModal(true)}
                   style={{
-                    height: '34px', padding: '0 14px', background: '#FFFFFF', color: '#374151',
-                    border: '1px solid #D1D5DB', borderRadius: '3px', fontSize: '13px', fontWeight: 500, cursor: 'pointer',
+                    height: '34px', padding: '0 14px', background: 'var(--surface-card)', color: 'var(--ink)',
+                    border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 500, cursor: 'pointer',
                   }}
                 >
                   Export CSV
@@ -217,8 +217,8 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
             <button
               onClick={onCreateVendor}
               style={{
-                height: '34px', padding: '0 16px', background: '#8C3225', color: '#FFFFFF',
-                border: 'none', borderRadius: '3px', fontSize: '13px', fontWeight: 600,
+                height: '34px', padding: '0 16px', background: 'var(--action)', color: 'var(--surface-card)',
+                border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 600,
                 cursor: 'pointer',
               }}
             >
@@ -228,30 +228,30 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
         </div>
 
         {loading && (
-          <div style={{ fontSize: '13px', color: '#6B7280', padding: '40px 0', textAlign: 'center' }}>Loading…</div>
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)', padding: '40px 0', textAlign: 'center' }}>Loading…</div>
         )}
 
         {!loading && filtered.length === 0 && (
           <div style={{
-            background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '4px',
-            padding: '48px 0', textAlign: 'center', fontSize: '13px', color: '#9CA3AF',
+            background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)',
+            padding: '48px 0', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)',
           }}>
             {vendors.length === 0 ? 'No vendors yet. Add your first vendor to get started.' : 'No vendors match the current filter.'}
           </div>
         )}
 
         {!loading && filtered.length > 0 && (
-          <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '3px', overflow: 'hidden' }}>
+          <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ background: '#F8F9FA', borderBottom: '1px solid #E3E8EF' }}>
+                  <tr style={{ background: 'var(--taupe-50)', borderBottom: '1px solid var(--taupe-200)' }}>
                     {columnsToShow.map(c => (
-                      <th key={c.key} style={{ padding: '10px 14px', fontSize: '10px', fontWeight: 600, color: '#6B7280', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                      <th key={c.key} style={{ padding: '10px 14px', fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
                         {c.label}
                       </th>
                     ))}
-                    <th style={{ padding: '10px 14px', fontSize: '10px', fontWeight: 600, color: '#6B7280', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                    <th style={{ padding: '10px 14px', fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
                       Status Timeline
                     </th>
                   </tr>
@@ -264,12 +264,12 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
                       <tr
                         key={v.id}
                         onClick={() => isDraft ? onResumeDraft(v.id) : onViewVendor(v.id)}
-                        style={{ borderBottom: i < filtered.length - 1 ? '1px solid #F3F4F6' : 'none', background: i % 2 === 0 ? '#FFFFFF' : '#FAFAFA', cursor: 'pointer' }}
+                        style={{ borderBottom: i < filtered.length - 1 ? '1px solid var(--taupe-100)' : 'none', background: i % 2 === 0 ? 'var(--surface-card)' : 'var(--taupe-50)', cursor: 'pointer' }}
                       >
                         {columnsToShow.map(c => (
                           <td key={c.key} style={{
                             padding: '11px 14px', fontSize: c.key === 'vendor_id' ? '11px' : '12px',
-                            color: c.key === 'vendor_id' ? '#8C3225' : c.key === 'org_name' ? '#1A1F36' : '#374151',
+                            color: c.key === 'vendor_id' ? 'var(--action)' : c.key === 'org_name' ? 'var(--ink)' : 'var(--ink)',
                             fontWeight: c.key === 'vendor_id' || c.key === 'org_name' ? 500 : 400,
                             fontFamily: c.key === 'vendor_id' ? 'monospace' : 'inherit',
                             whiteSpace: c.key === 'created_at' ? 'nowrap' : 'normal',
@@ -279,8 +279,8 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
                               <span
                                 onClick={e => { e.stopPropagation(); setPanPreview(vendors.filter(o => o.pan_number === v.pan_number && o.id !== v.id)) }}
                                 style={{
-                                  marginLeft: '8px', fontSize: '10px', fontWeight: 600, color: '#92400E',
-                                  background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '10px',
+                                  marginLeft: '8px', fontSize: '10px', fontWeight: 600, color: 'var(--gold-text)',
+                                  background: 'var(--gold-bg)', border: '1px solid var(--gold-border)', borderRadius: 'var(--radius-lg)',
                                   padding: '1px 7px', cursor: 'pointer', whiteSpace: 'nowrap',
                                 }}
                               >
@@ -293,8 +293,8 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
                           <button
                             onClick={e => { e.stopPropagation(); setStatusVendor(v) }}
                             style={{
-                              height: '28px', padding: '0 12px', background: '#FFFFFF', color: '#8C3225',
-                              border: '1px solid #f9c5b7', borderRadius: '3px', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
+                              height: '28px', padding: '0 12px', background: 'var(--surface-card)', color: 'var(--action)',
+                              border: '1px solid var(--taupe-300)', borderRadius: 'var(--radius-sm)', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
                             }}
                           >
                             View Status
@@ -306,7 +306,7 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
                 </tbody>
               </table>
             </div>
-            <div style={{ padding: '10px 14px', borderTop: '1px solid #E3E8EF', fontSize: '11px', color: '#9CA3AF', background: '#F8F9FA' }}>
+            <div style={{ padding: '10px 14px', borderTop: '1px solid var(--taupe-200)', fontSize: '11px', color: 'var(--text-muted)', background: 'var(--taupe-50)' }}>
               {filtered.length} vendor{filtered.length !== 1 ? 's' : ''}
             </div>
           </div>

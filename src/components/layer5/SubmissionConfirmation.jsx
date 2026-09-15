@@ -15,11 +15,11 @@ function InfoRow({ label, value, alt }) {
     <div style={{
       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       padding: '12px 16px', minHeight: '44px',
-      background: alt ? '#F7F7F7' : '#FFFFFF',
-      borderBottom: '1px solid #E8E8E8',
+      background: alt ? 'var(--taupe-50)' : 'var(--surface-card)',
+      borderBottom: '1px solid var(--taupe-200)',
     }}>
-      <div style={{ fontSize: '12px', color: '#6B6B6B' }}>{label}</div>
-      <div style={{ fontSize: '13px', color: '#1A1A1A', textAlign: 'right', maxWidth: '55%' }}>
+      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{label}</div>
+      <div style={{ fontSize: '13px', color: 'var(--text)', textAlign: 'right', maxWidth: '55%' }}>
         {value || '—'}
       </div>
     </div>
@@ -74,16 +74,16 @@ export default function SubmissionConfirmation({ submission, onStartNew, onTrack
 
   return (
     <div style={{ maxWidth: '480px', margin: '0 auto', padding: '24px 20px', width: '100%' }}>
-      <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '8px' }}>Report Submitted</div>
-      <div style={{ fontSize: '20px', fontWeight: 500, color: '#1A1A1A', marginBottom: '6px' }}>
+      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>Report Submitted</div>
+      <div style={{ fontSize: '20px', fontWeight: 500, color: 'var(--text)', marginBottom: '6px' }}>
         Your report is submitted
       </div>
-      <div style={{ fontSize: '13px', color: '#4A4A4A', marginBottom: '20px', lineHeight: '1.5' }}>
+      <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: '1.5' }}>
         {ROUTE_LABEL[approvalRoute?.route] || 'Your approver'} has been notified and will review your report.
       </div>
 
       {/* Reference card */}
-      <div style={{ border: '1px solid #E8E8E8', overflow: 'hidden', marginBottom: '20px' }}>
+      <div style={{ border: '1px solid var(--taupe-200)', overflow: 'hidden', marginBottom: '20px' }}>
         <InfoRow label="Reference" value={<span style={{ fontFamily: 'monospace' }}>{reference}</span>} alt={false} />
         <InfoRow label="Total amount" value={total ? `₹${Number(total).toLocaleString('en-IN')}` : '—'} alt={true} />
         <InfoRow label="Expenses" value={expenseCount ? `${expenseCount} item${expenseCount !== 1 ? 's' : ''}` : '—'} alt={false} />
@@ -93,8 +93,8 @@ export default function SubmissionConfirmation({ submission, onStartNew, onTrack
 
       {pdfUploadPending && (
         <div style={{
-          fontSize: '12px', color: '#CA8A04',
-          background: '#FEFCE8', border: '1px solid #FDE68A',
+          fontSize: '12px', color: 'var(--gold-text)',
+          background: 'var(--gold-bg)', border: '1px solid var(--gold-border)',
           padding: '10px 14px', marginBottom: '16px', lineHeight: '1.5',
         }}>
           PDF upload is pending. It will retry automatically.
@@ -105,7 +105,7 @@ export default function SubmissionConfirmation({ submission, onStartNew, onTrack
       <div style={{ marginBottom: '8px' }}>
         <StatusTimeline currentStep={0} />
       </div>
-      <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '24px' }}>
+      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '24px' }}>
         Submitted {timeLabel}
       </div>
 
@@ -116,12 +116,12 @@ export default function SubmissionConfirmation({ submission, onStartNew, onTrack
           disabled={!reportId}
           style={{
             width: '100%', height: '48px',
-            background: '#FFFFFF',
-            color: reportId ? '#1A1A1A' : '#9CA3AF',
-            border: `1px solid ${reportId ? '#1A1A1A' : '#E8E8E8'}`,
+            background: 'var(--surface-card)',
+            color: reportId ? 'var(--text)' : 'var(--text-muted)',
+            border: `1px solid ${reportId ? 'var(--text)' : 'var(--taupe-200)'}`,
             fontSize: '14px', fontWeight: 500,
             cursor: reportId ? 'pointer' : 'default',
-            borderRadius: '4px',
+            borderRadius: 'var(--radius-sm)',
           }}
         >
           Track this report
@@ -133,10 +133,10 @@ export default function SubmissionConfirmation({ submission, onStartNew, onTrack
             disabled={downloading}
             style={{
               width: '100%', height: '48px',
-              background: '#FFFFFF', color: '#1A1A1A',
-              border: '1px solid #E8E8E8',
+              background: 'var(--surface-card)', color: 'var(--text)',
+              border: '1px solid var(--taupe-200)',
               fontSize: '14px', fontWeight: 500,
-              cursor: downloading ? 'default' : 'pointer', borderRadius: '4px',
+              cursor: downloading ? 'default' : 'pointer', borderRadius: 'var(--radius-sm)',
             }}
           >
             {downloading ? 'Downloading…' : 'Download PDF'}
@@ -147,9 +147,9 @@ export default function SubmissionConfirmation({ submission, onStartNew, onTrack
           onClick={onStartNew}
           style={{
             width: '100%', height: '48px',
-            background: '#8C3225', color: '#FFFFFF',
+            background: 'var(--action)', color: 'var(--surface-card)',
             border: 'none', fontSize: '14px', fontWeight: 500,
-            cursor: 'pointer', borderRadius: '4px',
+            cursor: 'pointer', borderRadius: 'var(--radius-sm)',
           }}
         >
           Start new expense

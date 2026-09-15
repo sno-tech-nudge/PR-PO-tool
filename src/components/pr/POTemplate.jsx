@@ -3,7 +3,7 @@ import { getEntityAddress, getEntityCity } from '../../lib/orgEntities'
 import { amountInWords } from '../../lib/numberToWords'
 import { getPOTermsIntro, getPOTermsClauses } from '../../lib/poTermsAndConditions'
 
-const BROWN = '#8C3225'
+const BROWN = 'var(--action)'
 const BORDER = '#D9C2BB'
 // A4 at 96dpi — matches the 794px page width already used throughout this
 // file (jsPDF's `unit:'px', format:'a4'` in pdfGenerator.js resolves to the
@@ -33,7 +33,7 @@ function vendorAddressLines(vendor) {
 // Field-labelled cell used throughout the cover page's info table.
 function Cell({ label, children, style }) {
   return (
-    <td style={{ border: `1px solid ${BORDER}`, padding: '10px 12px', verticalAlign: 'top', fontSize: '11px', color: '#374151', ...style }}>
+    <td style={{ border: `1px solid ${BORDER}`, padding: '10px 12px', verticalAlign: 'top', fontSize: '11px', color: 'var(--ink)', ...style }}>
       <div style={{ fontWeight: 700, color: BROWN, marginBottom: '4px' }}>{label}</div>
       <div style={{ whiteSpace: 'pre-line', lineHeight: 1.5 }}>{children}</div>
     </td>
@@ -59,14 +59,14 @@ export default function POTemplate({ po, pr, vendor }) {
       <div
         id="po-template-cover"
         style={{
-          width: '794px', background: '#FFFFFF', padding: '40px',
+          width: '794px', background: 'var(--surface-card)', padding: '40px',
           fontFamily: 'system-ui, -apple-system, sans-serif', boxSizing: 'border-box',
-          position: 'absolute', left: '-9999px', top: 0, display: 'block', color: '#1A1F36',
+          position: 'absolute', left: '-9999px', top: 0, display: 'block', color: 'var(--ink)',
         }}
       >
         <div style={{ height: '5px', background: BROWN, marginBottom: '20px' }} />
 
-        <div style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '4px' }}>
+        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '4px' }}>
           THE/NUDGE INSTITUTE
         </div>
         <div style={{ fontSize: '26px', fontFamily: 'Georgia, serif', fontWeight: 700, color: BROWN, textAlign: 'center', marginBottom: '18px' }}>
@@ -123,7 +123,7 @@ export default function POTemplate({ po, pr, vendor }) {
         {/* Line items */}
         <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '16px' }}>
           <thead>
-            <tr style={{ background: '#fdf0ed' }}>
+            <tr style={{ background: 'var(--action-bg)' }}>
               {['Sl. No.', 'Description of goods/ services', 'Quantity', 'Category of Service', 'Rate per unit (in INR)', 'Amount'].map(h => (
                 <th key={h} style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '10px', fontWeight: 700, color: BROWN, textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
                   {h}
@@ -143,28 +143,28 @@ export default function POTemplate({ po, pr, vendor }) {
               </tr>
             ))}
             <tr>
-              <td colSpan={5} style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '12px', fontWeight: 600, textAlign: 'right', background: '#F8F9FA' }}>Subtotal:</td>
-              <td style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '12px', fontWeight: 600, textAlign: 'right', fontFamily: 'monospace', background: '#F8F9FA' }}>{fmtAmt(itemsSubtotal)}</td>
+              <td colSpan={5} style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '12px', fontWeight: 600, textAlign: 'right', background: 'var(--taupe-50)' }}>Subtotal:</td>
+              <td style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '12px', fontWeight: 600, textAlign: 'right', fontFamily: 'monospace', background: 'var(--taupe-50)' }}>{fmtAmt(itemsSubtotal)}</td>
             </tr>
             <tr>
-              <td colSpan={5} style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '12px', fontWeight: 600, textAlign: 'right', background: '#F8F9FA' }}>Tax:</td>
-              <td style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '12px', fontWeight: 600, textAlign: 'right', fontFamily: 'monospace', background: '#F8F9FA' }}>{fmtAmt(taxAmount)}</td>
+              <td colSpan={5} style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '12px', fontWeight: 600, textAlign: 'right', background: 'var(--taupe-50)' }}>Tax:</td>
+              <td style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '12px', fontWeight: 600, textAlign: 'right', fontFamily: 'monospace', background: 'var(--taupe-50)' }}>{fmtAmt(taxAmount)}</td>
             </tr>
             <tr>
-              <td colSpan={5} style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '12px', fontWeight: 700, textAlign: 'right', background: '#F8F9FA' }}>Total:</td>
-              <td style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '12px', fontWeight: 700, textAlign: 'right', fontFamily: 'monospace', background: '#F8F9FA' }}>{fmtAmt(subTotal)}</td>
+              <td colSpan={5} style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '12px', fontWeight: 700, textAlign: 'right', background: 'var(--taupe-50)' }}>Total:</td>
+              <td style={{ border: `1px solid ${BORDER}`, padding: '8px 10px', fontSize: '12px', fontWeight: 700, textAlign: 'right', fontFamily: 'monospace', background: 'var(--taupe-50)' }}>{fmtAmt(subTotal)}</td>
             </tr>
           </tbody>
         </table>
 
-        <div style={{ fontSize: '11px', color: '#374151', marginTop: '12px' }}>
+        <div style={{ fontSize: '11px', color: 'var(--ink)', marginTop: '12px' }}>
           <strong>Amount in words:</strong> {amountInWords(subTotal)} Rupees Only
         </div>
 
         {/* Short terms block */}
         <div style={{ marginTop: '20px', paddingTop: '14px', borderTop: `1px solid ${BORDER}` }}>
           <div style={{ fontSize: '11px', fontWeight: 700, color: BROWN, marginBottom: '6px' }}>Terms & Conditions:</div>
-          <div style={{ fontSize: '10.5px', color: '#374151', lineHeight: 1.7 }}>
+          <div style={{ fontSize: '10.5px', color: 'var(--ink)', lineHeight: 1.7 }}>
             Refer to standard terms and conditions attached to this PO<br />
             PO will be valid for 90 days<br />
             Payment terms: For {entity} — Advance {pr.advance_percent != null ? Number(pr.advance_percent) : 0}%
@@ -245,12 +245,12 @@ function TermsSection({ pageIdPrefix, entity }) {
           via offsetHeight, never itself screenshotted. */}
       <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', width: `${PAGE_W - 2 * PAGE_PAD}px` }}>
         <div ref={headerRef} style={{ overflow: 'hidden' }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '4px' }}>APPENDIX A</div>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '4px' }}>APPENDIX A</div>
           <div style={{ fontSize: '20px', fontFamily: 'Georgia, serif', fontWeight: 700, color: BROWN, textAlign: 'center', marginBottom: '18px' }}>Terms and Conditions</div>
         </div>
-        <div ref={introRef} style={{ fontSize: '11px', color: '#374151', lineHeight: 1.7 }}>{termsIntro}</div>
+        <div ref={introRef} style={{ fontSize: '11px', color: 'var(--ink)', lineHeight: 1.7 }}>{termsIntro}</div>
         {termsClauses.map((text, i) => (
-          <div key={i} ref={el => (clauseRefs.current[i] = el)} style={{ display: 'flex', gap: '8px', fontSize: '10.5px', color: '#374151', lineHeight: 1.6 }}>
+          <div key={i} ref={el => (clauseRefs.current[i] = el)} style={{ display: 'flex', gap: '8px', fontSize: '10.5px', color: 'var(--ink)', lineHeight: 1.6 }}>
             <span style={{ fontWeight: 700, color: BROWN, flexShrink: 0, width: '20px' }}>{i + 1}.</span>
             <span>{text}</span>
           </div>
@@ -262,13 +262,13 @@ function TermsSection({ pageIdPrefix, entity }) {
           key={pageIndex}
           id={`${pageIdPrefix}-${pageIndex}`}
           style={{
-            width: `${PAGE_W}px`, height: `${PAGE_H}px`, background: '#FFFFFF', padding: `${PAGE_PAD}px`,
+            width: `${PAGE_W}px`, height: `${PAGE_H}px`, background: 'var(--surface-card)', padding: `${PAGE_PAD}px`,
             fontFamily: 'system-ui, -apple-system, sans-serif', boxSizing: 'border-box',
-            position: 'absolute', left: '-9999px', top: 0, display: 'block', color: '#1A1F36', overflow: 'hidden',
+            position: 'absolute', left: '-9999px', top: 0, display: 'block', color: 'var(--ink)', overflow: 'hidden',
           }}
         >
           <div style={{ height: '5px', background: BROWN, marginBottom: '20px' }} />
-          <div style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '4px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '4px' }}>
             APPENDIX A
           </div>
           <div style={{ fontSize: '20px', fontFamily: 'Georgia, serif', fontWeight: 700, color: BROWN, textAlign: 'center', marginBottom: '18px' }}>
@@ -276,13 +276,13 @@ function TermsSection({ pageIdPrefix, entity }) {
           </div>
 
           {pageIndex === 0 && (
-            <div style={{ fontSize: '11px', color: '#374151', lineHeight: 1.7, marginBottom: '16px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--ink)', lineHeight: 1.7, marginBottom: '16px' }}>
               {termsIntro}
             </div>
           )}
 
           {clauses.map(({ text, index }) => (
-            <div key={index} style={{ display: 'flex', gap: '8px', marginBottom: '10px', fontSize: '10.5px', color: '#374151', lineHeight: 1.6 }}>
+            <div key={index} style={{ display: 'flex', gap: '8px', marginBottom: '10px', fontSize: '10.5px', color: 'var(--ink)', lineHeight: 1.6 }}>
               <span style={{ fontWeight: 700, color: BROWN, flexShrink: 0, width: '20px' }}>{index + 1}.</span>
               <span>{text}</span>
             </div>

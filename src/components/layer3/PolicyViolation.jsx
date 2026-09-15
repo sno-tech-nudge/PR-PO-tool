@@ -26,8 +26,8 @@ export default function PolicyViolation({ violation, expense }) {
 
   return (
     <div style={{
-      border: '1px solid #FECACA',
-      borderRadius: '8px',
+      border: '1px solid var(--clay-border)',
+      borderRadius: 'var(--radius-lg)',
       background: '#FFF5F5',
       padding: '14px 16px',
       marginBottom: '10px',
@@ -35,27 +35,27 @@ export default function PolicyViolation({ violation, expense }) {
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
         <div style={{
           width: '18px', height: '18px', borderRadius: '50%',
-          background: '#EF4444', color: '#FFFFFF',
+          background: 'var(--clay)', color: 'var(--surface-card)',
           fontSize: '11px', fontWeight: 700,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           flexShrink: 0, marginTop: '1px',
         }}>!</div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '13px', fontWeight: 600, color: '#B91C1C', marginBottom: '4px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--clay-text)', marginBottom: '4px' }}>
             {label}
           </div>
           {expense && (
-            <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '6px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px' }}>
               {expense.vendor || 'Unknown vendor'}{expense.amount ? ` · ₹${Number(expense.amount).toLocaleString('en-IN')}` : ''}
             </div>
           )}
-          <div style={{ fontSize: '12px', color: '#7F1D1D', lineHeight: '1.5', marginBottom: '8px' }}>
+          <div style={{ fontSize: '12px', color: 'var(--clay-text)', lineHeight: '1.5', marginBottom: '8px' }}>
             {violation.message}
           </div>
           <div style={{
-            fontSize: '11px', color: '#92400E',
-            background: '#FFFBEB', border: '1px solid #FDE68A',
-            borderRadius: '4px', padding: '6px 10px', lineHeight: '1.5',
+            fontSize: '11px', color: 'var(--gold-text)',
+            background: 'var(--gold-bg)', border: '1px solid var(--gold-border)',
+            borderRadius: 'var(--radius-sm)', padding: '6px 10px', lineHeight: '1.5',
           }}>
             <span style={{ fontWeight: 600 }}>How to fix: </span>{fix}
           </div>

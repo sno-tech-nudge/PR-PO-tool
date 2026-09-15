@@ -176,15 +176,15 @@ export default function Step2Payment({ receiptExtracted, onComplete, onBack }) {
     <div>
       <button
         onClick={onBack}
-        style={{ fontSize: '13px', color: '#4A4A4A', background: 'none', border: 'none', cursor: 'pointer', marginBottom: '16px', padding: 0 }}
+        style={{ fontSize: '13px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', marginBottom: '16px', padding: 0 }}
       >
         Back
       </button>
-      <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '16px' }}>Step 2 of 2</div>
-      <div style={{ fontSize: '20px', fontWeight: 500, color: '#1A1A1A', marginBottom: '6px' }}>
+      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>Step 2 of 2</div>
+      <div style={{ fontSize: '20px', fontWeight: 500, color: 'var(--text)', marginBottom: '6px' }}>
         Add proof of payment
       </div>
-      <div style={{ fontSize: '13px', color: '#4A4A4A', marginBottom: '20px' }}>
+      <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>
         UPI screenshot, bank SMS, card SMS, or cash declaration
       </div>
 
@@ -194,21 +194,21 @@ export default function Step2Payment({ receiptExtracted, onComplete, onBack }) {
             key={type.id}
             onClick={() => handleTypeSelect(type.id)}
             style={{
-              border: selectedType === type.id ? '1px solid #1A1A1A' : '1px solid #E8E8E8',
-              background: selectedType === type.id ? '#F7F7F7' : '#FFFFFF',
+              border: selectedType === type.id ? '1px solid var(--text)' : '1px solid var(--taupe-200)',
+              background: selectedType === type.id ? 'var(--taupe-50)' : 'var(--surface-card)',
               padding: '16px',
               cursor: 'pointer',
-              borderRadius: '4px',
+              borderRadius: 'var(--radius-sm)',
             }}
           >
-            <div style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A1A' }}>{type.label}</div>
-            <div style={{ fontSize: '11px', color: '#6B6B6B' }}>{type.sublabel}</div>
+            <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>{type.label}</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{type.sublabel}</div>
           </div>
         ))}
       </div>
 
       {cashAmountError && (
-        <div style={{ fontSize: '13px', color: '#DC2626', marginBottom: '12px' }}>
+        <div style={{ fontSize: '13px', color: 'var(--clay-text)', marginBottom: '12px' }}>
           Cash declaration is only available for amounts under 500 rupees
         </div>
       )}
@@ -218,8 +218,8 @@ export default function Step2Payment({ receiptExtracted, onComplete, onBack }) {
           <button
             onClick={() => cameraRef.current?.click()}
             style={{
-              width: '100%', height: '48px', background: '#8C3225', color: '#FFFFFF',
-              border: 'none', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: '4px',
+              width: '100%', height: '48px', background: 'var(--action)', color: 'var(--surface-card)',
+              border: 'none', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: 'var(--radius-sm)',
             }}
           >
             Take photo
@@ -227,8 +227,8 @@ export default function Step2Payment({ receiptExtracted, onComplete, onBack }) {
           <button
             onClick={() => galleryRef.current?.click()}
             style={{
-              width: '100%', height: '48px', background: '#FFFFFF', color: '#1A1A1A',
-              border: '1px solid #8C3225', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: '4px',
+              width: '100%', height: '48px', background: 'var(--surface-card)', color: 'var(--text)',
+              border: '1px solid var(--action)', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: 'var(--radius-sm)',
             }}
           >
             Upload from gallery or files
@@ -238,18 +238,18 @@ export default function Step2Payment({ receiptExtracted, onComplete, onBack }) {
         </div>
       )}
 
-      {error && <div style={{ fontSize: '13px', color: '#DC2626', marginTop: '12px' }}>{error}</div>}
+      {error && <div style={{ fontSize: '13px', color: 'var(--clay-text)', marginTop: '12px' }}>{error}</div>}
 
       {showCapture && preview && (
         <div style={{ marginTop: '16px' }}>
-          <div style={{ background: '#F7F7F7', marginBottom: '12px', position: 'relative' }}>
+          <div style={{ background: 'var(--taupe-50)', marginBottom: '12px', position: 'relative' }}>
             <img src={preview} alt="Payment proof preview" style={{ width: '100%', maxHeight: '280px', objectFit: 'contain', display: 'block' }} />
             {loading && (
               <div style={{
                 position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.85)',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px',
               }}>
-                <div style={{ fontSize: '13px', color: '#4A4A4A' }}>{loadingText}</div>
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{loadingText}</div>
                 <div className="spinner" />
               </div>
             )}
@@ -259,8 +259,8 @@ export default function Step2Payment({ receiptExtracted, onComplete, onBack }) {
               <button
                 onClick={handleRetake}
                 style={{
-                  width: '48%', height: '44px', border: '1px solid #E8E8E8', background: '#FFFFFF',
-                  color: '#1A1A1A', fontSize: '13px', cursor: 'pointer', borderRadius: '4px',
+                  width: '48%', height: '44px', border: '1px solid var(--taupe-200)', background: 'var(--surface-card)',
+                  color: 'var(--text)', fontSize: '13px', cursor: 'pointer', borderRadius: 'var(--radius-sm)',
                 }}
               >
                 Retake
@@ -268,8 +268,8 @@ export default function Step2Payment({ receiptExtracted, onComplete, onBack }) {
               <button
                 onClick={handleUsePhoto}
                 style={{
-                  width: '48%', height: '44px', background: '#8C3225', color: '#FFFFFF',
-                  border: 'none', fontSize: '13px', cursor: 'pointer', borderRadius: '4px',
+                  width: '48%', height: '44px', background: 'var(--action)', color: 'var(--surface-card)',
+                  border: 'none', fontSize: '13px', cursor: 'pointer', borderRadius: 'var(--radius-sm)',
                 }}
               >
                 Use this photo
@@ -281,34 +281,34 @@ export default function Step2Payment({ receiptExtracted, onComplete, onBack }) {
 
       {showCash && (
         <div style={{ marginTop: '16px' }}>
-          <div style={{ fontSize: '13px', color: '#4A4A4A', marginBottom: '12px', lineHeight: '1.6' }}>
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: '1.6' }}>
             I confirm I paid{' '}
             <input
               value={cashAmount}
               onChange={(e) => setCashAmount(e.target.value)}
-              style={{ border: 'none', borderBottom: '1px solid #1A1A1A', fontSize: '13px', width: '80px', textAlign: 'center', outline: 'none' }}
+              style={{ border: 'none', borderBottom: '1px solid var(--text)', fontSize: '13px', width: '80px', textAlign: 'center', outline: 'none' }}
               placeholder="amount"
             />{' '}
             in cash to{' '}
             <input
               value={cashVendor}
               onChange={(e) => setCashVendor(e.target.value)}
-              style={{ border: 'none', borderBottom: '1px solid #1A1A1A', fontSize: '13px', width: '120px', textAlign: 'center', outline: 'none' }}
+              style={{ border: 'none', borderBottom: '1px solid var(--text)', fontSize: '13px', width: '120px', textAlign: 'center', outline: 'none' }}
               placeholder="vendor"
             />{' '}
             on{' '}
             <input
               value={cashDate}
               onChange={(e) => setCashDate(e.target.value)}
-              style={{ border: 'none', borderBottom: '1px solid #1A1A1A', fontSize: '13px', width: '100px', textAlign: 'center', outline: 'none' }}
+              style={{ border: 'none', borderBottom: '1px solid var(--text)', fontSize: '13px', width: '100px', textAlign: 'center', outline: 'none' }}
               placeholder="date"
             />
           </div>
           <button
             onClick={handleCashConfirm}
             style={{
-              width: '100%', height: '48px', background: '#8C3225', color: '#FFFFFF',
-              border: 'none', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: '4px',
+              width: '100%', height: '48px', background: 'var(--action)', color: 'var(--surface-card)',
+              border: 'none', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: 'var(--radius-sm)',
             }}
           >
             Confirm declaration

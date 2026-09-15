@@ -165,22 +165,22 @@ export default function BulkAddExpenses({ user, onSaved, onBack }) {
   }
 
   const inputStyle = {
-    width: '100%', height: '38px', border: '1px solid #E5E7EB', borderRadius: '4px',
-    padding: '0 10px', fontSize: '13px', color: '#1A1A1A', outline: 'none',
-    boxSizing: 'border-box', background: '#FFFFFF', fontFamily: 'inherit',
+    width: '100%', height: '38px', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)',
+    padding: '0 10px', fontSize: '13px', color: 'var(--text)', outline: 'none',
+    boxSizing: 'border-box', background: 'var(--surface-card)', fontFamily: 'inherit',
   }
 
   return (
     <div style={{ maxWidth: '960px', margin: '0 auto', padding: '24px 20px 100px', width: '100%' }}>
       <div
         onClick={onBack}
-        style={{ fontSize: '13px', color: '#4A4A4A', cursor: 'pointer', textDecoration: 'underline', marginBottom: '20px' }}
+        style={{ fontSize: '13px', color: 'var(--text-muted)', cursor: 'pointer', textDecoration: 'underline', marginBottom: '20px' }}
       >
         ← Back
       </div>
 
-      <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '4px' }}>Quick Add</div>
-      <div style={{ fontSize: '20px', fontWeight: 500, color: '#1A1A1A', marginBottom: '20px' }}>
+      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Quick Add</div>
+      <div style={{ fontSize: '20px', fontWeight: 500, color: 'var(--text)', marginBottom: '20px' }}>
         Bulk add expenses
       </div>
 
@@ -193,8 +193,8 @@ export default function BulkAddExpenses({ user, onSaved, onBack }) {
           onClick={() => cameraRef.current?.click()}
           disabled={processing}
           style={{
-            height: '40px', padding: '0 16px', background: '#8C3225', color: '#FFFFFF',
-            border: 'none', borderRadius: '4px', fontSize: '13px', fontWeight: 500,
+            height: '40px', padding: '0 16px', background: 'var(--action)', color: 'var(--surface-card)',
+            border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 500,
             cursor: processing ? 'default' : 'pointer',
           }}
         >
@@ -204,8 +204,8 @@ export default function BulkAddExpenses({ user, onSaved, onBack }) {
           onClick={() => galleryRef.current?.click()}
           disabled={processing}
           style={{
-            height: '40px', padding: '0 16px', background: '#FFFFFF', color: '#1A1A1A',
-            border: '1px solid #8C3225', borderRadius: '4px', fontSize: '13px', fontWeight: 500,
+            height: '40px', padding: '0 16px', background: 'var(--surface-card)', color: 'var(--text)',
+            border: '1px solid var(--action)', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 500,
             cursor: processing ? 'default' : 'pointer',
           }}
         >
@@ -222,20 +222,20 @@ export default function BulkAddExpenses({ user, onSaved, onBack }) {
           onChange={e => { processFiles(e.target.files); e.target.value = '' }}
         />
         {processing && (
-          <span style={{ fontSize: '12px', color: '#6B7280' }}>{processingText}</span>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{processingText}</span>
         )}
       </div>
 
       {uploadError && (
-        <div style={{ fontSize: '12px', color: '#DC2626', marginBottom: '16px' }}>{uploadError}</div>
+        <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginBottom: '16px' }}>{uploadError}</div>
       )}
 
-      <div style={{ overflowX: 'auto', border: '1px solid #E5E7EB', borderRadius: '6px' }}>
+      <div style={{ overflowX: 'auto', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '820px' }}>
           <thead>
-            <tr style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
+            <tr style={{ background: 'var(--taupe-50)', borderBottom: '1px solid var(--taupe-200)' }}>
               {['', 'Date', 'Merchant', 'Category', 'Amount', 'Reimbursable', 'Payment Mode', ''].map((h, i) => (
-                <th key={i} style={{ padding: '10px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>
+                <th key={i} style={{ padding: '10px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>
                   {h}
                 </th>
               ))}
@@ -243,11 +243,11 @@ export default function BulkAddExpenses({ user, onSaved, onBack }) {
           </thead>
           <tbody>
             {rows.map((r, i) => (
-              <tr key={i} style={{ borderBottom: '1px solid #F3F4F6' }}>
+              <tr key={i} style={{ borderBottom: '1px solid var(--taupe-100)' }}>
                 <td style={{ padding: '8px', width: '48px' }}>
                   {r.preview && (
                     <a href={r.preview} target="_blank" rel="noopener noreferrer" title={r.qualityFlag ? "Couldn't read this clearly — please check the details" : 'View receipt'}>
-                      <img src={r.preview} alt="Receipt" style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: '3px', border: r.qualityFlag ? '2px solid #CA8A04' : '1px solid #E5E7EB' }} />
+                      <img src={r.preview} alt="Receipt" style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: 'var(--radius-sm)', border: r.qualityFlag ? '2px solid var(--gold-text)' : '1px solid var(--taupe-200)' }} />
                     </a>
                   )}
                 </td>
@@ -277,7 +277,7 @@ export default function BulkAddExpenses({ user, onSaved, onBack }) {
                 </td>
                 <td style={{ padding: '8px' }}>
                   {rows.length > 1 && (
-                    <span onClick={() => removeRow(i)} style={{ fontSize: '11px', color: '#B91C1C', cursor: 'pointer' }}>Remove</span>
+                    <span onClick={() => removeRow(i)} style={{ fontSize: '11px', color: 'var(--clay-text)', cursor: 'pointer' }}>Remove</span>
                   )}
                 </td>
               </tr>
@@ -288,23 +288,23 @@ export default function BulkAddExpenses({ user, onSaved, onBack }) {
 
       <div
         onClick={addRow}
-        style={{ marginTop: '14px', fontSize: '13px', color: '#8C3225', cursor: 'pointer', fontWeight: 500 }}
+        style={{ marginTop: '14px', fontSize: '13px', color: 'var(--action)', cursor: 'pointer', fontWeight: 500 }}
       >
         + Add More Expenses
       </div>
 
       {error && (
-        <div style={{ fontSize: '13px', color: '#DC2626', marginTop: '16px' }}>{error}</div>
+        <div style={{ fontSize: '13px', color: 'var(--clay-text)', marginTop: '16px' }}>{error}</div>
       )}
 
       <div style={{ position: 'fixed', bottom: 0, left: '220px', right: 0, zIndex: 10 }}>
-        <div style={{ background: '#FFFFFF', borderTop: '1px solid #E5E7EB', padding: '16px 20px', display: 'flex', gap: '10px', maxWidth: '960px', margin: '0 auto' }}>
+        <div style={{ background: 'var(--surface-card)', borderTop: '1px solid var(--taupe-200)', padding: '16px 20px', display: 'flex', gap: '10px', maxWidth: '960px', margin: '0 auto' }}>
           <button
             onClick={handleSave}
             disabled={saving || filledRows.length === 0}
             style={{
-              height: '44px', padding: '0 28px', borderRadius: '4px', fontSize: '14px', fontWeight: 600,
-              background: saving || filledRows.length === 0 ? '#9CA3AF' : '#8C3225', color: '#FFFFFF', border: 'none',
+              height: '44px', padding: '0 28px', borderRadius: 'var(--radius-sm)', fontSize: '14px', fontWeight: 600,
+              background: saving || filledRows.length === 0 ? 'var(--text-muted)' : 'var(--action)', color: 'var(--surface-card)', border: 'none',
               cursor: saving || filledRows.length === 0 ? 'default' : 'pointer',
             }}
           >
@@ -312,7 +312,7 @@ export default function BulkAddExpenses({ user, onSaved, onBack }) {
           </button>
           <button
             onClick={onBack}
-            style={{ height: '44px', padding: '0 20px', background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '14px', cursor: 'pointer' }}
+            style={{ height: '44px', padding: '0 20px', background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', fontSize: '14px', cursor: 'pointer' }}
           >
             Cancel
           </button>

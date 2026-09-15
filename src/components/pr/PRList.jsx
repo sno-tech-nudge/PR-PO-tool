@@ -5,11 +5,11 @@ import PRStatusTimeline from './PRStatusTimeline'
 import PRStatusModal from './PRStatusModal'
 
 const STATUS_COLOR = {
-  draft:        { color: '#6B7280', bg: '#F9FAFB' },
-  submitted:    { color: '#B45309', bg: '#FFFBEB' },
-  approved:     { color: '#15803D', bg: '#F0FDF4' },
-  po_generated: { color: '#8C3225', bg: '#fdf0ed' },
-  rejected:     { color: '#B91C1C', bg: '#FEF2F2' },
+  draft:        { color: 'var(--text-muted)', bg: 'var(--taupe-50)' },
+  submitted:    { color: 'var(--gold-text)', bg: 'var(--gold-bg)' },
+  approved:     { color: 'var(--moss-text)', bg: 'var(--moss-bg)' },
+  po_generated: { color: 'var(--action)', bg: 'var(--action-bg)' },
+  rejected:     { color: 'var(--clay-text)', bg: 'var(--clay-bg)' },
 }
 
 export default function PRList({ user, onViewPR, onCreatePR, onResumeDraft }) {
@@ -55,13 +55,13 @@ export default function PRList({ user, onViewPR, onCreatePR, onResumeDraft }) {
     <div style={{ maxWidth: '480px', margin: '0 auto', padding: '20px', width: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <div>
-          <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '4px' }}>Procurement</div>
-          <div style={{ fontSize: '20px', fontWeight: 500, color: '#1A1A1A' }}>My Requests</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Procurement</div>
+          <div style={{ fontSize: '20px', fontWeight: 500, color: 'var(--text)' }}>My Requests</div>
         </div>
         {canCreatePR(user.role) && (
           <button
             onClick={onCreatePR}
-            style={{ height: '36px', padding: '0 16px', background: '#8C3225', color: '#FFFFFF', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+            style={{ height: '36px', padding: '0 16px', background: 'var(--action)', color: 'var(--surface-card)', border: 'none', borderRadius: 'var(--radius-md)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
           >
             + New PR
           </button>
@@ -74,13 +74,13 @@ export default function PRList({ user, onViewPR, onCreatePR, onResumeDraft }) {
         value={search}
         onChange={e => setSearch(e.target.value)}
         style={{
-          width: '100%', height: '36px', border: '1px solid #E8E8E8', borderRadius: '4px',
-          padding: '0 12px', fontSize: '13px', color: '#1A1A1A', outline: 'none',
-          background: '#FFFFFF', boxSizing: 'border-box', marginBottom: '14px',
+          width: '100%', height: '36px', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)',
+          padding: '0 12px', fontSize: '13px', color: 'var(--text)', outline: 'none',
+          background: 'var(--surface-card)', boxSizing: 'border-box', marginBottom: '14px',
         }}
       />
 
-      <div style={{ display: 'flex', borderBottom: '1px solid #E8E8E8', marginBottom: '16px', gap: '0', overflowX: 'auto' }}>
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--taupe-200)', marginBottom: '16px', gap: '0', overflowX: 'auto' }}>
         {[['all','All'],['submitted','Pending'],['approved','Approved'],['po_generated','PO Issued'],['rejected','Rejected'],['draft','Draft']].map(([key, label]) => {
           const count = key === 'all' ? prs.length : prs.filter(p => p.status === key).length
           return (
@@ -90,21 +90,21 @@ export default function PRList({ user, onViewPR, onCreatePR, onResumeDraft }) {
               style={{
                 padding: '8px 14px', fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap',
                 fontWeight: filter === key ? 600 : 400,
-                color: filter === key ? '#1A1A1A' : '#6B6B6B',
-                borderBottom: filter === key ? '2px solid #8C3225' : '2px solid transparent',
+                color: filter === key ? 'var(--text)' : 'var(--text-muted)',
+                borderBottom: filter === key ? '2px solid var(--action)' : '2px solid transparent',
                 marginBottom: '-1px',
               }}
             >
-              {label} {count > 0 && <span style={{ fontSize: '10px', color: '#9CA3AF' }}>({count})</span>}
+              {label} {count > 0 && <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>({count})</span>}
             </div>
           )
         })}
       </div>
 
-      {loading && <div style={{ fontSize: '13px', color: '#6B6B6B', textAlign: 'center', padding: '40px 0' }}>Loading…</div>}
+      {loading && <div style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', padding: '40px 0' }}>Loading…</div>}
 
       {!loading && filtered.length === 0 && (
-        <div style={{ fontSize: '14px', color: '#4A4A4A', textAlign: 'center', padding: '40px 0' }}>
+        <div style={{ fontSize: '14px', color: 'var(--text-muted)', textAlign: 'center', padding: '40px 0' }}>
           {prs.length === 0
             ? 'No purchase requests yet.'
             : search.trim()
@@ -119,24 +119,24 @@ export default function PRList({ user, onViewPR, onCreatePR, onResumeDraft }) {
           <div
             key={pr.id}
             onClick={() => pr.status === 'draft' ? onResumeDraft(pr.id) : onViewPR(pr.id)}
-            style={{ border: '1px solid #E8E8E8', borderRadius: '4px', marginBottom: '10px', padding: '14px 16px', cursor: 'pointer', background: '#FFFFFF' }}
+            style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', marginBottom: '10px', padding: '14px 16px', cursor: 'pointer', background: 'var(--surface-card)' }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: '#1A1A1A' }}>{pr.vendors?.org_name || 'Unknown Vendor'}</div>
-              <div style={{ fontSize: '14px', fontWeight: 700, color: '#1A1A1A' }}>INR {Number(pr.amount || 0).toLocaleString('en-IN')}</div>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{pr.vendors?.org_name || 'Unknown Vendor'}</div>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text)' }}>INR {Number(pr.amount || 0).toLocaleString('en-IN')}</div>
             </div>
-            <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '6px' }}>{pr.purpose?.substring(0, 80)}{pr.purpose?.length > 80 ? '…' : ''}</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px' }}>{pr.purpose?.substring(0, 80)}{pr.purpose?.length > 80 ? '…' : ''}</div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: '11px', color: '#9CA3AF', fontFamily: 'monospace' }}>{pr.pr_number}</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{pr.pr_number}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 7px', borderRadius: '3px', background: sc.bg, color: sc.color }}>
+                <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 7px', borderRadius: 'var(--radius-sm)', background: sc.bg, color: sc.color }}>
                   {pr.status === 'po_generated' ? 'PO Issued' : (pr.status || '').replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                 </span>
                 <button
                   onClick={e => { e.stopPropagation(); setStatusPR(pr) }}
                   style={{
-                    height: '24px', padding: '0 10px', background: '#FFFFFF', color: '#8C3225',
-                    border: '1px solid #f9c5b7', borderRadius: '3px', fontSize: '10px', fontWeight: 600, cursor: 'pointer',
+                    height: '24px', padding: '0 10px', background: 'var(--surface-card)', color: 'var(--action)',
+                    border: '1px solid var(--taupe-300)', borderRadius: 'var(--radius-sm)', fontSize: '10px', fontWeight: 600, cursor: 'pointer',
                   }}
                 >
                   View Status

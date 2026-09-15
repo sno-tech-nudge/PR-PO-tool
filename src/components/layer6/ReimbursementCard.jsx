@@ -11,7 +11,7 @@ export default function ReimbursementCard({ report, selected, onToggle, readonly
   const reimbType = expenses[0]?.reimbursement_type || 'Bank transfer'
 
   return (
-    <div style={{ border: '1px solid #E8E8E8', marginBottom: '8px', overflow: 'hidden' }}>
+    <div style={{ border: '1px solid var(--taupe-200)', marginBottom: '8px', overflow: 'hidden' }}>
       <div style={{ padding: '16px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
 
         {/* Checkbox */}
@@ -20,9 +20,9 @@ export default function ReimbursementCard({ report, selected, onToggle, readonly
             onClick={e => { e.stopPropagation(); onToggle && onToggle(report.id) }}
             style={{
               width: '20px', height: '20px', flexShrink: 0,
-              border: `1.5px solid ${selected ? '#1A1A1A' : '#E8E8E8'}`,
-              background: selected ? '#1A1A1A' : '#FFFFFF',
-              borderRadius: '2px', cursor: 'pointer',
+              border: `1.5px solid ${selected ? 'var(--text)' : 'var(--taupe-200)'}`,
+              background: selected ? 'var(--text)' : 'var(--surface-card)',
+              borderRadius: 'var(--radius-xs)', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               marginTop: '2px',
             }}
@@ -30,7 +30,7 @@ export default function ReimbursementCard({ report, selected, onToggle, readonly
             {selected && (
               <div style={{
                 width: '10px', height: '6px',
-                borderLeft: '2px solid #FFFFFF', borderBottom: '2px solid #FFFFFF',
+                borderLeft: '2px solid var(--surface-card)', borderBottom: '2px solid var(--surface-card)',
                 transform: 'rotate(-45deg)', marginTop: '-3px',
               }} />
             )}
@@ -41,21 +41,21 @@ export default function ReimbursementCard({ report, selected, onToggle, readonly
         <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => setExpanded(e => !e)}>
           {/* Top row */}
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-            <div style={{ fontSize: '14px', fontWeight: 500, color: '#1A1A1A' }}>
+            <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text)' }}>
               {report.brand || 'Team Member'}
             </div>
-            <div style={{ fontSize: '14px', fontWeight: 500, color: '#1A1A1A' }}>
+            <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text)' }}>
               {report.total_amount ? `₹${Number(report.total_amount).toLocaleString('en-IN')}` : '—'}
             </div>
           </div>
 
           {/* Second row */}
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-            <div style={{ fontSize: '12px', color: '#6B6B6B' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
               {report.expense_count || 0} expense{report.expense_count !== 1 ? 's' : ''}
               {report.brand ? ` · ${report.brand}` : ''}
             </div>
-            <div style={{ fontSize: '12px', color: '#6B6B6B' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
               {readonly
                 ? report.reimbursed_at
                   ? `Reimbursed ${new Date(report.reimbursed_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
@@ -67,20 +67,20 @@ export default function ReimbursementCard({ report, selected, onToggle, readonly
 
           {/* Third row */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ fontSize: '11px', color: '#6B6B6B', fontFamily: 'monospace' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
               {report.report_reference}
             </div>
             {readonly ? (
               <div style={{
-                fontSize: '11px', fontWeight: 500, padding: '2px 8px', borderRadius: '2px',
-                background: '#F0FDF4', color: '#16A34A',
+                fontSize: '11px', fontWeight: 500, padding: '2px 8px', borderRadius: 'var(--radius-xs)',
+                background: 'var(--moss-bg)', color: 'var(--moss)',
               }}>
                 Reimbursed
               </div>
             ) : (
               <div style={{
-                fontSize: '11px', color: '#4A4A4A',
-                background: '#F7F7F7', padding: '2px 8px',
+                fontSize: '11px', color: 'var(--text-muted)',
+                background: 'var(--taupe-50)', padding: '2px 8px',
               }}>
                 {reimbType}
               </div>
@@ -91,21 +91,21 @@ export default function ReimbursementCard({ report, selected, onToggle, readonly
 
       {/* Expanded expense breakdown */}
       {expanded && expenses.length > 0 && (
-        <div style={{ borderTop: '1px solid #E8E8E8' }}>
+        <div style={{ borderTop: '1px solid var(--taupe-200)' }}>
           {expenses.map((exp, i) => (
             <div
               key={i}
               style={{
                 padding: '8px 16px',
-                borderBottom: i < expenses.length - 1 ? '1px solid #E8E8E8' : 'none',
+                borderBottom: i < expenses.length - 1 ? '1px solid var(--taupe-200)' : 'none',
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                background: i % 2 === 0 ? '#FFFFFF' : '#F7F7F7',
+                background: i % 2 === 0 ? 'var(--surface-card)' : 'var(--taupe-50)',
               }}
             >
-              <div style={{ fontSize: '12px', color: '#4A4A4A' }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                 {[exp.vendor, exp.category].filter(Boolean).join(' · ')}
               </div>
-              <div style={{ fontSize: '12px', color: '#4A4A4A', flexShrink: 0, marginLeft: '12px' }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', flexShrink: 0, marginLeft: '12px' }}>
                 {exp.amount ? `₹${Number(exp.amount).toLocaleString('en-IN')}` : '—'}
               </div>
             </div>

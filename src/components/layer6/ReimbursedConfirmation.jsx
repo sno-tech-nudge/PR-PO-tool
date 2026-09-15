@@ -17,25 +17,25 @@ function Timeline() {
               right: '50%',
               width: '100%',
               height: '2px',
-              background: '#16A34A',
+              background: 'var(--moss)',
               zIndex: 0,
             }} />
           )}
           {/* Circle */}
           <div style={{
             width: '20px', height: '20px', borderRadius: '50%',
-            background: '#16A34A',
-            border: '2px solid #16A34A',
+            background: 'var(--moss)',
+            border: '2px solid var(--moss)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             zIndex: 1, flexShrink: 0,
           }}>
             <div style={{
               width: '8px', height: '5px',
-              borderLeft: '2px solid #FFFFFF', borderBottom: '2px solid #FFFFFF',
+              borderLeft: '2px solid var(--surface-card)', borderBottom: '2px solid var(--surface-card)',
               transform: 'rotate(-45deg)', marginTop: '-2px',
             }} />
           </div>
-          <div style={{ fontSize: '10px', color: '#16A34A', marginTop: '6px', textAlign: 'center', fontWeight: 500 }}>
+          <div style={{ fontSize: '10px', color: 'var(--moss)', marginTop: '6px', textAlign: 'center', fontWeight: 500 }}>
             {label}
           </div>
         </div>
@@ -49,11 +49,11 @@ function DateRow({ label, value, alt }) {
     <div style={{
       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       padding: '10px 16px', minHeight: '40px',
-      background: alt ? '#F7F7F7' : '#FFFFFF',
-      borderBottom: '1px solid #E8E8E8',
+      background: alt ? 'var(--taupe-50)' : 'var(--surface-card)',
+      borderBottom: '1px solid var(--taupe-200)',
     }}>
-      <div style={{ fontSize: '12px', color: '#6B6B6B' }}>{label}</div>
-      <div style={{ fontSize: '13px', color: '#1A1A1A' }}>{value || '—'}</div>
+      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{label}</div>
+      <div style={{ fontSize: '13px', color: 'var(--text)' }}>{value || '—'}</div>
     </div>
   )
 }
@@ -106,7 +106,7 @@ export default function ReimbursedConfirmation({ reportId, reportReference, onSt
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-        <div style={{ fontSize: '13px', color: '#6B6B6B' }}>Loading...</div>
+        <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Loading...</div>
       </div>
     )
   }
@@ -116,7 +116,7 @@ export default function ReimbursedConfirmation({ reportId, reportReference, onSt
       {onBack && (
         <div
           onClick={onBack}
-          style={{ fontSize: '13px', color: '#4A4A4A', cursor: 'pointer', textDecoration: 'underline', marginBottom: '24px' }}
+          style={{ fontSize: '13px', color: 'var(--text-muted)', cursor: 'pointer', textDecoration: 'underline', marginBottom: '24px' }}
         >
           ← Back
         </div>
@@ -126,20 +126,20 @@ export default function ReimbursedConfirmation({ reportId, reportReference, onSt
       <div style={{ textAlign: 'center', marginBottom: '28px' }}>
         <div style={{
           width: '56px', height: '56px', borderRadius: '50%',
-          background: '#F0FDF4', border: '2px solid #16A34A',
+          background: 'var(--moss-bg)', border: '2px solid var(--moss)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           margin: '0 auto 16px',
         }}>
           <div style={{
             width: '20px', height: '12px',
-            borderLeft: '3px solid #16A34A', borderBottom: '3px solid #16A34A',
+            borderLeft: '3px solid var(--moss)', borderBottom: '3px solid var(--moss)',
             transform: 'rotate(-45deg)', marginTop: '-4px',
           }} />
         </div>
-        <div style={{ fontSize: '20px', fontWeight: 500, color: '#16A34A', marginBottom: '4px' }}>
+        <div style={{ fontSize: '20px', fontWeight: 500, color: 'var(--moss)', marginBottom: '4px' }}>
           Reimbursed
         </div>
-        <div style={{ fontSize: '13px', color: '#6B6B6B' }}>
+        <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
           Your expenses have been reimbursed
         </div>
       </div>
@@ -149,7 +149,7 @@ export default function ReimbursedConfirmation({ reportId, reportReference, onSt
 
       {/* Report details */}
       {report && (
-        <div style={{ border: '1px solid #E8E8E8', overflow: 'hidden', marginBottom: '20px' }}>
+        <div style={{ border: '1px solid var(--taupe-200)', overflow: 'hidden', marginBottom: '20px' }}>
           <DateRow label="Reference" value={<span style={{ fontFamily: 'monospace' }}>{report.report_reference}</span>} alt={false} />
           <DateRow label="Total amount" value={`₹${Number(report.total_amount || 0).toLocaleString('en-IN')}`} alt={true} />
           <DateRow label="Submitted" value={report.created_at ? formatDateTime(report.created_at) : '—'} alt={false} />
@@ -166,16 +166,16 @@ export default function ReimbursedConfirmation({ reportId, reportReference, onSt
             disabled={downloadingPDF}
             style={{
               width: '100%', height: '44px',
-              background: '#FFFFFF', color: '#1A1A1A',
-              border: '1px solid #8C3225',
+              background: 'var(--surface-card)', color: 'var(--text)',
+              border: '1px solid var(--action)',
               fontSize: '14px', cursor: downloadingPDF ? 'default' : 'pointer',
-              borderRadius: '4px',
+              borderRadius: 'var(--radius-sm)',
             }}
           >
             {downloadingPDF ? 'Preparing download…' : 'Download PDF report'}
           </button>
           {pdfError && (
-            <div style={{ fontSize: '12px', color: '#DC2626', marginTop: '6px', textAlign: 'center' }}>
+            <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginTop: '6px', textAlign: 'center' }}>
               {pdfError}
             </div>
           )}
@@ -187,9 +187,9 @@ export default function ReimbursedConfirmation({ reportId, reportReference, onSt
         onClick={onStartNew}
         style={{
           width: '100%', height: '48px',
-          background: '#8C3225', color: '#FFFFFF',
+          background: 'var(--action)', color: 'var(--surface-card)',
           border: 'none', fontSize: '14px', fontWeight: 500,
-          cursor: 'pointer', borderRadius: '4px',
+          cursor: 'pointer', borderRadius: 'var(--radius-sm)',
         }}
       >
         Start new expense

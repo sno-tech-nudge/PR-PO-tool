@@ -35,12 +35,12 @@ async function generatePRNumber() {
 function Field({ label, error, required, hint, children }) {
   return (
     <div style={{ marginBottom: '18px' }}>
-      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '5px' }}>
-        {label}{required && <span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>}
+      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: '5px' }}>
+        {label}{required && <span style={{ color: 'var(--clay-text)', marginLeft: '2px' }}>*</span>}
       </label>
-      {hint && <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '5px' }}>{hint}</div>}
+      {hint && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '5px' }}>{hint}</div>}
       {children}
-      {error && <div style={{ fontSize: '11px', color: '#DC2626', marginTop: '4px' }}>{error}</div>}
+      {error && <div style={{ fontSize: '11px', color: 'var(--clay-text)', marginTop: '4px' }}>{error}</div>}
     </div>
   )
 }
@@ -52,9 +52,9 @@ function sel(value, onChange, options, placeholder, onBlur) {
       onChange={e => onChange(e.target.value)}
       onBlur={onBlur}
       style={{
-        width: '100%', height: '38px', border: '1px solid #D1D5DB', borderRadius: '4px',
-        padding: '0 10px', fontSize: '13px', color: value ? '#1A1F36' : '#9CA3AF',
-        background: '#FFFFFF', outline: 'none', boxSizing: 'border-box',
+        width: '100%', height: '38px', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)',
+        padding: '0 10px', fontSize: '13px', color: value ? 'var(--ink)' : 'var(--text-muted)',
+        background: 'var(--surface-card)', outline: 'none', boxSizing: 'border-box',
       }}
     >
       <option value="">{placeholder}</option>
@@ -65,13 +65,13 @@ function sel(value, onChange, options, placeholder, onBlur) {
 
 function PolicyBanner({ type, children }) {
   const styles = {
-    warning: { bg: '#FFFBEB', border: '#FDE68A', text: '#92400E' },
-    error:   { bg: '#FEF2F2', border: '#FECACA', text: '#B91C1C' },
-    info:    { bg: '#fdf0ed', border: '#f9c5b7', text: '#7c2d12' },
+    warning: { bg: 'var(--gold-bg)', border: 'var(--gold-border)', text: 'var(--gold-text)' },
+    error:   { bg: 'var(--clay-bg)', border: 'var(--clay-border)', text: 'var(--clay-text)' },
+    info:    { bg: 'var(--action-bg)', border: 'var(--taupe-300)', text: '#7c2d12' },
   }
   const s = styles[type] || styles.info
   return (
-    <div style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: '6px', padding: '12px 16px', marginBottom: '16px' }}>
+    <div style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 'var(--radius-md)', padding: '12px 16px', marginBottom: '16px' }}>
       <div style={{ fontSize: '12px', color: s.text, lineHeight: 1.6 }}>{children}</div>
     </div>
   )
@@ -88,9 +88,9 @@ function YesNoToggle({ value, onChange }) {
             onClick={() => onChange(key === 'yes')}
             style={{
               flex: 1, padding: '10px 12px', cursor: 'pointer', textAlign: 'center',
-              border: `1.5px solid ${active ? '#8C3225' : '#E5E7EB'}`,
-              background: active ? '#fdf0ed' : '#FFFFFF', borderRadius: '4px',
-              fontSize: '13px', fontWeight: active ? 600 : 400, color: active ? '#8C3225' : '#374151',
+              border: `1.5px solid ${active ? 'var(--action)' : 'var(--taupe-200)'}`,
+              background: active ? 'var(--action-bg)' : 'var(--surface-card)', borderRadius: 'var(--radius-sm)',
+              fontSize: '13px', fontWeight: active ? 600 : 400, color: active ? 'var(--action)' : 'var(--ink)',
             }}
           >
             {label}
@@ -511,20 +511,20 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
   if (showBelowBlock) {
     return (
       <div style={{ maxWidth: '540px', margin: '0 auto', padding: '24px 20px' }}>
-        <button onClick={() => setShowBelowBlock(false)} style={{ background: 'none', border: 'none', fontSize: '13px', color: '#8C3225', cursor: 'pointer', padding: 0, marginBottom: '20px' }}>
+        <button onClick={() => setShowBelowBlock(false)} style={{ background: 'none', border: 'none', fontSize: '13px', color: 'var(--action)', cursor: 'pointer', padding: 0, marginBottom: '20px' }}>
           ← Back
         </button>
-        <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '8px', padding: '28px 24px' }}>
-          <div style={{ fontSize: '18px', fontWeight: 700, color: '#B91C1C', marginBottom: '12px' }}>PR Not Required</div>
-          <div style={{ fontSize: '14px', color: '#7F1D1D', lineHeight: 1.7, marginBottom: '16px' }}>
+        <div style={{ background: 'var(--clay-bg)', border: '1px solid var(--clay-border)', borderRadius: 'var(--radius-lg)', padding: '28px 24px' }}>
+          <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--clay-text)', marginBottom: '12px' }}>PR Not Required</div>
+          <div style={{ fontSize: '14px', color: 'var(--clay-text)', lineHeight: 1.7, marginBottom: '16px' }}>
             Purchases under <strong>₹25,000</strong> do not require a Purchase Request or Purchase Order. Please submit this as a direct expense claim.
           </div>
-          <div style={{ background: '#FCA5A5', borderRadius: '6px', padding: '12px 16px', fontSize: '12px', color: '#7F1D1D', fontWeight: 600, lineHeight: 1.6 }}>
+          <div style={{ background: '#FCA5A5', borderRadius: 'var(--radius-md)', padding: '12px 16px', fontSize: '12px', color: 'var(--clay-text)', fontWeight: 600, lineHeight: 1.6 }}>
             ⚠ Splitting expenses across multiple requests to stay below the ₹25,000 threshold is <u>strictly prohibited</u> and will invite disciplinary action per the Procurement Policy.
           </div>
           <button
             onClick={() => { setBreakdown({ items: [{ description: '', quantity: '', category: '', ratePerUnit: '' }], tax: '', incidental: '' }); setShowBelowBlock(false) }}
-            style={{ marginTop: '20px', height: '38px', padding: '0 20px', background: '#FFFFFF', color: '#B91C1C', border: '1px solid #FECACA', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}
+            style={{ marginTop: '20px', height: '38px', padding: '0 20px', background: 'var(--surface-card)', color: 'var(--clay-text)', border: '1px solid var(--clay-border)', borderRadius: 'var(--radius-md)', fontSize: '13px', cursor: 'pointer' }}
           >
             Change amount
           </button>
@@ -537,38 +537,38 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
     <div style={{ maxWidth: '640px', margin: '0 auto', padding: '24px 20px 80px' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-        <button onClick={onBack} style={{ background: 'none', border: 'none', fontSize: '13px', color: '#8C3225', cursor: 'pointer', padding: 0 }}>Back</button>
-        <span style={{ color: '#9CA3AF' }}>/</span>
-        <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A1F36', margin: 0 }}>
+        <button onClick={onBack} style={{ background: 'none', border: 'none', fontSize: '13px', color: 'var(--action)', cursor: 'pointer', padding: 0 }}>Back</button>
+        <span style={{ color: 'var(--text-muted)' }}>/</span>
+        <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--ink)', margin: 0 }}>
           {isEdit ? 'Edit Purchase Request' : existingPR?.status === 'draft' ? 'Continue Purchase Request Draft' : 'New Purchase Request'}
         </h2>
       </div>
       {draftSavedAt && (
-        <div style={{ fontSize: '11px', color: '#15803D', marginBottom: '12px' }}>
+        <div style={{ fontSize: '11px', color: 'var(--moss-text)', marginBottom: '12px' }}>
           Draft saved ✓ {draftSavedAt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
         </div>
       )}
       {saveError && step < STEPS.length - 1 && (
-        <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '4px', padding: '10px 14px', marginBottom: '12px', fontSize: '13px', color: '#B91C1C' }}>
+        <div style={{ background: 'var(--clay-bg)', border: '1px solid var(--clay-border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', marginBottom: '12px', fontSize: '13px', color: 'var(--clay-text)' }}>
           {saveError}
         </div>
       )}
 
       {/* Slim progress bar — purely cosmetic, tucked above the step circles
           rather than anywhere near the form fields themselves. */}
-      <div style={{ height: '4px', background: '#F3F4F6', borderRadius: '2px', marginBottom: '18px', overflow: 'hidden' }}>
+      <div style={{ height: '4px', background: 'var(--taupe-100)', borderRadius: 'var(--radius-xs)', marginBottom: '18px', overflow: 'hidden' }}>
         <div style={{
           height: '100%', width: `${((step + 1) / STEPS.length) * 100}%`,
-          background: '#8C3225', borderRadius: '2px', transition: 'width 0.25s ease',
+          background: 'var(--action)', borderRadius: 'var(--radius-xs)', transition: 'width 0.25s ease',
         }} />
       </div>
 
       <StepIndicator current={step} total={STEPS.length} labels={STEP_LABELS} />
-      <div style={{ fontSize: '14px', fontWeight: 700, color: '#1A1F36', marginBottom: '20px' }}>{STEPS[step]}</div>
+      <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--ink)', marginBottom: '20px' }}>{STEPS[step]}</div>
 
       {/* ── Section 1: Program & Donor Details ── */}
       {step === 0 && (
-        <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '24px' }}>
+        <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '24px' }}>
           <Field label="Donor / Programme Allocation" error={errors.allocations} required hint="Split this spend across donors / programmes — must total 100%">
             <DonorAllocations value={allocations} onChange={setAllocations} error={errors.allocations} />
           </Field>
@@ -590,7 +590,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
       {/* ── Section 2: Purchase Details (Expense Details + Quotes & Advance) ── */}
       {step === 1 && (
         <>
-        <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '24px' }}>
+        <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '24px' }}>
           <PolicyBanner type="warning">
             <strong>Important:</strong> Splitting purchases across multiple PRs to stay under ₹25,000 is strictly prohibited and will invite disciplinary action. A minimum lead time of <strong>10 working days</strong> is required for all new procurements.
           </PolicyBanner>
@@ -605,8 +605,8 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
 
           {/* Amount breakdown: per-line-item quantity × category × rate per unit (mandatory) + tax (mandatory) + incidentals (optional) */}
           <div style={{ marginBottom: '18px' }}>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '5px' }}>
-              Amount (INR)<span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: '5px' }}>
+              Amount (INR)<span style={{ color: 'var(--clay-text)', marginLeft: '2px' }}>*</span>
             </label>
             <AmountBreakdown
               value={breakdown}
@@ -616,7 +616,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
           </div>
 
           {numericAmount >= PR_MIN && (
-            <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '16px', background: '#F9FAFB', borderRadius: '4px', padding: '8px 12px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px', background: 'var(--taupe-50)', borderRadius: 'var(--radius-sm)', padding: '8px 12px' }}>
               Approval route: {approvalLevels.map(l => l.label).join(' → ')} → PO Approver &nbsp;·&nbsp; {requiredQuotes} quote{requiredQuotes > 1 ? 's' : ''} required
             </div>
           )}
@@ -639,7 +639,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
                   if (toDate && toDate < v) setToDate('')
                 }}
                 onBlur={() => validateField('fromDate')}
-                style={{ width: '100%', height: '38px', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '0 10px', fontSize: '13px', color: '#1A1F36', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', height: '38px', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', padding: '0 10px', fontSize: '13px', color: 'var(--ink)', background: 'var(--surface-card)', outline: 'none', boxSizing: 'border-box' }}
               />
             </Field>
             <Field label="To Date" error={errors.toDate} required>
@@ -649,7 +649,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
                 min={fromDate || fiscalYearStartStr()}
                 onChange={e => setToDate(e.target.value)}
                 onBlur={() => validateField('toDate')}
-                style={{ width: '100%', height: '38px', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '0 10px', fontSize: '13px', color: '#1A1F36', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', height: '38px', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', padding: '0 10px', fontSize: '13px', color: 'var(--ink)', background: 'var(--surface-card)', outline: 'none', boxSizing: 'border-box' }}
               />
             </Field>
           </div>
@@ -661,17 +661,17 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
               onBlur={() => validateField('purpose')}
               placeholder="Describe what this purchase is for and why it is needed"
               rows={3}
-              style={{ width: '100%', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '10px', fontSize: '13px', color: '#1A1F36', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }}
+              style={{ width: '100%', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', padding: '10px', fontSize: '13px', color: 'var(--ink)', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }}
             />
           </Field>
 
           <div style={{ marginBottom: '18px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--ink)' }}>
               <input type="checkbox" checked={isRecurring} onChange={e => setIsRecurring(e.target.checked)} style={{ width: '16px', height: '16px' }} />
               This is a recurring purchase
             </label>
             {isRecurring && (
-              <div style={{ marginTop: '10px', paddingLeft: '24px', fontSize: '12px', color: '#6B7280' }}>
+              <div style={{ marginTop: '10px', paddingLeft: '24px', fontSize: '12px', color: 'var(--text-muted)' }}>
                 For rate service contracts (Admin, IT), raise PR quarterly or half-yearly.
               </div>
             )}
@@ -687,15 +687,15 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
         {/* Quotes & Payment Terms — reveals once the core purchase details above are filled */}
         {vendorId && lineItemsValid(breakdown.items || []) && breakdownTotals({ ...breakdown, base: itemsBase }).valid && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
-            <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '24px' }}>
+            <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '24px' }}>
               <PolicyBanner type="info">
                 <strong>Policy requirement:</strong> {requiredQuotes} quote{requiredQuotes > 1 ? 's are' : ' is'} required for this purchase (₹{numericAmount.toLocaleString('en-IN')}). Quotes ensure the organisation gets the best price.
               </PolicyBanner>
               <QuoteRows value={quoteState} onChange={setQuoteState} requiredQuotes={requiredQuotes} error={errors.quotes} entity={primaryAllocation(allocations)?.entity} />
             </div>
 
-            <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '24px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#1A1F36', marginBottom: '4px' }}>Payment Terms</div>
+            <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '24px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--ink)', marginBottom: '4px' }}>Payment Terms</div>
               <AdvanceTable value={advanceState} onChange={setAdvanceState} error={errors.advance} />
             </div>
           </div>
@@ -712,17 +712,17 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
             </PolicyBanner>
           )}
 
-          <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px', padding: '24px', marginBottom: '12px' }}>
-            <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '4px' }}>{isEdit ? 'Editing' : 'New'} Purchase Request</div>
-            <div style={{ fontSize: '32px', fontWeight: 700, color: '#1A1F36' }}>₹{numericAmount.toLocaleString('en-IN')}</div>
-            <div style={{ fontSize: '13px', color: '#6B7280', marginTop: '2px', marginBottom: '16px' }}>{vendorData?.org_name || vendorId}</div>
-            <div style={{ height: '1px', background: '#F3F4F6', marginBottom: '16px' }} />
+          <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '24px', marginBottom: '12px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>{isEdit ? 'Editing' : 'New'} Purchase Request</div>
+            <div style={{ fontSize: '32px', fontWeight: 700, color: 'var(--ink)' }}>₹{numericAmount.toLocaleString('en-IN')}</div>
+            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px', marginBottom: '16px' }}>{vendorData?.org_name || vendorId}</div>
+            <div style={{ height: '1px', background: 'var(--taupe-100)', marginBottom: '16px' }} />
 
             {/* Line items */}
             <div style={{ marginBottom: '16px' }}>
-              <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '6px' }}>Line Items</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px' }}>Line Items</div>
               {(breakdown.items || []).filter(it => it.quantity !== '' || it.ratePerUnit !== '' || it.category || it.description).map((it, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#374151', marginBottom: '3px' }}>
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--ink)', marginBottom: '3px' }}>
                   <span>{it.description || `Item ${i + 1}`} — {it.category || 'No category'} — {it.quantity || 0} × ₹{(Number(it.ratePerUnit) || 0).toLocaleString('en-IN')}</span>
                   <span style={{ fontWeight: 600 }}>₹{((Number(it.quantity) || 0) * (Number(it.ratePerUnit) || 0)).toLocaleString('en-IN')}</span>
                 </div>
@@ -751,16 +751,16 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
               ['Submission Timestamp', new Date().toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })],
             ].filter(Boolean).map(([label, val]) => (
               <div key={label} style={{ display: 'flex', gap: '12px', marginBottom: '8px', fontSize: '13px' }}>
-                <span style={{ color: '#9CA3AF', width: '140px', flexShrink: 0, fontSize: '12px' }}>{label}</span>
-                <span style={{ color: '#1A1F36' }}>{val}</span>
+                <span style={{ color: 'var(--text-muted)', width: '140px', flexShrink: 0, fontSize: '12px' }}>{label}</span>
+                <span style={{ color: 'var(--ink)' }}>{val}</span>
               </div>
             ))}
 
             {/* Donor allocation lines */}
-            <div style={{ marginTop: '10px', borderTop: '1px solid #F3F4F6', paddingTop: '10px' }}>
-              <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '6px' }}>Donor / Programme Allocation</div>
+            <div style={{ marginTop: '10px', borderTop: '1px solid var(--taupe-100)', paddingTop: '10px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px' }}>Donor / Programme Allocation</div>
               {allocations.map((a, i) => (
-                <div key={i} style={{ fontSize: '12px', color: '#374151', marginBottom: '3px' }}>
+                <div key={i} style={{ fontSize: '12px', color: 'var(--ink)', marginBottom: '3px' }}>
                   {a.percent}% · {[a.entity, a.program, a.subprogram, a.donor].filter(Boolean).join(' / ')}
                 </div>
               ))}
@@ -781,7 +781,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
           )}
 
           {saveError && (
-            <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '4px', padding: '10px 14px', marginBottom: '12px', fontSize: '13px', color: '#B91C1C' }}>
+            <div style={{ background: 'var(--clay-bg)', border: '1px solid var(--clay-border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', marginBottom: '12px', fontSize: '13px', color: 'var(--clay-text)' }}>
               {saveError}
             </div>
           )}
@@ -789,7 +789,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
           <button
             onClick={handleSubmit}
             disabled={saving}
-            style={{ width: '100%', height: '44px', background: saving ? '#9CA3AF' : '#8C3225', color: '#FFFFFF', border: 'none', borderRadius: '4px', fontSize: '14px', fontWeight: 600, cursor: saving ? 'default' : 'pointer' }}
+            style={{ width: '100%', height: '44px', background: saving ? 'var(--text-muted)' : 'var(--action)', color: 'var(--surface-card)', border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '14px', fontWeight: 600, cursor: saving ? 'default' : 'pointer' }}
           >
             {saving ? 'Submitting…' : isEdit ? 'Resubmit Purchase Request' : 'Submit Purchase Request'}
           </button>
@@ -802,14 +802,14 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
           {step > 0 && (
             <button
               onClick={() => setStep(s => s - 1)}
-              style={{ height: '40px', padding: '0 20px', background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '14px', cursor: 'pointer' }}
+              style={{ height: '40px', padding: '0 20px', background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', fontSize: '14px', cursor: 'pointer' }}
             >
               Back
             </button>
           )}
           <button
             onClick={nextStep}
-            style={{ height: '40px', padding: '0 24px', background: '#8C3225', color: '#FFFFFF', border: 'none', borderRadius: '4px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}
+            style={{ height: '40px', padding: '0 24px', background: 'var(--action)', color: 'var(--surface-card)', border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}
           >
             {step === 1 ? 'Review' : 'Continue'}
           </button>
@@ -817,7 +817,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
             <button
               onClick={handleSaveDraft}
               disabled={savingDraft}
-              style={{ height: '40px', padding: '0 18px', background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '13px', fontWeight: 600, cursor: savingDraft ? 'default' : 'pointer' }}
+              style={{ height: '40px', padding: '0 18px', background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 600, cursor: savingDraft ? 'default' : 'pointer' }}
             >
               {savingDraft ? 'Saving…' : 'Save as Draft'}
             </button>
@@ -829,7 +829,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
         <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
           <button
             onClick={() => setStep(s => s - 1)}
-            style={{ height: '38px', padding: '0 20px', background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '13px', cursor: 'pointer' }}
+            style={{ height: '38px', padding: '0 20px', background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', fontSize: '13px', cursor: 'pointer' }}
           >
             ← Edit
           </button>
@@ -837,7 +837,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
             <button
               onClick={handleSaveDraft}
               disabled={savingDraft}
-              style={{ height: '38px', padding: '0 18px', background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '13px', fontWeight: 600, cursor: savingDraft ? 'default' : 'pointer' }}
+              style={{ height: '38px', padding: '0 18px', background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 600, cursor: savingDraft ? 'default' : 'pointer' }}
             >
               {savingDraft ? 'Saving…' : 'Save as Draft'}
             </button>
@@ -849,14 +849,14 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
       {!showBelowBlock && step < STEPS.length - 1 && (
         <div style={{
           position: 'fixed', bottom: '24px', right: '24px', zIndex: 40,
-          background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '8px',
-          padding: '14px 16px', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', minWidth: '190px',
+          background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)',
+          padding: '14px 16px', boxShadow: '0 4px 16px rgba(54, 32, 26,0.12)', minWidth: '190px',
         }}>
-          <div style={{ fontSize: '10px', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
+          <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
             Before you submit
           </div>
           {checklist.map(c => (
-            <div key={c.label} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', marginBottom: '6px', color: c.done ? '#15803D' : '#9CA3AF' }}>
+            <div key={c.label} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', marginBottom: '6px', color: c.done ? 'var(--moss-text)' : 'var(--text-muted)' }}>
               <span>{c.done ? '✓' : '○'}</span>
               <span>{c.label}</span>
             </div>

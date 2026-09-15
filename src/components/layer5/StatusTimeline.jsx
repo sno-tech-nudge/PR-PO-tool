@@ -38,7 +38,7 @@ export default function StatusTimeline({ currentStep = 0, compact = false }) {
                   right: '50%',
                   width: '100%',
                   height: '1px',
-                  background: isDone ? '#16A34A' : '#E8E8E8',
+                  background: isDone ? 'var(--moss)' : 'var(--taupe-200)',
                   zIndex: 0,
                 }} />
               )}
@@ -48,8 +48,8 @@ export default function StatusTimeline({ currentStep = 0, compact = false }) {
                 width: '10px',
                 height: '10px',
                 borderRadius: '50%',
-                background: isDone ? '#16A34A' : isCurrent ? '#1A1A1A' : '#FFFFFF',
-                border: `1.5px solid ${isDone ? '#16A34A' : isCurrent ? '#1A1A1A' : '#E8E8E8'}`,
+                background: isDone ? 'var(--moss)' : isCurrent ? 'var(--text)' : 'var(--surface-card)',
+                border: `1.5px solid ${isDone ? 'var(--moss)' : isCurrent ? 'var(--text)' : 'var(--taupe-200)'}`,
                 zIndex: 1,
                 position: 'relative',
                 flexShrink: 0,
@@ -62,7 +62,7 @@ export default function StatusTimeline({ currentStep = 0, compact = false }) {
                 textAlign: 'center',
                 marginTop: '6px',
                 lineHeight: '1.3',
-                color: isDone ? '#16A34A' : isCurrent ? '#1A1A1A' : '#6B6B6B',
+                color: isDone ? 'var(--moss)' : isCurrent ? 'var(--text)' : 'var(--text-muted)',
                 fontWeight: isCurrent ? 500 : 400,
                 paddingLeft: '2px',
                 paddingRight: '2px',

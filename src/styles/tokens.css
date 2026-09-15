@@ -1,0 +1,268 @@
+/* ============================================================
+   The/Nudge — Design system tokens
+   Ported from "TheNudge Design System" package: colors,
+   typography, spacing/radius/shadow, self-hosted fonts, and
+   base element defaults. Font paths adjusted to this project's
+   src/assets/fonts/.
+   ============================================================ */
+
+/* ---- Webfonts ---- */
+@font-face {
+  font-family: "Montserrat";
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url("../assets/fonts/Montserrat-Light.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Montserrat";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/Montserrat-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Montserrat";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../assets/fonts/Montserrat-Medium.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Montserrat";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../assets/fonts/Montserrat-SemiBold.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Montserrat";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../assets/fonts/Montserrat-Bold.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Lato";
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url("../assets/fonts/Lato-Light.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Lato";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/Lato-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Lato";
+  font-style: italic;
+  font-weight: 300;
+  font-display: swap;
+  src: url("../assets/fonts/Lato-LightItalic.woff2") format("woff2");
+}
+
+:root {
+  /* ---- Brand primaries (exact hex — never approximate) ---- */
+  --tn-brown: #693d30;
+  --tn-taupe: #ddd0cc;
+  --tn-white: #ffffff;
+
+  /* ---- Brown scale (tints & shades of #693d30) ---- */
+  --brown-900: #36201a;
+  --brown-800: #4d2c23;
+  --brown-700: #693d30;
+  --brown-600: #7d4c3d;
+  --brown-500: #9a6655;
+  --brown-400: #b88e7f;
+  --brown-300: #cda99c;
+
+  /* ---- Taupe / paper scale (warm neutrals) ---- */
+  --paper:     #f6f2ec;
+  --taupe-50:  #faf7f4;
+  --taupe-100: #f4efe9;
+  --taupe-200: #ece3dc;
+  --taupe-300: #ddd0cc;
+  --taupe-400: #c9b8b1;
+  --taupe-500: #b3a099;
+
+  /* ---- Functional accents (subdued, brand-aligned) ---- */
+  --moss:   #6b7257;
+  --clay:   #b4623f;
+  --gold:   #c79a4e;
+
+  /* Surfaces */
+  --surface:          var(--paper);
+  --surface-card:     var(--tn-white);
+  --surface-paper:    var(--paper);
+  --surface-sunken:   var(--taupe-200);
+  --surface-taupe:    var(--taupe-300);
+  --surface-dark:     var(--brown-700);
+  --surface-hot:      var(--brown-900);
+  --surface-darkest:  var(--brown-900);
+
+  /* Text */
+  --ink:              var(--brown-700);
+  --text:             var(--brown-700);
+  --text-muted:       var(--brown-500);
+  --text-faint:       var(--brown-400);
+  --text-on-dark:     var(--taupe-200);
+  --text-on-dark-muted: var(--brown-300);
+  --text-inverse:     var(--tn-white);
+
+  /* Lines & borders */
+  --rule:             color-mix(in srgb, var(--brown-700) 20%, transparent);
+  --rule-strong:      var(--brown-700);
+  --rule-on-dark:     color-mix(in srgb, var(--taupe-200) 22%, transparent);
+  --border:           color-mix(in srgb, var(--brown-700) 20%, transparent);
+  --border-strong:    var(--brown-700);
+  --border-on-dark:   color-mix(in srgb, var(--taupe-200) 22%, transparent);
+
+  /* Interactive (brown primary) */
+  --action:           var(--brown-700);
+  --action-hover:     var(--brown-800);
+  --action-active:    var(--brown-900);
+  --action-text:      var(--tn-white);
+  --focus-ring:       color-mix(in srgb, var(--brown-500) 55%, transparent);
+
+  /* Mono data ramp */
+  --chart-1: var(--brown-700);
+  --chart-2: var(--brown-600);
+  --chart-3: var(--brown-500);
+  --chart-4: var(--brown-400);
+  --chart-5: var(--taupe-300);
+  --chart-6: var(--taupe-200);
+
+  /* Status/functional tints — text/bg/border triples built on the
+     brand-aligned moss (success) / gold (warning) / clay (error) accents,
+     so status meaning stays visually distinct while every hue comes from
+     the brand palette. Darker *-text variants keep small text readable
+     on the paper/white surfaces this app uses for badges. */
+  --moss-text:   color-mix(in srgb, var(--moss) 75%, var(--brown-900));
+  --moss-bg:     color-mix(in srgb, var(--moss) 12%, var(--tn-white));
+  --moss-border: color-mix(in srgb, var(--moss) 35%, transparent);
+
+  --gold-text:   color-mix(in srgb, var(--gold) 60%, var(--brown-900));
+  --gold-bg:     color-mix(in srgb, var(--gold) 14%, var(--tn-white));
+  --gold-border: color-mix(in srgb, var(--gold) 40%, transparent);
+
+  --clay-text:   color-mix(in srgb, var(--clay) 70%, var(--brown-900));
+  --clay-bg:     color-mix(in srgb, var(--clay) 12%, var(--tn-white));
+  --clay-border: color-mix(in srgb, var(--clay) 35%, transparent);
+
+  --action-bg:   color-mix(in srgb, var(--action) 10%, var(--tn-white));
+
+  /* ---- Families ---- */
+  --font-sans: "Montserrat", "Helvetica Neue", Arial, sans-serif;
+  --font-serif-alt: "Lato", Georgia, serif;
+  --font-italic: "Lato", Georgia, serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  /* ---- Weights ---- */
+  --weight-light: 300;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* ---- Type scale (1.250 major-third, 16px root) ---- */
+  --text-2xs: 0.694rem;
+  --text-xs:  0.8rem;
+  --text-sm:  0.9rem;
+  --text-base: 1rem;
+  --text-md:  1.25rem;
+  --text-lg:  1.563rem;
+  --text-xl:  1.953rem;
+  --text-2xl: 2.441rem;
+  --text-3xl: 3.052rem;
+  --text-4xl: 3.815rem;
+  --text-5xl: 4.768rem;
+
+  /* ---- Line heights ---- */
+  --leading-tight: 1.1;
+  --leading-snug: 1.25;
+  --leading-normal: 1.55;
+  --leading-relaxed: 1.7;
+
+  /* ---- Letter spacing ---- */
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.04em;
+  --tracking-wider: 0.12em;
+
+  /* ---- Semantic roles ---- */
+  --font-display: var(--font-sans);
+  --font-heading: var(--font-sans);
+  --font-body: var(--font-sans);
+  --font-caption: var(--font-italic);
+
+  /* ---- Spacing scale (4px base) ---- */
+  --space-0: 0;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+  --space-9: 6rem;
+  --space-10: 8rem;
+
+  /* ---- Radius (gentle, rectangular brand) ---- */
+  --radius-none: 0;
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 16px;
+  --radius-pill: 999px;
+
+  /* ---- Borders ---- */
+  --border-width: 1px;
+  --border-width-strong: 2px;
+
+  /* ---- Elevation (warm-brown tinted, soft, sparing) ---- */
+  --shadow-xs: 0 1px 2px rgba(54, 32, 26, 0.06);
+  --shadow-sm: 0 1px 3px rgba(54, 32, 26, 0.08), 0 1px 2px rgba(54, 32, 26, 0.06);
+  --shadow-md: 0 4px 12px rgba(54, 32, 26, 0.10);
+  --shadow-lg: 0 12px 32px rgba(54, 32, 26, 0.14);
+  --shadow-focus: 0 0 0 3px var(--focus-ring);
+
+  /* ---- Layout ---- */
+  --container-sm: 640px;
+  --container-md: 880px;
+  --container-lg: 1120px;
+  --container-xl: 1320px;
+  --gutter: var(--space-5);
+  --logo-clearspace: 1em;
+
+  /* ---- Motion (restrained, no bounce) ---- */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.0, 0, 0.2, 1);
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
+}
+
+/* ---- Base element defaults ---- */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: var(--weight-light);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+  color: var(--ink);
+}
+
+a {
+  color: var(--action);
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+a:hover { color: var(--action-hover); }
+
+::selection {
+  background: var(--brown-700);
+  color: var(--tn-white);
+}

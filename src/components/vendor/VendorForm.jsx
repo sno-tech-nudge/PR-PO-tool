@@ -88,22 +88,22 @@ function parseGSTIN(gstin) {
 function Field({ label, error, required, hint, children }) {
   return (
     <div style={{ marginBottom: '18px' }}>
-      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: hint ? '2px' : '5px' }}>
-        {label}{required && <span style={{ color: '#DC2626', marginLeft: '2px' }}>*</span>}
+      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: hint ? '2px' : '5px' }}>
+        {label}{required && <span style={{ color: 'var(--clay-text)', marginLeft: '2px' }}>*</span>}
       </label>
-      {hint && <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '5px' }}>{hint}</div>}
+      {hint && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '5px' }}>{hint}</div>}
       {children}
-      {error && <div style={{ fontSize: '11px', color: '#DC2626', marginTop: '4px' }}>{error}</div>}
+      {error && <div style={{ fontSize: '11px', color: 'var(--clay-text)', marginTop: '4px' }}>{error}</div>}
     </div>
   )
 }
 
 const inputStyle = (err, extra = {}) => ({
-  width: '100%', height: '38px', border: `1px solid ${err ? '#DC2626' : '#D1D5DB'}`,
-  borderRadius: '4px', padding: '0 10px', fontSize: '13px', color: '#1A1F36',
-  background: '#FFFFFF', outline: 'none', boxSizing: 'border-box', ...extra,
+  width: '100%', height: '38px', border: `1px solid ${err ? 'var(--clay-text)' : 'var(--taupe-400)'}`,
+  borderRadius: 'var(--radius-sm)', padding: '0 10px', fontSize: '13px', color: 'var(--ink)',
+  background: 'var(--surface-card)', outline: 'none', boxSizing: 'border-box', ...extra,
 })
-const disabledStyle = { ...inputStyle(false), background: '#F3F4F6', color: '#9CA3AF', cursor: 'not-allowed' }
+const disabledStyle = { ...inputStyle(false), background: 'var(--taupe-100)', color: 'var(--text-muted)', cursor: 'not-allowed' }
 
 function Inp({ field, f, setF, placeholder, type = 'text', disabled, mono, err, upper, maxLength }) {
   return (
@@ -124,7 +124,7 @@ function Sel({ field, f, setF, options, placeholder, err }) {
     <select
       value={f[field]}
       onChange={e => setF(prev => ({ ...prev, [field]: e.target.value }))}
-      style={{ ...inputStyle(err), color: f[field] ? '#1A1F36' : '#9CA3AF' }}
+      style={{ ...inputStyle(err), color: f[field] ? 'var(--ink)' : 'var(--text-muted)' }}
     >
       <option value="">{placeholder || 'Select…'}</option>
       {options.map(o => <option key={o} value={o}>{o}</option>)}
@@ -137,21 +137,21 @@ function Toggle({ label, checked, onChange }) {
     <label style={{
       display: 'flex', alignItems: 'center', gap: '10px',
       cursor: 'pointer', padding: '12px 16px',
-      background: checked ? '#fdf0ed' : '#F9FAFB',
-      border: `1px solid ${checked ? '#f9c5b7' : '#E5E7EB'}`,
-      borderRadius: '6px', fontSize: '13px', fontWeight: 500,
-      color: checked ? '#8C3225' : '#374151', userSelect: 'none', transition: '0.15s',
+      background: checked ? 'var(--action-bg)' : 'var(--taupe-50)',
+      border: `1px solid ${checked ? 'var(--taupe-300)' : 'var(--taupe-200)'}`,
+      borderRadius: 'var(--radius-md)', fontSize: '13px', fontWeight: 500,
+      color: checked ? 'var(--action)' : 'var(--ink)', userSelect: 'none', transition: '0.15s',
     }}>
       <div style={{
-        width: '36px', height: '20px', borderRadius: '10px',
-        background: checked ? '#8C3225' : '#D1D5DB',
+        width: '36px', height: '20px', borderRadius: 'var(--radius-lg)',
+        background: checked ? 'var(--action)' : 'var(--taupe-400)',
         position: 'relative', transition: '0.2s', flexShrink: 0,
       }}>
         <div style={{
           position: 'absolute', top: '2px',
           left: checked ? '18px' : '2px',
           width: '16px', height: '16px', borderRadius: '50%',
-          background: '#FFFFFF', transition: '0.2s',
+          background: 'var(--surface-card)', transition: '0.2s',
         }} />
       </div>
       <input type="checkbox" checked={checked} onChange={onChange} style={{ display: 'none' }} />
@@ -163,10 +163,10 @@ function Toggle({ label, checked, onChange }) {
 function YesNo({ value, onChange, error }) {
   const pill = selected => ({
     flex: 1, textAlign: 'center', padding: '10px 12px', cursor: 'pointer',
-    borderRadius: '6px', fontSize: '13px', fontWeight: 600,
-    border: `1px solid ${selected ? '#8C3225' : '#D1D5DB'}`,
-    background: selected ? '#fdf0ed' : '#FFFFFF',
-    color: selected ? '#8C3225' : '#374151',
+    borderRadius: 'var(--radius-md)', fontSize: '13px', fontWeight: 600,
+    border: `1px solid ${selected ? 'var(--action)' : 'var(--taupe-400)'}`,
+    background: selected ? 'var(--action-bg)' : 'var(--surface-card)',
+    color: selected ? 'var(--action)' : 'var(--ink)',
   })
   return (
     <div>
@@ -174,23 +174,23 @@ function YesNo({ value, onChange, error }) {
         <div style={pill(value === true)} onClick={() => onChange(true)}>Yes</div>
         <div style={pill(value === false)} onClick={() => onChange(false)}>No</div>
       </div>
-      {error && <div style={{ fontSize: '11px', color: '#DC2626', marginTop: '4px' }}>{error}</div>}
+      {error && <div style={{ fontSize: '11px', color: 'var(--clay-text)', marginTop: '4px' }}>{error}</div>}
     </div>
   )
 }
 
 function SectionHeader({ number, title, subtitle }) {
   return (
-    <div style={{ marginBottom: '22px', paddingBottom: '14px', borderBottom: '2px solid #F3F4F6' }}>
+    <div style={{ marginBottom: '22px', paddingBottom: '14px', borderBottom: '2px solid var(--taupe-100)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <div style={{
-          width: '30px', height: '30px', borderRadius: '50%', background: '#8C3225',
-          color: '#FFFFFF', fontSize: '13px', fontWeight: 700,
+          width: '30px', height: '30px', borderRadius: '50%', background: 'var(--action)',
+          color: 'var(--surface-card)', fontSize: '13px', fontWeight: 700,
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
         }}>{number}</div>
         <div>
-          <div style={{ fontSize: '15px', fontWeight: 700, color: '#1A1F36' }}>{title}</div>
-          {subtitle && <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '1px' }}>{subtitle}</div>}
+          <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--ink)' }}>{title}</div>
+          {subtitle && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px' }}>{subtitle}</div>}
         </div>
       </div>
     </div>
@@ -201,12 +201,12 @@ function FileUpload({ label, required, error, existing, file, onChange, accept =
   return (
     <Field label={label} required={required} error={error}>
       <div style={{
-        border: `2px dashed ${error ? '#DC2626' : file ? '#15803D' : '#D1D5DB'}`,
-        borderRadius: '6px', padding: '16px', background: file ? '#F0FDF4' : '#FAFAFA',
+        border: `2px dashed ${error ? 'var(--clay-text)' : file ? 'var(--moss-text)' : 'var(--taupe-400)'}`,
+        borderRadius: 'var(--radius-md)', padding: '16px', background: file ? 'var(--moss-bg)' : 'var(--taupe-50)',
         cursor: 'pointer', transition: '0.15s',
       }}>
         <label style={{ cursor: 'pointer', display: 'block' }}>
-          <div style={{ fontSize: '12px', color: file ? '#15803D' : '#6B7280', textAlign: 'center', marginBottom: '6px' }}>
+          <div style={{ fontSize: '12px', color: file ? 'var(--moss-text)' : 'var(--text-muted)', textAlign: 'center', marginBottom: '6px' }}>
             {file ? `✓ ${file.name}` : existing ? '✓ File already uploaded — click to replace' : 'Click to select file (PDF or image)'}
           </div>
           <input
@@ -219,8 +219,8 @@ function FileUpload({ label, required, error, existing, file, onChange, accept =
             <div style={{ textAlign: 'center' }}>
               <span style={{
                 display: 'inline-block', padding: '5px 14px',
-                background: '#FFFFFF', border: '1px solid #D1D5DB',
-                borderRadius: '4px', fontSize: '12px', color: '#374151', fontWeight: 500,
+                background: 'var(--surface-card)', border: '1px solid var(--taupe-400)',
+                borderRadius: 'var(--radius-sm)', fontSize: '12px', color: 'var(--ink)', fontWeight: 500,
               }}>
                 Select File
               </span>
@@ -229,7 +229,7 @@ function FileUpload({ label, required, error, existing, file, onChange, accept =
         </label>
       </div>
       {existing && !file && (
-        <div style={{ fontSize: '11px', color: '#15803D', marginTop: '4px' }}>File on record — re-upload to replace.</div>
+        <div style={{ fontSize: '11px', color: 'var(--moss-text)', marginTop: '4px' }}>File on record — re-upload to replace.</div>
       )}
     </Field>
   )
@@ -738,8 +738,8 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
   const grid2 = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 20px' }
   const full  = { gridColumn: '1 / -1' }
   const card  = {
-    background: '#FFFFFF', border: '1px solid #E3E8EF',
-    borderRadius: '8px', padding: '28px', marginBottom: '16px',
+    background: 'var(--surface-card)', border: '1px solid var(--taupe-200)',
+    borderRadius: 'var(--radius-lg)', padding: '28px', marginBottom: '16px',
   }
 
   return (
@@ -747,11 +747,11 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-        <button onClick={onBack} style={{ background: 'none', border: 'none', fontSize: '13px', color: '#8C3225', cursor: 'pointer', padding: 0 }}>
+        <button onClick={onBack} style={{ background: 'none', border: 'none', fontSize: '13px', color: 'var(--action)', cursor: 'pointer', padding: 0 }}>
           ← Back
         </button>
-        <span style={{ color: '#D1D5DB' }}>/</span>
-        <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A1F36', margin: 0 }}>
+        <span style={{ color: 'var(--taupe-400)' }}>/</span>
+        <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--ink)', margin: 0 }}>
           {isEdit ? 'Edit Vendor' : existingVendor?.status === 'draft' ? 'Continue Vendor Draft' : 'Vendor Registration'}
         </h2>
       </div>
@@ -759,16 +759,16 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
       {/* Vendor ID badge */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'space-between',
-        background: '#fdf0ed', border: '1px solid #f9c5b7', borderRadius: '6px',
+        background: 'var(--action-bg)', border: '1px solid var(--taupe-300)', borderRadius: 'var(--radius-md)',
         padding: '12px 18px', marginBottom: '24px',
       }}>
         <div>
-          <div style={{ fontSize: '10px', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Vendor ID</div>
-          <div style={{ fontSize: '16px', fontWeight: 700, color: '#8C3225', fontFamily: 'monospace', marginTop: '2px' }}>
+          <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Vendor ID</div>
+          <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--action)', fontFamily: 'monospace', marginTop: '2px' }}>
             {vendorId || 'Will be assigned on submission'}
           </div>
         </div>
-        <div style={{ fontSize: '11px', color: '#9CA3AF' }}>Auto-assigned</div>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Auto-assigned</div>
       </div>
 
       {/* ══════════════════════════════════════
@@ -824,7 +824,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
               maxLength={6}
               style={inputStyle(!!errors.pincode)}
             />
-            {pincodeLooking && <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '3px' }}>Looking up…</div>}
+            {pincodeLooking && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px' }}>Looking up…</div>}
           </Field>
           <Field label="City / District" required error={errors.city}>
             <Inp field="city" f={f} setF={setF} placeholder="Bangalore" err={!!errors.city} />
@@ -850,7 +850,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                 type="button"
                 onClick={() => checkPanDuplicates(f.pan_number)}
                 style={{
-                  background: 'none', border: 'none', padding: '4px 0', fontSize: '11px', color: '#2563EB',
+                  background: 'none', border: 'none', padding: '4px 0', fontSize: '11px', color: 'var(--action)',
                   cursor: 'pointer', fontWeight: 600, display: 'block', marginTop: '4px', textDecoration: 'underline',
                 }}
               >
@@ -861,8 +861,8 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
               <div
                 onClick={() => setShowPanDupModal(true)}
                 style={{
-                  marginTop: '6px', fontSize: '11px', color: '#92400E', cursor: 'pointer',
-                  background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '4px', padding: '6px 10px',
+                  marginTop: '6px', fontSize: '11px', color: 'var(--gold-text)', cursor: 'pointer',
+                  background: 'var(--gold-bg)', border: '1px solid var(--gold-border)', borderRadius: 'var(--radius-sm)', padding: '6px 10px',
                 }}
               >
                 ⚠ {panDuplicates.length} other vendor{panDuplicates.length !== 1 ? 's' : ''} already registered with this PAN — click to view
@@ -874,7 +874,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         {/* Individual/Proprietorship vendor — Aadhaar (per the Finance
             requirements sheet, both share the same document requirements) */}
         {isIndividual && (
-          <div style={{ background: '#F5F3FF', border: '1px solid #DDD6FE', borderRadius: '6px', padding: '16px', marginBottom: '14px' }}>
+          <div style={{ background: 'var(--gold-bg)', border: '1px solid #DDD6FE', borderRadius: 'var(--radius-md)', padding: '16px', marginBottom: '14px' }}>
             <div style={{ fontSize: '12px', fontWeight: 700, color: '#5B21B6', marginBottom: '12px' }}>Aadhaar Details (Individual Vendor)</div>
             <Field label="Aadhaar Number" required error={errors.aadhaar_number}>
               <input
@@ -926,8 +926,8 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           />
         </div>
         {f.is_msme && (
-          <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '6px', padding: '16px', marginBottom: '14px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#92400E', marginBottom: '12px' }}>MSME Registration Details</div>
+          <div style={{ background: 'var(--gold-bg)', border: '1px solid var(--gold-border)', borderRadius: 'var(--radius-md)', padding: '16px', marginBottom: '14px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gold-text)', marginBottom: '12px' }}>MSME Registration Details</div>
             <Field label="MSME Registration Details" required error={errors.msme_details}
               hint="If MSME is yes, please provide the registration details">
               <textarea
@@ -936,10 +936,10 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                 placeholder="MSME Udyam Registration Number, category (Micro/Small/Medium), etc."
                 rows={3}
                 style={{
-                  width: '100%', border: `1px solid ${errors.msme_details ? '#DC2626' : '#FDE68A'}`,
-                  borderRadius: '4px', padding: '10px', fontSize: '13px', color: '#1A1F36',
+                  width: '100%', border: `1px solid ${errors.msme_details ? 'var(--clay-text)' : 'var(--gold-border)'}`,
+                  borderRadius: 'var(--radius-sm)', padding: '10px', fontSize: '13px', color: 'var(--ink)',
                   outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit',
-                  background: '#FFFFFF',
+                  background: 'var(--surface-card)',
                 }}
               />
             </Field>
@@ -963,19 +963,19 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           />
         </div>
         {f.is_gstin_registered && (
-          <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '6px', padding: '16px', marginBottom: '14px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#1E40AF', marginBottom: '12px' }}>GST Registration Detail</div>
+          <div style={{ background: '#EFF6FF', border: '1px solid var(--action-bg)', borderRadius: 'var(--radius-md)', padding: '16px', marginBottom: '14px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--action)', marginBottom: '12px' }}>GST Registration Detail</div>
             {!gstinEnabled && (
-              <div style={{ fontSize: '12px', color: '#6B7280', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: '4px', padding: '10px 12px', marginBottom: '12px' }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', background: 'var(--taupe-100)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', marginBottom: '12px' }}>
                 ℹ In order to fill GST Registration Detail, first fill <strong>Organisation Registration State</strong> (below) and a valid <strong>PAN Number</strong> (above).
               </div>
             )}
             {(() => {
               const parsed = parseGSTIN(f.gstin)
               const canValidate = !!parsed
-              const borderColor = !f.gstin ? '#BFDBFE'
-                : gstinValidated ? (gstinValidated.ok ? '#15803D' : '#DC2626')
-                : canValidate ? '#15803D' : (f.gstin.length === 15 ? '#DC2626' : '#BFDBFE')
+              const borderColor = !f.gstin ? 'var(--action-bg)'
+                : gstinValidated ? (gstinValidated.ok ? 'var(--moss-text)' : 'var(--clay-text)')
+                : canValidate ? 'var(--moss-text)' : (f.gstin.length === 15 ? 'var(--clay-text)' : 'var(--action-bg)')
 
               function handleValidate() {
                 if (!parsed) {
@@ -1020,7 +1020,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                       onClick={handleValidate}
                       style={{
                         background: 'none', border: 'none', padding: '4px 0',
-                        fontSize: '12px', color: '#2563EB', cursor: 'pointer',
+                        fontSize: '12px', color: 'var(--action)', cursor: 'pointer',
                         fontWeight: 600, display: 'block', marginTop: '4px',
                         textDecoration: 'underline',
                       }}
@@ -1031,38 +1031,38 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                   {/* Validation result card */}
                   {gstinValidated && (
                     <div style={{
-                      marginTop: '8px', borderRadius: '6px', padding: '12px 14px',
-                      background: gstinValidated.ok ? '#F0FDF4' : '#FEF2F2',
-                      border: `1px solid ${gstinValidated.ok ? '#BBF7D0' : '#FECACA'}`,
+                      marginTop: '8px', borderRadius: 'var(--radius-md)', padding: '12px 14px',
+                      background: gstinValidated.ok ? 'var(--moss-bg)' : 'var(--clay-bg)',
+                      border: `1px solid ${gstinValidated.ok ? 'var(--moss-border)' : 'var(--clay-border)'}`,
                       fontSize: '12px',
                     }}>
                       {gstinValidated.ok ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                          <div style={{ fontWeight: 700, color: '#15803D', fontSize: '13px' }}>✓ Valid GSTIN</div>
-                          <div style={{ color: '#374151' }}>
-                            <span style={{ color: '#6B7280' }}>Place of Supply: </span>
+                          <div style={{ fontWeight: 700, color: 'var(--moss-text)', fontSize: '13px' }}>✓ Valid GSTIN</div>
+                          <div style={{ color: 'var(--ink)' }}>
+                            <span style={{ color: 'var(--text-muted)' }}>Place of Supply: </span>
                             <strong>[{gstinValidated.stateCode}] – {gstinValidated.stateName}</strong>
                           </div>
-                          <div style={{ color: '#374151' }}>
-                            <span style={{ color: '#6B7280' }}>PAN: </span>
+                          <div style={{ color: 'var(--ink)' }}>
+                            <span style={{ color: 'var(--text-muted)' }}>PAN: </span>
                             <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{gstinValidated.embeddedPan}</span>
                             {gstinValidated.panMatch === true && (
-                              <span style={{ color: '#15803D', marginLeft: '6px' }}>✓ matches PAN field</span>
+                              <span style={{ color: 'var(--moss-text)', marginLeft: '6px' }}>✓ matches PAN field</span>
                             )}
                             {gstinValidated.panMatch === false && (
-                              <span style={{ color: '#DC2626', marginLeft: '6px' }}>✗ mismatch — PAN field has {f.pan_number.toUpperCase()}</span>
+                              <span style={{ color: 'var(--clay-text)', marginLeft: '6px' }}>✗ mismatch — PAN field has {f.pan_number.toUpperCase()}</span>
                             )}
                           </div>
                         </div>
                       ) : (
-                        <div style={{ color: '#B91C1C', fontWeight: 600 }}>✗ {gstinValidated.msg}</div>
+                        <div style={{ color: 'var(--clay-text)', fontWeight: 600 }}>✗ {gstinValidated.msg}</div>
                       )}
                       <button
                         type="button"
                         onClick={handleValidate}
                         style={{
                           background: 'none', border: 'none', padding: '6px 0 0',
-                          fontSize: '11px', color: '#2563EB', cursor: 'pointer',
+                          fontSize: '11px', color: 'var(--action)', cursor: 'pointer',
                           fontWeight: 600, display: 'block', textDecoration: 'underline',
                         }}
                       >
@@ -1107,7 +1107,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
               onChange={handleChequeFile}
             />
             {chequeOcrLoading && (
-              <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '-10px', marginBottom: '14px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '-10px', marginBottom: '14px' }}>
                 Reading document — auto-filling bank and address details…
               </div>
             )}
@@ -1137,12 +1137,12 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         </div>
 
         {isIndividual && (
-          <div style={{ fontSize: '12px', color: '#6B7280', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: '4px', padding: '10px 12px', marginBottom: '4px' }}>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', background: 'var(--taupe-100)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', marginBottom: '4px' }}>
             No separate registration document is needed for {f.org_type} — the Aadhaar copy above (in Organisation Details) covers this per Finance's requirements.
           </div>
         )}
 
-        <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '4px' }}>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
           Accepted formats: PDF, JPG, PNG, JPEG · Max 10 MB per file
         </div>
       </div>
@@ -1167,7 +1167,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           <Field label="Telephone Number" required error={errors.phone}
             hint={phonePrefix === '+91' ? 'Mobile number' : 'Landline — include STD code'}>
             <div style={{ display: 'flex', gap: '6px' }}>
-              <div style={{ display: 'flex', border: '1px solid #D1D5DB', borderRadius: '4px', overflow: 'hidden', flexShrink: 0 }}>
+              <div style={{ display: 'flex', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', overflow: 'hidden', flexShrink: 0 }}>
                 {['+91', ''].map(p => (
                   <div
                     key={p || 'other'}
@@ -1175,8 +1175,8 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                     style={{
                       height: '36px', padding: '0 10px', display: 'flex', alignItems: 'center', cursor: 'pointer',
                       fontSize: '13px', fontWeight: 600,
-                      background: phonePrefix === p ? '#8C3225' : '#F9FAFB',
-                      color: phonePrefix === p ? '#FFFFFF' : '#374151',
+                      background: phonePrefix === p ? 'var(--action)' : 'var(--taupe-50)',
+                      color: phonePrefix === p ? 'var(--surface-card)' : 'var(--ink)',
                     }}
                   >
                     {p || 'Landline'}
@@ -1227,10 +1227,10 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                   placeholder="e.g. Vendor is owned by a family member of an employee"
                   rows={3}
                   style={{
-                    width: '100%', border: `1px solid ${errors.related_org_description ? '#DC2626' : '#D1D5DB'}`,
-                    borderRadius: '4px', padding: '10px', fontSize: '13px', color: '#1A1F36',
+                    width: '100%', border: `1px solid ${errors.related_org_description ? 'var(--clay-text)' : 'var(--taupe-400)'}`,
+                    borderRadius: 'var(--radius-sm)', padding: '10px', fontSize: '13px', color: 'var(--ink)',
                     outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit',
-                    background: '#FFFFFF',
+                    background: 'var(--surface-card)',
                   }}
                 />
               </Field>
@@ -1265,12 +1265,12 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                 style={{ flex: 1, ...inputStyle(!!errors.ifsc_code, { fontFamily: 'monospace' }) }}
               />
               {ifscLooking && (
-                <div style={{ fontSize: '11px', color: '#6B7280', alignSelf: 'center', flexShrink: 0 }}>Looking up…</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', alignSelf: 'center', flexShrink: 0 }}>Looking up…</div>
               )}
             </div>
-            <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '3px' }}>Bank and branch auto-fill on valid IFSC</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px' }}>Bank and branch auto-fill on valid IFSC</div>
             {ifscLookupFailed && (
-              <div style={{ fontSize: '11px', color: '#B45309', marginTop: '3px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--gold-text)', marginTop: '3px' }}>
                 Auto lookup unavailable — please enter bank name and branch manually.
               </div>
             )}
@@ -1280,7 +1280,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
             {branchLocked && (
               <span
                 onClick={() => setBranchLocked(false)}
-                style={{ fontSize: '11px', color: '#2563EB', cursor: 'pointer', textDecoration: 'underline', display: 'inline-block', marginTop: '4px' }}
+                style={{ fontSize: '11px', color: 'var(--action)', cursor: 'pointer', textDecoration: 'underline', display: 'inline-block', marginTop: '4px' }}
               >
                 Edit manually
               </span>
@@ -1292,7 +1292,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
               {branchLocked && (
                 <span
                   onClick={() => setBranchLocked(false)}
-                  style={{ fontSize: '11px', color: '#2563EB', cursor: 'pointer', textDecoration: 'underline', display: 'inline-block', marginTop: '4px' }}
+                  style={{ fontSize: '11px', color: 'var(--action)', cursor: 'pointer', textDecoration: 'underline', display: 'inline-block', marginTop: '4px' }}
                 >
                   Edit manually
                 </span>
@@ -1304,21 +1304,21 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
 
       {/* Error summary */}
       {saveError && (
-        <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '6px', padding: '12px 16px', marginBottom: '16px', fontSize: '13px', color: '#B91C1C' }}>
+        <div style={{ background: 'var(--clay-bg)', border: '1px solid var(--clay-border)', borderRadius: 'var(--radius-md)', padding: '12px 16px', marginBottom: '16px', fontSize: '13px', color: 'var(--clay-text)' }}>
           {saveError}
         </div>
       )}
       {draftSavedAt && (
-        <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '6px', padding: '12px 16px', marginBottom: '16px', fontSize: '13px', color: '#15803D' }}>
+        <div style={{ background: 'var(--moss-bg)', border: '1px solid var(--moss-border)', borderRadius: 'var(--radius-md)', padding: '12px 16px', marginBottom: '16px', fontSize: '13px', color: 'var(--moss-text)' }}>
           Draft saved ✓ {draftSavedAt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
         </div>
       )}
       {Object.keys(errors).length > 0 && (
-        <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '6px', padding: '12px 16px', marginBottom: '16px' }}>
-          <div style={{ fontSize: '12px', fontWeight: 700, color: '#B91C1C', marginBottom: '6px' }}>Please fix the following before submitting:</div>
+        <div style={{ background: 'var(--clay-bg)', border: '1px solid var(--clay-border)', borderRadius: 'var(--radius-md)', padding: '12px 16px', marginBottom: '16px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--clay-text)', marginBottom: '6px' }}>Please fix the following before submitting:</div>
           <ul style={{ margin: 0, paddingLeft: '16px' }}>
             {Object.values(errors).map((msg, i) => (
-              <li key={i} style={{ fontSize: '12px', color: '#DC2626', marginBottom: '2px' }}>{msg}</li>
+              <li key={i} style={{ fontSize: '12px', color: 'var(--clay-text)', marginBottom: '2px' }}>{msg}</li>
             ))}
           </ul>
         </div>
@@ -1331,8 +1331,8 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           disabled={saving || savingDraft}
           style={{
             height: '46px', padding: '0 36px',
-            background: saving ? '#9CA3AF' : '#8C3225',
-            color: '#FFFFFF', border: 'none', borderRadius: '6px',
+            background: saving ? 'var(--text-muted)' : 'var(--action)',
+            color: 'var(--surface-card)', border: 'none', borderRadius: 'var(--radius-md)',
             fontSize: '14px', fontWeight: 700, cursor: saving ? 'default' : 'pointer',
           }}
         >
@@ -1344,7 +1344,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
             disabled={saving || savingDraft}
             style={{
               height: '46px', padding: '0 24px',
-              background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '6px',
+              background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-md)',
               fontSize: '14px', fontWeight: 600, cursor: savingDraft ? 'default' : 'pointer',
             }}
           >
@@ -1353,7 +1353,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         )}
         <button
           onClick={onBack}
-          style={{ height: '46px', padding: '0 24px', background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '6px', fontSize: '14px', cursor: 'pointer' }}
+          style={{ height: '46px', padding: '0 24px', background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-md)', fontSize: '14px', cursor: 'pointer' }}
         >
           Cancel
         </button>
@@ -1370,14 +1370,14 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
       {/* Live checklist — lets the submitter see what's still missing before they hit Submit */}
       <div style={{
         position: 'fixed', bottom: '24px', right: '24px', zIndex: 40,
-        background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '8px',
-        padding: '14px 16px', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', minWidth: '190px',
+        background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)',
+        padding: '14px 16px', boxShadow: '0 4px 16px rgba(54, 32, 26,0.12)', minWidth: '190px',
       }}>
-        <div style={{ fontSize: '10px', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
+        <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
           Before you submit
         </div>
         {checklist.map(c => (
-          <div key={c.label} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', marginBottom: '6px', color: c.done ? '#15803D' : '#9CA3AF' }}>
+          <div key={c.label} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', marginBottom: '6px', color: c.done ? 'var(--moss-text)' : 'var(--text-muted)' }}>
             <span>{c.done ? '✓' : '○'}</span>
             <span>{c.label}</span>
           </div>

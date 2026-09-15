@@ -28,11 +28,11 @@ function monthLabel(key) {
 
 function SectionCard({ title, sub, action, children }) {
   return (
-    <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '3px', padding: '20px', marginBottom: '16px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', borderBottom: '1px solid #F3F4F6', paddingBottom: '10px' }}>
+    <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '20px', marginBottom: '16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', borderBottom: '1px solid var(--taupe-100)', paddingBottom: '10px' }}>
         <div>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{title}</div>
-          {sub && <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '3px' }}>{sub}</div>}
+          <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ink)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{title}</div>
+          {sub && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px' }}>{sub}</div>}
         </div>
         {action}
       </div>
@@ -43,10 +43,10 @@ function SectionCard({ title, sub, action, children }) {
 
 function KPICard({ label, value, sub, subColor, borderColor }) {
   return (
-    <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderLeft: `3px solid ${borderColor || '#1565C0'}`, borderRadius: '3px', padding: '16px 20px' }}>
-      <div style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>{label}</div>
-      <div style={{ fontSize: '24px', fontWeight: 700, color: '#1A1F36', lineHeight: 1, marginBottom: sub ? '6px' : 0, letterSpacing: '-0.5px' }}>{value}</div>
-      {sub && <div style={{ fontSize: '11px', color: subColor || '#9CA3AF' }}>{sub}</div>}
+    <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderLeft: `3px solid ${borderColor || 'var(--action)'}`, borderRadius: 'var(--radius-sm)', padding: '16px 20px' }}>
+      <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>{label}</div>
+      <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--ink)', lineHeight: 1, marginBottom: sub ? '6px' : 0, letterSpacing: '-0.5px' }}>{value}</div>
+      {sub && <div style={{ fontSize: '11px', color: subColor || 'var(--text-muted)' }}>{sub}</div>}
     </div>
   )
 }
@@ -55,11 +55,11 @@ function Bar({ label, value, valueLabel, max, color }) {
   return (
     <div style={{ marginBottom: '12px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-        <span style={{ fontSize: '12px', color: '#374151' }}>{label}</span>
-        <span style={{ fontSize: '12px', fontWeight: 600, color: '#1A1F36' }}>{valueLabel}</span>
+        <span style={{ fontSize: '12px', color: 'var(--ink)' }}>{label}</span>
+        <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ink)' }}>{valueLabel}</span>
       </div>
-      <div style={{ height: '8px', background: '#F3F4F6', borderRadius: '2px' }}>
-        <div style={{ height: '100%', width: `${max ? (value / max) * 100 : 0}%`, background: color, borderRadius: '2px', transition: 'width 0.3s ease' }} />
+      <div style={{ height: '8px', background: 'var(--taupe-100)', borderRadius: 'var(--radius-xs)' }}>
+        <div style={{ height: '100%', width: `${max ? (value / max) * 100 : 0}%`, background: color, borderRadius: 'var(--radius-xs)', transition: 'width 0.3s ease' }} />
       </div>
     </div>
   )
@@ -68,24 +68,24 @@ function Bar({ label, value, valueLabel, max, color }) {
 function FlagTable({ title, note, rows, columns, onRowClick, emptyLabel }) {
   return (
     <div style={{ marginBottom: '18px' }}>
-      <div style={{ fontSize: '12px', fontWeight: 700, color: '#374151', marginBottom: '2px' }}>{title} ({rows.length})</div>
-      {note && <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '8px' }}>{note}</div>}
+      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--ink)', marginBottom: '2px' }}>{title} ({rows.length})</div>
+      {note && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>{note}</div>}
       {rows.length === 0 ? (
-        <div style={{ fontSize: '12px', color: '#15803D', padding: '10px 0' }}>✓ {emptyLabel || 'None flagged'}</div>
+        <div style={{ fontSize: '12px', color: 'var(--moss-text)', padding: '10px 0' }}>✓ {emptyLabel || 'None flagged'}</div>
       ) : (
         <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '6px' }}>
           <thead>
-            <tr style={{ background: '#F8F9FA' }}>
+            <tr style={{ background: 'var(--taupe-50)' }}>
               {columns.map(c => (
-                <th key={c.key} style={{ padding: '7px 10px', fontSize: '10px', fontWeight: 600, color: '#6B7280', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{c.label}</th>
+                <th key={c.key} style={{ padding: '7px 10px', fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{c.label}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {rows.map(row => (
-              <tr key={row.id} onClick={() => onRowClick?.(row.id)} style={{ borderTop: '1px solid #F3F4F6', cursor: onRowClick ? 'pointer' : 'default' }}>
+              <tr key={row.id} onClick={() => onRowClick?.(row.id)} style={{ borderTop: '1px solid var(--taupe-100)', cursor: onRowClick ? 'pointer' : 'default' }}>
                 {columns.map(c => (
-                  <td key={c.key} style={{ padding: '8px 10px', fontSize: '12px', color: '#374151' }}>{c.render ? c.render(row) : (row[c.key] ?? '—')}</td>
+                  <td key={c.key} style={{ padding: '8px 10px', fontSize: '12px', color: 'var(--ink)' }}>{c.render ? c.render(row) : (row[c.key] ?? '—')}</td>
                 ))}
               </tr>
             ))}
@@ -229,7 +229,7 @@ export default function AnalyticsView({ user, onViewPR, onViewPO, onViewVendor }
     return () => { cancelled = true }
   }, [selectedMemberId, members])
 
-  if (loading) return <div style={{ fontSize: '13px', color: '#6B7280', padding: '40px 0', textAlign: 'center' }}>Loading analytics…</div>
+  if (loading) return <div style={{ fontSize: '13px', color: 'var(--text-muted)', padding: '40px 0', textAlign: 'center' }}>Loading analytics…</div>
 
   // ── Cash Flow Forecast — PRs still in the pipeline (submitted or fully
   // approved but not yet turned into a PO), bucketed by month of the
@@ -285,34 +285,34 @@ export default function AnalyticsView({ user, onViewPR, onViewPO, onViewVendor }
 
   return (
     <div>
-      <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '14px', textAlign: 'right' }}>
+      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '14px', textAlign: 'right' }}>
         {lastRefreshed && `Live · last updated ${lastRefreshed.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`}
       </div>
 
       {/* Cash Flow Forecast */}
       <SectionCard title="Cash Flow Forecast" sub="Submitted + approved PRs not yet turned into a PO, by expected purchase month">
         <div style={{ marginBottom: '14px' }}>
-          <KPICard label="Total Pipeline" value={fmtShort(pipelineTotal)} sub={`${pipeline.length} PR${pipeline.length !== 1 ? 's' : ''} not yet POed`} borderColor="#1565C0" />
+          <KPICard label="Total Pipeline" value={fmtShort(pipelineTotal)} sub={`${pipeline.length} PR${pipeline.length !== 1 ? 's' : ''} not yet POed`} borderColor="var(--action)" />
         </div>
         {monthRows.length === 0 ? (
-          <div style={{ fontSize: '12px', color: '#9CA3AF', textAlign: 'center', padding: '12px 0' }}>Nothing in the pipeline right now.</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center', padding: '12px 0' }}>Nothing in the pipeline right now.</div>
         ) : monthRows.map(([key, v]) => (
-          <Bar key={key} label={`${monthLabel(key)} · ${v.count} PR${v.count !== 1 ? 's' : ''}`} value={v.total} valueLabel={fmtShort(v.total)} max={maxMonth} color="#1565C0" />
+          <Bar key={key} label={`${monthLabel(key)} · ${v.count} PR${v.count !== 1 ? 's' : ''}`} value={v.total} valueLabel={fmtShort(v.total)} max={maxMonth} color="var(--action)" />
         ))}
       </SectionCard>
 
       {/* Submitted vs Approved vs Rejected */}
       <SectionCard title="PR Pipeline — Submitted vs Approved vs Rejected" sub="Auto-refreshes every 30 seconds">
-        <Bar label="Submitted (pending approval)" value={submittedCount} valueLabel={submittedCount} max={maxStatus} color="#B45309" />
-        <Bar label="Approved (incl. PO issued)" value={approvedCount} valueLabel={approvedCount} max={maxStatus} color="#15803D" />
-        <Bar label="Rejected" value={rejectedCount} valueLabel={rejectedCount} max={maxStatus} color="#B91C1C" />
+        <Bar label="Submitted (pending approval)" value={submittedCount} valueLabel={submittedCount} max={maxStatus} color="var(--gold-text)" />
+        <Bar label="Approved (incl. PO issued)" value={approvedCount} valueLabel={approvedCount} max={maxStatus} color="var(--moss-text)" />
+        <Bar label="Rejected" value={rejectedCount} valueLabel={rejectedCount} max={maxStatus} color="var(--clay-text)" />
       </SectionCard>
 
       {/* TAT */}
       <SectionCard title="Approval Turnaround Time">
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-          <KPICard label="PR Approval TAT" value={prTAT == null ? '—' : `${prTAT} day${prTAT === 1 ? '' : 's'}`} sub={`${prDurations.length} approved PR${prDurations.length !== 1 ? 's' : ''} measured`} borderColor="#B45309" />
-          <KPICard label="Vendor Approval TAT" value={vendorTAT == null ? '—' : `${vendorTAT} day${vendorTAT === 1 ? '' : 's'}`} sub={`${approvedVendors.length} approved vendor${approvedVendors.length !== 1 ? 's' : ''} measured`} borderColor="#6D28D9" />
+          <KPICard label="PR Approval TAT" value={prTAT == null ? '—' : `${prTAT} day${prTAT === 1 ? '' : 's'}`} sub={`${prDurations.length} approved PR${prDurations.length !== 1 ? 's' : ''} measured`} borderColor="var(--gold-text)" />
+          <KPICard label="Vendor Approval TAT" value={vendorTAT == null ? '—' : `${vendorTAT} day${vendorTAT === 1 ? '' : 's'}`} sub={`${approvedVendors.length} approved vendor${approvedVendors.length !== 1 ? 's' : ''} measured`} borderColor="var(--gold-text)" />
         </div>
       </SectionCard>
 
@@ -324,26 +324,26 @@ export default function AnalyticsView({ user, onViewPR, onViewPO, onViewVendor }
           <select
             value={selectedMemberId}
             onChange={e => setSelectedMemberId(e.target.value)}
-            style={{ height: '28px', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '0 8px', fontSize: '12px', color: '#1A1F36', background: '#FFFFFF' }}
+            style={{ height: '28px', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', padding: '0 8px', fontSize: '12px', color: 'var(--ink)', background: 'var(--surface-card)' }}
           >
             {members.map(m => <option key={m.id} value={m.id}>{m.name} ({m.role})</option>)}
           </select>
         }
       >
         {personalLoading ? (
-          <div style={{ fontSize: '12px', color: '#9CA3AF', textAlign: 'center', padding: '12px 0' }}>Loading…</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center', padding: '12px 0' }}>Loading…</div>
         ) : !personalStats ? (
-          <div style={{ fontSize: '12px', color: '#9CA3AF', textAlign: 'center', padding: '12px 0' }}>No team member selected.</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center', padding: '12px 0' }}>No team member selected.</div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px' }}>
-            <KPICard label="Approved PRs" value={personalStats.prCount} borderColor="#B45309" />
-            <KPICard label="Approved Vendors" value={personalStats.vendorCount} borderColor="#6D28D9" />
-            <KPICard label="Approved Expense Reports" value={personalStats.reportCount} borderColor="#1565C0" />
+            <KPICard label="Approved PRs" value={personalStats.prCount} borderColor="var(--gold-text)" />
+            <KPICard label="Approved Vendors" value={personalStats.vendorCount} borderColor="var(--gold-text)" />
+            <KPICard label="Approved Expense Reports" value={personalStats.reportCount} borderColor="var(--action)" />
             <KPICard
               label="Avg Time to Approve"
               value={personalStats.avgDays == null ? '—' : `${personalStats.avgDays} day${personalStats.avgDays === 1 ? '' : 's'}`}
               sub="across all three, combined"
-              borderColor="#15803D"
+              borderColor="var(--moss-text)"
             />
           </div>
         )}
@@ -356,17 +356,17 @@ export default function AnalyticsView({ user, onViewPR, onViewPO, onViewVendor }
           sub={`Open items worth a second look — not necessarily wrong, just flagged for review${auditRefreshedAt ? ` · checked ${auditRefreshedAt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}` : ''}`}
           action={
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '11px', color: '#6B7280' }}>PO threshold ₹</span>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>PO threshold ₹</span>
               <input
                 type="number"
                 value={poThreshold}
                 onChange={e => setPoThreshold(e.target.value)}
-                style={{ width: '90px', height: '26px', border: '1px solid #D1D5DB', borderRadius: '4px', padding: '0 8px', fontSize: '12px', outline: 'none' }}
+                style={{ width: '90px', height: '26px', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', padding: '0 8px', fontSize: '12px', outline: 'none' }}
               />
               <button
                 onClick={loadAudit}
                 disabled={auditLoading}
-                style={{ height: '26px', padding: '0 10px', fontSize: '11px', fontWeight: 600, background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '4px', cursor: auditLoading ? 'default' : 'pointer' }}
+                style={{ height: '26px', padding: '0 10px', fontSize: '11px', fontWeight: 600, background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', cursor: auditLoading ? 'default' : 'pointer' }}
               >
                 {auditLoading ? 'Checking…' : 'Refresh'}
               </button>

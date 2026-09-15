@@ -3,10 +3,10 @@ import { supabase } from '../../lib/supabase'
 import { timeAgo } from '../../lib/approvalEngine'
 
 const STATUS_BADGE = {
-  approved: { label: 'Approved', color: '#16A34A', bg: '#F0FDF4', icon: '✓' },
-  rejected: { label: 'Returned', color: '#DC2626', bg: '#FEF2F2', icon: '✕' },
-  processing: { label: 'Processing', color: '#CA8A04', bg: '#FEFCE8', icon: '◷' },
-  reimbursed: { label: 'Reimbursed', color: '#16A34A', bg: '#F0FDF4', icon: '✓' },
+  approved: { label: 'Approved', color: 'var(--moss)', bg: 'var(--moss-bg)', icon: '✓' },
+  rejected: { label: 'Returned', color: 'var(--clay-text)', bg: 'var(--clay-bg)', icon: '✕' },
+  processing: { label: 'Processing', color: 'var(--gold-text)', bg: 'var(--gold-bg)', icon: '◷' },
+  reimbursed: { label: 'Reimbursed', color: 'var(--moss)', bg: 'var(--moss-bg)', icon: '✓' },
 }
 
 const ROUTE_LABEL = {
@@ -29,47 +29,47 @@ function ReportCard({ report, onClick, showSLA = true }) {
   // Left border gives approvers a triage signal without opening each card —
   // red once past due_at, amber once inside the last 12 hours of the 48h
   // SLA window, transparent otherwise.
-  const urgencyBorder = showSLA ? (isOverdue ? '#DC2626' : isWarning ? '#CA8A04' : 'transparent') : 'transparent'
+  const urgencyBorder = showSLA ? (isOverdue ? 'var(--clay-text)' : isWarning ? 'var(--gold-text)' : 'transparent') : 'transparent'
 
   return (
     <div
       onClick={() => onClick(report.id)}
       style={{
-        border: '1px solid #E8E8E8', borderLeft: `4px solid ${urgencyBorder}`,
+        border: '1px solid var(--taupe-200)', borderLeft: `4px solid ${urgencyBorder}`,
         marginBottom: '12px', cursor: 'pointer', overflow: 'hidden',
       }}
     >
       <div style={{ padding: '16px' }}>
         {/* Top row */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-          <div style={{ fontSize: '14px', fontWeight: 500, color: '#1A1A1A' }}>
+          <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text)' }}>
             {report.entity || 'Team Member'}
           </div>
-          <div style={{ fontSize: '14px', fontWeight: 500, color: '#1A1A1A' }}>
+          <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text)' }}>
             {report.total_amount ? `₹${Number(report.total_amount).toLocaleString('en-IN')}` : '—'}
           </div>
         </div>
 
         {/* Second row */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-          <div style={{ fontSize: '12px', color: '#6B6B6B' }}>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
             {report.expense_count || 0} expense{report.expense_count !== 1 ? 's' : ''}{report.entity ? ` · ${report.entity}` : ''}
           </div>
-          <div style={{ fontSize: '12px', color: '#6B6B6B' }}>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
             {timeAgo(report.submitted_at || report.created_at)}
           </div>
         </div>
 
         {/* Third row */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontSize: '11px', color: '#6B6B6B', fontFamily: 'monospace' }}>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
             {report.report_reference || '—'}
           </div>
           {showSLA ? (
             <div style={{
               display: 'flex', alignItems: 'center', gap: '4px',
-              fontSize: '11px', padding: '2px 8px', borderRadius: '2px',
-              background: '#F7F7F7', color: '#6B6B6B',
+              fontSize: '11px', padding: '2px 8px', borderRadius: 'var(--radius-xs)',
+              background: 'var(--taupe-50)', color: 'var(--text-muted)',
             }}>
               <span style={{ fontSize: '11px' }}>◷</span>
               {ROUTE_LABEL[report.approval_route] || '—'}
@@ -78,7 +78,7 @@ function ReportCard({ report, onClick, showSLA = true }) {
             STATUS_BADGE[report.status] && (
               <div style={{
                 display: 'flex', alignItems: 'center', gap: '4px',
-                fontSize: '11px', fontWeight: 500, padding: '2px 8px', borderRadius: '2px',
+                fontSize: '11px', fontWeight: 500, padding: '2px 8px', borderRadius: 'var(--radius-xs)',
                 background: STATUS_BADGE[report.status].bg,
                 color: STATUS_BADGE[report.status].color,
               }}>
@@ -95,8 +95,8 @@ function ReportCard({ report, onClick, showSLA = true }) {
         <div style={{
           display: 'flex', alignItems: 'center', gap: '6px',
           padding: '6px 16px',
-          background: '#FEF2F2', borderTop: '1px solid #DC2626',
-          fontSize: '11px', color: '#DC2626',
+          background: 'var(--clay-bg)', borderTop: '1px solid var(--clay-text)',
+          fontSize: '11px', color: 'var(--clay-text)',
         }}>
           <span style={{ fontSize: '12px' }}>⚠</span>
           Overdue by {Math.ceil(-hoursLeft)} hour{Math.ceil(-hoursLeft) !== 1 ? 's' : ''}.
@@ -106,8 +106,8 @@ function ReportCard({ report, onClick, showSLA = true }) {
         <div style={{
           display: 'flex', alignItems: 'center', gap: '6px',
           padding: '6px 16px',
-          background: '#FEFCE8', borderTop: '1px solid #CA8A04',
-          fontSize: '11px', color: '#CA8A04',
+          background: 'var(--gold-bg)', borderTop: '1px solid var(--gold-text)',
+          fontSize: '11px', color: 'var(--gold-text)',
         }}>
           <span style={{ fontSize: '12px' }}>◷</span>
           {Math.floor(hoursLeft)} hour{Math.floor(hoursLeft) !== 1 ? 's' : ''} left to review.
@@ -157,18 +157,18 @@ export default function ApproverDashboard({ onViewReport, onBack }) {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
         {onBack && (
-          <div onClick={onBack} style={{ fontSize: '13px', color: '#4A4A4A', cursor: 'pointer', textDecoration: 'underline', flexShrink: 0 }}>
+          <div onClick={onBack} style={{ fontSize: '13px', color: 'var(--text-muted)', cursor: 'pointer', textDecoration: 'underline', flexShrink: 0 }}>
             ← Back
           </div>
         )}
         <div>
-          <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '4px' }}>Approvals</div>
-          <div style={{ fontSize: '20px', fontWeight: 500, color: '#1A1A1A' }}>Pending your review</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Approvals</div>
+          <div style={{ fontSize: '20px', fontWeight: 500, color: 'var(--text)' }}>Pending your review</div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid #E8E8E8', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--taupe-200)', marginBottom: '20px' }}>
         {[
           { key: 'pending', label: `Pending (${pending.length})` },
           { key: 'reviewed', label: `Reviewed (${reviewed.length})` },
@@ -179,8 +179,8 @@ export default function ApproverDashboard({ onViewReport, onBack }) {
             style={{
               padding: '10px 16px', fontSize: '13px', cursor: 'pointer',
               fontWeight: tab === t.key ? 500 : 400,
-              color: tab === t.key ? '#1A1A1A' : '#6B6B6B',
-              borderBottom: tab === t.key ? '2px solid #8C3225' : '2px solid transparent',
+              color: tab === t.key ? 'var(--text)' : 'var(--text-muted)',
+              borderBottom: tab === t.key ? '2px solid var(--action)' : '2px solid transparent',
               marginBottom: '-1px',
             }}
           >
@@ -190,11 +190,11 @@ export default function ApproverDashboard({ onViewReport, onBack }) {
       </div>
 
       {loading && (
-        <div style={{ fontSize: '13px', color: '#6B6B6B' }}>Loading...</div>
+        <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Loading...</div>
       )}
 
       {!loading && displayList.length === 0 && (
-        <div style={{ fontSize: '14px', color: '#4A4A4A', textAlign: 'center', padding: '40px 0' }}>
+        <div style={{ fontSize: '14px', color: 'var(--text-muted)', textAlign: 'center', padding: '40px 0' }}>
           No reports pending your review
         </div>
       )}

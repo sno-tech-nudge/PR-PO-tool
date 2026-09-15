@@ -32,16 +32,16 @@ export default function RejectionModal({ onSendBack, onCancel }) {
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          background: '#FFFFFF',
+          background: 'var(--surface-card)',
           padding: '24px',
           width: '100%',
           maxWidth: '440px',
         }}
       >
-        <div style={{ fontSize: '16px', fontWeight: 500, color: '#1A1A1A', marginBottom: '8px' }}>
+        <div style={{ fontSize: '16px', fontWeight: 500, color: 'var(--text)', marginBottom: '8px' }}>
           Return to employee
         </div>
-        <div style={{ fontSize: '13px', color: '#4A4A4A', marginBottom: '16px', lineHeight: '1.5' }}>
+        <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: '1.5' }}>
           Add a reason so the employee knows what to fix.
         </div>
 
@@ -55,11 +55,11 @@ export default function RejectionModal({ onSendBack, onCancel }) {
               key={r}
               onClick={() => setReason(r)}
               style={{
-                border: `1px solid ${reason === r ? '#1A1A1A' : '#E8E8E8'}`,
+                border: `1px solid ${reason === r ? 'var(--text)' : 'var(--taupe-200)'}`,
                 padding: '8px 12px',
-                fontSize: '12px', color: '#4A4A4A',
+                fontSize: '12px', color: 'var(--text-muted)',
                 cursor: 'pointer',
-                background: reason === r ? '#F7F7F7' : '#FFFFFF',
+                background: reason === r ? 'var(--taupe-50)' : 'var(--surface-card)',
               }}
             >
               {r}
@@ -75,10 +75,10 @@ export default function RejectionModal({ onSendBack, onCancel }) {
           rows={4}
           style={{
             width: '100%',
-            border: '1px solid #E8E8E8',
+            border: '1px solid var(--taupe-200)',
             padding: '12px',
             fontSize: '13px',
-            color: '#1A1A1A',
+            color: 'var(--text)',
             resize: 'vertical',
             fontFamily: 'system-ui, -apple-system, sans-serif',
             outline: 'none',
@@ -93,11 +93,11 @@ export default function RejectionModal({ onSendBack, onCancel }) {
             disabled={!reason.trim() || sending}
             style={{
               width: '100%', height: '48px',
-              background: !reason.trim() || sending ? '#9CA3AF' : '#1A1A1A',
-              color: '#FFFFFF', border: 'none',
+              background: !reason.trim() || sending ? 'var(--text-muted)' : 'var(--text)',
+              color: 'var(--surface-card)', border: 'none',
               fontSize: '14px', fontWeight: 500,
               cursor: !reason.trim() || sending ? 'default' : 'pointer',
-              borderRadius: '4px',
+              borderRadius: 'var(--radius-sm)',
             }}
           >
             {sending ? 'Sending…' : 'Send back'}
@@ -106,10 +106,10 @@ export default function RejectionModal({ onSendBack, onCancel }) {
             onClick={onCancel}
             style={{
               width: '100%', height: '48px',
-              background: '#FFFFFF', color: '#1A1A1A',
-              border: '1px solid #8C3225',
+              background: 'var(--surface-card)', color: 'var(--text)',
+              border: '1px solid var(--action)',
               fontSize: '14px', fontWeight: 500,
-              cursor: 'pointer', borderRadius: '4px',
+              cursor: 'pointer', borderRadius: 'var(--radius-sm)',
             }}
           >
             Cancel

@@ -15,9 +15,9 @@ function fmtDate(d) {
 
 function Row({ label, value, mono }) {
   return (
-    <div style={{ padding: '10px 20px', borderBottom: '1px solid #F3F4F6', display: 'flex' }}>
-      <div style={{ width: '220px', fontSize: '11px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0, paddingTop: '1px' }}>{label}</div>
-      <div style={{ fontSize: '13px', color: '#1A1F36', fontFamily: mono ? 'monospace' : 'inherit', flex: 1 }}>{value || '—'}</div>
+    <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--taupe-100)', display: 'flex' }}>
+      <div style={{ width: '220px', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0, paddingTop: '1px' }}>{label}</div>
+      <div style={{ fontSize: '13px', color: 'var(--ink)', fontFamily: mono ? 'monospace' : 'inherit', flex: 1 }}>{value || '—'}</div>
     </div>
   )
 }
@@ -121,20 +121,20 @@ export default function VendorApprovalView({ vendor, user, onBack, onActioned })
   if (!vendor) return null
 
   return (
-    <div style={{ background: '#F4F5F7', minHeight: '100vh', paddingBottom: '40px' }}>
+    <div style={{ background: 'var(--taupe-50)', minHeight: '100vh', paddingBottom: '40px' }}>
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px 28px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '20px' }}>
-          <span onClick={onBack} style={{ fontSize: '12px', color: '#8C3225', cursor: 'pointer' }}>Vendors</span>
-          <span style={{ fontSize: '12px', color: '#9CA3AF' }}>/</span>
-          <span style={{ fontSize: '12px', color: '#6B7280' }}>Approve Vendor</span>
+          <span onClick={onBack} style={{ fontSize: '12px', color: 'var(--action)', cursor: 'pointer' }}>Vendors</span>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>/</span>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Approve Vendor</span>
         </div>
 
         {/* Summary card */}
-        <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '3px', marginBottom: '12px', overflow: 'hidden' }}>
-          <div style={{ padding: '16px 20px', background: '#F8F9FA', borderBottom: '1px solid #E3E8EF' }}>
-            <div style={{ fontSize: '11px', color: '#9CA3AF', fontFamily: 'monospace', marginBottom: '4px' }}>{vendor.vendor_id}</div>
-            <div style={{ fontSize: '20px', fontWeight: 700, color: '#1A1F36' }}>{vendor.org_name}</div>
-            <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px' }}>{vendor.org_type} · Submitted by {getDisplayName(vendor.submitted_by)}</div>
+        <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', marginBottom: '12px', overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px', background: 'var(--taupe-50)', borderBottom: '1px solid var(--taupe-200)' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace', marginBottom: '4px' }}>{vendor.vendor_id}</div>
+            <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--ink)' }}>{vendor.org_name}</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{vendor.org_type} · Submitted by {getDisplayName(vendor.submitted_by)}</div>
           </div>
         </div>
 
@@ -142,8 +142,8 @@ export default function VendorApprovalView({ vendor, user, onBack, onActioned })
           <div
             onClick={() => setShowPanModal(true)}
             style={{
-              background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '3px',
-              padding: '12px 16px', marginBottom: '12px', fontSize: '13px', color: '#92400E', cursor: 'pointer',
+              background: 'var(--gold-bg)', border: '1px solid var(--gold-border)', borderRadius: 'var(--radius-sm)',
+              padding: '12px 16px', marginBottom: '12px', fontSize: '13px', color: 'var(--gold-text)', cursor: 'pointer',
             }}
           >
             ⚠ This PAN is already registered to {panSiblings.length} other vendor{panSiblings.length !== 1 ? 's' : ''} — click to view. Duplicate PAN/GST is allowed, this is informational only.
@@ -186,9 +186,9 @@ export default function VendorApprovalView({ vendor, user, onBack, onActioned })
             ],
           },
         ].map(section => (
-          <div key={section.title} style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '3px', marginBottom: '12px', overflow: 'hidden' }}>
-            <div style={{ padding: '12px 20px', background: '#F8F9FA', borderBottom: '1px solid #E3E8EF' }}>
-              <span style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{section.title}</span>
+          <div key={section.title} style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', marginBottom: '12px', overflow: 'hidden' }}>
+            <div style={{ padding: '12px 20px', background: 'var(--taupe-50)', borderBottom: '1px solid var(--taupe-200)' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ink)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{section.title}</span>
             </div>
             {section.rows.map(([label, value, mono]) => (
               <Row key={label} label={label} value={value} mono={mono} />
@@ -197,71 +197,71 @@ export default function VendorApprovalView({ vendor, user, onBack, onActioned })
         ))}
 
         {/* Documents */}
-        <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '3px', marginBottom: '12px', overflow: 'hidden' }}>
-          <div style={{ padding: '12px 20px', background: '#F8F9FA', borderBottom: '1px solid #E3E8EF' }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Documents</span>
+        <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', marginBottom: '12px', overflow: 'hidden' }}>
+          <div style={{ padding: '12px 20px', background: 'var(--taupe-50)', borderBottom: '1px solid var(--taupe-200)' }}>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ink)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Documents</span>
           </div>
           <div style={{ padding: '16px 20px', display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
             {chequeUrl ? (
-              <a href={chequeUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: '#8C3225', textDecoration: 'underline' }}>
+              <a href={chequeUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: 'var(--action)', textDecoration: 'underline' }}>
                 View Cancelled Cheque / Bank Statement
               </a>
-            ) : <span style={{ fontSize: '13px', color: '#B91C1C' }}>Cheque not uploaded</span>}
+            ) : <span style={{ fontSize: '13px', color: 'var(--clay-text)' }}>Cheque not uploaded</span>}
             {panUrl ? (
-              <a href={panUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: '#8C3225', textDecoration: 'underline' }}>
+              <a href={panUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: 'var(--action)', textDecoration: 'underline' }}>
                 View PAN Copy
               </a>
-            ) : <span style={{ fontSize: '13px', color: '#B91C1C' }}>PAN not uploaded</span>}
+            ) : <span style={{ fontSize: '13px', color: 'var(--clay-text)' }}>PAN not uploaded</span>}
           </div>
         </div>
 
         {AADHAAR_REQUIRED_ORG_TYPES.includes(vendor.org_type) && (
-          <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '3px', marginBottom: '12px', overflow: 'hidden' }}>
-            <div style={{ padding: '12px 20px', background: '#F8F9FA', borderBottom: '1px solid #E3E8EF' }}>
-              <span style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Aadhaar Details (Individual Vendor)</span>
+          <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', marginBottom: '12px', overflow: 'hidden' }}>
+            <div style={{ padding: '12px 20px', background: 'var(--taupe-50)', borderBottom: '1px solid var(--taupe-200)' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ink)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Aadhaar Details (Individual Vendor)</span>
             </div>
             <Row label="Aadhaar Number" value={vendor.aadhaar_number} mono />
             <Row label="Aadhaar-PAN Linked" value={vendor.aadhaar_pan_linked ? 'Confirmed by vendor' : 'Not confirmed'} />
             <div style={{ padding: '16px 20px', display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
               {aadhaarUrl ? (
-                <a href={aadhaarUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: '#8C3225', textDecoration: 'underline' }}>
+                <a href={aadhaarUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: 'var(--action)', textDecoration: 'underline' }}>
                   View Aadhaar Copy
                 </a>
-              ) : <span style={{ fontSize: '13px', color: '#B91C1C' }}>Aadhaar copy not uploaded</span>}
+              ) : <span style={{ fontSize: '13px', color: 'var(--clay-text)' }}>Aadhaar copy not uploaded</span>}
               {vendor.aadhaar_pan_linked && (
                 aadhaarProofUrl ? (
-                  <a href={aadhaarProofUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: '#8C3225', textDecoration: 'underline' }}>
+                  <a href={aadhaarProofUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: 'var(--action)', textDecoration: 'underline' }}>
                     View Aadhaar-PAN Link Proof
                   </a>
-                ) : <span style={{ fontSize: '13px', color: '#B91C1C' }}>Link proof not uploaded</span>
+                ) : <span style={{ fontSize: '13px', color: 'var(--clay-text)' }}>Link proof not uploaded</span>
               )}
             </div>
           </div>
         )}
 
         {/* Approve / Reject panel */}
-        <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '3px', overflow: 'hidden' }}>
-          <div style={{ padding: '12px 20px', background: '#F8F9FA', borderBottom: '1px solid #E3E8EF' }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Finance Decision</span>
+        <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
+          <div style={{ padding: '12px 20px', background: 'var(--taupe-50)', borderBottom: '1px solid var(--taupe-200)' }}>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ink)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Finance Decision</span>
           </div>
           <div style={{ padding: '20px' }}>
             {error && (
-              <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '3px', padding: '10px 14px', marginBottom: '14px', fontSize: '13px', color: '#B91C1C' }}>
+              <div style={{ background: 'var(--clay-bg)', border: '1px solid var(--clay-border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', marginBottom: '14px', fontSize: '13px', color: 'var(--clay-text)' }}>
                 {error}
               </div>
             )}
 
             {!rejecting ? (
               <div>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>Comment (optional)</div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)', marginBottom: '8px' }}>Comment (optional)</div>
                 <textarea
                   value={approveComment}
                   onChange={e => setApproveComment(e.target.value)}
                   placeholder="Any notes for the record or for the submitter — shown to them alongside the approval."
                   rows={2}
                   style={{
-                    width: '100%', border: '1px solid #E3E8EF', borderRadius: '3px', padding: '10px 12px',
-                    fontSize: '13px', color: '#1A1F36', outline: 'none', resize: 'vertical',
+                    width: '100%', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '10px 12px',
+                    fontSize: '13px', color: 'var(--ink)', outline: 'none', resize: 'vertical',
                     boxSizing: 'border-box', fontFamily: 'inherit', marginBottom: '14px',
                   }}
                 />
@@ -269,14 +269,14 @@ export default function VendorApprovalView({ vendor, user, onBack, onActioned })
                   <button
                     onClick={handleApprove}
                     disabled={saving}
-                    style={{ height: '38px', padding: '0 24px', background: saving ? '#9CA3AF' : '#15803D', color: '#FFFFFF', border: 'none', borderRadius: '3px', fontSize: '13px', fontWeight: 600, cursor: saving ? 'default' : 'pointer' }}
+                    style={{ height: '38px', padding: '0 24px', background: saving ? 'var(--text-muted)' : 'var(--moss-text)', color: 'var(--surface-card)', border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 600, cursor: saving ? 'default' : 'pointer' }}
                   >
                     {saving ? 'Saving…' : 'Approve Vendor'}
                   </button>
                   <button
                     onClick={() => setRejecting(true)}
                     disabled={saving}
-                    style={{ height: '38px', padding: '0 24px', background: '#FFFFFF', color: '#B91C1C', border: '1px solid #FECACA', borderRadius: '3px', fontSize: '13px', cursor: 'pointer' }}
+                    style={{ height: '38px', padding: '0 24px', background: 'var(--surface-card)', color: 'var(--clay-text)', border: '1px solid var(--clay-border)', borderRadius: 'var(--radius-sm)', fontSize: '13px', cursor: 'pointer' }}
                   >
                     Reject
                   </button>
@@ -284,15 +284,15 @@ export default function VendorApprovalView({ vendor, user, onBack, onActioned })
               </div>
             ) : (
               <div>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>Reason for rejection</div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)', marginBottom: '8px' }}>Reason for rejection</div>
                 <textarea
                   value={reason}
                   onChange={e => setReason(e.target.value)}
                   placeholder="Be specific — the submitter will see this and use it to correct the vendor record."
                   rows={3}
                   style={{
-                    width: '100%', border: '1px solid #E3E8EF', borderRadius: '3px', padding: '10px 12px',
-                    fontSize: '13px', color: '#1A1F36', outline: 'none', resize: 'vertical',
+                    width: '100%', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '10px 12px',
+                    fontSize: '13px', color: 'var(--ink)', outline: 'none', resize: 'vertical',
                     boxSizing: 'border-box', fontFamily: 'inherit', marginBottom: '12px',
                   }}
                 />
@@ -300,13 +300,13 @@ export default function VendorApprovalView({ vendor, user, onBack, onActioned })
                   <button
                     onClick={handleReject}
                     disabled={saving}
-                    style={{ height: '38px', padding: '0 24px', background: saving ? '#9CA3AF' : '#B91C1C', color: '#FFFFFF', border: 'none', borderRadius: '3px', fontSize: '13px', fontWeight: 600, cursor: saving ? 'default' : 'pointer' }}
+                    style={{ height: '38px', padding: '0 24px', background: saving ? 'var(--text-muted)' : 'var(--clay-text)', color: 'var(--surface-card)', border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 600, cursor: saving ? 'default' : 'pointer' }}
                   >
                     {saving ? 'Saving…' : 'Confirm Rejection'}
                   </button>
                   <button
                     onClick={() => { setRejecting(false); setReason('') }}
-                    style={{ height: '38px', padding: '0 18px', background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '3px', fontSize: '13px', cursor: 'pointer' }}
+                    style={{ height: '38px', padding: '0 18px', background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', fontSize: '13px', cursor: 'pointer' }}
                   >
                     Cancel
                   </button>

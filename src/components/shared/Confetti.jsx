@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-const COLORS = ['#8C3225', '#16A34A', '#CA8A04', '#2563EB', '#DB2777']
+const COLORS = ['var(--action)', 'var(--moss)', 'var(--gold-text)', 'var(--action)', '#DB2777']
 
 // Small celebratory burst — plain CSS, no charting/animation library. Fires
 // once on mount, removes itself after the fall animation finishes so it

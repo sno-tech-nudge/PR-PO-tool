@@ -12,9 +12,9 @@ function timeAgo(dateStr) {
 }
 
 const TYPE_COLOR = {
-  pr_approved: '#15803D', vendor_approved: '#15803D', approved: '#15803D',
-  pr_rejected: '#B91C1C', vendor_rejected: '#B91C1C', rejected: '#B91C1C',
-  pr_submitted: '#B45309', bank_change_request: '#B45309', link_suggestion: '#1565C0',
+  pr_approved: 'var(--moss-text)', vendor_approved: 'var(--moss-text)', approved: 'var(--moss-text)',
+  pr_rejected: 'var(--clay-text)', vendor_rejected: 'var(--clay-text)', rejected: 'var(--clay-text)',
+  pr_submitted: 'var(--gold-text)', bank_change_request: 'var(--gold-text)', link_suggestion: 'var(--action)',
 }
 
 // Sidebar-footer notification bell — reads expense_notifications (a table
@@ -77,21 +77,21 @@ export default function NotificationBell({ user, onOpenReport, onOpenPR, onOpenV
         onClick={() => setOpen(o => !o)}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '7px 10px', borderRadius: '5px', cursor: 'pointer',
+          padding: '7px 10px', borderRadius: 'var(--radius-md)', cursor: 'pointer',
           background: open ? 'rgba(255,255,255,0.08)' : 'transparent',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#c4826f', flexShrink: 0 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-on-dark-muted)', flexShrink: 0 }}>
             <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
             <path d="M13.73 21a2 2 0 0 1-3.46 0" />
           </svg>
-          <span style={{ fontSize: '12px', color: '#FFFFFF' }}>Notifications</span>
+          <span style={{ fontSize: '12px', color: 'var(--surface-card)' }}>Notifications</span>
         </div>
         {unreadCount > 0 && (
           <span style={{
-            fontSize: '10px', fontWeight: 700, background: '#DC2626', color: '#FFFFFF',
-            borderRadius: '10px', padding: '1px 6px', minWidth: '16px', textAlign: 'center', lineHeight: '14px',
+            fontSize: '10px', fontWeight: 700, background: 'var(--clay-text)', color: 'var(--surface-card)',
+            borderRadius: 'var(--radius-lg)', padding: '1px 6px', minWidth: '16px', textAlign: 'center', lineHeight: '14px',
           }}>
             {unreadCount}
           </span>
@@ -101,36 +101,36 @@ export default function NotificationBell({ user, onOpenReport, onOpenPR, onOpenV
       {open && (
         <div style={{
           position: 'fixed', left: '230px', bottom: '16px', width: '340px', maxHeight: '70vh',
-          background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '6px',
-          boxShadow: '0 8px 28px rgba(0,0,0,0.25)', zIndex: 300, overflow: 'hidden',
+          background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)',
+          boxShadow: '0 8px 28px rgba(54, 32, 26,0.25)', zIndex: 300, overflow: 'hidden',
           display: 'flex', flexDirection: 'column',
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderBottom: '1px solid #F3F4F6' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#1A1F36', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Notifications</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderBottom: '1px solid var(--taupe-100)' }}>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--ink)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Notifications</span>
             {unreadCount > 0 && (
-              <span onClick={markAllRead} style={{ fontSize: '11px', color: '#8C3225', cursor: 'pointer' }}>Mark all as read</span>
+              <span onClick={markAllRead} style={{ fontSize: '11px', color: 'var(--action)', cursor: 'pointer' }}>Mark all as read</span>
             )}
           </div>
           <div style={{ overflowY: 'auto', flex: 1 }}>
             {notifications.length === 0 ? (
-              <div style={{ padding: '32px 16px', textAlign: 'center', fontSize: '12px', color: '#9CA3AF' }}>No notifications yet.</div>
+              <div style={{ padding: '32px 16px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>No notifications yet.</div>
             ) : (
               notifications.map(n => (
                 <div
                   key={n.id}
                   onClick={() => handleClick(n)}
                   style={{
-                    padding: '10px 14px', borderBottom: '1px solid #F3F4F6', cursor: 'pointer',
-                    background: n.is_read ? '#FFFFFF' : '#FFFBEB', display: 'flex', gap: '8px', alignItems: 'flex-start',
+                    padding: '10px 14px', borderBottom: '1px solid var(--taupe-100)', cursor: 'pointer',
+                    background: n.is_read ? 'var(--surface-card)' : 'var(--gold-bg)', display: 'flex', gap: '8px', alignItems: 'flex-start',
                   }}
                 >
                   <div style={{
                     width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0, marginTop: '4px',
-                    background: n.is_read ? 'transparent' : (TYPE_COLOR[n.type] || '#6B7280'),
+                    background: n.is_read ? 'transparent' : (TYPE_COLOR[n.type] || 'var(--text-muted)'),
                   }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '12px', color: '#1A1F36', lineHeight: 1.4, fontWeight: n.is_read ? 400 : 600 }}>{n.message}</div>
-                    <div style={{ fontSize: '10px', color: '#9CA3AF', marginTop: '3px' }}>{timeAgo(n.created_at)}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--ink)', lineHeight: 1.4, fontWeight: n.is_read ? 400 : 600 }}>{n.message}</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '3px' }}>{timeAgo(n.created_at)}</div>
                   </div>
                 </div>
               ))

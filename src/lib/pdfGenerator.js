@@ -10,7 +10,7 @@ export async function generateExpenseReportPDF() {
       scale: 1.5,
       useCORS: true,
       allowTaint: true,
-      backgroundColor: '#ffffff',
+      backgroundColor: 'var(--surface-card)',
       logging: false,
       imageTimeout: 3000,
       onclone: (clonedDoc) => {
@@ -61,7 +61,7 @@ async function renderElementCanvas(html2canvas, elementId) {
   const element = document.getElementById(elementId)
   if (!element) return null
   return html2canvas(element, {
-    scale: 1.5, useCORS: true, allowTaint: true, backgroundColor: '#ffffff', logging: false,
+    scale: 1.5, useCORS: true, allowTaint: true, backgroundColor: 'var(--surface-card)', logging: false,
     onclone: (clonedDoc) => {
       const el = clonedDoc.getElementById(elementId)
       if (el) { el.style.display = 'block'; el.style.position = 'relative'; el.style.left = '0' }

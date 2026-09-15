@@ -11,17 +11,17 @@ function fmtDateTime(d) {
 function Row({ label, value }) {
   return (
     <div style={{ display: 'flex', gap: '12px', marginBottom: '8px', fontSize: '13px' }}>
-      <span style={{ color: '#9CA3AF', width: '150px', flexShrink: 0, fontSize: '12px', paddingTop: '1px' }}>{label}</span>
-      <span style={{ color: '#1A1F36' }}>{value || '—'}</span>
+      <span style={{ color: 'var(--text-muted)', width: '150px', flexShrink: 0, fontSize: '12px', paddingTop: '1px' }}>{label}</span>
+      <span style={{ color: 'var(--ink)' }}>{value || '—'}</span>
     </div>
   )
 }
 
 function Card({ title, action, children }) {
   return (
-    <div style={{ background: '#FFFFFF', border: '1px solid #E3E8EF', borderRadius: '8px', padding: '20px', marginBottom: '14px' }}>
+    <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '20px', marginBottom: '14px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-        <div style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{title}</div>
+        <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ink)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{title}</div>
         {action}
       </div>
       {children}
@@ -30,25 +30,25 @@ function Card({ title, action, children }) {
 }
 
 function ApprovalTable({ approvals }) {
-  if (!approvals?.length) return <div style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '4px' }}>No approval records.</div>
+  if (!approvals?.length) return <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>No approval records.</div>
   return (
     <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '8px' }}>
       <thead>
-        <tr style={{ background: '#F8F9FA' }}>
+        <tr style={{ background: 'var(--taupe-50)' }}>
           {['Level', 'Approver', 'Status', 'Date & Time'].map(h => (
-            <th key={h} style={{ padding: '7px 10px', fontSize: '10px', fontWeight: 600, color: '#6B7280', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+            <th key={h} style={{ padding: '7px 10px', fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
           ))}
         </tr>
       </thead>
       <tbody>
         {approvals.map((a, i) => {
-          const statusColor = a.status === 'approved' ? '#15803D' : a.status === 'rejected' ? '#B91C1C' : a.status === 'waiting' ? '#9CA3AF' : '#B45309'
+          const statusColor = a.status === 'approved' ? 'var(--moss-text)' : a.status === 'rejected' ? 'var(--clay-text)' : a.status === 'waiting' ? 'var(--text-muted)' : 'var(--gold-text)'
           return (
-            <tr key={i} style={{ borderTop: '1px solid #F3F4F6' }}>
-              <td style={{ padding: '8px 10px', fontSize: '12px', color: '#374151', fontWeight: 600 }}>{a.approver_name || a.approver_level}</td>
-              <td style={{ padding: '8px 10px', fontSize: '11px', color: '#6B7280' }}>{a.approver_email ? getDisplayName(a.approver_email) : '—'}</td>
+            <tr key={i} style={{ borderTop: '1px solid var(--taupe-100)' }}>
+              <td style={{ padding: '8px 10px', fontSize: '12px', color: 'var(--ink)', fontWeight: 600 }}>{a.approver_name || a.approver_level}</td>
+              <td style={{ padding: '8px 10px', fontSize: '11px', color: 'var(--text-muted)' }}>{a.approver_email ? getDisplayName(a.approver_email) : '—'}</td>
               <td style={{ padding: '8px 10px', fontSize: '11px', fontWeight: 600, color: statusColor }}>{a.status?.charAt(0).toUpperCase() + a.status?.slice(1)}</td>
-              <td style={{ padding: '8px 10px', fontSize: '12px', color: '#9CA3AF' }}>{fmtDateTime(a.actioned_at)}</td>
+              <td style={{ padding: '8px 10px', fontSize: '12px', color: 'var(--text-muted)' }}>{fmtDateTime(a.actioned_at)}</td>
             </tr>
           )
         })}
@@ -61,8 +61,8 @@ function AttachmentLink({ label, url }) {
   if (!url) return null
   return (
     <a href={url} target="_blank" rel="noopener noreferrer" style={{
-      display: 'inline-block', fontSize: '12px', color: '#8C3225', textDecoration: 'none',
-      border: '1px solid #f9c5b7', background: '#fdf0ed', borderRadius: '4px', padding: '5px 10px',
+      display: 'inline-block', fontSize: '12px', color: 'var(--action)', textDecoration: 'none',
+      border: '1px solid var(--taupe-300)', background: 'var(--action-bg)', borderRadius: 'var(--radius-sm)', padding: '5px 10px',
       marginRight: '8px', marginBottom: '8px',
     }}>
       ↗ {label}
@@ -152,17 +152,17 @@ export default function AuditTrail({ poId, reportId, user, onBack, onViewVendor,
   if (!isAdmin) {
     return (
       <div style={{ maxWidth: '640px', margin: '0 auto', padding: '60px 20px', textAlign: 'center' }}>
-        <div style={{ fontSize: '14px', color: '#9CA3AF' }}>The audit trail is available to admins only.</div>
-        <button onClick={onBack} style={{ marginTop: '16px', height: '36px', padding: '0 18px', background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '13px', cursor: 'pointer' }}>← Back</button>
+        <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>The audit trail is available to admins only.</div>
+        <button onClick={onBack} style={{ marginTop: '16px', height: '36px', padding: '0 18px', background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', fontSize: '13px', cursor: 'pointer' }}>← Back</button>
       </div>
     )
   }
 
-  if (loading) return <div style={{ padding: '60px', textAlign: 'center', fontSize: '13px', color: '#9CA3AF' }}>Loading audit trail…</div>
+  if (loading) return <div style={{ padding: '60px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>Loading audit trail…</div>
   if (!chain) return (
     <div style={{ maxWidth: '640px', margin: '0 auto', padding: '60px 20px', textAlign: 'center' }}>
-      <div style={{ fontSize: '14px', color: '#9CA3AF' }}>Nothing found for this record.</div>
-      <button onClick={onBack} style={{ marginTop: '16px', height: '36px', padding: '0 18px', background: '#FFFFFF', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '13px', cursor: 'pointer' }}>← Back</button>
+      <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Nothing found for this record.</div>
+      <button onClick={onBack} style={{ marginTop: '16px', height: '36px', padding: '0 18px', background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', fontSize: '13px', cursor: 'pointer' }}>← Back</button>
     </div>
   )
 
@@ -172,15 +172,15 @@ export default function AuditTrail({ poId, reportId, user, onBack, onViewVendor,
   return (
     <div style={{ maxWidth: '760px', margin: '0 auto', padding: '28px 24px 60px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '16px' }}>
-        <span onClick={onBack} style={{ fontSize: '12px', color: '#8C3225', cursor: 'pointer' }}>Back</span>
-        <span style={{ fontSize: '12px', color: '#9CA3AF' }}>/</span>
-        <span style={{ fontSize: '12px', color: '#6B7280' }}>Audit Trail</span>
+        <span onClick={onBack} style={{ fontSize: '12px', color: 'var(--action)', cursor: 'pointer' }}>Back</span>
+        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>/</span>
+        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Audit Trail</span>
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
         <div>
-          <div style={{ fontSize: '22px', fontWeight: 700, color: '#1A1F36' }}>Audit Trail</div>
-          <div style={{ fontSize: '13px', color: '#6B7280', marginTop: '2px' }}>
+          <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--ink)' }}>Audit Trail</div>
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
             {vendor?.org_name} · {pr?.pr_number} · {po.po_number}
           </div>
         </div>
@@ -190,13 +190,13 @@ export default function AuditTrail({ poId, reportId, user, onBack, onViewVendor,
             disabled={downloading}
             style={{
               height: '38px', padding: '0 18px', fontSize: '13px', fontWeight: 600,
-              background: downloading ? '#9CA3AF' : '#8C3225', color: '#FFFFFF', border: 'none',
-              borderRadius: '6px', cursor: downloading ? 'default' : 'pointer',
+              background: downloading ? 'var(--text-muted)' : 'var(--action)', color: 'var(--surface-card)', border: 'none',
+              borderRadius: 'var(--radius-md)', cursor: downloading ? 'default' : 'pointer',
             }}
           >
             {downloading ? 'Preparing…' : '↓ Download Full Audit Trail'}
           </button>
-          {downloadError && <div style={{ fontSize: '11px', color: '#B91C1C', marginTop: '6px', maxWidth: '220px', textAlign: 'right' }}>{downloadError}</div>}
+          {downloadError && <div style={{ fontSize: '11px', color: 'var(--clay-text)', marginTop: '6px', maxWidth: '220px', textAlign: 'right' }}>{downloadError}</div>}
         </div>
       </div>
 
@@ -204,7 +204,7 @@ export default function AuditTrail({ poId, reportId, user, onBack, onViewVendor,
       <Card
         title="Vendor"
         action={onViewVendor && vendor && (
-          <span onClick={() => onViewVendor(vendor.id)} style={{ fontSize: '12px', color: '#8C3225', cursor: 'pointer', textDecoration: 'underline' }}>Open Vendor Record →</span>
+          <span onClick={() => onViewVendor(vendor.id)} style={{ fontSize: '12px', color: 'var(--action)', cursor: 'pointer', textDecoration: 'underline' }}>Open Vendor Record →</span>
         )}
       >
         {vendor ? (
@@ -223,14 +223,14 @@ export default function AuditTrail({ poId, reportId, user, onBack, onViewVendor,
               ))}
             </div>
           </>
-        ) : <div style={{ fontSize: '12px', color: '#9CA3AF' }}>No vendor record linked.</div>}
+        ) : <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No vendor record linked.</div>}
       </Card>
 
       {/* PR */}
       <Card
         title="Purchase Request"
         action={onViewPR && pr && (
-          <span onClick={() => onViewPR(pr.id)} style={{ fontSize: '12px', color: '#8C3225', cursor: 'pointer', textDecoration: 'underline' }}>Open PR Record →</span>
+          <span onClick={() => onViewPR(pr.id)} style={{ fontSize: '12px', color: 'var(--action)', cursor: 'pointer', textDecoration: 'underline' }}>Open PR Record →</span>
         )}
       >
         {pr ? (
@@ -249,17 +249,17 @@ export default function AuditTrail({ poId, reportId, user, onBack, onViewVendor,
               {pr.comparative_statement_path && <AttachmentLink label="Comparative Statement" url={u('pr-quotes', pr.comparative_statement_path)} />}
               {pr.advance_approval_screenshot_path && <AttachmentLink label="Advance Approval Screenshot" url={u('pr-quotes', pr.advance_approval_screenshot_path)} />}
             </div>
-            <div style={{ fontSize: '10px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '10px' }}>Approval Trail</div>
+            <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '10px' }}>Approval Trail</div>
             <ApprovalTable approvals={prApprovals} />
           </>
-        ) : <div style={{ fontSize: '12px', color: '#9CA3AF' }}>No PR record linked.</div>}
+        ) : <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No PR record linked.</div>}
       </Card>
 
       {/* PO */}
       <Card
         title="Purchase Order"
         action={onViewPO && (
-          <span onClick={() => onViewPO(po.id)} style={{ fontSize: '12px', color: '#8C3225', cursor: 'pointer', textDecoration: 'underline' }}>Open PO Record →</span>
+          <span onClick={() => onViewPO(po.id)} style={{ fontSize: '12px', color: 'var(--action)', cursor: 'pointer', textDecoration: 'underline' }}>Open PO Record →</span>
         )}
       >
         <Row label="PO Number" value={po.po_number} />
@@ -275,14 +275,14 @@ export default function AuditTrail({ poId, reportId, user, onBack, onViewVendor,
       {/* Expense Reports */}
       {reportChains.length === 0 ? (
         <Card title="Expense Reports">
-          <div style={{ fontSize: '12px', color: '#9CA3AF' }}>No expense report has been submitted against this PO yet.</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No expense report has been submitted against this PO yet.</div>
         </Card>
       ) : reportChains.map(({ report, approvals, expenses }) => (
         <Card
           key={report.id}
           title={`Expense Report — ${report.report_reference || report.id}`}
           action={onViewReport && (
-            <span onClick={() => onViewReport(report.id)} style={{ fontSize: '12px', color: '#8C3225', cursor: 'pointer', textDecoration: 'underline' }}>Open Report Record →</span>
+            <span onClick={() => onViewReport(report.id)} style={{ fontSize: '12px', color: 'var(--action)', cursor: 'pointer', textDecoration: 'underline' }}>Open Report Record →</span>
           )}
         >
           <Row label="Status" value={report.status} />
@@ -294,15 +294,15 @@ export default function AuditTrail({ poId, reportId, user, onBack, onViewVendor,
           {report.rejection_reason && <Row label="Rejection Reason" value={report.rejection_reason} />}
           {report.pdf_storage_path && <div style={{ marginTop: '10px' }}><AttachmentLink label="Report PDF" url={u('expense-reports', report.pdf_storage_path)} /></div>}
 
-          <div style={{ fontSize: '10px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '10px' }}>Approval Trail</div>
+          <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '10px' }}>Approval Trail</div>
           <ApprovalTable approvals={approvals} />
 
           {expenses.length > 0 && (
             <>
-              <div style={{ fontSize: '10px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '14px', marginBottom: '6px' }}>Expense Line Items</div>
+              <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '14px', marginBottom: '6px' }}>Expense Line Items</div>
               {expenses.map((e, i) => (
-                <div key={e.id} style={{ borderTop: i > 0 ? '1px solid #F3F4F6' : 'none', padding: '8px 0' }}>
-                  <div style={{ fontSize: '12px', color: '#374151', marginBottom: '4px' }}>
+                <div key={e.id} style={{ borderTop: i > 0 ? '1px solid var(--taupe-100)' : 'none', padding: '8px 0' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--ink)', marginBottom: '4px' }}>
                     {e.vendor || 'Expense'} · {e.category || '—'} · ₹{Number(e.amount || 0).toLocaleString('en-IN')} · {e.date || '—'}
                   </div>
                   <AttachmentLink label="Receipt" url={u('expense-documents', e.capture?.receipt_storage_path)} />
