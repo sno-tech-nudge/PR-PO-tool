@@ -108,16 +108,25 @@ export function SupportingAttachments({ attachments }) {
   )
 }
 
-// Raw external links carried over from migrated/historical data (PO Pdf
-// link, VR PDF Link, ER PDF Link on Zoho's own export) — opened directly
-// in a new tab exactly as given, rather than proxied through our own
-// Storage. No signed-URL fetch needed since these already point straight
-// at the source (Zoho/Google Drive), and whoever clicks it uses their own
-// session there to view it.
+// PO Pdf link / VR PDF Link on the Zoho export point into the internal
+// Zoho Creator app UI (creatorapp.zoho.com/.../tni-finance/#page:...) —
+// viewable only by someone logged into Zoho Creator with access, a dead
+// end for everyone else. Never surface those; the compiled report PDF
+// (ER PDF Link, almost always a plain Google Drive link) is the one
+// external link worth showing.
+function isZohoCreatorLink(url) {
+  return typeof url === 'string' && url.includes('creatorapp.zoho.com')
+}
+
+// Raw external links carried over from migrated/historical data — opened
+// directly in a new tab exactly as given, rather than proxied through our
+// own Storage. No signed-URL fetch needed since these already point
+// straight at the source (Google Drive), and whoever clicks it uses their
+// own session there to view it.
 export function ExternalAttachmentLinks({ poLink, vrLink, erLink }) {
   const links = [
-    poLink && { url: poLink, label: 'View Attachment (PO)' },
-    vrLink && { url: vrLink, label: 'View Attachment (VR)' },
+    poLink && !isZohoCreatorLink(poLink) && { url: poLink, label: 'View Attachment (PO)' },
+    vrLink && !isZohoCreatorLink(vrLink) && { url: vrLink, label: 'View Attachment (VR)' },
     erLink && { url: erLink, label: 'View Attachment (Report)' },
   ].filter(Boolean)
   if (links.length === 0) return null
