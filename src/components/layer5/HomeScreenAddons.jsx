@@ -1,6 +1,15 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { canAccessApprovals, canAccessFinance, isObserver } from '../../lib/auth'
+import { STATUS_STEP } from '../../lib/approvalEngine'
+import { avgTAT } from '../../lib/tat'
+import StatusTimeline from './StatusTimeline'
+
+// Statuses that mean "still moving through the pipeline" — not a draft,
+// and not fully resolved yet (paid/reimbursed or rejected/turned into a PO).
+const PR_PIPELINE_STATUSES = ['submitted', 'approved']
+const REPORT_PIPELINE_STATUSES = ['submitted', 'under_review', 'approved', 'processing']
+const APPROVER_QUEUE_ROLES = ['fl', 'finance', 'coo']
 
 const POLICY_REMINDERS = [
   { text: 'Submit receipts within 7 days of purchase' },
@@ -57,19 +66,31 @@ export default function HomeScreenAddons({
   user, onViewReport,
   onResumePRDraft, onResumeVendorDraft,
   onOpenExpenseApprovals, onOpenPRApprovals, onOpenFinance,
+  onViewPR, onViewVendor, onOpenReportApproval,
   hideExpenseFeatures = false,
 }) {
   const [stats, setStats]                 = useState(null)
   const [recentReports, setRecentReports] = useState([])
   const [tasks, setTasks]                 = useState(null)
   const [loading, setLoading]             = useState(true)
+  const [recentActivity, setRecentActivity] = useState([])
+  const [approvalQueue, setApprovalQueue] = useState([])
+  const [personalMini, setPersonalMini]   = useState(null)
 
   useEffect(() => { load() }, [user?.email, hideExpenseFeatures])
 
   async function load() {
     const email = user?.email
-    const canApprove = canAccessApprovals(user?.role) && !isObserver(user?.role)
-    const canFinance = canAccessFinance(user?.role)
+    const role = user?.role
+    const canApprove = canAccessApprovals(role) && !isObserver(role)
+    const canFinance = canAccessFinance(role)
+    const isEmployee = role === 'employee'
+    const showApproverQueue = APPROVER_QUEUE_ROLES.includes(role)
+    // The small personal snapshot at the bottom of Home is additive to what
+    // Finance/Admin already get via the full Finance Dashboard > Analytics
+    // Personal Analytics section — skip it here to avoid showing the same
+    // thing twice for that audience.
+    const showPersonalMini = role === 'employee' || role === 'fl'
 
     const [
       { count: savedCount },
@@ -79,6 +100,15 @@ export default function HomeScreenAddons({
       { count: pendingExpenseReports },
       { count: pendingPRs },
       { count: pendingPOs },
+      { data: recentPRs },
+      { data: recentVendors },
+      { data: approvalRows },
+      { count: raisedPRCount },
+      { count: raisedVendorCount },
+      { count: raisedReportCount },
+      { data: myPRApprovals },
+      { data: myReportApprovals },
+      { data: pipelineReports },
     ] = await Promise.all([
       hideExpenseFeatures
         ? Promise.resolve({ count: 0 })
@@ -115,11 +145,66 @@ export default function HomeScreenAddons({
       canFinance
         ? supabase.from('purchase_orders').select('id', { count: 'exact', head: true }).eq('status', 'pending_approval')
         : Promise.resolve({ count: 0 }),
+      // Recent activity (employees) — most recently created non-draft PR/
+      // Vendor of theirs, merged with the already-fetched `reports` list.
+      isEmployee
+        ? supabase.from('purchase_requests')
+            .select('id, pr_number, amount, status, created_at')
+            .eq('requested_by', email)
+            .not('status', 'eq', 'draft')
+            .order('created_at', { ascending: false })
+            .limit(50)
+        : Promise.resolve({ data: [] }),
+      isEmployee
+        ? supabase.from('vendors')
+            .select('id, org_name, vendor_id, status, created_at')
+            .eq('submitted_by', email)
+            .not('status', 'eq', 'draft')
+            .order('created_at', { ascending: false })
+            .limit(3)
+        : Promise.resolve({ data: [] }),
+      // "Needs your approval" preview (FL/Finance/COO) — reports that have
+      // just landed at a level this person can act on (same coarse-fallback
+      // vs required_role logic as canAccessApprovals/ApproverReportView).
+      showApproverQueue
+        ? supabase.from('report_approvals')
+            .select('id, created_at, report:expense_reports(id, report_reference, total_amount, status, employee_email)')
+            .eq('status', 'pending')
+            .or(`required_role.eq.${role},required_role.is.null`)
+            .order('created_at', { ascending: false })
+            .limit(3)
+        : Promise.resolve({ data: [] }),
+      showPersonalMini
+        ? supabase.from('purchase_requests').select('id', { count: 'exact', head: true }).eq('requested_by', email).not('status', 'eq', 'draft')
+        : Promise.resolve({ count: 0 }),
+      showPersonalMini
+        ? supabase.from('vendors').select('id', { count: 'exact', head: true }).eq('submitted_by', email).not('status', 'eq', 'draft')
+        : Promise.resolve({ count: 0 }),
+      showPersonalMini
+        ? supabase.from('expense_reports').select('id', { count: 'exact', head: true }).eq('employee_email', email).not('status', 'eq', 'saved')
+        : Promise.resolve({ count: 0 }),
+      role === 'fl'
+        ? supabase.from('pr_approvals').select('status, created_at, actioned_at').eq('approver_email', email).in('status', ['approved', 'rejected'])
+        : Promise.resolve({ data: [] }),
+      role === 'fl'
+        ? supabase.from('report_approvals').select('status, created_at, actioned_at').eq('approver_email', email).in('status', ['approved', 'rejected'])
+        : Promise.resolve({ data: [] }),
+      // Report amounts for the "In Pipeline" total — fetched independently
+      // of `hideExpenseFeatures` (which only hides the report *list*/detail
+      // UI for employees during this testing round) so the pipeline figure
+      // stays honest even while that list itself stays hidden.
+      isEmployee
+        ? supabase.from('expense_reports').select('total_amount, status').eq('employee_email', email).in('status', REPORT_PIPELINE_STATUSES)
+        : Promise.resolve({ data: [] }),
     ])
 
     const reps = reports || []
+    // "Approved" reports are, in practice, almost always already paid out —
+    // Finance frequently settles them outside a formal "mark as reimbursed"
+    // step in the tool — so the Reimbursed total counts both, not just the
+    // strictly-reimbursed ones, to reflect what's actually been paid.
     const reimburseTotal = reps
-      .filter(r => r.status === 'reimbursed')
+      .filter(r => r.status === 'reimbursed' || r.status === 'approved')
       .reduce((s, r) => s + (r.total_amount || 0), 0)
 
     setStats({
@@ -135,6 +220,39 @@ export default function HomeScreenAddons({
       pendingPRs: pendingPRs || 0,
       pendingPOs: pendingPOs || 0,
     })
+
+    if (isEmployee) {
+      const merged = [
+        ...reps.map(r => ({ id: r.id, type: 'report', title: r.report_reference, subtitle: r.total_amount ? `₹${Number(r.total_amount).toLocaleString('en-IN')}` : '—', status: r.status, date: r.created_at })),
+        ...(recentPRs || []).map(pr => ({ id: pr.id, type: 'pr', title: `PR ${pr.pr_number || ''}`.trim(), subtitle: pr.amount ? `₹${Number(pr.amount).toLocaleString('en-IN')}` : '—', status: pr.status, date: pr.created_at })),
+        ...(recentVendors || []).map(v => ({ id: v.id, type: 'vendor', title: v.org_name || 'Vendor', subtitle: v.vendor_id || '—', status: v.status, date: v.created_at })),
+      ].sort((a, b) => new Date(b.date) - new Date(a.date))
+      setRecentActivity(merged.slice(0, 2))
+    }
+
+    if (showApproverQueue) {
+      setApprovalQueue((approvalRows || []).map(a => a.report).filter(Boolean))
+    }
+
+    if (showPersonalMini) {
+      const raised = (raisedPRCount || 0) + (raisedVendorCount || 0) + (raisedReportCount || 0)
+      if (role === 'fl') {
+        const allApprovals = [...(myPRApprovals || []), ...(myReportApprovals || [])]
+        const approvedRows = allApprovals.filter(a => a.status === 'approved')
+        setPersonalMini({
+          raised,
+          approvedCount: approvedRows.length,
+          rejectedCount: allApprovals.filter(a => a.status === 'rejected').length,
+          avgDays: avgTAT(approvedRows, 'created_at', 'actioned_at'),
+        })
+      } else {
+        const pipelineTotal =
+          (pipelineReports || []).reduce((s, r) => s + (r.total_amount || 0), 0) +
+          (recentPRs || []).filter(pr => PR_PIPELINE_STATUSES.includes(pr.status)).reduce((s, pr) => s + (Number(pr.amount) || 0), 0)
+        setPersonalMini({ raised, pipelineTotal })
+      }
+    }
+
     setLoading(false)
   }
 
@@ -253,8 +371,72 @@ export default function HomeScreenAddons({
         </div>
       )}
 
+      {/* Needs your approval — FL/Finance/COO, the reports that most
+          recently landed at a level they can act on. One click straight
+          into the approval screen, same as picking it from the full list. */}
+      {approvalQueue.length > 0 && (
+        <div style={{ marginBottom: '24px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
+            Needs Your Approval
+          </div>
+          <div style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+            {approvalQueue.map((rep, i) => (
+              <div
+                key={rep.id}
+                onClick={() => onOpenReportApproval?.(rep.id)}
+                style={{
+                  padding: '13px 16px',
+                  borderBottom: i < approvalQueue.length - 1 ? '1px solid var(--taupe-100)' : 'none',
+                  background: 'var(--surface-card)', cursor: 'pointer',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)', fontFamily: 'monospace' }}>{rep.report_reference}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                      {rep.employee_email} · {rep.total_amount ? `₹${Number(rep.total_amount).toLocaleString('en-IN')}` : '—'}
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '16px', color: 'var(--taupe-400)' }}>›</span>
+                </div>
+                <StatusTimeline currentStep={STATUS_STEP[rep.status] ?? 0} compact />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recent activity (employees) — most recent PR/Report/Vendor they
+          raised, superseding the plain "Recent Reports" list below (which
+          only ever covered expense reports) for this audience. */}
+      {recentActivity.length > 0 && (
+        <div style={{ marginBottom: '24px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
+            Recent Activity
+          </div>
+          <div style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+            {recentActivity.map((item, i) => {
+              const badge = STATUS_BADGE[item.status] || STATUS_BADGE.submitted
+              const onClick = item.type === 'pr' ? () => onViewPR?.(item.id)
+                : item.type === 'vendor' ? () => onViewVendor?.(item.id)
+                : () => onViewReport?.(item.id)
+              return (
+                <TaskRow
+                  key={`${item.type}-${item.id}`}
+                  title={item.title}
+                  subtitle={item.subtitle}
+                  badge={badge.label} badgeColor={badge.color} badgeBg={badge.bg}
+                  last={i === recentActivity.length - 1}
+                  onClick={onClick}
+                />
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Recent reports */}
-      {!hideExpenseFeatures && recentReports.length > 0 && (
+      {!hideExpenseFeatures && recentActivity.length === 0 && recentReports.length > 0 && (
         <div style={{ marginBottom: '24px' }}>
           <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
             Recent Reports
@@ -316,6 +498,62 @@ export default function HomeScreenAddons({
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '18px' }}>{r.text}</span>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Personal snapshot — a small always-visible summary for employees
+          and FL specifically; Finance/Admin already get the full version
+          via Finance Dashboard > Analytics > Personal Analytics. */}
+      {personalMini && (
+        <div style={{ marginTop: '24px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
+            Your Activity
+          </div>
+          <div style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '16px 18px' }}>
+            <div style={{ display: 'flex', gap: '24px', marginBottom: personalMini.approvedCount != null || personalMini.pipelineTotal != null ? '16px' : 0 }}>
+              <div>
+                <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--ink)', lineHeight: 1 }}>{personalMini.raised}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Raised</div>
+              </div>
+              {personalMini.pipelineTotal != null && (
+                <div>
+                  <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--action)', lineHeight: 1 }}>
+                    ₹{personalMini.pipelineTotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>In Pipeline</div>
+                </div>
+              )}
+              {personalMini.avgDays != null && (
+                <div>
+                  <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--ink)', lineHeight: 1 }}>{personalMini.avgDays}d</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Avg Turnaround</div>
+                </div>
+              )}
+            </div>
+
+            {personalMini.approvedCount != null && (
+              <div>
+                {[
+                  { label: 'Approved', value: personalMini.approvedCount, color: 'var(--moss)' },
+                  { label: 'Rejected', value: personalMini.rejectedCount, color: 'var(--clay)' },
+                ].map(row => (
+                  <div key={row.label} style={{ marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--ink)' }}>{row.label}</span>
+                      <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ink)' }}>{row.value}</span>
+                    </div>
+                    <div style={{ height: '6px', background: 'var(--taupe-100)', borderRadius: 'var(--radius-xs)' }}>
+                      <div style={{
+                        height: '100%',
+                        width: `${Math.max(personalMini.approvedCount, personalMini.rejectedCount, 1) ? (row.value / Math.max(personalMini.approvedCount, personalMini.rejectedCount, 1)) * 100 : 0}%`,
+                        background: row.color, borderRadius: 'var(--radius-xs)',
+                      }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
