@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
-import { STATUS_STEP, formatDateTime } from '../../lib/approvalEngine'
-import StatusTimeline from './StatusTimeline'
+import { formatDateTime } from '../../lib/approvalEngine'
 import NotificationToast from './NotificationToast'
 import ReportChat from '../shared/ReportChat'
 import Confetti from '../shared/Confetti'
@@ -15,20 +14,6 @@ const STATUS_BADGE = {
   rejected: { bg: 'var(--clay-bg)', color: 'var(--clay-text)', label: 'Rejected', icon: '✕' },
   processing: { bg: 'var(--gold-bg)', color: 'var(--gold-text)', label: 'Processing', icon: '◷' },
   reimbursed: { bg: 'var(--moss-bg)', color: 'var(--moss)', label: 'Reimbursed', icon: '✓' },
-}
-
-function getStatusMessage(status, reviewedBy) {
-  const approver = reviewedBy || 'your approver'
-  switch (status) {
-    case 'draft': return 'This report has not been submitted yet'
-    case 'submitted': return `Waiting for ${approver} to review`
-    case 'under_review': return `${approver} is reviewing your report`
-    case 'approved': return `Approved by ${approver}. Finance is processing.`
-    case 'rejected': return `Returned by ${approver}. See reason below.`
-    case 'processing': return 'Finance is processing your reimbursement'
-    case 'reimbursed': return 'Reimbursement has been processed'
-    default: return ''
-  }
 }
 
 function ActivityItem({ text, timestamp }) {
@@ -172,8 +157,6 @@ export default function ReportStatus({ reportId, onBack, onStartNew, onViewPO })
   }
 
   const status = report?.status || 'submitted'
-  const currentStep = STATUS_STEP[status] ?? 0
-  const badge = STATUS_BADGE[status] || STATUS_BADGE.submitted
   const isRejected = status === 'rejected'
 
   // Activity log from report + approval records
@@ -251,22 +234,6 @@ export default function ReportStatus({ reportId, onBack, onStartNew, onViewPO })
         </div>
       )}
 
-      {/* Status badge */}
-      <div style={{ marginBottom: '12px' }}>
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: '6px',
-          background: badge.bg, color: badge.color,
-          padding: '6px 16px', fontSize: '13px', fontWeight: 500,
-          borderRadius: 'var(--radius-xs)', marginBottom: '8px',
-        }}>
-          <span style={{ fontSize: '13px' }}>{badge.icon}</span>
-          {badge.label}
-        </div>
-        <div style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.5' }}>
-          {getStatusMessage(status, report?.reviewed_by)}
-        </div>
-      </div>
-
       {status === 'reimbursed' && (
         <div style={{
           border: '1px solid var(--moss-border)', background: 'var(--moss-bg)', borderRadius: 'var(--radius-md)',
@@ -317,11 +284,6 @@ export default function ReportStatus({ reportId, onBack, onStartNew, onViewPO })
           </button>
         </div>
       )}
-
-      {/* Timeline */}
-      <div style={{ border: '1px solid var(--taupe-200)', padding: '16px', marginBottom: '20px' }}>
-        <StatusTimeline currentStep={currentStep} />
-      </div>
 
       {/* Activity log */}
       {activities.length > 0 && (
