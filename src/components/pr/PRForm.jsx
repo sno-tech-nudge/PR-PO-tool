@@ -32,9 +32,20 @@ async function generatePRNumber() {
 }
 
 
-function Field({ label, error, required, hint, children }) {
+// Scrolls a field (matched by the `id` Field/wrapper divs carry, keyed to
+// the same string as its entry in `errors`) into view and focuses its
+// input — used by the error-summary banner so each listed problem is a
+// direct link to where it needs fixing, not just a static message.
+function scrollToField(key) {
+  const el = document.getElementById(key)
+  if (!el) return
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  el.querySelector('input, select, textarea, button')?.focus({ preventScroll: true })
+}
+
+function Field({ id, label, error, required, hint, children }) {
   return (
-    <div style={{ marginBottom: '18px' }}>
+    <div id={id} style={{ marginBottom: '18px', scrollMarginTop: '80px' }}>
       <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: '5px' }}>
         {label}{required && <span style={{ color: 'var(--clay-text)', marginLeft: '2px' }}>*</span>}
       </label>
@@ -569,8 +580,14 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
             Please fix the following before continuing:
           </div>
           <ul style={{ margin: 0, paddingLeft: '18px' }}>
-            {Object.values(errors).filter(v => typeof v === 'string').map((msg, i) => (
-              <li key={i} style={{ fontSize: '12px', color: 'var(--clay-text)', lineHeight: 1.6 }}>{msg}</li>
+            {Object.entries(errors).filter(([, v]) => typeof v === 'string').map(([key, msg]) => (
+              <li
+                key={key}
+                onClick={() => scrollToField(key)}
+                style={{ fontSize: '12px', color: 'var(--clay-text)', lineHeight: 1.6, cursor: 'pointer', textDecoration: 'underline' }}
+              >
+                {msg}
+              </li>
             ))}
           </ul>
         </div>
@@ -591,18 +608,18 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
       {/* ── Section 1: Program & Donor Details ── */}
       {step === 0 && (
         <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '24px' }}>
-          <Field label="Donor / Programme Allocation" error={errors.allocations} required hint="Split this spend across donors / programmes — must total 100%">
+          <Field id="allocations" label="Donor / Programme Allocation" error={errors.allocations} required hint="Split this spend across donors / programmes — must total 100%">
             <DonorAllocations value={allocations} onChange={setAllocations} error={errors.allocations} />
           </Field>
 
           {allocationsValid && (
-            <Field label="Budgeted?" error={errors.budgeted} required hint="Is this spend within an approved budget line?">
+            <Field id="budgeted" label="Budgeted?" error={errors.budgeted} required hint="Is this spend within an approved budget line?">
               <YesNoToggle value={budgeted} onChange={setBudgeted} />
             </Field>
           )}
 
           {allocationsValid && budgeted !== null && (
-            <Field label="Expense Nature" error={errors.expenseType} required hint="Revenue vs capital classification">
+            <Field id="expenseType" label="Expense Nature" error={errors.expenseType} required hint="Revenue vs capital classification">
               {sel(expenseType, setExpenseType, EXPENSE_NATURES, 'Select nature…', () => validateField('expenseType'))}
             </Field>
           )}
@@ -621,12 +638,12 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
             Only <strong>approved vendors</strong> can be selected. New vendors must complete the vendor registration process before a PR can be raised.
           </PolicyBanner>
 
-          <Field label="Approved Vendor" error={errors.vendorId} required>
+          <Field id="vendorId" label="Approved Vendor" error={errors.vendorId} required>
             <VendorSelector value={vendorId} onChange={handleVendorSelect} />
           </Field>
 
           {/* Amount breakdown: per-line-item quantity × category × rate per unit (mandatory) + tax (mandatory) + incidentals (optional) */}
-          <div style={{ marginBottom: '18px' }}>
+          <div id="amount" style={{ marginBottom: '18px', scrollMarginTop: '80px' }}>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: '5px' }}>
               Amount (INR)<span style={{ color: 'var(--clay-text)', marginLeft: '2px' }}>*</span>
             </label>
@@ -650,7 +667,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
           )}
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <Field label="From Date" error={errors.fromDate} required>
+            <Field id="fromDate" label="From Date" error={errors.fromDate} required>
               <input
                 type="date"
                 value={fromDate}
@@ -664,7 +681,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
                 style={{ width: '100%', height: '38px', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', padding: '0 10px', fontSize: '13px', color: 'var(--ink)', background: 'var(--surface-card)', outline: 'none', boxSizing: 'border-box' }}
               />
             </Field>
-            <Field label="To Date" error={errors.toDate} required>
+            <Field id="toDate" label="To Date" error={errors.toDate} required>
               <input
                 type="date"
                 value={toDate}
@@ -676,7 +693,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
             </Field>
           </div>
 
-          <Field label="Purpose / Description" error={errors.purpose} required>
+          <Field id="purpose" label="Purpose / Description" error={errors.purpose} required>
             <textarea
               value={purpose}
               onChange={e => setPurpose(e.target.value)}
@@ -700,7 +717,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
           </div>
 
           {isRecurring && (
-            <Field label="Frequency" error={errors.frequency} required>
+            <Field id="frequency" label="Frequency" error={errors.frequency} required>
               {sel(frequency, setFrequency, FREQUENCIES, 'Select frequency…', () => validateField('frequency'))}
             </Field>
           )}
@@ -709,14 +726,14 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
         {/* Quotes & Payment Terms — reveals once the core purchase details above are filled */}
         {vendorId && lineItemsValid(breakdown.items || []) && breakdownTotals({ ...breakdown, base: itemsBase }).valid && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
-            <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '24px' }}>
+            <div id="quotes" style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '24px', scrollMarginTop: '80px' }}>
               <PolicyBanner type="info">
                 <strong>Policy requirement:</strong> {requiredQuotes} quote{requiredQuotes > 1 ? 's are' : ' is'} required for this purchase (₹{numericAmount.toLocaleString('en-IN')}). Quotes ensure the organisation gets the best price.
               </PolicyBanner>
               <QuoteRows value={quoteState} onChange={setQuoteState} requiredQuotes={requiredQuotes} error={errors.quotes} entity={primaryAllocation(allocations)?.entity} />
             </div>
 
-            <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '24px' }}>
+            <div id="advance" style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '24px', scrollMarginTop: '80px' }}>
               <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--ink)', marginBottom: '4px' }}>Payment Terms</div>
               <AdvanceTable value={advanceState} onChange={setAdvanceState} error={errors.advance} />
             </div>
