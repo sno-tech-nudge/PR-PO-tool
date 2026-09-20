@@ -101,11 +101,11 @@ export default function VendorDetail({ vendorId, user, onBack, onEdit, onApprove
     setDownloading(true); setDownloadError(null); setDownloadStep('Preparing PDF…')
     try {
       const documents = [
-        { label: 'Cancelled Cheque / Bank Statement', url: chequeUrl, path: vendor.cancelled_cheque_path },
-        { label: 'PAN Copy', url: panUrl, path: vendor.pan_copy_path },
-        { label: 'Registration Certificate', url: regCertUrl, path: vendor.registration_certificate_path },
-        { label: 'MSME Certificate', url: msmeCertUrl, path: vendor.msme_certificate_path },
-        { label: 'GST Certificate', url: gstCertUrl, path: vendor.gst_certificate_path },
+        { label: 'Cancelled Cheque / Bank Statement', url: chequeUrl || vendor.cancelled_cheque_drive_link, path: vendor.cancelled_cheque_path },
+        { label: 'PAN Copy', url: panUrl || vendor.pan_copy_drive_link, path: vendor.pan_copy_path },
+        { label: 'Registration Certificate', url: regCertUrl || vendor.registration_certificate_drive_link, path: vendor.registration_certificate_path },
+        { label: 'MSME Certificate', url: msmeCertUrl || vendor.msme_certificate_drive_link, path: vendor.msme_certificate_path },
+        { label: 'GST Certificate', url: gstCertUrl || vendor.gst_certificate_drive_link, path: vendor.gst_certificate_path },
         { label: 'Aadhaar Copy', url: aadhaarUrl, path: vendor.aadhaar_copy_path },
         { label: 'Aadhaar-PAN Link Proof', url: aadhaarProofUrl, path: vendor.aadhaar_pan_link_proof_path },
       ].filter(d => d.url)
@@ -278,13 +278,14 @@ export default function VendorDetail({ vendorId, user, onBack, onEdit, onApprove
         <Section title="Documents">
           <div style={{ padding: '16px 20px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
             {[
-              ['Cancelled Cheque / Bank Statement', chequeUrl],
-              ['PAN Copy', panUrl],
-              [!AADHAAR_REQUIRED_ORG_TYPES.includes(vendor.org_type) ? 'Registration Certificate' : null, regCertUrl],
-              [vendor.is_msme ? 'MSME Certificate' : null, msmeCertUrl],
-              [vendor.is_gstin_registered ? 'GST Certificate' : null, gstCertUrl],
+              ['Cancelled Cheque / Bank Statement', chequeUrl || vendor.cancelled_cheque_drive_link],
+              ['PAN Copy', panUrl || vendor.pan_copy_drive_link],
+              [!AADHAAR_REQUIRED_ORG_TYPES.includes(vendor.org_type) ? 'Registration Certificate' : null, regCertUrl || vendor.registration_certificate_drive_link],
+              [vendor.is_msme ? 'MSME Certificate' : null, msmeCertUrl || vendor.msme_certificate_drive_link],
+              [vendor.is_gstin_registered ? 'GST Certificate' : null, gstCertUrl || vendor.gst_certificate_drive_link],
               [AADHAAR_REQUIRED_ORG_TYPES.includes(vendor.org_type) ? 'Aadhaar Copy' : null, aadhaarUrl],
               [AADHAAR_REQUIRED_ORG_TYPES.includes(vendor.org_type) && vendor.aadhaar_pan_linked ? 'Aadhaar-PAN Link Proof' : null, aadhaarProofUrl],
+              [vendor.drive_folder_link ? 'All Documents (Drive Folder)' : null, vendor.drive_folder_link],
             ].filter(([label]) => label).map(([label, url]) => (
               url ? (
                 <a key={label} href={url} target="_blank" rel="noopener noreferrer"
