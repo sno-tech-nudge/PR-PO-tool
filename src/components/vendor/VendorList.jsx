@@ -5,6 +5,7 @@ import VendorColumnPicker from './VendorColumnPicker'
 import VendorExportModal from './VendorExportModal'
 import PanDuplicateModal from './PanDuplicateModal'
 import VendorStatusModal from './VendorStatusModal'
+import VendorInviteModal from './VendorInviteModal'
 import { downloadCSV, vendorsToRows } from '../../lib/exportUtils'
 import { canAccessFinance } from '../../lib/auth'
 import { getDisplayName } from '../../lib/directory'
@@ -77,6 +78,7 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
   const [search, setSearch]     = useState('')
   const [visibleColumns, setVisibleColumns] = useState(loadColumns)
   const [showExportModal, setShowExportModal] = useState(false)
+  const [showInviteModal, setShowInviteModal] = useState(false)
   const [panPreview, setPanPreview] = useState(null) // { vendors } when viewing a PAN-duplicate pill
   const [statusVendor, setStatusVendor] = useState(null) // vendor row when viewing the status timeline
 
@@ -215,6 +217,16 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
               </>
             )}
             <button
+              onClick={() => setShowInviteModal(true)}
+              style={{
+                height: '34px', padding: '0 14px', background: 'var(--surface-card)', color: 'var(--ink)',
+                border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 500,
+                cursor: 'pointer',
+              }}
+            >
+              Invite Vendor to Register
+            </button>
+            <button
               onClick={onCreateVendor}
               style={{
                 height: '34px', padding: '0 16px', background: 'var(--action)', color: 'var(--surface-card)',
@@ -312,6 +324,10 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
           </div>
         )}
       </div>
+
+      {showInviteModal && (
+        <VendorInviteModal user={user} onClose={() => setShowInviteModal(false)} />
+      )}
 
       {showExportModal && (
         <VendorExportModal

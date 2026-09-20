@@ -244,7 +244,7 @@ async function generateVendorId() {
 }
 
 // ─── main component ─────────────────────────────────────────────────────────────
-export default function VendorForm({ user, existingVendor = null, onSaved, onBack }) {
+export default function VendorForm({ user, existingVendor = null, onSaved, onBack, hideBack = false }) {
   const isEdit = !!existingVendor && existingVendor.status !== 'draft'
 
   const [vendorId, setVendorId]     = useState(existingVendor?.status === 'draft' ? '' : (existingVendor?.vendor_id || ''))
@@ -747,10 +747,14 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-        <button onClick={onBack} style={{ background: 'none', border: 'none', fontSize: '13px', color: 'var(--action)', cursor: 'pointer', padding: 0 }}>
-          ← Back
-        </button>
-        <span style={{ color: 'var(--taupe-400)' }}>/</span>
+        {!hideBack && (
+          <>
+            <button onClick={onBack} style={{ background: 'none', border: 'none', fontSize: '13px', color: 'var(--action)', cursor: 'pointer', padding: 0 }}>
+              ← Back
+            </button>
+            <span style={{ color: 'var(--taupe-400)' }}>/</span>
+          </>
+        )}
         <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--ink)', margin: 0 }}>
           {isEdit ? 'Edit Vendor' : existingVendor?.status === 'draft' ? 'Continue Vendor Draft' : 'Vendor Registration'}
         </h2>
@@ -1351,12 +1355,14 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
             {savingDraft ? 'Saving…' : 'Save as Draft'}
           </button>
         )}
-        <button
-          onClick={onBack}
-          style={{ height: '46px', padding: '0 24px', background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-md)', fontSize: '14px', cursor: 'pointer' }}
-        >
-          Cancel
-        </button>
+        {!hideBack && (
+          <button
+            onClick={onBack}
+            style={{ height: '46px', padding: '0 24px', background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-md)', fontSize: '14px', cursor: 'pointer' }}
+          >
+            Cancel
+          </button>
+        )}
       </div>
 
       {showPanDupModal && (

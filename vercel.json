@@ -4,5 +4,8 @@
       "path": "/api/reminders",
       "schedule": "30 3 * * *"
     }
+  ],
+  "rewrites": [
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

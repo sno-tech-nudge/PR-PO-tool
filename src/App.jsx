@@ -33,6 +33,7 @@ import VendorList from './components/vendor/VendorList'
 import VendorDetail from './components/vendor/VendorDetail'
 import VendorApprovalView from './components/vendor/VendorApprovalView'
 import BankChangeRequest from './components/vendor/BankChangeRequest'
+import PublicVendorRegister from './components/vendor/PublicVendorRegister'
 
 // PR module
 import PRList from './components/pr/PRList'
@@ -268,6 +269,13 @@ export default function App() {
     setAppScreen(auditTrailReturnScreen)
     setAuditTrailPOId(null)
   }
+
+  // Public, no-login entry point for a vendor self-registration link — must
+  // be checked before session/login logic runs at all, since a vendor has
+  // no team_members account. See VendorInviteModal.jsx (generates the link)
+  // and PublicVendorRegister.jsx (the form itself).
+  const vendorInviteMatch = window.location.pathname.match(/^\/vendor-register\/(.+)$/)
+  if (vendorInviteMatch) return <PublicVendorRegister token={vendorInviteMatch[1]} />
 
   if (sessionLoading) return null
   if (!user) return <LoginScreen onLogin={handleLogin} />
