@@ -569,12 +569,16 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
   }
 
   // OCR the GST Registration Certificate to auto-fill GSTIN when it's still
-  // blank, or — if one's already typed — cross-check the two and surface a
-  // live match/mismatch indicator instead, same as the PAN copy above. Runs
-  // on every upload, including replacing an already-uploaded file, so
-  // swapping in a different certificate always re-checks it — it must NOT
-  // bail out just because GSTIN already has a value, or a mismatched
-  // replacement document would silently go unnoticed.
+  // blank. If one's already typed and differs from what this document reads,
+  // that's trusted and auto-applied ONLY when the new GSTIN's embedded PAN
+  // matches the PAN Number field above — i.e. it structurally belongs to the
+  // same entity, so a replacement certificate correcting/updating the GSTIN
+  // is applied automatically. Anything else (an embedded PAN that doesn't
+  // match) is left alone for the live match/mismatch indicator below to
+  // flag instead, same as the PAN copy above. Runs on every upload,
+  // including replacing an already-uploaded file — it must NOT bail out
+  // just because GSTIN already has a value, or a mismatched replacement
+  // document would silently go unnoticed.
   async function handleGstCertFile(file) {
     setGstCertFile(file)
     setGstExtracted(null)
@@ -589,7 +593,15 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
       const extractedGstin = extracted?.gstin?.toUpperCase().trim()
       if (extractedGstin && GSTIN_RE.test(extractedGstin)) {
         setGstExtracted(extractedGstin)
-        setF(prev => (prev.gstin.trim() ? prev : { ...prev, gstin: extractedGstin }))
+        const panUpper = f.pan_number.toUpperCase().trim()
+        const embeddedPanMatches = parseGSTIN(extractedGstin)?.embeddedPan === panUpper
+        setF(prev => {
+          const typed = prev.gstin.toUpperCase().trim()
+          if (!typed || (typed !== extractedGstin && embeddedPanMatches)) {
+            return { ...prev, gstin: extractedGstin }
+          }
+          return prev
+        })
       }
     } catch (err) {
       console.error('GST certificate OCR failed:', err)
