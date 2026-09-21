@@ -9,6 +9,20 @@ import { buildPRTimelineSteps } from './prStatusSteps'
 
 function fmtAmt(n) { return `₹${Number(n || 0).toLocaleString('en-IN')}` }
 
+// approvePO used to just sleep 500ms and hope POTemplate had mounted by
+// then before screenshotting it — on a slower render (or a loaded device)
+// that race could lose, renderElementCanvas would find no element, and the
+// PO would get approved with pdf_storage_path left null forever, with
+// nothing surfacing the failure. Polls for the real DOM node instead.
+async function waitForElement(id, timeoutMs = 4000, intervalMs = 50) {
+  const start = Date.now()
+  while (Date.now() - start < timeoutMs) {
+    if (document.getElementById(id)) return true
+    await new Promise(resolve => setTimeout(resolve, intervalMs))
+  }
+  return false
+}
+
 // Shared by PRDetail.jsx (full detail screen, including the action panel) and
 // PRApproverDashboard.jsx (quick accept/reject icons in the list) so both act
 // on a PR's approval chain identically.
@@ -68,6 +82,21 @@ export async function approvePRLevel({ prId, approvals, user, pr }) {
     }
     notifySlack(`✅ PR <${recordUrl('pr', prId)}|${pr?.pr_number || prId}> approved by ${currentPending.approver_name} (${user.name}) — now awaiting *${nextWaiting.approver_name}* approval.`)
 
+    // In-app bell notification for the requester — previously only an email
+    // was sent here, so nothing showed up in the tool itself until the PO
+    // was actually issued at the very end of the chain.
+    if (pr?.requested_by) {
+      try {
+        await supabase.from('expense_notifications').insert({
+          recipient_id: pr.requested_by,
+          type: 'pr_approved',
+          message: `Your PR ${pr.pr_number} was approved by ${currentPending.approver_name} — now awaiting ${nextWaiting.approver_name}.`,
+          related_type: 'pr',
+          related_id: prId,
+        })
+      } catch { /* non-blocking */ }
+    }
+
     const timelineForNext = updatedApprovals.map(a => (a.id === nextWaiting.id ? { ...a, status: 'pending' } : a))
     const timelineSteps = buildPRTimelineSteps('submitted', timelineForNext)
     sendPREmail({
@@ -84,6 +113,18 @@ export async function approvePRLevel({ prId, approvals, user, pr }) {
 
   await supabase.from('purchase_requests').update({ status: 'approved' }).eq('id', prId)
   notifySlack(`✅ PR <${recordUrl('pr', prId)}|${pr?.pr_number || prId}> fully approved by ${currentPending.approver_name} (${user.name}) — ${fmtAmt(pr?.amount)}, ready for PO.`)
+
+  if (pr?.requested_by) {
+    try {
+      await supabase.from('expense_notifications').insert({
+        recipient_id: pr.requested_by,
+        type: 'pr_approved',
+        message: `Your PR ${pr.pr_number} is fully approved — Finance will now issue the Purchase Order.`,
+        related_type: 'pr',
+        related_id: prId,
+      })
+    } catch { /* non-blocking */ }
+  }
 
   sendPREmail({
     type: 'advanced', recipientEmail: pr?.requested_by, prNumber: pr?.pr_number,
@@ -128,25 +169,42 @@ export async function createPendingPO({ prId, pr, amount }) {
   }
 }
 
-// Finance approves a pending PO: renders the hidden POTemplate (via
-// setPOData, which the caller must render as <POTemplate po={poData} .../>
-// for the html2canvas screenshot to work), generates + uploads the PDF,
-// flips the PO to 'issued', links the PR to any matching expense report,
-// and notifies the requester.
+// Renders the hidden POTemplate (via setPOData, which the caller must render
+// as <POTemplate po={poData} .../> for the html2canvas screenshot to work),
+// waits for it to actually mount, generates the PDF (one retry on a
+// transient html2canvas hiccup), and uploads it — returns the storage path,
+// or null if any step failed. Shared by approvePO (fires automatically on
+// approval) and regeneratePOPdf (a manual recovery path for a PO that ended
+// up issued without one).
+async function generateAndStorePOPdf(po, setPOData) {
+  setPOData(po)
+  const rendered = await waitForElement('po-template-cover')
+  if (!rendered) return null
+  // A short additional settle time for images/fonts inside it, not just the
+  // container element existing. setTimeout, not requestAnimationFrame — rAF
+  // callbacks are paused by the browser whenever the tab/pane isn't the
+  // active one, which would hang this indefinitely if Finance approves a PO
+  // from a background tab; setTimeout keeps firing regardless.
+  await new Promise(resolve => setTimeout(resolve, 150))
+  let pdf = await generatePOPDF()
+  if (!pdf) pdf = await generatePOPDF()
+  if (!pdf) return null
+  return await uploadPDFToSupabase(pdf, `${po.po_number}.pdf`, supabase, 'po-pdfs', { upsert: true })
+}
+
+// Finance approves a pending PO: generates + uploads the PDF, flips the PO
+// to 'issued', links the PR to any matching expense report, and notifies
+// the requester.
 //
 // The PDF step is best-effort and isolated in its own try/catch — a flaky
 // html2canvas render or a storage hiccup must never block the actual
 // approval (the status flip below), only mean this PO issues without a PDF
-// attached (pdf_storage_path stays null, retried on nothing since there's no
-// re-approve action once issued).
+// attached (pdf_storage_path stays null — see regeneratePOPdf below for the
+// recovery path).
 export async function approvePO({ po, pr, user, setPOData }) {
   let pdfPath = null
   try {
-    setPOData(po)
-    // Give POTemplate time to render before screenshotting it.
-    await new Promise(resolve => setTimeout(resolve, 500))
-    const pdf = await generatePOPDF()
-    if (pdf) pdfPath = await uploadPDFToSupabase(pdf, `${po.po_number}.pdf`, supabase, 'po-pdfs', { upsert: true })
+    pdfPath = await generateAndStorePOPdf(po, setPOData)
   } catch (err) {
     console.error('PO PDF generation/upload failed (non-blocking):', err.message)
   }
@@ -178,6 +236,22 @@ export async function approvePO({ po, pr, user, setPOData }) {
     return true
   } catch (err) {
     console.error('PO approval error:', err.message)
+    return { error: err.message }
+  }
+}
+
+// Recovery path for an already-issued PO that ended up with no PDF (the
+// generation step in approvePO is best-effort and non-blocking, so this can
+// happen). Regenerates and stores just the PDF, without touching status or
+// re-sending any of approvePO's notifications.
+export async function regeneratePOPdf({ po, setPOData }) {
+  try {
+    const pdfPath = await generateAndStorePOPdf(po, setPOData)
+    if (!pdfPath) return { error: 'Could not generate the PDF. Please try again.' }
+    await supabase.from('purchase_orders').update({ pdf_storage_path: pdfPath }).eq('id', po.id)
+    return true
+  } catch (err) {
+    console.error('PO PDF regeneration failed:', err.message)
     return { error: err.message }
   }
 }

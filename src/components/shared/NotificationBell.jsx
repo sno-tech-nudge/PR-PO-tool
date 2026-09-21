@@ -28,7 +28,11 @@ export default function NotificationBell({ user, onOpenReport, onOpenPR, onOpenV
 
   useEffect(() => {
     load()
-    const interval = setInterval(load, 30000)
+    // Matches the 15s polling interval every other list/dashboard in this
+    // app already uses (PRList, PRApproverDashboard, FinancePRsView, …) —
+    // this was left at 30s, making it visibly slower to reflect a fresh
+    // approve/reject than everything else on the page.
+    const interval = setInterval(load, 15000)
     return () => clearInterval(interval)
   }, [user.email])
 

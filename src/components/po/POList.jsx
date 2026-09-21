@@ -52,10 +52,18 @@ export default function POList({ user, onViewPO }) {
 
   const isFinance = canAccessFinance(user.role)
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+    // This list never refreshed itself before — a Finance/PO-approver
+    // sitting on this screen wouldn't see a freshly-submitted PO show up
+    // under "Pending Approval" without manually leaving and coming back.
+    // Same 15s interval as every other list/dashboard in this app.
+    const interval = setInterval(() => load({ silent: true }), 15000)
+    return () => clearInterval(interval)
+  }, [])
 
-  async function load() {
-    setLoading(true)
+  async function load({ silent = false } = {}) {
+    if (!silent) setLoading(true)
     const isEmployee = user.role === 'employee'
     // !inner turns the embedded relation into a real join filter — without
     // it, .eq('purchase_requests.requested_by', ...) only filters which

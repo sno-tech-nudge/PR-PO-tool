@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { approvePO, rejectPO } from '../../lib/prApprovalActions'
+import { approvePO, rejectPO, regeneratePOPdf } from '../../lib/prApprovalActions'
 import { canAccessFinance } from '../../lib/auth'
 import { getDisplayName } from '../../lib/directory'
 import { downloadPOBundle } from '../../lib/poBundle'
@@ -54,6 +54,7 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
   const [showAttachments, setShowAttachments] = useState(false)
   const [bundling, setBundling] = useState(false)
   const [bundleError, setBundleError] = useState(null)
+  const [regeneratingPdf, setRegeneratingPdf] = useState(false)
 
   useEffect(() => { load() }, [poId])
 
@@ -105,6 +106,19 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
       setPoError(result?.error ? `Could not approve this purchase order: ${result.error}` : 'Could not approve this purchase order. Please try again.')
     }
     setApprovingPO(false)
+  }
+
+  // Recovery path for a PO that's already issued but ended up with no PDF —
+  // the generation step is best-effort at approval time and can fail.
+  async function handleGeneratePdf() {
+    setRegeneratingPdf(true); setPoError(null)
+    const result = await regeneratePOPdf({ po, setPOData: setPoTemplateData })
+    if (result === true) {
+      await load()
+    } else {
+      setPoError(result?.error || 'Could not generate the PO PDF. Please try again.')
+    }
+    setRegeneratingPdf(false)
   }
 
   async function handleRejectPO() {
@@ -209,6 +223,21 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
               >
                 ↓ Download PO PDF
               </a>
+            )}
+            {!pdfUrl && po.status === 'issued' && (
+              <button
+                onClick={handleGeneratePdf}
+                disabled={regeneratingPdf}
+                title="This PO was issued but its PDF failed to generate — try again"
+                style={{
+                  padding: '6px 14px', fontSize: '12px', fontWeight: 600,
+                  background: 'var(--surface-card)', color: 'var(--gold-text)',
+                  border: '1px solid var(--gold-border)', borderRadius: 'var(--radius-md)',
+                  cursor: regeneratingPdf ? 'default' : 'pointer',
+                }}
+              >
+                {regeneratingPdf ? 'Generating…' : 'Generate PO PDF'}
+              </button>
             )}
             {isFinance && (
               <button

@@ -4,6 +4,7 @@
 // combine uploaded files into one PDF — see src/lib/pdfMerge.js).
 
 import { appendDocumentsToPdf, downloadPDF } from './pdfMerge'
+import { inlineUnsupportedColors } from './pdfGenerator'
 
 const A4_WIDTH = 595.28
 const A4_HEIGHT = 841.89
@@ -40,11 +41,18 @@ export async function generateVendorProfilePDF({ documents = [], onProgress } = 
   if (!element) return null
 
   onProgress?.('Rendering overview…')
+  // html2canvas can't parse a raw var(...) reference for backgroundColor —
+  // resolve the token to its actual computed color first (see the identical
+  // fix + comment in pdfGenerator.js, the same bug was breaking PO/report PDFs).
+  const surfaceCardColor = getComputedStyle(document.documentElement).getPropertyValue('--surface-card').trim() || '#FFFFFF'
   const canvas = await html2canvas(element, {
-    scale: 1.5, useCORS: true, allowTaint: true, backgroundColor: 'var(--surface-card)', logging: false,
+    scale: 1.5, useCORS: true, allowTaint: true, backgroundColor: surfaceCardColor, logging: false,
     onclone: (clonedDoc) => {
       const el = clonedDoc.getElementById('vendor-pdf-template')
-      if (el) { el.style.display = 'block'; el.style.position = 'relative'; el.style.left = '0' }
+      if (el) {
+        el.style.display = 'block'; el.style.position = 'relative'; el.style.left = '0'
+        inlineUnsupportedColors(element, el)
+      }
     },
   })
 

@@ -1,3 +1,65 @@
+// html2canvas's backgroundColor option needs an actual resolved color — it
+// throws ("unsupported color function \"var\"") if handed a raw var(...)
+// reference, which every PDF export in this app (expense report, PO, vendor
+// profile) was doing. This was a hard, 100%-reproducing failure, not a rare
+// edge case: every single html2canvas call using this option has been
+// failing before jsPDF ever runs, silently leaving pdf_storage_path/the
+// download null wherever the failure is caught non-blocking. Resolving via
+// getComputedStyle instead of hardcoding a literal keeps this correct if the
+// token's value ever changes.
+function resolveCssVar(name, fallback = '#FFFFFF') {
+  const resolved = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+  return resolved || fallback
+}
+
+// The backgroundColor option above is only half of this bug. This app's
+// design tokens (moss/gold/clay status colors, --action-bg, --border,
+// --rule, --focus-ring, and others — see src/styles/tokens.css) are defined
+// with color-mix(), which every browser resolves down through
+// getComputedStyle not to legacy rgb()/rgba() but to the CSS Color Level 4
+// `color(srgb r g b [/ a])` function — a syntax html2canvas 1.4.1 (this
+// project's version, released before browsers commonly emitted this format)
+// cannot parse either, throwing the exact same "unsupported color function"
+// error for any element anywhere in the screenshotted subtree that uses one
+// of these tokens for color/background/border. A PO/report/vendor-profile
+// template that includes so much as one status badge or themed border hits
+// this on every single render — this was the real, always-reproducing root
+// cause behind "the PDF doesn't appear", not a rare edge case.
+//
+// Fix: before html2canvas rasterizes the clone, walk it in lockstep with the
+// live source subtree (same structure, so same traversal order) and convert
+// each element's *computed* color-ish properties from `color(srgb ...)` to
+// a literal rgb()/rgba() html2canvas can actually parse, inlined directly on
+// the clone so it wins over the stylesheet rule.
+const COLOR_PROPS = [
+  'color', 'backgroundColor',
+  'borderTopColor', 'borderRightColor', 'borderBottomColor', 'borderLeftColor',
+  'outlineColor', 'textDecorationColor',
+]
+function legacyColor(value) {
+  const m = /^color\(srgb\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*([\d.]+))?\)$/.exec(value)
+  if (!m) return null
+  const [, r, g, b, a] = m
+  const R = Math.round(parseFloat(r) * 255)
+  const G = Math.round(parseFloat(g) * 255)
+  const B = Math.round(parseFloat(b) * 255)
+  return a != null ? `rgba(${R}, ${G}, ${B}, ${a})` : `rgb(${R}, ${G}, ${B})`
+}
+export function inlineUnsupportedColors(sourceRoot, cloneRoot) {
+  const sourceEls = [sourceRoot, ...sourceRoot.querySelectorAll('*')]
+  const cloneEls = [cloneRoot, ...cloneRoot.querySelectorAll('*')]
+  for (let i = 0; i < sourceEls.length; i++) {
+    const src = sourceEls[i]
+    const dst = cloneEls[i]
+    if (!src || !dst) continue
+    const computed = getComputedStyle(src)
+    for (const prop of COLOR_PROPS) {
+      const legacy = legacyColor(computed[prop])
+      if (legacy) dst.style[prop] = legacy
+    }
+  }
+}
+
 export async function generateExpenseReportPDF() {
   const { jsPDF } = await import('jspdf')
   const html2canvas = (await import('html2canvas')).default
@@ -10,7 +72,7 @@ export async function generateExpenseReportPDF() {
       scale: 1.5,
       useCORS: true,
       allowTaint: true,
-      backgroundColor: 'var(--surface-card)',
+      backgroundColor: resolveCssVar('--surface-card'),
       logging: false,
       imageTimeout: 3000,
       onclone: (clonedDoc) => {
@@ -19,6 +81,7 @@ export async function generateExpenseReportPDF() {
           clonedElement.style.display = 'block'
           clonedElement.style.position = 'relative'
           clonedElement.style.left = '0'
+          inlineUnsupportedColors(element, clonedElement)
         }
       },
     })
@@ -61,10 +124,13 @@ async function renderElementCanvas(html2canvas, elementId) {
   const element = document.getElementById(elementId)
   if (!element) return null
   return html2canvas(element, {
-    scale: 1.5, useCORS: true, allowTaint: true, backgroundColor: 'var(--surface-card)', logging: false,
+    scale: 1.5, useCORS: true, allowTaint: true, backgroundColor: resolveCssVar('--surface-card'), logging: false,
     onclone: (clonedDoc) => {
       const el = clonedDoc.getElementById(elementId)
-      if (el) { el.style.display = 'block'; el.style.position = 'relative'; el.style.left = '0' }
+      if (el) {
+        el.style.display = 'block'; el.style.position = 'relative'; el.style.left = '0'
+        inlineUnsupportedColors(element, el)
+      }
     },
   })
 }
