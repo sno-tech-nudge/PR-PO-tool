@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { getFiscalYearPrefix } from '../../lib/formCalc'
 import { NATURE_OF_BUSINESS_OPTIONS } from '../../lib/vendorData'
-import { extractChequeDetails } from '../../lib/claude'
+import { extractChequeDetails, extractPanCardDetails } from '../../lib/claude'
 import { imageFileToJpegBase64, pdfPageToBase64 } from '../../lib/receiptImage'
 import PanDuplicateModal from './PanDuplicateModal'
 import { sendVendorEmail } from '../../lib/vendorEmail'
@@ -255,7 +255,7 @@ async function generateVendorId() {
 }
 
 // ─── main component ─────────────────────────────────────────────────────────────
-export default function VendorForm({ user, existingVendor = null, onSaved, onBack, hideBack = false }) {
+export default function VendorForm({ user, existingVendor = null, onSaved, onBack, hideBack = false, isGuestSubmission = false }) {
   const isEdit = !!existingVendor && existingVendor.status !== 'draft'
 
   const [vendorId, setVendorId]     = useState(existingVendor?.status === 'draft' ? '' : (existingVendor?.vendor_id || ''))
@@ -273,6 +273,13 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
   const [ifscLooking, setIfscLooking]       = useState(false)
   const [ifscLookupFailed, setIfscLookupFailed] = useState(false)
   const [chequeOcrLoading, setChequeOcrLoading] = useState(false)
+  const [panOcrLoading, setPanOcrLoading] = useState(false)
+  // The PAN string OCR'd off the uploaded PAN copy, or null before a file is
+  // uploaded / if extraction found nothing readable. Kept separately from
+  // `f.pan_number` (rather than collapsed into a one-time decision at upload
+  // time) so the match/mismatch indicator stays live no matter which of the
+  // two — the typed number or the uploaded file — changes second.
+  const [panExtracted, setPanExtracted] = useState(null)
   const [pincodeLooking, setPincodeLooking] = useState(false)
   const [branchLocked, setBranchLocked]     = useState(false)
   const [gstinValidated, setGstinValidated] = useState(null) // null | {ok, stateCode, stateName, embeddedPan, panMatch}
@@ -323,6 +330,13 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
 
   // derived: GSTIN field enabled only when org state + valid PAN are filled
   const gstinEnabled = !!f.org_registration_state && PAN_RE.test(f.pan_number.toUpperCase().trim())
+  // derived: live match/mismatch between the typed PAN Number and whatever
+  // the uploaded PAN copy OCR'd to — recomputed every render (not a one-time
+  // check at upload time) so it stays right no matter which field changes
+  // after the other.
+  const panMatchStatus = panExtracted && PAN_RE.test(f.pan_number.toUpperCase().trim())
+    ? (panExtracted === f.pan_number.toUpperCase().trim() ? 'match' : 'mismatch')
+    : null
   const isIndividual = AADHAAR_REQUIRED_ORG_TYPES.includes(f.org_type)
 
   // Individuals don't have a company registration number — show "0" instead
@@ -446,31 +460,63 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
               extracted.state.toLowerCase().includes(s.toLowerCase().split(' ')[0])
             )
           : null
-        // Address fields are a convenience fill only — always left freely
-        // editable, never locked like bank name/branch above.
+        // Fill everything the OCR call already returned — including
+        // bank_name/branch/ifsc_code — immediately, in this one state update,
+        // rather than waiting on a second sequential network round trip to
+        // the IFSC directory before the person sees anything. Address fields
+        // are a convenience fill only — always left freely editable, never
+        // locked like bank name/branch below.
         setF(prev => ({
           ...prev,
           beneficiary_name: prev.beneficiary_name || extracted.beneficiary_name || prev.beneficiary_name,
           account_number: prev.account_number || extracted.account_number || prev.account_number,
+          ifsc_code: prev.ifsc_code || extracted.ifsc_code || prev.ifsc_code,
+          bank_name: prev.bank_name || extracted.bank_name || prev.bank_name,
+          branch: prev.branch || extracted.branch || prev.branch,
           address_line1: prev.address_line1 || extracted.address_line1 || prev.address_line1,
           city: prev.city || extracted.city || prev.city,
           state: prev.state || matchedState || prev.state,
           pincode: prev.pincode || extracted.pincode || prev.pincode,
         }))
-        if (!hadIfsc && extracted.ifsc_code) {
-          await lookupIFSC(extracted.ifsc_code)
-        } else if (!f.bank_name && !f.branch && (extracted.bank_name || extracted.branch)) {
-          setF(prev => ({
-            ...prev,
-            bank_name: prev.bank_name || extracted.bank_name || prev.bank_name,
-            branch: prev.branch || extracted.branch || prev.branch,
-          }))
-        }
+        setChequeOcrLoading(false)
+        // Canonicalize/lock the bank name + branch against the authoritative
+        // IFSC directory in the background — the person already sees the
+        // OCR'd values above without waiting on this second network call.
+        if (!hadIfsc && extracted.ifsc_code) lookupIFSC(extracted.ifsc_code)
+        return
       }
     } catch (err) {
       console.error('Cheque OCR failed:', err)
     }
     setChequeOcrLoading(false)
+  }
+
+  // OCR the PAN copy to auto-fill PAN Number when it's still blank, or — if
+  // someone already typed one — cross-check the two and surface a live
+  // match/mismatch indicator instead. Never overrides a value already typed.
+  async function handlePanFile(file) {
+    setPanFile(file)
+    setPanExtracted(null)
+    if (!file) return
+    setPanOcrLoading(true)
+    try {
+      const { base64 } = file.type === 'application/pdf'
+        ? await pdfPageToBase64(file)
+        : await imageFileToJpegBase64(file)
+      const extracted = await extractPanCardDetails(base64)
+      const extractedPan = extracted?.pan_number?.toUpperCase().trim()
+      if (extractedPan && PAN_RE.test(extractedPan)) {
+        setPanExtracted(extractedPan)
+        if (!f.pan_number.trim()) {
+          setF(prev => ({ ...prev, pan_number: extractedPan }))
+          setPanDupAcknowledged(false)
+          checkPanDuplicates(extractedPan)
+        }
+      }
+    } catch (err) {
+      console.error('PAN OCR failed:', err)
+    }
+    setPanOcrLoading(false)
   }
 
   // Duplicate PAN is a warning, never a blocker (Finance's explicit
@@ -535,9 +581,15 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
     } else if (isIndividual && f.aadhaar_number && !AADHAAR_RE.test(f.aadhaar_number.trim())) {
       e.aadhaar_number = 'Enter 12-digit Aadhaar number'
     }
-    if (submit && f.is_related_to_org === null)     e.is_related_to_org = 'Please select Yes or No'
-    if (submit && f.is_related_to_org === true && !f.related_org_description.trim()) {
-      e.related_org_description = 'Please describe the relationship'
+    // A vendor filling this themselves via the guest invite link has no
+    // "employee" relationship to disclose a personal connection to — the
+    // question (and its required-ness) only makes sense when an internal
+    // person is the one creating the vendor record.
+    if (!isGuestSubmission) {
+      if (submit && f.is_related_to_org === null)     e.is_related_to_org = 'Please select Yes or No'
+      if (submit && f.is_related_to_org === true && !f.related_org_description.trim()) {
+        e.related_org_description = 'Please describe the relationship'
+      }
     }
     if (submit && !f.contact_person.trim())        e.contact_person = 'Required'
     else if (f.contact_person && !NAME_RE.test(f.contact_person.trim())) e.contact_person = 'Only letters and spaces allowed'
@@ -950,7 +1002,154 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           </div>
         )}
 
-        {/* MSME toggle + conditional */}
+      </div>
+
+      {/* ══════════════════════════════════════
+          SECTION 2 — Attachments (tailored per Type of Organisation, per
+          Finance's Vendor Document Requirements sheet)
+      ══════════════════════════════════════ */}
+      <div style={card}>
+        <SectionHeader
+          number="2"
+          title="Attachments"
+          subtitle={f.org_type ? `Documents required for ${f.org_type}` : 'Select Type of Organisation above to see exactly what’s needed'}
+        />
+
+        <div style={grid2}>
+          <div style={full}>
+            <FileUpload id="cheque"
+              label="Cancelled Cheque or Bank Statement / Passbook"
+              required={!isEdit}
+              error={liveErrors.cheque}
+              existing={chequePath}
+              file={chequeFile}
+              onChange={handleChequeFile}
+            />
+            {chequeOcrLoading && (
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '-10px', marginBottom: '14px' }}>
+                Reading document — auto-filling bank and address details…
+              </div>
+            )}
+          </div>
+          <div style={full}>
+            <FileUpload id="pan_copy"
+              label="PAN Copy"
+              required={!isEdit}
+              error={liveErrors.pan_copy}
+              existing={panPath}
+              file={panFile}
+              onChange={handlePanFile}
+            />
+            {panOcrLoading && (
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '-10px', marginBottom: '14px' }}>
+                Reading document — checking PAN number…
+              </div>
+            )}
+            {!panOcrLoading && panMatchStatus === 'match' && (
+              <div style={{ fontSize: '11px', color: 'var(--moss-text)', fontWeight: 600, marginTop: '-10px', marginBottom: '14px' }}>
+                ✓ PAN copy matches the PAN Number entered above
+              </div>
+            )}
+            {!panOcrLoading && panMatchStatus === 'mismatch' && (
+              <div style={{ fontSize: '11px', color: 'var(--clay-text)', fontWeight: 600, marginTop: '-10px', marginBottom: '14px' }}>
+                ✗ This document shows {panExtracted} but PAN Number above is {f.pan_number.toUpperCase().trim()} — please check
+              </div>
+            )}
+          </div>
+          {!isIndividual && (
+            <div style={full}>
+              <FileUpload id="reg_cert"
+                label={incorporationDocLabel(f.org_type)}
+                required={!isEdit}
+                error={liveErrors.reg_cert}
+                existing={regCertPath}
+                file={regCertFile}
+                onChange={setRegCertFile}
+              />
+            </div>
+          )}
+        </div>
+
+        {isIndividual && (
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', background: 'var(--taupe-100)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', marginBottom: '4px' }}>
+            No separate registration document is needed for {f.org_type} — the Aadhaar copy above (in Organisation Details) covers this per Finance's requirements.
+          </div>
+        )}
+
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+          Accepted formats: PDF, JPG, PNG, JPEG · Max 10 MB per file
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════
+          SECTION 3 — Contact & Registration
+      ══════════════════════════════════════ */}
+      <div style={card}>
+        <SectionHeader number="3" title="Contact & Registration" subtitle="Point of contact and legal registration" />
+        <div style={grid2}>
+          <div style={full}>
+            <Field id="contact_person" label="Contact Person" required error={liveErrors.contact_person} hint="Letters and spaces only">
+              <input
+                type="text"
+                value={f.contact_person}
+                onChange={e => setF(p => ({ ...p, contact_person: e.target.value.replace(/[^A-Za-z ]/g, '') }))}
+                placeholder="Full name"
+                style={inputStyle(!!liveErrors.contact_person)}
+              />
+            </Field>
+          </div>
+          <Field id="phone" label="Telephone Number" required error={liveErrors.phone}
+            hint={phonePrefix === '+91' ? 'Mobile number' : 'Landline — include STD code'}>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <div style={{ display: 'flex', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', overflow: 'hidden', flexShrink: 0 }}>
+                {['+91', ''].map(p => (
+                  <div
+                    key={p || 'other'}
+                    onClick={() => { setPhonePrefix(p); setF(prev => ({ ...prev, phone: '' })) }}
+                    style={{
+                      height: '36px', padding: '0 10px', display: 'flex', alignItems: 'center', cursor: 'pointer',
+                      fontSize: '13px', fontWeight: 600,
+                      background: phonePrefix === p ? 'var(--action)' : 'var(--taupe-50)',
+                      color: phonePrefix === p ? 'var(--surface-card)' : 'var(--ink)',
+                    }}
+                  >
+                    {p || 'Landline'}
+                  </div>
+                ))}
+              </div>
+              <input
+                type="tel"
+                value={f.phone}
+                onChange={e => setF(p => ({
+                  ...p,
+                  phone: phonePrefix === '+91' ? e.target.value.replace(/\D/g, '') : e.target.value.replace(/[^0-9\- ]/g, ''),
+                }))}
+                placeholder={phonePrefix === '+91' ? '9876543210' : 'e.g. 080-12345678'}
+                maxLength={phonePrefix === '+91' ? 10 : 15}
+                style={{ flex: 1, ...inputStyle(!!liveErrors.phone) }}
+              />
+            </div>
+          </Field>
+          <Field id="email" label="PoC Email ID" required error={liveErrors.email}>
+            <Inp field="email" f={f} setF={setF} placeholder="contact@organisation.com" type="email" err={!!liveErrors.email} />
+          </Field>
+          <Field label="Organisation Website">
+            <Inp field="website" f={f} setF={setF} placeholder="https://organisation.com" />
+          </Field>
+          <Field id="org_registration_number" label="Organisation Registration Number" required error={liveErrors.org_registration_number}
+            hint={isIndividual ? 'Individual vendors do not have a registration number' : undefined}>
+            <Inp field="org_registration_number" f={f} setF={setF} placeholder="e.g. U74999KA2020PTC…" err={!!liveErrors.org_registration_number} mono disabled={isIndividual} />
+          </Field>
+          <Field label="Organisation Registration State"
+            hint="Fill this to unlock the GSTIN field">
+            <Sel field="org_registration_state" f={f} setF={setF} options={INDIAN_STATES} placeholder="Select state…" />
+          </Field>
+        </div>
+
+        {/* MSME + GSTIN detail entry lives here — right after Organisation
+            Registration State, which GSTIN validation depends on, instead of
+            up in Organisation Details where the "fill the state below"
+            hint used to point at a field a whole card further down. */}
         <div style={{ marginBottom: '14px' }}>
           <Toggle
             label="MSME Registration Present?"
@@ -987,7 +1186,6 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           </div>
         )}
 
-        {/* GSTIN toggle + conditional */}
         <div style={{ marginBottom: '14px' }}>
           <Toggle
             label="GSTIN Registration Present?"
@@ -1000,7 +1198,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
             <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--action)', marginBottom: '12px' }}>GST Registration Detail</div>
             {!gstinEnabled && (
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', background: 'var(--taupe-100)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', marginBottom: '12px' }}>
-                ℹ In order to fill GST Registration Detail, first fill <strong>Organisation Registration State</strong> (below) and a valid <strong>PAN Number</strong> (above).
+                ℹ In order to fill GST Registration Detail, first fill <strong>Organisation Registration State</strong> and a valid <strong>PAN Number</strong> above.
               </div>
             )}
             {(() => {
@@ -1116,160 +1314,41 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
             />
           </div>
         )}
-      </div>
 
-      {/* ══════════════════════════════════════
-          SECTION 2 — Attachments (tailored per Type of Organisation, per
-          Finance's Vendor Document Requirements sheet)
-      ══════════════════════════════════════ */}
-      <div style={card}>
-        <SectionHeader
-          number="2"
-          title="Attachments"
-          subtitle={f.org_type ? `Documents required for ${f.org_type}` : 'Select Type of Organisation above to see exactly what’s needed'}
-        />
-
-        <div style={grid2}>
-          <div style={full}>
-            <FileUpload id="cheque"
-              label="Cancelled Cheque or Bank Statement / Passbook"
-              required={!isEdit}
-              error={liveErrors.cheque}
-              existing={chequePath}
-              file={chequeFile}
-              onChange={handleChequeFile}
-            />
-            {chequeOcrLoading && (
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '-10px', marginBottom: '14px' }}>
-                Reading document — auto-filling bank and address details…
-              </div>
-            )}
-          </div>
-          <div style={full}>
-            <FileUpload id="pan_copy"
-              label="PAN Copy"
-              required={!isEdit}
-              error={liveErrors.pan_copy}
-              existing={panPath}
-              file={panFile}
-              onChange={setPanFile}
-            />
-          </div>
-          {!isIndividual && (
+        {/* A vendor filling this themselves via the guest invite link has no
+            "employee" relationship to disclose a personal connection to —
+            this question only makes sense when an internal person is the one
+            creating the vendor record (validated accordingly in validate()). */}
+        {!isGuestSubmission && (
+          <div style={grid2}>
             <div style={full}>
-              <FileUpload id="reg_cert"
-                label={incorporationDocLabel(f.org_type)}
-                required={!isEdit}
-                error={liveErrors.reg_cert}
-                existing={regCertPath}
-                file={regCertFile}
-                onChange={setRegCertFile}
-              />
-            </div>
-          )}
-        </div>
-
-        {isIndividual && (
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)', background: 'var(--taupe-100)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', marginBottom: '4px' }}>
-            No separate registration document is needed for {f.org_type} — the Aadhaar copy above (in Organisation Details) covers this per Finance's requirements.
-          </div>
-        )}
-
-        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-          Accepted formats: PDF, JPG, PNG, JPEG · Max 10 MB per file
-        </div>
-      </div>
-
-      {/* ══════════════════════════════════════
-          SECTION 3 — Contact & Registration
-      ══════════════════════════════════════ */}
-      <div style={card}>
-        <SectionHeader number="3" title="Contact & Registration" subtitle="Point of contact and legal registration" />
-        <div style={grid2}>
-          <div style={full}>
-            <Field id="contact_person" label="Contact Person" required error={liveErrors.contact_person} hint="Letters and spaces only">
-              <input
-                type="text"
-                value={f.contact_person}
-                onChange={e => setF(p => ({ ...p, contact_person: e.target.value.replace(/[^A-Za-z ]/g, '') }))}
-                placeholder="Full name"
-                style={inputStyle(!!liveErrors.contact_person)}
-              />
-            </Field>
-          </div>
-          <Field id="phone" label="Telephone Number" required error={liveErrors.phone}
-            hint={phonePrefix === '+91' ? 'Mobile number' : 'Landline — include STD code'}>
-            <div style={{ display: 'flex', gap: '6px' }}>
-              <div style={{ display: 'flex', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', overflow: 'hidden', flexShrink: 0 }}>
-                {['+91', ''].map(p => (
-                  <div
-                    key={p || 'other'}
-                    onClick={() => { setPhonePrefix(p); setF(prev => ({ ...prev, phone: '' })) }}
-                    style={{
-                      height: '36px', padding: '0 10px', display: 'flex', alignItems: 'center', cursor: 'pointer',
-                      fontSize: '13px', fontWeight: 600,
-                      background: phonePrefix === p ? 'var(--action)' : 'var(--taupe-50)',
-                      color: phonePrefix === p ? 'var(--surface-card)' : 'var(--ink)',
-                    }}
-                  >
-                    {p || 'Landline'}
-                  </div>
-                ))}
-              </div>
-              <input
-                type="tel"
-                value={f.phone}
-                onChange={e => setF(p => ({
-                  ...p,
-                  phone: phonePrefix === '+91' ? e.target.value.replace(/\D/g, '') : e.target.value.replace(/[^0-9\- ]/g, ''),
-                }))}
-                placeholder={phonePrefix === '+91' ? '9876543210' : 'e.g. 080-12345678'}
-                maxLength={phonePrefix === '+91' ? 10 : 15}
-                style={{ flex: 1, ...inputStyle(!!liveErrors.phone) }}
-              />
-            </div>
-          </Field>
-          <Field id="email" label="PoC Email ID" required error={liveErrors.email}>
-            <Inp field="email" f={f} setF={setF} placeholder="contact@organisation.com" type="email" err={!!liveErrors.email} />
-          </Field>
-          <Field label="Organisation Website">
-            <Inp field="website" f={f} setF={setF} placeholder="https://organisation.com" />
-          </Field>
-          <Field id="org_registration_number" label="Organisation Registration Number" required error={liveErrors.org_registration_number}
-            hint={isIndividual ? 'Individual vendors do not have a registration number' : undefined}>
-            <Inp field="org_registration_number" f={f} setF={setF} placeholder="e.g. U74999KA2020PTC…" err={!!liveErrors.org_registration_number} mono disabled={isIndividual} />
-          </Field>
-          <Field label="Organisation Registration State"
-            hint="Fill this to unlock the GSTIN field">
-            <Sel field="org_registration_state" f={f} setF={setF} options={INDIAN_STATES} placeholder="Select state…" />
-          </Field>
-          <div style={full}>
-            <Field id="is_related_to_org" label="Is this vendor you are creating related to or connected with you personally?" required error={liveErrors.is_related_to_org}>
-              <YesNo
-                value={f.is_related_to_org}
-                onChange={v => setF(p => ({ ...p, is_related_to_org: v }))}
-              />
-            </Field>
-          </div>
-          {f.is_related_to_org === true && (
-            <div style={full}>
-              <Field id="related_org_description" label="Describe the relationship / connection" required error={liveErrors.related_org_description}>
-                <textarea
-                  value={f.related_org_description}
-                  onChange={e => setF(p => ({ ...p, related_org_description: e.target.value }))}
-                  placeholder="e.g. Vendor is owned by a family member of an employee"
-                  rows={3}
-                  style={{
-                    width: '100%', border: `1px solid ${liveErrors.related_org_description ? 'var(--clay-text)' : 'var(--taupe-400)'}`,
-                    borderRadius: 'var(--radius-sm)', padding: '10px', fontSize: '13px', color: 'var(--ink)',
-                    outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit',
-                    background: 'var(--surface-card)',
-                  }}
+              <Field id="is_related_to_org" label="Is this vendor you are creating related to or connected with you personally?" required error={liveErrors.is_related_to_org}>
+                <YesNo
+                  value={f.is_related_to_org}
+                  onChange={v => setF(p => ({ ...p, is_related_to_org: v }))}
                 />
               </Field>
             </div>
-          )}
-        </div>
+            {f.is_related_to_org === true && (
+              <div style={full}>
+                <Field id="related_org_description" label="Describe the relationship / connection" required error={liveErrors.related_org_description}>
+                  <textarea
+                    value={f.related_org_description}
+                    onChange={e => setF(p => ({ ...p, related_org_description: e.target.value }))}
+                    placeholder="e.g. Vendor is owned by a family member of an employee"
+                    rows={3}
+                    style={{
+                      width: '100%', border: `1px solid ${liveErrors.related_org_description ? 'var(--clay-text)' : 'var(--taupe-400)'}`,
+                      borderRadius: 'var(--radius-sm)', padding: '10px', fontSize: '13px', color: 'var(--ink)',
+                      outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit',
+                      background: 'var(--surface-card)',
+                    }}
+                  />
+                </Field>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ══════════════════════════════════════

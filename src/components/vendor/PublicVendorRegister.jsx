@@ -99,7 +99,7 @@ export default function PublicVendorRegister({ token }) {
         </div>
         <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--ink)' }}>Vendor Registration</div>
       </div>
-      <VendorForm user={guestUser} onSaved={handleSubmitted} hideBack />
+      <VendorForm user={guestUser} onSaved={handleSubmitted} hideBack isGuestSubmission />
     </div>
   )
 }

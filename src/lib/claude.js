@@ -242,6 +242,16 @@ Use null for any field not visible. Do not guess.`
   )
 }
 
+export async function extractPanCardDetails(base64Image) {
+  return await callGemini(base64Image,
+    `You are extracting the PAN (Permanent Account Number) from an Indian PAN card, or a scanned/photographed copy of one.
+The PAN is a 10-character code printed on the card, format: 5 uppercase letters, then 4 digits, then 1 uppercase letter (e.g. ABCDE1234F).
+Reply with raw JSON only — no markdown, no backticks, no explanation:
+{"pan_number":string}
+Use null if not clearly visible. Do not guess.`
+  )
+}
+
 export async function extractVendorQuote(base64Image) {
   return await callGemini(base64Image,
     `You are extracting data from a vendor quote or invoice document. Extract all key fields accurately.
