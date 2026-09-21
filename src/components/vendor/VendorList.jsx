@@ -81,6 +81,7 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [panPreview, setPanPreview] = useState(null) // { vendors } when viewing a PAN-duplicate pill
   const [statusVendor, setStatusVendor] = useState(null) // vendor row when viewing the status timeline
+  const [deletingDraftId, setDeletingDraftId] = useState(null)
 
   useEffect(() => { load() }, [])
 
@@ -103,6 +104,18 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
     const { data } = await q
     setVendors(data || [])
     setLoading(false)
+  }
+
+  // A draft is only ever this person's own private scratch work (see the
+  // `load()` query above), so no extra ownership check is needed here beyond
+  // it being visible to them in the first place.
+  async function handleDeleteDraft(vendor) {
+    if (!window.confirm(`Delete this draft (${vendor.org_name || 'unnamed vendor'})? This cannot be undone.`)) return
+    setDeletingDraftId(vendor.id)
+    await supabase.from('vendors').delete().eq('id', vendor.id)
+    setVendors(prev => prev.filter(v => v.id !== vendor.id))
+    setDeletingDraftId(null)
+    setStatusVendor(null)
   }
 
   function handleColumnsChange(next) {
@@ -349,6 +362,8 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
         <VendorStatusModal
           vendor={statusVendor}
           onClose={() => setStatusVendor(null)}
+          onDelete={handleDeleteDraft}
+          deleting={deletingDraftId === statusVendor.id}
         />
       )}
     </div>

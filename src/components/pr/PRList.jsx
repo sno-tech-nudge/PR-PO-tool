@@ -18,6 +18,7 @@ export default function PRList({ user, onViewPR, onCreatePR, onResumeDraft }) {
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [statusPR, setStatusPR] = useState(null)
+  const [deletingDraftId, setDeletingDraftId] = useState(null)
 
   useEffect(() => {
     load()
@@ -36,6 +37,19 @@ export default function PRList({ user, onViewPR, onCreatePR, onResumeDraft }) {
       .order('created_at', { ascending: false })
     setPRs(data || [])
     setLoading(false)
+  }
+
+  // A draft only ever shows up here scoped to `requested_by = user.email`
+  // (see the load() query above), so it's already this person's own — no
+  // separate ownership check needed. A draft has no pr_approvals rows yet
+  // (only created on submit), so a plain delete is safe with no orphans.
+  async function handleDeleteDraft(pr) {
+    if (!window.confirm(`Delete this draft PR${pr.vendors?.org_name ? ` for ${pr.vendors.org_name}` : ''}? This cannot be undone.`)) return
+    setDeletingDraftId(pr.id)
+    await supabase.from('purchase_requests').delete().eq('id', pr.id)
+    setPRs(prev => prev.filter(p => p.id !== pr.id))
+    setDeletingDraftId(null)
+    setStatusPR(null)
   }
 
   const byFilter = filter === 'all' ? prs : prs.filter(p => p.status === filter)
@@ -152,7 +166,14 @@ export default function PRList({ user, onViewPR, onCreatePR, onResumeDraft }) {
         )
       })}
 
-      {statusPR && <PRStatusModal pr={statusPR} onClose={() => setStatusPR(null)} />}
+      {statusPR && (
+        <PRStatusModal
+          pr={statusPR}
+          onClose={() => setStatusPR(null)}
+          onDelete={handleDeleteDraft}
+          deleting={deletingDraftId === statusPR.id}
+        />
+      )}
     </div>
   )
 }

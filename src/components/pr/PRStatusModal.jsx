@@ -198,7 +198,7 @@ function VerticalTimeline({ pr, steps }) {
   )
 }
 
-export default function PRStatusModal({ pr, onClose }) {
+export default function PRStatusModal({ pr, onClose, onDelete, deleting }) {
   const [approvals, setApprovals] = useState([])
   const [po, setPO] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -223,6 +223,7 @@ export default function PRStatusModal({ pr, onClose }) {
 
   if (!pr) return null
   const steps = loading ? [] : buildSteps(pr, approvals, po)
+  const isDraft = pr.status === 'draft'
 
   return (
     <div
@@ -236,7 +237,22 @@ export default function PRStatusModal({ pr, onClose }) {
         <div style={{ background: 'var(--surface-card)', borderRadius: '10px 10px 0 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px 0' }}>
             <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text)' }}>{pr.vendors?.org_name || pr.pr_number || 'Purchase Request'}</div>
-            <span onClick={onClose} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--text-muted)', lineHeight: 1 }}>×</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              {isDraft && onDelete && (
+                <button
+                  onClick={() => onDelete(pr)}
+                  disabled={deleting}
+                  style={{
+                    height: '28px', padding: '0 12px', background: 'var(--surface-card)', color: 'var(--clay-text)',
+                    border: '1px solid var(--clay-border)', borderRadius: 'var(--radius-sm)', fontSize: '11px', fontWeight: 600,
+                    cursor: deleting ? 'default' : 'pointer',
+                  }}
+                >
+                  {deleting ? 'Deleting…' : 'Delete Draft'}
+                </button>
+              )}
+              <span onClick={onClose} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--text-muted)', lineHeight: 1 }}>×</span>
+            </div>
           </div>
           {loading ? (
             <div style={{ padding: '40px 24px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>Loading…</div>

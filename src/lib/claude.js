@@ -252,6 +252,27 @@ Use null if not clearly visible. Do not guess.`
   )
 }
 
+export async function extractGstCertDetails(base64Image) {
+  return await callGemini(base64Image,
+    `You are extracting the GSTIN from an Indian GST Registration Certificate (Form GST REG-06), or a scanned/photographed copy of one.
+The GSTIN is a 15-character code, usually printed near the top under "Registration Number" or "GSTIN", format: 2 digits (state code) + 5 uppercase letters + 4 digits + 1 uppercase letter + 1 digit-or-letter + "Z" + 1 alphanumeric (e.g. 29ABCDE1234F1Z5).
+Reply with raw JSON only — no markdown, no backticks, no explanation:
+{"gstin":string}
+Use null if not clearly visible. Do not guess.`
+  )
+}
+
+export async function extractMsmeCertDetails(base64Image) {
+  return await callGemini(base64Image,
+    `You are extracting details from an Indian MSME/Udyam Registration Certificate, or a scanned/photographed copy of one.
+The registration_number (also called "Udyam Registration Number" or "UDYAM No.") is printed near the top, format like UDYAM-KA-03-1234567 (older Udyog Aadhaar certificates instead have a 12-character alphanumeric UAN — extract whichever is present).
+The category is the enterprise classification, printed as one of: Micro, Small, or Medium.
+Reply with raw JSON only — no markdown, no backticks, no explanation:
+{"registration_number":string,"category":string}
+Use null for any field not clearly visible. Do not guess.`
+  )
+}
+
 export async function extractVendorQuote(base64Image) {
   return await callGemini(base64Image,
     `You are extracting data from a vendor quote or invoice document. Extract all key fields accurately.

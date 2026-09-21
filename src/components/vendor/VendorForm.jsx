@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { getFiscalYearPrefix } from '../../lib/formCalc'
 import { NATURE_OF_BUSINESS_OPTIONS } from '../../lib/vendorData'
-import { extractChequeDetails, extractPanCardDetails } from '../../lib/claude'
+import { extractChequeDetails, extractPanCardDetails, extractGstCertDetails, extractMsmeCertDetails } from '../../lib/claude'
 import { imageFileToJpegBase64, pdfPageToBase64 } from '../../lib/receiptImage'
 import PanDuplicateModal from './PanDuplicateModal'
 import { sendVendorEmail } from '../../lib/vendorEmail'
@@ -96,14 +96,19 @@ function scrollToField(key) {
   el.querySelector('input, select, textarea, button')?.focus({ preventScroll: true })
 }
 
+// Hint text renders AFTER the input, not between the label and input — two
+// Fields sitting side by side in the same grid row (e.g. Type of
+// Organisation next to Nature of Business) must have their inputs line up
+// regardless of which one happens to carry a hint, and a hint wrapping to
+// two lines used to shove that field's input down past its neighbour's.
 function Field({ id, label, error, required, hint, children }) {
   return (
     <div id={id} style={{ marginBottom: '18px', scrollMarginTop: '80px' }}>
-      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: hint ? '2px' : '5px' }}>
+      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: '5px' }}>
         {label}{required && <span style={{ color: 'var(--clay-text)', marginLeft: '2px' }}>*</span>}
       </label>
-      {hint && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '5px' }}>{hint}</div>}
       {children}
+      {hint && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>{hint}</div>}
       {error && <div style={{ fontSize: '11px', color: 'var(--clay-text)', marginTop: '4px' }}>{error}</div>}
     </div>
   )
@@ -282,7 +287,8 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
   const [panExtracted, setPanExtracted] = useState(null)
   const [pincodeLooking, setPincodeLooking] = useState(false)
   const [branchLocked, setBranchLocked]     = useState(false)
-  const [gstinValidated, setGstinValidated] = useState(null) // null | {ok, stateCode, stateName, embeddedPan, panMatch}
+  const [gstCertOcrLoading, setGstCertOcrLoading] = useState(false)
+  const [msmeCertOcrLoading, setMsmeCertOcrLoading] = useState(false)
   // '+91' for a mobile number, '' for a landline/other number entered as-is
   // (with STD code). Not persisted separately — derived from the stored
   // phone value on edit, since a 10-digit number is unambiguously a mobile.
@@ -337,6 +343,16 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
   const panMatchStatus = panExtracted && PAN_RE.test(f.pan_number.toUpperCase().trim())
     ? (panExtracted === f.pan_number.toUpperCase().trim() ? 'match' : 'mismatch')
     : null
+  // derived: GSTIN validation recomputed live from whatever's typed — no
+  // button, no stale result left over from a previous value. parseGSTIN is a
+  // pure regex check (no network call), so this is cheap to run every
+  // render. Only surfaces an "invalid" result once all 15 characters are in,
+  // so it doesn't flash an error while the person is still mid-typing.
+  const gstinParsed = parseGSTIN(f.gstin)
+  const gstinValidation = !f.gstin ? null
+    : gstinParsed
+      ? { ok: true, ...gstinParsed, panMatch: PAN_RE.test(f.pan_number.toUpperCase().trim()) ? gstinParsed.embeddedPan === f.pan_number.toUpperCase().trim() : null }
+      : (f.gstin.length === 15 ? { ok: false, msg: 'Invalid GSTIN format. Check and re-enter.' } : null)
   const isIndividual = AADHAAR_REQUIRED_ORG_TYPES.includes(f.org_type)
 
   // Individuals don't have a company registration number — show "0" instead
@@ -351,6 +367,19 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
   }, [isIndividual])
 
   useEffect(() => { financeAlertSentRef.current = false }, [f.aadhaar_pan_linked])
+
+  // Once the GSTIN parses successfully, its embedded state code can fill
+  // Organisation Registration State when that's still blank — same
+  // auto-fill this used to do inside the (now removed) manual Validate
+  // button, just running automatically as soon as validation succeeds.
+  useEffect(() => {
+    if (!gstinParsed || f.org_registration_state) return
+    const matched = INDIAN_STATES.find(s =>
+      s.toLowerCase().includes(gstinParsed.stateName.toLowerCase()) ||
+      gstinParsed.stateName.toLowerCase().includes(s.toLowerCase().split(' ')[0])
+    )
+    if (matched) setF(p => ({ ...p, org_registration_state: matched }))
+  }, [gstinParsed, f.org_registration_state])
 
   useEffect(() => {
     if (existingVendor) {
@@ -517,6 +546,59 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
       console.error('PAN OCR failed:', err)
     }
     setPanOcrLoading(false)
+  }
+
+  // OCR the GST Registration Certificate to auto-fill GSTIN when it's still
+  // blank. Only applies once the field is actually unlocked (state + PAN
+  // filled) — same "never override what's already there" rule as the other
+  // document auto-fills above.
+  async function handleGstCertFile(file) {
+    setGstCertFile(file)
+    if (!file) return
+    if (!gstinEnabled || f.gstin.trim()) return
+    setGstCertOcrLoading(true)
+    try {
+      const { base64 } = file.type === 'application/pdf'
+        ? await pdfPageToBase64(file)
+        : await imageFileToJpegBase64(file)
+      const extracted = await extractGstCertDetails(base64)
+      const extractedGstin = extracted?.gstin?.toUpperCase().trim()
+      if (extractedGstin && GSTIN_RE.test(extractedGstin)) {
+        setF(prev => (prev.gstin.trim() ? prev : { ...prev, gstin: extractedGstin }))
+      }
+    } catch (err) {
+      console.error('GST certificate OCR failed:', err)
+    }
+    setGstCertOcrLoading(false)
+  }
+
+  // OCR the MSME/Udyam certificate to pre-fill the (free-text) MSME
+  // Registration Details field with the registration number and category it
+  // finds — same "fill only if blank" rule as the other document auto-fills,
+  // and the field stays an ordinary editable textarea afterward so the
+  // person can add anything else it doesn't cover.
+  async function handleMsmeCertFile(file) {
+    setMsmeCertFile(file)
+    if (!file) return
+    if (f.msme_details.trim()) return
+    setMsmeCertOcrLoading(true)
+    try {
+      const { base64 } = file.type === 'application/pdf'
+        ? await pdfPageToBase64(file)
+        : await imageFileToJpegBase64(file)
+      const extracted = await extractMsmeCertDetails(base64)
+      const regNo = extracted?.registration_number?.trim()
+      const category = extracted?.category?.trim()
+      const lines = []
+      if (regNo) lines.push(`Udyam Registration Number: ${regNo}`)
+      if (category) lines.push(`Category: ${category}`)
+      if (lines.length) {
+        setF(prev => (prev.msme_details.trim() ? prev : { ...prev, msme_details: lines.join('\n') }))
+      }
+    } catch (err) {
+      console.error('MSME certificate OCR failed:', err)
+    }
+    setMsmeCertOcrLoading(false)
   }
 
   // Duplicate PAN is a warning, never a blocker (Finance's explicit
@@ -1181,8 +1263,13 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
               error={liveErrors.msme_cert}
               existing={msmeCertPath}
               file={msmeCertFile}
-              onChange={setMsmeCertFile}
+              onChange={handleMsmeCertFile}
             />
+            {msmeCertOcrLoading && (
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '-10px' }}>
+                Reading document — filling in registration number and category…
+              </div>
+            )}
           </div>
         )}
 
@@ -1190,7 +1277,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           <Toggle
             label="GSTIN Registration Present?"
             checked={f.is_gstin_registered}
-            onChange={e => { setF(p => ({ ...p, is_gstin_registered: e.target.checked, gstin: '' })); setGstinValidated(null) }}
+            onChange={e => setF(p => ({ ...p, is_gstin_registered: e.target.checked, gstin: '' }))}
           />
         </div>
         {f.is_gstin_registered && (
@@ -1201,117 +1288,70 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                 ℹ In order to fill GST Registration Detail, first fill <strong>Organisation Registration State</strong> and a valid <strong>PAN Number</strong> above.
               </div>
             )}
-            {(() => {
-              const parsed = parseGSTIN(f.gstin)
-              const canValidate = !!parsed
-              const borderColor = !f.gstin ? 'var(--action-bg)'
-                : gstinValidated ? (gstinValidated.ok ? 'var(--moss-text)' : 'var(--clay-text)')
-                : canValidate ? 'var(--moss-text)' : (f.gstin.length === 15 ? 'var(--clay-text)' : 'var(--action-bg)')
-
-              function handleValidate() {
-                if (!parsed) {
-                  setGstinValidated({ ok: false, msg: 'Invalid GSTIN format. Check and re-enter.' })
-                  return
-                }
-                const panUpper = f.pan_number.toUpperCase().trim()
-                const panMatch = PAN_RE.test(panUpper) ? parsed.embeddedPan === panUpper : null
-                const result = { ok: true, ...parsed, panMatch }
-                setGstinValidated(result)
-                // auto-fill org_registration_state if blank
-                if (!f.org_registration_state) {
-                  const matched = INDIAN_STATES.find(s =>
-                    s.toLowerCase().includes(parsed.stateName.toLowerCase()) ||
-                    parsed.stateName.toLowerCase().includes(s.toLowerCase().split(' ')[0])
-                  )
-                  if (matched) setF(p => ({ ...p, org_registration_state: matched }))
-                }
-              }
-
-              return (
-                <Field id="gstin" label="GSTIN / UIN" required error={liveErrors.gstin}>
-                  <input
-                    type="text"
-                    value={f.gstin}
-                    onChange={e => {
-                      if (!gstinEnabled) return
-                      setGstinValidated(null)
-                      setF(p => ({ ...p, gstin: e.target.value.toUpperCase() }))
-                    }}
-                    placeholder={gstinEnabled ? '29ABCDE1234F1Z5' : 'Fill state and PAN first…'}
-                    maxLength={15}
-                    disabled={!gstinEnabled}
-                    style={gstinEnabled
-                      ? { ...inputStyle(!!liveErrors.gstin, { fontFamily: 'monospace', letterSpacing: '0.08em' }), borderColor }
-                      : disabledStyle}
-                  />
-                  {/* Validate link — shows once 15 chars entered, hides after validation */}
-                  {gstinEnabled && f.gstin && !gstinValidated && (
-                    <button
-                      type="button"
-                      onClick={handleValidate}
-                      style={{
-                        background: 'none', border: 'none', padding: '4px 0',
-                        fontSize: '12px', color: 'var(--action)', cursor: 'pointer',
-                        fontWeight: 600, display: 'block', marginTop: '4px',
-                        textDecoration: 'underline',
-                      }}
-                    >
-                      Validate
-                    </button>
-                  )}
-                  {/* Validation result card */}
-                  {gstinValidated && (
-                    <div style={{
-                      marginTop: '8px', borderRadius: 'var(--radius-md)', padding: '12px 14px',
-                      background: gstinValidated.ok ? 'var(--moss-bg)' : 'var(--clay-bg)',
-                      border: `1px solid ${gstinValidated.ok ? 'var(--moss-border)' : 'var(--clay-border)'}`,
-                      fontSize: '12px',
-                    }}>
-                      {gstinValidated.ok ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                          <div style={{ fontWeight: 700, color: 'var(--moss-text)', fontSize: '13px' }}>✓ Valid GSTIN</div>
-                          <div style={{ color: 'var(--ink)' }}>
-                            <span style={{ color: 'var(--text-muted)' }}>Place of Supply: </span>
-                            <strong>[{gstinValidated.stateCode}] – {gstinValidated.stateName}</strong>
-                          </div>
-                          <div style={{ color: 'var(--ink)' }}>
-                            <span style={{ color: 'var(--text-muted)' }}>PAN: </span>
-                            <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{gstinValidated.embeddedPan}</span>
-                            {gstinValidated.panMatch === true && (
-                              <span style={{ color: 'var(--moss-text)', marginLeft: '6px' }}>✓ matches PAN field</span>
-                            )}
-                            {gstinValidated.panMatch === false && (
-                              <span style={{ color: 'var(--clay-text)', marginLeft: '6px' }}>✗ mismatch — PAN field has {f.pan_number.toUpperCase()}</span>
-                            )}
-                          </div>
-                        </div>
-                      ) : (
-                        <div style={{ color: 'var(--clay-text)', fontWeight: 600 }}>✗ {gstinValidated.msg}</div>
-                      )}
-                      <button
-                        type="button"
-                        onClick={handleValidate}
-                        style={{
-                          background: 'none', border: 'none', padding: '6px 0 0',
-                          fontSize: '11px', color: 'var(--action)', cursor: 'pointer',
-                          fontWeight: 600, display: 'block', textDecoration: 'underline',
-                        }}
-                      >
-                        Verify Again
-                      </button>
+            <Field id="gstin" label="GSTIN / UIN" required error={liveErrors.gstin}>
+              <input
+                type="text"
+                value={f.gstin}
+                onChange={e => {
+                  if (!gstinEnabled) return
+                  setF(p => ({ ...p, gstin: e.target.value.toUpperCase() }))
+                }}
+                placeholder={gstinEnabled ? '29ABCDE1234F1Z5' : 'Fill state and PAN first…'}
+                maxLength={15}
+                disabled={!gstinEnabled}
+                style={gstinEnabled
+                  ? inputStyle(!!liveErrors.gstin, {
+                      fontFamily: 'monospace', letterSpacing: '0.08em',
+                      border: `1px solid ${!f.gstin ? 'var(--action-bg)' : gstinValidation ? (gstinValidation.ok ? 'var(--moss-text)' : 'var(--clay-text)') : 'var(--action-bg)'}`,
+                    })
+                  : disabledStyle}
+              />
+              {/* Validates live as soon as 15 characters are in — no button,
+                  no stale result, updates the instant the value changes. */}
+              {gstinValidation && (
+                <div style={{
+                  marginTop: '8px', borderRadius: 'var(--radius-md)', padding: '12px 14px',
+                  background: gstinValidation.ok ? 'var(--moss-bg)' : 'var(--clay-bg)',
+                  border: `1px solid ${gstinValidation.ok ? 'var(--moss-border)' : 'var(--clay-border)'}`,
+                  fontSize: '12px',
+                }}>
+                  {gstinValidation.ok ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      <div style={{ fontWeight: 700, color: 'var(--moss-text)', fontSize: '13px' }}>✓ Valid GSTIN</div>
+                      <div style={{ color: 'var(--ink)' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Place of Supply: </span>
+                        <strong>[{gstinValidation.stateCode}] – {gstinValidation.stateName}</strong>
+                      </div>
+                      <div style={{ color: 'var(--ink)' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>PAN: </span>
+                        <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{gstinValidation.embeddedPan}</span>
+                        {gstinValidation.panMatch === true && (
+                          <span style={{ color: 'var(--moss-text)', marginLeft: '6px' }}>✓ matches PAN field</span>
+                        )}
+                        {gstinValidation.panMatch === false && (
+                          <span style={{ color: 'var(--clay-text)', marginLeft: '6px' }}>✗ mismatch — PAN field has {f.pan_number.toUpperCase()}</span>
+                        )}
+                      </div>
                     </div>
+                  ) : (
+                    <div style={{ color: 'var(--clay-text)', fontWeight: 600 }}>✗ {gstinValidation.msg}</div>
                   )}
-                </Field>
-              )
-            })()}
+                </div>
+              )}
+            </Field>
             <FileUpload id="gst_cert"
               label="GST Registration Certificate"
               required
               error={liveErrors.gst_cert}
               existing={gstCertPath}
               file={gstCertFile}
-              onChange={setGstCertFile}
+              onChange={handleGstCertFile}
             />
+            {gstCertOcrLoading && (
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '-10px' }}>
+                Reading document — auto-filling GSTIN…
+              </div>
+            )}
           </div>
         )}
 
