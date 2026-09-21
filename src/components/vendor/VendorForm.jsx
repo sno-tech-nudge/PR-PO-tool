@@ -289,6 +289,16 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
   const [branchLocked, setBranchLocked]     = useState(false)
   const [gstCertOcrLoading, setGstCertOcrLoading] = useState(false)
   const [msmeCertOcrLoading, setMsmeCertOcrLoading] = useState(false)
+  // Same "extracted once, compared live every render" pattern as panExtracted
+  // above, for the other three document uploads — each re-upload (including
+  // replacing an already-uploaded file) re-runs OCR and refreshes these, so
+  // swapping in a different document always re-checks it against whatever is
+  // currently typed, instead of silently doing nothing because a value was
+  // already filled in. Cheque/bank isn't part of this — see handleChequeFile,
+  // which always overwrites from whichever cheque was uploaded last instead,
+  // since the cheque is the sole source for those fields.
+  const [gstExtracted, setGstExtracted] = useState(null) // string | null
+  const [msmeExtracted, setMsmeExtracted] = useState(null) // {registration_number, category} | null
   // '+91' for a mobile number, '' for a landline/other number entered as-is
   // (with STD code). Not persisted separately — derived from the stored
   // phone value on edit, since a 10-digit number is unambiguously a mobile.
@@ -353,6 +363,17 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
     : gstinParsed
       ? { ok: true, ...gstinParsed, panMatch: PAN_RE.test(f.pan_number.toUpperCase().trim()) ? gstinParsed.embeddedPan === f.pan_number.toUpperCase().trim() : null }
       : (f.gstin.length === 15 ? { ok: false, msg: 'Invalid GSTIN format. Check and re-enter.' } : null)
+  // derived: live match/mismatch between the typed GSTIN and whatever the
+  // uploaded GST certificate OCR'd to — same pattern as panMatchStatus above.
+  const gstCertMatchStatus = gstExtracted && f.gstin.trim()
+    ? (gstExtracted === f.gstin.toUpperCase().trim() ? 'match' : 'mismatch')
+    : null
+  // derived: whether the MSME certificate's extracted registration number
+  // shows up anywhere in the (free-text) details field — a substring check
+  // rather than an exact-match, since that field also holds whatever else
+  // the person has typed alongside the auto-filled lines.
+  const msmeMismatch = !!(msmeExtracted?.registration_number && f.msme_details.trim()
+    && !f.msme_details.toUpperCase().includes(msmeExtracted.registration_number.toUpperCase()))
   const isIndividual = AADHAAR_REQUIRED_ORG_TYPES.includes(f.org_type)
 
   // Individuals don't have a company registration number — show "0" instead
@@ -481,7 +502,6 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         : await imageFileToJpegBase64(file)
       const extracted = await extractChequeDetails(base64)
       if (extracted) {
-        const hadIfsc = !!f.ifsc_code
         const matchedState = extracted.state
           ? INDIAN_STATES.find(s =>
               s.toLowerCase() === extracted.state.toLowerCase() ||
@@ -489,19 +509,19 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
               extracted.state.toLowerCase().includes(s.toLowerCase().split(' ')[0])
             )
           : null
-        // Fill everything the OCR call already returned — including
-        // bank_name/branch/ifsc_code — immediately, in this one state update,
-        // rather than waiting on a second sequential network round trip to
-        // the IFSC directory before the person sees anything. Address fields
-        // are a convenience fill only — always left freely editable, never
-        // locked like bank name/branch below.
+        // The cheque/bank statement is the sole source for these bank
+        // fields, so a (re-)upload always overwrites them with whatever it
+        // reads — no "only if blank" gate and no mismatch warning here,
+        // unlike PAN/GST/MSME, which are typed independently and only
+        // cross-checked against their own attachment. Address fields stay a
+        // convenience fill only (fill if blank, freely editable after).
         setF(prev => ({
           ...prev,
-          beneficiary_name: prev.beneficiary_name || extracted.beneficiary_name || prev.beneficiary_name,
-          account_number: prev.account_number || extracted.account_number || prev.account_number,
-          ifsc_code: prev.ifsc_code || extracted.ifsc_code || prev.ifsc_code,
-          bank_name: prev.bank_name || extracted.bank_name || prev.bank_name,
-          branch: prev.branch || extracted.branch || prev.branch,
+          beneficiary_name: extracted.beneficiary_name || prev.beneficiary_name,
+          account_number: extracted.account_number || prev.account_number,
+          ifsc_code: extracted.ifsc_code || prev.ifsc_code,
+          bank_name: extracted.bank_name || prev.bank_name,
+          branch: extracted.branch || prev.branch,
           address_line1: prev.address_line1 || extracted.address_line1 || prev.address_line1,
           city: prev.city || extracted.city || prev.city,
           state: prev.state || matchedState || prev.state,
@@ -509,9 +529,9 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         }))
         setChequeOcrLoading(false)
         // Canonicalize/lock the bank name + branch against the authoritative
-        // IFSC directory in the background — the person already sees the
-        // OCR'd values above without waiting on this second network call.
-        if (!hadIfsc && extracted.ifsc_code) lookupIFSC(extracted.ifsc_code)
+        // IFSC directory in the background on every (re-)upload, same reason
+        // as above — the new cheque's IFSC is what should win.
+        if (extracted.ifsc_code) lookupIFSC(extracted.ifsc_code)
         return
       }
     } catch (err) {
@@ -549,13 +569,17 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
   }
 
   // OCR the GST Registration Certificate to auto-fill GSTIN when it's still
-  // blank. Only applies once the field is actually unlocked (state + PAN
-  // filled) — same "never override what's already there" rule as the other
-  // document auto-fills above.
+  // blank, or — if one's already typed — cross-check the two and surface a
+  // live match/mismatch indicator instead, same as the PAN copy above. Runs
+  // on every upload, including replacing an already-uploaded file, so
+  // swapping in a different certificate always re-checks it — it must NOT
+  // bail out just because GSTIN already has a value, or a mismatched
+  // replacement document would silently go unnoticed.
   async function handleGstCertFile(file) {
     setGstCertFile(file)
+    setGstExtracted(null)
     if (!file) return
-    if (!gstinEnabled || f.gstin.trim()) return
+    if (!gstinEnabled) return
     setGstCertOcrLoading(true)
     try {
       const { base64 } = file.type === 'application/pdf'
@@ -564,6 +588,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
       const extracted = await extractGstCertDetails(base64)
       const extractedGstin = extracted?.gstin?.toUpperCase().trim()
       if (extractedGstin && GSTIN_RE.test(extractedGstin)) {
+        setGstExtracted(extractedGstin)
         setF(prev => (prev.gstin.trim() ? prev : { ...prev, gstin: extractedGstin }))
       }
     } catch (err) {
@@ -574,26 +599,30 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
 
   // OCR the MSME/Udyam certificate to pre-fill the (free-text) MSME
   // Registration Details field with the registration number and category it
-  // finds — same "fill only if blank" rule as the other document auto-fills,
-  // and the field stays an ordinary editable textarea afterward so the
-  // person can add anything else it doesn't cover.
+  // finds — fills only if blank, and the field stays an ordinary editable
+  // textarea afterward. Runs on every upload, including replacing an
+  // already-uploaded file, so a swapped-in certificate that disagrees with
+  // whatever's already typed gets flagged instead of silently ignored.
   async function handleMsmeCertFile(file) {
     setMsmeCertFile(file)
+    setMsmeExtracted(null)
     if (!file) return
-    if (f.msme_details.trim()) return
     setMsmeCertOcrLoading(true)
     try {
       const { base64 } = file.type === 'application/pdf'
         ? await pdfPageToBase64(file)
         : await imageFileToJpegBase64(file)
       const extracted = await extractMsmeCertDetails(base64)
-      const regNo = extracted?.registration_number?.trim()
-      const category = extracted?.category?.trim()
-      const lines = []
-      if (regNo) lines.push(`Udyam Registration Number: ${regNo}`)
-      if (category) lines.push(`Category: ${category}`)
-      if (lines.length) {
-        setF(prev => (prev.msme_details.trim() ? prev : { ...prev, msme_details: lines.join('\n') }))
+      const regNo = extracted?.registration_number?.trim() || null
+      const category = extracted?.category?.trim() || null
+      if (regNo || category) {
+        setMsmeExtracted({ registration_number: regNo, category })
+        if (!f.msme_details.trim()) {
+          const lines = []
+          if (regNo) lines.push(`Udyam Registration Number: ${regNo}`)
+          if (category) lines.push(`Category: ${category}`)
+          setF(prev => (prev.msme_details.trim() ? prev : { ...prev, msme_details: lines.join('\n') }))
+        }
       }
     } catch (err) {
       console.error('MSME certificate OCR failed:', err)
@@ -1134,7 +1163,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
             )}
             {!panOcrLoading && panMatchStatus === 'mismatch' && (
               <div style={{ fontSize: '11px', color: 'var(--clay-text)', fontWeight: 600, marginTop: '-10px', marginBottom: '14px' }}>
-                ✗ This document shows {panExtracted} but PAN Number above is {f.pan_number.toUpperCase().trim()} — please check
+                ✗ This document shows {panExtracted} but PAN Number above is {f.pan_number.toUpperCase().trim()} — please check attachment again
               </div>
             )}
           </div>
@@ -1270,6 +1299,11 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                 Reading document — filling in registration number and category…
               </div>
             )}
+            {!msmeCertOcrLoading && msmeMismatch && (
+              <div style={{ fontSize: '11px', color: 'var(--clay-text)', fontWeight: 600, marginTop: '-10px' }}>
+                ✗ This document shows registration number {msmeExtracted.registration_number}, which doesn't appear in the details above — please check attachment again
+              </div>
+            )}
           </div>
         )}
 
@@ -1350,6 +1384,16 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
             {gstCertOcrLoading && (
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '-10px' }}>
                 Reading document — auto-filling GSTIN…
+              </div>
+            )}
+            {!gstCertOcrLoading && gstCertMatchStatus === 'match' && (
+              <div style={{ fontSize: '11px', color: 'var(--moss-text)', fontWeight: 600, marginTop: '-10px' }}>
+                ✓ Certificate matches the GSTIN entered above
+              </div>
+            )}
+            {!gstCertOcrLoading && gstCertMatchStatus === 'mismatch' && (
+              <div style={{ fontSize: '11px', color: 'var(--clay-text)', fontWeight: 600, marginTop: '-10px' }}>
+                ✗ This document shows {gstExtracted} but GSTIN above is {f.gstin.toUpperCase().trim()} — please check attachment again
               </div>
             )}
           </div>
