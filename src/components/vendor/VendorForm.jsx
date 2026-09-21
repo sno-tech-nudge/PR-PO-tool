@@ -261,9 +261,11 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
   const [vendorId, setVendorId]     = useState(existingVendor?.status === 'draft' ? '' : (existingVendor?.vendor_id || ''))
   const [draftId, setDraftId]       = useState(existingVendor?.id || null)
   const [errors, setErrors]         = useState({})
-  // Gates the clickable error-summary banner so it only appears after an
-  // actual Save/Submit attempt, not the moment a single field is blurred.
-  const [attemptedSave, setAttemptedSave] = useState(false)
+  // null before any Save/Submit attempt (gates the error-summary banner so
+  // it only appears once someone has actually tried), otherwise 'draft' or
+  // 'submit' — which validate() mode to keep re-running live so a fixed
+  // field's warning clears immediately instead of waiting for another click.
+  const [attemptedMode, setAttemptedMode] = useState(null)
   const [saving, setSaving]         = useState(false)
   const [savingDraft, setSavingDraft] = useState(false)
   const [saveError, setSaveError]   = useState(null)
@@ -643,11 +645,12 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
     setErrors(e)
     if (Object.keys(e).length) {
       if (silent === true) return
-      setAttemptedSave(true)
-      window.scrollTo({ top: 0 })
+      // Stay put — the warning list renders right above the buttons,
+      // where the person already is, instead of jumping them to the top.
+      setAttemptedMode('draft')
       return
     }
-    setAttemptedSave(false)
+    setAttemptedMode(null)
     setSavingDraft(true); setSaveError(null)
     try {
       const payload = await buildPayload({ status: 'draft', vendor_id: null })
@@ -710,11 +713,10 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           submitterEmail: user.email,
         })
       }
-      setAttemptedSave(true)
-      window.scrollTo({ top: 0 })
+      setAttemptedMode('submit')
       return
     }
-    setAttemptedSave(false)
+    setAttemptedMode(null)
     if (panDuplicates.length > 0 && !panDupAcknowledged) {
       setShowPanDupModal(true)
       return
@@ -763,6 +765,12 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
     borderRadius: 'var(--radius-lg)', padding: '28px', marginBottom: '16px',
   }
 
+  // Once a Save-draft/Submit attempt has failed, recompute validation fresh on
+  // every render (not just on the next click) so a warning clears the instant
+  // its field is actually fixed. Before any attempt, falls back to the real
+  // `errors` state (only ever touched by per-field onBlur checks).
+  const liveErrors = attemptedMode ? validate(attemptedMode) : errors
+
   return (
     <div style={{ maxWidth: '720px', margin: '0 auto', padding: '24px 20px 80px' }}>
 
@@ -780,25 +788,6 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           {isEdit ? 'Edit Vendor' : existingVendor?.status === 'draft' ? 'Continue Vendor Draft' : 'Vendor Registration'}
         </h2>
       </div>
-
-      {attemptedSave && Object.values(errors).some(v => typeof v === 'string') && (
-        <div style={{ background: 'var(--clay-bg)', border: '1px solid var(--clay-border)', borderRadius: 'var(--radius-sm)', padding: '12px 14px', marginBottom: '16px' }}>
-          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--clay-text)', marginBottom: '4px' }}>
-            Please fix the following:
-          </div>
-          <ul style={{ margin: 0, paddingLeft: '18px' }}>
-            {Object.entries(errors).filter(([, v]) => typeof v === 'string').map(([key, msg]) => (
-              <li
-                key={key}
-                onClick={() => scrollToField(key)}
-                style={{ fontSize: '12px', color: 'var(--clay-text)', lineHeight: 1.6, cursor: 'pointer', textDecoration: 'underline' }}
-              >
-                {msg}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
 
       {/* Vendor ID badge */}
       <div style={{
@@ -825,28 +814,28 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
 
         <div style={grid2}>
           <div style={full}>
-            <Field id="org_name" label="Name of Organisation" required error={errors.org_name}>
-              <Inp field="org_name" f={f} setF={setF} placeholder="e.g. Acme Solutions Pvt Ltd" err={!!errors.org_name} />
+            <Field id="org_name" label="Name of Organisation" required error={liveErrors.org_name}>
+              <Inp field="org_name" f={f} setF={setF} placeholder="e.g. Acme Solutions Pvt Ltd" err={!!liveErrors.org_name} />
             </Field>
           </div>
-          <Field id="org_type" label="Type of Organisation" required error={errors.org_type}
+          <Field id="org_type" label="Type of Organisation" required error={liveErrors.org_type}
             hint="Determines which documents Attachments will ask for below">
-            <Sel field="org_type" f={f} setF={setF} options={ORG_TYPES} placeholder="Select type…" err={!!errors.org_type} />
+            <Sel field="org_type" f={f} setF={setF} options={ORG_TYPES} placeholder="Select type…" err={!!liveErrors.org_type} />
           </Field>
-          <Field id="nature_of_business" label="Nature of Business" required error={errors.nature_of_business}>
-            <Sel field="nature_of_business" f={f} setF={setF} options={NATURE_OF_BUSINESS_OPTIONS} placeholder="Select nature of business…" err={!!errors.nature_of_business} />
+          <Field id="nature_of_business" label="Nature of Business" required error={liveErrors.nature_of_business}>
+            <Sel field="nature_of_business" f={f} setF={setF} options={NATURE_OF_BUSINESS_OPTIONS} placeholder="Select nature of business…" err={!!liveErrors.nature_of_business} />
           </Field>
-          <Field id="date_of_incorporation" label="Date of Incorporation" required error={errors.date_of_incorporation}>
+          <Field id="date_of_incorporation" label="Date of Incorporation" required error={liveErrors.date_of_incorporation}>
             <input
               type="date"
               value={f.date_of_incorporation}
               onChange={e => setF(p => ({ ...p, date_of_incorporation: e.target.value }))}
-              style={inputStyle(!!errors.date_of_incorporation)}
+              style={inputStyle(!!liveErrors.date_of_incorporation)}
             />
           </Field>
           <div style={full}>
-            <Field id="address_line1" label="Address Line 1" required error={errors.address_line1}>
-              <Inp field="address_line1" f={f} setF={setF} placeholder="Building / Street name" err={!!errors.address_line1} />
+            <Field id="address_line1" label="Address Line 1" required error={liveErrors.address_line1}>
+              <Inp field="address_line1" f={f} setF={setF} placeholder="Building / Street name" err={!!liveErrors.address_line1} />
             </Field>
           </div>
           <div style={full}>
@@ -854,7 +843,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
               <Inp field="address_line2" f={f} setF={setF} placeholder="Area, landmark (optional)" />
             </Field>
           </div>
-          <Field id="pincode" label="Pincode" required error={errors.pincode} hint="City and state auto-fill from a valid pincode">
+          <Field id="pincode" label="Pincode" required error={liveErrors.pincode} hint="City and state auto-fill from a valid pincode">
             <input
               type="text"
               value={f.pincode}
@@ -866,20 +855,20 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
               onBlur={() => lookupPincode()}
               placeholder="560001"
               maxLength={6}
-              style={inputStyle(!!errors.pincode)}
+              style={inputStyle(!!liveErrors.pincode)}
             />
             {pincodeLooking && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px' }}>Looking up…</div>}
           </Field>
-          <Field id="city" label="City / District" required error={errors.city}>
-            <Inp field="city" f={f} setF={setF} placeholder="Bangalore" err={!!errors.city} />
+          <Field id="city" label="City / District" required error={liveErrors.city}>
+            <Inp field="city" f={f} setF={setF} placeholder="Bangalore" err={!!liveErrors.city} />
           </Field>
-          <Field id="state" label="State / Province" required error={errors.state}>
-            <Sel field="state" f={f} setF={setF} options={INDIAN_STATES} placeholder="Select state…" err={!!errors.state} />
+          <Field id="state" label="State / Province" required error={liveErrors.state}>
+            <Sel field="state" f={f} setF={setF} options={INDIAN_STATES} placeholder="Select state…" err={!!liveErrors.state} />
           </Field>
           <Field label="Country">
             <Inp field="country" f={f} setF={setF} placeholder="India" />
           </Field>
-          <Field id="pan_number" label="PAN Number" required error={errors.pan_number}>
+          <Field id="pan_number" label="PAN Number" required error={liveErrors.pan_number}>
             <input
               type="text"
               value={f.pan_number}
@@ -887,7 +876,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
               onBlur={e => checkPanDuplicates(e.target.value)}
               placeholder="ABCDE1234F"
               maxLength={10}
-              style={inputStyle(!!errors.pan_number, { fontFamily: 'monospace', letterSpacing: '0.1em' })}
+              style={inputStyle(!!liveErrors.pan_number, { fontFamily: 'monospace', letterSpacing: '0.1em' })}
             />
             {PAN_RE.test(f.pan_number.toUpperCase().trim()) && (
               <button
@@ -920,26 +909,26 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         {isIndividual && (
           <div style={{ background: 'var(--gold-bg)', border: '1px solid #DDD6FE', borderRadius: 'var(--radius-md)', padding: '16px', marginBottom: '14px' }}>
             <div style={{ fontSize: '12px', fontWeight: 700, color: '#5B21B6', marginBottom: '12px' }}>Aadhaar Details (Individual Vendor)</div>
-            <Field id="aadhaar_number" label="Aadhaar Number" required error={errors.aadhaar_number}>
+            <Field id="aadhaar_number" label="Aadhaar Number" required error={liveErrors.aadhaar_number}>
               <input
                 type="text"
                 value={f.aadhaar_number}
                 onChange={e => setF(p => ({ ...p, aadhaar_number: e.target.value.replace(/\D/g, '') }))}
                 placeholder="123412341234"
                 maxLength={12}
-                style={inputStyle(!!errors.aadhaar_number, { fontFamily: 'monospace', letterSpacing: '0.08em' })}
+                style={inputStyle(!!liveErrors.aadhaar_number, { fontFamily: 'monospace', letterSpacing: '0.08em' })}
               />
             </Field>
             <FileUpload id="aadhaar_copy"
               label="Aadhaar Copy"
               required
-              error={errors.aadhaar_copy}
+              error={liveErrors.aadhaar_copy}
               existing={aadhaarPath}
               file={aadhaarFile}
               onChange={setAadhaarFile}
             />
             <div style={{ marginTop: '4px' }}>
-              <Field id="aadhaar_pan_linked" label="Are your Aadhaar and PAN linked?" required error={errors.aadhaar_pan_linked}>
+              <Field id="aadhaar_pan_linked" label="Are your Aadhaar and PAN linked?" required error={liveErrors.aadhaar_pan_linked}>
                 <YesNo
                   value={f.aadhaar_pan_linked}
                   onChange={v => setF(p => ({ ...p, aadhaar_pan_linked: v }))}
@@ -951,7 +940,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                 <FileUpload id="aadhaar_pan_proof"
                   label="Proof of Aadhaar-PAN Link"
                   required
-                  error={errors.aadhaar_pan_proof}
+                  error={liveErrors.aadhaar_pan_proof}
                   existing={aadhaarProofPath}
                   file={aadhaarProofFile}
                   onChange={setAadhaarProofFile}
@@ -972,7 +961,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         {f.is_msme && (
           <div style={{ background: 'var(--gold-bg)', border: '1px solid var(--gold-border)', borderRadius: 'var(--radius-md)', padding: '16px', marginBottom: '14px' }}>
             <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gold-text)', marginBottom: '12px' }}>MSME Registration Details</div>
-            <Field id="msme_details" label="MSME Registration Details" required error={errors.msme_details}
+            <Field id="msme_details" label="MSME Registration Details" required error={liveErrors.msme_details}
               hint="If MSME is yes, please provide the registration details">
               <textarea
                 value={f.msme_details}
@@ -980,7 +969,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                 placeholder="MSME Udyam Registration Number, category (Micro/Small/Medium), etc."
                 rows={3}
                 style={{
-                  width: '100%', border: `1px solid ${errors.msme_details ? 'var(--clay-text)' : 'var(--gold-border)'}`,
+                  width: '100%', border: `1px solid ${liveErrors.msme_details ? 'var(--clay-text)' : 'var(--gold-border)'}`,
                   borderRadius: 'var(--radius-sm)', padding: '10px', fontSize: '13px', color: 'var(--ink)',
                   outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit',
                   background: 'var(--surface-card)',
@@ -990,7 +979,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
             <FileUpload id="msme_cert"
               label="MSME Registration Certificate"
               required
-              error={errors.msme_cert}
+              error={liveErrors.msme_cert}
               existing={msmeCertPath}
               file={msmeCertFile}
               onChange={setMsmeCertFile}
@@ -1041,7 +1030,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
               }
 
               return (
-                <Field id="gstin" label="GSTIN / UIN" required error={errors.gstin}>
+                <Field id="gstin" label="GSTIN / UIN" required error={liveErrors.gstin}>
                   <input
                     type="text"
                     value={f.gstin}
@@ -1054,7 +1043,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                     maxLength={15}
                     disabled={!gstinEnabled}
                     style={gstinEnabled
-                      ? { ...inputStyle(!!errors.gstin, { fontFamily: 'monospace', letterSpacing: '0.08em' }), borderColor }
+                      ? { ...inputStyle(!!liveErrors.gstin, { fontFamily: 'monospace', letterSpacing: '0.08em' }), borderColor }
                       : disabledStyle}
                   />
                   {/* Validate link — shows once 15 chars entered, hides after validation */}
@@ -1120,7 +1109,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
             <FileUpload id="gst_cert"
               label="GST Registration Certificate"
               required
-              error={errors.gst_cert}
+              error={liveErrors.gst_cert}
               existing={gstCertPath}
               file={gstCertFile}
               onChange={setGstCertFile}
@@ -1145,7 +1134,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
             <FileUpload id="cheque"
               label="Cancelled Cheque or Bank Statement / Passbook"
               required={!isEdit}
-              error={errors.cheque}
+              error={liveErrors.cheque}
               existing={chequePath}
               file={chequeFile}
               onChange={handleChequeFile}
@@ -1160,7 +1149,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
             <FileUpload id="pan_copy"
               label="PAN Copy"
               required={!isEdit}
-              error={errors.pan_copy}
+              error={liveErrors.pan_copy}
               existing={panPath}
               file={panFile}
               onChange={setPanFile}
@@ -1171,7 +1160,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
               <FileUpload id="reg_cert"
                 label={incorporationDocLabel(f.org_type)}
                 required={!isEdit}
-                error={errors.reg_cert}
+                error={liveErrors.reg_cert}
                 existing={regCertPath}
                 file={regCertFile}
                 onChange={setRegCertFile}
@@ -1198,17 +1187,17 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         <SectionHeader number="3" title="Contact & Registration" subtitle="Point of contact and legal registration" />
         <div style={grid2}>
           <div style={full}>
-            <Field id="contact_person" label="Contact Person" required error={errors.contact_person} hint="Letters and spaces only">
+            <Field id="contact_person" label="Contact Person" required error={liveErrors.contact_person} hint="Letters and spaces only">
               <input
                 type="text"
                 value={f.contact_person}
                 onChange={e => setF(p => ({ ...p, contact_person: e.target.value.replace(/[^A-Za-z ]/g, '') }))}
                 placeholder="Full name"
-                style={inputStyle(!!errors.contact_person)}
+                style={inputStyle(!!liveErrors.contact_person)}
               />
             </Field>
           </div>
-          <Field id="phone" label="Telephone Number" required error={errors.phone}
+          <Field id="phone" label="Telephone Number" required error={liveErrors.phone}
             hint={phonePrefix === '+91' ? 'Mobile number' : 'Landline — include STD code'}>
             <div style={{ display: 'flex', gap: '6px' }}>
               <div style={{ display: 'flex', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', overflow: 'hidden', flexShrink: 0 }}>
@@ -1236,26 +1225,26 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                 }))}
                 placeholder={phonePrefix === '+91' ? '9876543210' : 'e.g. 080-12345678'}
                 maxLength={phonePrefix === '+91' ? 10 : 15}
-                style={{ flex: 1, ...inputStyle(!!errors.phone) }}
+                style={{ flex: 1, ...inputStyle(!!liveErrors.phone) }}
               />
             </div>
           </Field>
-          <Field id="email" label="PoC Email ID" required error={errors.email}>
-            <Inp field="email" f={f} setF={setF} placeholder="contact@organisation.com" type="email" err={!!errors.email} />
+          <Field id="email" label="PoC Email ID" required error={liveErrors.email}>
+            <Inp field="email" f={f} setF={setF} placeholder="contact@organisation.com" type="email" err={!!liveErrors.email} />
           </Field>
           <Field label="Organisation Website">
             <Inp field="website" f={f} setF={setF} placeholder="https://organisation.com" />
           </Field>
-          <Field id="org_registration_number" label="Organisation Registration Number" required error={errors.org_registration_number}
+          <Field id="org_registration_number" label="Organisation Registration Number" required error={liveErrors.org_registration_number}
             hint={isIndividual ? 'Individual vendors do not have a registration number' : undefined}>
-            <Inp field="org_registration_number" f={f} setF={setF} placeholder="e.g. U74999KA2020PTC…" err={!!errors.org_registration_number} mono disabled={isIndividual} />
+            <Inp field="org_registration_number" f={f} setF={setF} placeholder="e.g. U74999KA2020PTC…" err={!!liveErrors.org_registration_number} mono disabled={isIndividual} />
           </Field>
           <Field label="Organisation Registration State"
             hint="Fill this to unlock the GSTIN field">
             <Sel field="org_registration_state" f={f} setF={setF} options={INDIAN_STATES} placeholder="Select state…" />
           </Field>
           <div style={full}>
-            <Field id="is_related_to_org" label="Is this vendor you are creating related to or connected with you personally?" required error={errors.is_related_to_org}>
+            <Field id="is_related_to_org" label="Is this vendor you are creating related to or connected with you personally?" required error={liveErrors.is_related_to_org}>
               <YesNo
                 value={f.is_related_to_org}
                 onChange={v => setF(p => ({ ...p, is_related_to_org: v }))}
@@ -1264,14 +1253,14 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           </div>
           {f.is_related_to_org === true && (
             <div style={full}>
-              <Field id="related_org_description" label="Describe the relationship / connection" required error={errors.related_org_description}>
+              <Field id="related_org_description" label="Describe the relationship / connection" required error={liveErrors.related_org_description}>
                 <textarea
                   value={f.related_org_description}
                   onChange={e => setF(p => ({ ...p, related_org_description: e.target.value }))}
                   placeholder="e.g. Vendor is owned by a family member of an employee"
                   rows={3}
                   style={{
-                    width: '100%', border: `1px solid ${errors.related_org_description ? 'var(--clay-text)' : 'var(--taupe-400)'}`,
+                    width: '100%', border: `1px solid ${liveErrors.related_org_description ? 'var(--clay-text)' : 'var(--taupe-400)'}`,
                     borderRadius: 'var(--radius-sm)', padding: '10px', fontSize: '13px', color: 'var(--ink)',
                     outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit',
                     background: 'var(--surface-card)',
@@ -1290,14 +1279,14 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         <SectionHeader number="4" title="Bank Account Details" subtitle="Beneficiary details for payment processing" />
         <div style={grid2}>
           <div style={full}>
-            <Field id="beneficiary_name" label="Beneficiary Name" required error={errors.beneficiary_name}>
-              <Inp field="beneficiary_name" f={f} setF={setF} placeholder="Name as on bank account" err={!!errors.beneficiary_name} />
+            <Field id="beneficiary_name" label="Beneficiary Name" required error={liveErrors.beneficiary_name}>
+              <Inp field="beneficiary_name" f={f} setF={setF} placeholder="Name as on bank account" err={!!liveErrors.beneficiary_name} />
             </Field>
           </div>
-          <Field id="account_number" label="Account Number" required error={errors.account_number}>
-            <Inp field="account_number" f={f} setF={setF} placeholder="" mono err={!!errors.account_number} />
+          <Field id="account_number" label="Account Number" required error={liveErrors.account_number}>
+            <Inp field="account_number" f={f} setF={setF} placeholder="" mono err={!!liveErrors.account_number} />
           </Field>
-          <Field id="ifsc_code" label="IFSC Code" required error={errors.ifsc_code}>
+          <Field id="ifsc_code" label="IFSC Code" required error={liveErrors.ifsc_code}>
             <div style={{ display: 'flex', gap: '6px' }}>
               <input
                 type="text"
@@ -1313,7 +1302,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                 }}
                 placeholder="SBIN0001234"
                 maxLength={11}
-                style={{ flex: 1, ...inputStyle(!!errors.ifsc_code, { fontFamily: 'monospace' }) }}
+                style={{ flex: 1, ...inputStyle(!!liveErrors.ifsc_code, { fontFamily: 'monospace' }) }}
               />
               {ifscLooking && (
                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', alignSelf: 'center', flexShrink: 0 }}>Looking up…</div>
@@ -1326,8 +1315,8 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
               </div>
             )}
           </Field>
-          <Field id="bank_name" label="Bank Name" required error={errors.bank_name}>
-            <Inp field="bank_name" f={f} setF={setF} placeholder="e.g. State Bank of India" disabled={branchLocked} err={!!errors.bank_name} />
+          <Field id="bank_name" label="Bank Name" required error={liveErrors.bank_name}>
+            <Inp field="bank_name" f={f} setF={setF} placeholder="e.g. State Bank of India" disabled={branchLocked} err={!!liveErrors.bank_name} />
             {branchLocked && (
               <span
                 onClick={() => setBranchLocked(false)}
@@ -1338,8 +1327,8 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
             )}
           </Field>
           <div style={full}>
-            <Field id="branch" label="Branch" required error={errors.branch}>
-              <Inp field="branch" f={f} setF={setF} placeholder="e.g. MG Road, Bangalore" disabled={branchLocked} err={!!errors.branch} />
+            <Field id="branch" label="Branch" required error={liveErrors.branch}>
+              <Inp field="branch" f={f} setF={setF} placeholder="e.g. MG Road, Bangalore" disabled={branchLocked} err={!!liveErrors.branch} />
               {branchLocked && (
                 <span
                   onClick={() => setBranchLocked(false)}
@@ -1364,12 +1353,18 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           Draft saved ✓ {draftSavedAt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
         </div>
       )}
-      {Object.keys(errors).length > 0 && (
+      {attemptedMode && Object.values(liveErrors).some(v => typeof v === 'string') && (
         <div style={{ background: 'var(--clay-bg)', border: '1px solid var(--clay-border)', borderRadius: 'var(--radius-md)', padding: '12px 16px', marginBottom: '16px' }}>
           <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--clay-text)', marginBottom: '6px' }}>Please fix the following before submitting:</div>
           <ul style={{ margin: 0, paddingLeft: '16px' }}>
-            {Object.values(errors).map((msg, i) => (
-              <li key={i} style={{ fontSize: '12px', color: 'var(--clay-text)', marginBottom: '2px' }}>{msg}</li>
+            {Object.entries(liveErrors).filter(([, v]) => typeof v === 'string').map(([key, msg]) => (
+              <li
+                key={key}
+                onClick={() => scrollToField(key)}
+                style={{ fontSize: '12px', color: 'var(--clay-text)', marginBottom: '2px', cursor: 'pointer', textDecoration: 'underline' }}
+              >
+                {msg}
+              </li>
             ))}
           </ul>
         </div>

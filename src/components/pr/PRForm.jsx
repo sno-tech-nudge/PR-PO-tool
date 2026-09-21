@@ -298,8 +298,10 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
     setErrors(e)
     if (step === 1 && belowThreshold) { setShowBelowBlock(true); return }
     if (Object.keys(e).length) {
+      // Stay put — the warning list renders right above the Continue
+      // button, exactly where the person already is, instead of yanking
+      // them up to the top of a long step just to read it.
       setAttemptedNext(true)
-      window.scrollTo({ top: 0 })
       return
     }
     setAttemptedNext(false)
@@ -553,6 +555,13 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
     )
   }
 
+  // Once a Continue/Review attempt has failed, recompute validation fresh on
+  // every render (not just on the next click) so a warning clears the
+  // instant its field is actually fixed, instead of lingering stale until
+  // the person clicks Continue again. Before any attempt, falls back to the
+  // real `errors` state (only ever touched by per-field onBlur checks).
+  const liveErrors = attemptedNext ? validateStep(step) : errors
+
   return (
     <div style={{ maxWidth: '640px', margin: '0 auto', padding: '24px 20px 80px' }}>
       {/* Header */}
@@ -574,25 +583,6 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
         </div>
       )}
 
-      {attemptedNext && Object.values(errors).some(v => typeof v === 'string') && (
-        <div style={{ background: 'var(--clay-bg)', border: '1px solid var(--clay-border)', borderRadius: 'var(--radius-sm)', padding: '12px 14px', marginBottom: '12px' }}>
-          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--clay-text)', marginBottom: '4px' }}>
-            Please fix the following before continuing:
-          </div>
-          <ul style={{ margin: 0, paddingLeft: '18px' }}>
-            {Object.entries(errors).filter(([, v]) => typeof v === 'string').map(([key, msg]) => (
-              <li
-                key={key}
-                onClick={() => scrollToField(key)}
-                style={{ fontSize: '12px', color: 'var(--clay-text)', lineHeight: 1.6, cursor: 'pointer', textDecoration: 'underline' }}
-              >
-                {msg}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
       {/* Slim progress bar — purely cosmetic, tucked above the step circles
           rather than anywhere near the form fields themselves. */}
       <div style={{ height: '4px', background: 'var(--taupe-100)', borderRadius: 'var(--radius-xs)', marginBottom: '18px', overflow: 'hidden' }}>
@@ -608,18 +598,18 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
       {/* ── Section 1: Program & Donor Details ── */}
       {step === 0 && (
         <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '24px' }}>
-          <Field id="allocations" label="Donor / Programme Allocation" error={errors.allocations} required hint="Split this spend across donors / programmes — must total 100%">
-            <DonorAllocations value={allocations} onChange={setAllocations} error={errors.allocations} />
+          <Field id="allocations" label="Donor / Programme Allocation" error={liveErrors.allocations} required hint="Split this spend across donors / programmes — must total 100%">
+            <DonorAllocations value={allocations} onChange={setAllocations} error={liveErrors.allocations} />
           </Field>
 
           {allocationsValid && (
-            <Field id="budgeted" label="Budgeted?" error={errors.budgeted} required hint="Is this spend within an approved budget line?">
+            <Field id="budgeted" label="Budgeted?" error={liveErrors.budgeted} required hint="Is this spend within an approved budget line?">
               <YesNoToggle value={budgeted} onChange={setBudgeted} />
             </Field>
           )}
 
           {allocationsValid && budgeted !== null && (
-            <Field id="expenseType" label="Expense Nature" error={errors.expenseType} required hint="Revenue vs capital classification">
+            <Field id="expenseType" label="Expense Nature" error={liveErrors.expenseType} required hint="Revenue vs capital classification">
               {sel(expenseType, setExpenseType, EXPENSE_NATURES, 'Select nature…', () => validateField('expenseType'))}
             </Field>
           )}
@@ -638,7 +628,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
             Only <strong>approved vendors</strong> can be selected. New vendors must complete the vendor registration process before a PR can be raised.
           </PolicyBanner>
 
-          <Field id="vendorId" label="Approved Vendor" error={errors.vendorId} required>
+          <Field id="vendorId" label="Approved Vendor" error={liveErrors.vendorId} required>
             <VendorSelector value={vendorId} onChange={handleVendorSelect} />
           </Field>
 
@@ -650,7 +640,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
             <AmountBreakdown
               value={breakdown}
               onChange={setBreakdown}
-              errors={{ ...(errors.amount ? { base: errors.amount } : {}), ...(errors.itemFields ? { category: true } : {}) }}
+              errors={{ ...(liveErrors.amount ? { base: liveErrors.amount } : {}), ...(liveErrors.itemFields ? { category: true } : {}) }}
             />
           </div>
 
@@ -667,7 +657,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
           )}
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <Field id="fromDate" label="From Date" error={errors.fromDate} required>
+            <Field id="fromDate" label="From Date" error={liveErrors.fromDate} required>
               <input
                 type="date"
                 value={fromDate}
@@ -681,7 +671,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
                 style={{ width: '100%', height: '38px', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', padding: '0 10px', fontSize: '13px', color: 'var(--ink)', background: 'var(--surface-card)', outline: 'none', boxSizing: 'border-box' }}
               />
             </Field>
-            <Field id="toDate" label="To Date" error={errors.toDate} required>
+            <Field id="toDate" label="To Date" error={liveErrors.toDate} required>
               <input
                 type="date"
                 value={toDate}
@@ -693,7 +683,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
             </Field>
           </div>
 
-          <Field id="purpose" label="Purpose / Description" error={errors.purpose} required>
+          <Field id="purpose" label="Purpose / Description" error={liveErrors.purpose} required>
             <textarea
               value={purpose}
               onChange={e => setPurpose(e.target.value)}
@@ -717,7 +707,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
           </div>
 
           {isRecurring && (
-            <Field id="frequency" label="Frequency" error={errors.frequency} required>
+            <Field id="frequency" label="Frequency" error={liveErrors.frequency} required>
               {sel(frequency, setFrequency, FREQUENCIES, 'Select frequency…', () => validateField('frequency'))}
             </Field>
           )}
@@ -730,12 +720,12 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
               <PolicyBanner type="info">
                 <strong>Policy requirement:</strong> {requiredQuotes} quote{requiredQuotes > 1 ? 's are' : ' is'} required for this purchase (₹{numericAmount.toLocaleString('en-IN')}). Quotes ensure the organisation gets the best price.
               </PolicyBanner>
-              <QuoteRows value={quoteState} onChange={setQuoteState} requiredQuotes={requiredQuotes} error={errors.quotes} entity={primaryAllocation(allocations)?.entity} />
+              <QuoteRows value={quoteState} onChange={setQuoteState} requiredQuotes={requiredQuotes} error={liveErrors.quotes} entity={primaryAllocation(allocations)?.entity} />
             </div>
 
             <div id="advance" style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '24px', scrollMarginTop: '80px' }}>
               <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--ink)', marginBottom: '4px' }}>Payment Terms</div>
-              <AdvanceTable value={advanceState} onChange={setAdvanceState} error={errors.advance} />
+              <AdvanceTable value={advanceState} onChange={setAdvanceState} error={liveErrors.advance} />
             </div>
           </div>
         )}
@@ -837,7 +827,26 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
 
       {/* Navigation */}
       {step < STEPS.length - 1 && (
-        <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+        <>
+          {attemptedNext && Object.values(liveErrors).some(v => typeof v === 'string') && (
+            <div style={{ background: 'var(--clay-bg)', border: '1px solid var(--clay-border)', borderRadius: 'var(--radius-sm)', padding: '12px 14px', marginTop: '20px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--clay-text)', marginBottom: '4px' }}>
+                Please fix the following before continuing:
+              </div>
+              <ul style={{ margin: 0, paddingLeft: '18px' }}>
+                {Object.entries(liveErrors).filter(([, v]) => typeof v === 'string').map(([key, msg]) => (
+                  <li
+                    key={key}
+                    onClick={() => scrollToField(key)}
+                    style={{ fontSize: '12px', color: 'var(--clay-text)', lineHeight: 1.6, cursor: 'pointer', textDecoration: 'underline' }}
+                  >
+                    {msg}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
           {step > 0 && (
             <button
               onClick={() => { setErrors({}); setAttemptedNext(false); setStep(s => s - 1) }}
@@ -861,7 +870,8 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
               {savingDraft ? 'Saving…' : 'Save as Draft'}
             </button>
           )}
-        </div>
+          </div>
+        </>
       )}
 
       {step === STEPS.length - 1 && (
