@@ -78,7 +78,7 @@ function PolicyBanner({ type, children }) {
   const styles = {
     warning: { bg: 'var(--gold-bg)', border: 'var(--gold-border)', text: 'var(--gold-text)' },
     error:   { bg: 'var(--clay-bg)', border: 'var(--clay-border)', text: 'var(--clay-text)' },
-    info:    { bg: 'var(--action-bg)', border: 'var(--taupe-300)', text: '#7c2d12' },
+    info:    { bg: 'var(--action-bg)', border: 'var(--taupe-300)', text: 'var(--action)' },
   }
   const s = styles[type] || styles.info
   return (

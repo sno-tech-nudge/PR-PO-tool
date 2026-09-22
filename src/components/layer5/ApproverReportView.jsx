@@ -225,7 +225,7 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
       {(aiLoading || aiSummary) && (
         <div style={{
           border: '1px solid var(--taupe-200)',
-          borderLeft: `3px solid ${aiSummary?.recommendation === 'approve' ? '#10B981' : 'var(--gold)'}`,
+          borderLeft: `3px solid ${aiSummary?.recommendation === 'approve' ? 'var(--moss)' : 'var(--gold)'}`,
           borderRadius: 'var(--radius-lg)', padding: '14px 16px', marginBottom: '16px',
           background: 'var(--taupe-50)',
         }}>

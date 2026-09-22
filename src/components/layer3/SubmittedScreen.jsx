@@ -10,7 +10,7 @@ export default function SubmittedScreen({ submission, onAddAnother }) {
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <div style={{
             width: '56px', height: '56px', borderRadius: '50%',
-            background: 'var(--moss-bg)', border: '2px solid #86EFAC',
+            background: 'var(--moss-bg)', border: '2px solid var(--moss-border)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             margin: '0 auto 16px', fontSize: '26px',
           }}>✓</div>

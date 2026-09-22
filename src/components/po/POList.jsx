@@ -148,7 +148,7 @@ export default function POList({ user, onViewPO }) {
             {label}
             <span style={{
               marginLeft: '6px', fontSize: '11px', fontWeight: 500,
-              color: tab === key ? '#1D4ED8' : 'var(--text-muted)',
+              color: tab === key ? 'var(--action)' : 'var(--text-muted)',
             }}>
               {tabCount(key)}
             </span>

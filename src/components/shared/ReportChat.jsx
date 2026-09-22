@@ -10,7 +10,7 @@ function fmtTime(ts) {
 
 const ROLE_CONFIG = {
   finance:  { label: 'Finance',  bg: 'var(--action-bg)', border: 'var(--action-bg)', color: 'var(--action)' },
-  approver: { label: 'Approver', bg: 'var(--gold-bg)', border: '#DDD6FE', color: 'var(--gold-text)' },
+  approver: { label: 'Approver', bg: 'var(--gold-bg)', border: 'var(--gold-border)', color: 'var(--gold-text)' },
   employee: { label: 'Employee', bg: 'var(--taupe-50)', border: 'var(--taupe-200)', color: 'var(--ink)' },
 }
 
@@ -160,7 +160,7 @@ export default function ReportChat({ reportId, currentRole, currentName }) {
                     </span>
                   )}
                   {c.resolved && (
-                    <span style={{ fontSize: '10px', color: '#10B981' }}>Resolved</span>
+                    <span style={{ fontSize: '10px', color: 'var(--moss-text)' }}>Resolved</span>
                   )}
                 </div>
                 <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{fmtTime(c.created_at)}</span>

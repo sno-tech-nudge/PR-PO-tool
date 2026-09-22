@@ -28,7 +28,7 @@ export default function PolicyViolation({ violation, expense }) {
     <div style={{
       border: '1px solid var(--clay-border)',
       borderRadius: 'var(--radius-lg)',
-      background: '#FFF5F5',
+      background: 'var(--clay-bg)',
       padding: '14px 16px',
       marginBottom: '10px',
     }}>

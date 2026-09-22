@@ -121,12 +121,21 @@ const inputStyle = (err, extra = {}) => ({
 })
 const disabledStyle = { ...inputStyle(false), background: 'var(--taupe-100)', color: 'var(--text-muted)', cursor: 'not-allowed' }
 
-function Inp({ field, f, setF, placeholder, type = 'text', disabled, mono, err, upper, maxLength }) {
+// `filter` strips characters live as the person types (e.g. digits-only for
+// an account number) — the same guardrail pattern as phone/Aadhaar below,
+// pulled onto the shared input so any field can opt in with one prop
+// instead of hand-rolling its own onChange.
+function Inp({ field, f, setF, placeholder, type = 'text', disabled, mono, err, upper, maxLength, filter }) {
   return (
     <input
       type={type}
       value={f[field]}
-      onChange={e => !disabled && setF(prev => ({ ...prev, [field]: upper ? e.target.value.toUpperCase() : e.target.value }))}
+      onChange={e => {
+        if (disabled) return
+        let v = filter ? filter(e.target.value) : e.target.value
+        if (upper) v = v.toUpperCase()
+        setF(prev => ({ ...prev, [field]: v }))
+      }}
       placeholder={placeholder}
       disabled={disabled}
       maxLength={maxLength}
@@ -148,31 +157,42 @@ function Sel({ field, f, setF, options, placeholder, err }) {
   )
 }
 
-function Toggle({ label, checked, onChange }) {
+// `disabled` + `hint` let a toggle be visible but not clickable yet — used
+// by GSTIN below so the person sees the option exists (rather than it just
+// not being there) but can't turn it on until its real prerequisites are
+// filled, with the hint explaining exactly what's still needed instead of
+// letting them flip it on into a half-broken, disabled-input card.
+function Toggle({ label, checked, onChange, disabled, hint }) {
   return (
-    <label style={{
-      display: 'flex', alignItems: 'center', gap: '10px',
-      cursor: 'pointer', padding: '12px 16px',
-      background: checked ? 'var(--action-bg)' : 'var(--taupe-50)',
-      border: `1px solid ${checked ? 'var(--taupe-300)' : 'var(--taupe-200)'}`,
-      borderRadius: 'var(--radius-md)', fontSize: '13px', fontWeight: 500,
-      color: checked ? 'var(--action)' : 'var(--ink)', userSelect: 'none', transition: '0.15s',
-    }}>
-      <div style={{
-        width: '36px', height: '20px', borderRadius: 'var(--radius-lg)',
-        background: checked ? 'var(--action)' : 'var(--taupe-400)',
-        position: 'relative', transition: '0.2s', flexShrink: 0,
+    <div>
+      <label style={{
+        display: 'flex', alignItems: 'center', gap: '10px',
+        cursor: disabled ? 'not-allowed' : 'pointer', padding: '12px 16px',
+        background: disabled ? 'var(--taupe-100)' : (checked ? 'var(--action-bg)' : 'var(--taupe-50)'),
+        border: `1px solid ${checked ? 'var(--taupe-300)' : 'var(--taupe-200)'}`,
+        borderRadius: 'var(--radius-md)', fontSize: '13px', fontWeight: 500,
+        color: disabled ? 'var(--text-muted)' : (checked ? 'var(--action)' : 'var(--ink)'),
+        userSelect: 'none', transition: '0.15s',
       }}>
         <div style={{
-          position: 'absolute', top: '2px',
-          left: checked ? '18px' : '2px',
-          width: '16px', height: '16px', borderRadius: '50%',
-          background: 'var(--surface-card)', transition: '0.2s',
-        }} />
-      </div>
-      <input type="checkbox" checked={checked} onChange={onChange} style={{ display: 'none' }} />
-      {label}
-    </label>
+          width: '36px', height: '20px', borderRadius: 'var(--radius-lg)',
+          background: disabled ? 'var(--taupe-300)' : (checked ? 'var(--action)' : 'var(--taupe-400)'),
+          position: 'relative', transition: '0.2s', flexShrink: 0,
+        }}>
+          <div style={{
+            position: 'absolute', top: '2px',
+            left: checked ? '18px' : '2px',
+            width: '16px', height: '16px', borderRadius: '50%',
+            background: 'var(--surface-card)', transition: '0.2s',
+          }} />
+        </div>
+        <input type="checkbox" checked={checked} disabled={disabled} onChange={onChange} style={{ display: 'none' }} />
+        {label}
+      </label>
+      {disabled && hint && (
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', paddingLeft: '2px' }}>{hint}</div>
+      )}
+    </div>
   )
 }
 
@@ -730,6 +750,9 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
     if (submit && !f.org_registration_number.trim()) e.org_registration_number = 'Required'
     if (submit && !f.beneficiary_name.trim())      e.beneficiary_name = 'Required'
     if (submit && !f.account_number.trim())        e.account_number = 'Required'
+    else if (f.account_number && (f.account_number.length < 9 || f.account_number.length > 18)) {
+      e.account_number = 'Enter a 9-18 digit account number'
+    }
     if (submit) {
       if (!IFSC_RE.test(f.ifsc_code.toUpperCase().trim())) e.ifsc_code = 'Invalid IFSC (e.g. SBIN0001234)'
     } else if (f.ifsc_code && !IFSC_RE.test(f.ifsc_code.toUpperCase().trim())) {
@@ -1047,10 +1070,16 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
             <input
               type="text"
               value={f.pan_number}
-              onChange={e => { setF(p => ({ ...p, pan_number: e.target.value.toUpperCase() })); setPanDupAcknowledged(false) }}
+              onChange={e => {
+                // Filter then cap length — in that order, not via the native
+                // maxLength attribute, which truncates the raw keystrokes
+                // *before* this filter runs and can leave fewer than 10 real
+                // characters if a stray symbol was typed within the limit.
+                setF(p => ({ ...p, pan_number: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10) }))
+                setPanDupAcknowledged(false)
+              }}
               onBlur={e => checkPanDuplicates(e.target.value)}
               placeholder="ABCDE1234F"
-              maxLength={10}
               style={inputStyle(!!liveErrors.pan_number, { fontFamily: 'monospace', letterSpacing: '0.1em' })}
             />
             {PAN_RE.test(f.pan_number.toUpperCase().trim()) && (
@@ -1082,15 +1111,14 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         {/* Individual/Proprietorship vendor — Aadhaar (per the Finance
             requirements sheet, both share the same document requirements) */}
         {isIndividual && (
-          <div style={{ background: 'var(--gold-bg)', border: '1px solid #DDD6FE', borderRadius: 'var(--radius-md)', padding: '16px', marginBottom: '14px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#5B21B6', marginBottom: '12px' }}>Aadhaar Details (Individual Vendor)</div>
+          <div style={{ background: 'var(--gold-bg)', border: '1px solid var(--gold-border)', borderRadius: 'var(--radius-md)', padding: '16px', marginBottom: '14px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gold-text)', marginBottom: '12px' }}>Aadhaar Details (Individual Vendor)</div>
             <Field id="aadhaar_number" label="Aadhaar Number" required error={liveErrors.aadhaar_number}>
               <input
                 type="text"
                 value={f.aadhaar_number}
-                onChange={e => setF(p => ({ ...p, aadhaar_number: e.target.value.replace(/\D/g, '') }))}
+                onChange={e => setF(p => ({ ...p, aadhaar_number: e.target.value.replace(/\D/g, '').slice(0, 12) }))}
                 placeholder="123412341234"
-                maxLength={12}
                 style={inputStyle(!!liveErrors.aadhaar_number, { fontFamily: 'monospace', letterSpacing: '0.08em' })}
               />
             </Field>
@@ -1245,10 +1273,11 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                 value={f.phone}
                 onChange={e => setF(p => ({
                   ...p,
-                  phone: phonePrefix === '+91' ? e.target.value.replace(/\D/g, '') : e.target.value.replace(/[^0-9\- ]/g, ''),
+                  phone: phonePrefix === '+91'
+                    ? e.target.value.replace(/\D/g, '').slice(0, 10)
+                    : e.target.value.replace(/[^0-9\- ]/g, '').slice(0, 15),
                 }))}
                 placeholder={phonePrefix === '+91' ? '9876543210' : 'e.g. 080-12345678'}
-                maxLength={phonePrefix === '+91' ? 10 : 15}
                 style={{ flex: 1, ...inputStyle(!!liveErrors.phone) }}
               />
             </div>
@@ -1323,6 +1352,8 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           <Toggle
             label="GSTIN Registration Present?"
             checked={f.is_gstin_registered}
+            disabled={!f.is_gstin_registered && !gstinEnabled}
+            hint="Fill Organisation Registration State and a valid PAN Number above first — GSTIN is validated against them."
             onChange={e => setF(p => ({ ...p, is_gstin_registered: e.target.checked, gstin: '' }))}
           />
         </div>
@@ -1340,10 +1371,9 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                 value={f.gstin}
                 onChange={e => {
                   if (!gstinEnabled) return
-                  setF(p => ({ ...p, gstin: e.target.value.toUpperCase() }))
+                  setF(p => ({ ...p, gstin: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 15) }))
                 }}
                 placeholder={gstinEnabled ? '29ABCDE1234F1Z5' : 'Fill state and PAN first…'}
-                maxLength={15}
                 disabled={!gstinEnabled}
                 style={gstinEnabled
                   ? inputStyle(!!liveErrors.gstin, {
@@ -1459,7 +1489,8 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
             </Field>
           </div>
           <Field id="account_number" label="Account Number" required error={liveErrors.account_number}>
-            <Inp field="account_number" f={f} setF={setF} placeholder="" mono err={!!liveErrors.account_number} />
+            <Inp field="account_number" f={f} setF={setF} placeholder="" mono err={!!liveErrors.account_number}
+              filter={v => v.replace(/\D/g, '').slice(0, 18)} />
           </Field>
           <Field id="ifsc_code" label="IFSC Code" required error={liveErrors.ifsc_code}>
             <div style={{ display: 'flex', gap: '6px' }}>
@@ -1467,7 +1498,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                 type="text"
                 value={f.ifsc_code}
                 onChange={e => {
-                  const code = e.target.value.toUpperCase()
+                  const code = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11)
                   setF(p => ({ ...p, ifsc_code: code }))
                   // Auto-fill the moment a valid 11-character IFSC is typed
                   // (or pasted) — no blur/button needed. Re-fires the same
@@ -1476,7 +1507,6 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                   if (IFSC_RE.test(code)) lookupIFSC(code)
                 }}
                 placeholder="SBIN0001234"
-                maxLength={11}
                 style={{ flex: 1, ...inputStyle(!!liveErrors.ifsc_code, { fontFamily: 'monospace' }) }}
               />
               {ifscLooking && (

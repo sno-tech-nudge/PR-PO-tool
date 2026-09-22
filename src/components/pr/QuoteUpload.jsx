@@ -131,7 +131,7 @@ export default function QuoteUpload({ onExtracted, onFileUploaded, skipExtractio
             ].map(([label, val]) => val ? (
               <div key={label}>
                 <div style={{ fontSize: '10px', color: 'var(--moss-text)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1px' }}>{label}</div>
-                <div style={{ fontSize: '13px', color: '#14532D', fontWeight: 500 }}>{val}</div>
+                <div style={{ fontSize: '13px', color: 'var(--moss-text)', fontWeight: 500 }}>{val}</div>
               </div>
             ) : null)}
           </div>
@@ -139,7 +139,7 @@ export default function QuoteUpload({ onExtracted, onFileUploaded, skipExtractio
             <div style={{ marginTop: '10px' }}>
               <div style={{ fontSize: '10px', color: 'var(--moss-text)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>Line Items</div>
               {extracted.line_items.map((item, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#14532D', marginBottom: '2px' }}>
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--moss-text)', marginBottom: '2px' }}>
                   <span>{item.description}</span>
                   <span>{item.total != null ? `INR ${Number(item.total).toLocaleString('en-IN')}` : ''}</span>
                 </div>

@@ -282,7 +282,7 @@ export default function FinanceDashboard({ user, showToast, onBack }) {
                 onClick={() => setTab('pending')}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
-                  background: '#FFF7ED', border: '1px solid #FED7AA',
+                  background: 'var(--clay-bg)', border: '1px solid var(--clay-border)',
                   padding: '6px 14px', cursor: 'pointer', borderRadius: 'var(--radius-sm)',
                 }}
               >
@@ -290,10 +290,10 @@ export default function FinanceDashboard({ user, showToast, onBack }) {
                   width: '8px', height: '8px', borderRadius: '50%',
                   background: 'var(--clay)', flexShrink: 0,
                 }} />
-                <span style={{ fontSize: '12px', color: '#9A3412', fontWeight: 500 }}>
+                <span style={{ fontSize: '12px', color: 'var(--clay-text)', fontWeight: 500 }}>
                   {pendingCount} report{pendingCount !== 1 ? 's' : ''} awaiting payment
                 </span>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: '#7C2D12' }}>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--clay-text)' }}>
                   INR {Number(pendingTotal).toLocaleString('en-IN')}
                 </span>
               </div>

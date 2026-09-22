@@ -363,7 +363,7 @@ export default function ReportStatus({ reportId, onBack, onStartNew, onViewPO })
             <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--moss-text)' }}>
               Verified by Finance
             </div>
-            <div style={{ fontSize: '11px', color: '#166534', marginTop: '2px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--moss-text)', marginTop: '2px' }}>
               {report.vouched_by || 'Finance Team'} · {new Date(report.vouched_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
             </div>
           </div>

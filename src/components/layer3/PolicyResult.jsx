@@ -126,7 +126,7 @@ export default function PolicyResult({ results, expenses, onSubmitted, onProceed
         <div style={{ textAlign: 'center', padding: '20px 0 16px' }}>
           <div style={{
             width: '44px', height: '44px', borderRadius: '50%',
-            background: 'var(--moss-bg)', border: '2px solid #86EFAC',
+            background: 'var(--moss-bg)', border: '2px solid var(--moss-border)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             margin: '0 auto 10px', fontSize: '18px',
           }}>

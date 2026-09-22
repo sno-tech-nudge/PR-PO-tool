@@ -288,7 +288,7 @@ export default function AdminReportDetail({ reportId, user, onBack, onViewAuditT
               <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--gold-text)' }}>
                 {flagged.length} Flagged Expense{flagged.length !== 1 ? 's' : ''}
               </div>
-              <div style={{ fontSize: '11px', color: '#78350F', marginTop: '2px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--gold-text)', marginTop: '2px' }}>
                 {flagged.map(e => e.vendor || 'Unknown').join(' · ')}
               </div>
             </div>

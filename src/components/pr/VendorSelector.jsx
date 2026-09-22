@@ -109,7 +109,7 @@ export default function VendorSelector({ value, onChange }) {
             ].map(([label, val]) => (
               <div key={label}>
                 <div style={{ fontSize: '10px', color: 'var(--action)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1px' }}>{label}</div>
-                <div style={{ fontSize: '12px', color: '#1E3A8A', fontWeight: 500 }}>{val}</div>
+                <div style={{ fontSize: '12px', color: 'var(--action)', fontWeight: 500 }}>{val}</div>
               </div>
             ))}
           </div>

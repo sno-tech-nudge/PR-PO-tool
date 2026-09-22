@@ -1,6 +1,6 @@
 const SEVERITY_STYLES = {
-  high: { bg: '#FFF7ED', border: '#FED7AA', dot: 'var(--clay)', text: '#9A3412', label: '#C2410C' },
-  medium: { bg: 'var(--gold-bg)', border: 'var(--gold-border)', dot: 'var(--gold-text)', text: '#78350F', label: 'var(--gold-text)' },
+  high: { bg: 'var(--clay-bg)', border: 'var(--clay-border)', dot: 'var(--clay)', text: 'var(--clay-text)', label: 'var(--clay-text)' },
+  medium: { bg: 'var(--gold-bg)', border: 'var(--gold-border)', dot: 'var(--gold-text)', text: 'var(--gold-text)', label: 'var(--gold-text)' },
   low: { bg: '#F0F9FF', border: '#BAE6FD', dot: '#0284C7', text: '#0C4A6E', label: '#075985' },
 }
 
