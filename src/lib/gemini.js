@@ -26,7 +26,14 @@ const REQUEST_TIMEOUT_MS = 12000
 const MAX_ATTEMPTS = 3
 
 async function callGeminiOnce(base64Image, prompt, attempt) {
-  const key = import.meta.env.VITE_GEMINI_API_KEY
+  // import.meta.env is a Vite-only property — undefined under plain Node
+  // (e.g. an api/ serverless function reusing this module for server-side
+  // OCR), where process.env is what actually holds the key instead.
+  // globalThis.process (rather than a bare `process` reference) is what
+  // makes this safe in the browser bundle too, where `process` isn't
+  // declared at all — a bare reference would throw ReferenceError, but a
+  // property access on globalThis just reads back `undefined`.
+  const key = import.meta.env?.VITE_GEMINI_API_KEY || globalThis.process?.env?.VITE_GEMINI_API_KEY
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
   try {

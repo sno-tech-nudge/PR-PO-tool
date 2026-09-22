@@ -1,4 +1,4 @@
-import { callGemini } from './gemini'
+import { callGemini } from './gemini.js'
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions'
 
