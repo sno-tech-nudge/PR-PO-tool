@@ -244,11 +244,6 @@ export default function App() {
   }
 
   function openPRCreate()   { setEditingPR(null); setPRSubScreen('form') }
-  // Home's "New PR"/"New Vendor" quick actions — same entry points as the
-  // Purchase Requests / Vendors nav's own "create" buttons, just reachable
-  // straight from Home without an extra click through the list first.
-  function openPRQuickAdd()     { openPRCreate(); setAppScreen('pr-list') }
-  function openVendorQuickAdd() { openVendorCreate(); setAppScreen('vendors') }
   function openPRDetail(id) { setViewingPRId(id); setPRSubScreen('detail') }
   function openPRList()     { setPRSubScreen('list'); setEditingPR(null); setViewingPRId(null) }
   function openPREdit(pr)   { setEditingPR(pr); setPRSubScreen('form') }
@@ -473,105 +468,48 @@ export default function App() {
               </div>
             </div>
 
-            {user.role === 'employee' ? (
-              <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '20px', marginBottom: '28px' }}>
-                <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--ink)', marginBottom: '16px' }}>Quick Add</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                  <div
-                    onClick={openPRQuickAdd}
-                    style={{
-                      border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '28px 12px',
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                      cursor: 'pointer', minHeight: '148px', boxSizing: 'border-box', textAlign: 'center',
-                    }}
-                  >
-                    <div style={{
-                      width: '44px', height: '44px', borderRadius: '50%', background: 'var(--action-bg)',
-                      color: 'var(--action)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      marginBottom: '10px',
-                    }}>
-                      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
-                        <path d="M14 2v4a2 2 0 0 0 2 2h4" />
-                        <path d="M10 9H8" />
-                        <path d="M16 13H8" />
-                        <path d="M16 17H8" />
-                      </svg>
-                    </div>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink)' }}>New PR</div>
-                  </div>
+            <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '20px', marginBottom: '28px' }}>
+              <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--ink)', marginBottom: '16px' }}>Quick Add</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '14px' }}>
+                <QuickAddDropzone onReady={handleQuickReceipt} />
 
-                  <div
-                    onClick={openVendorQuickAdd}
-                    style={{
-                      border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '28px 12px',
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                      cursor: 'pointer', minHeight: '148px', boxSizing: 'border-box', textAlign: 'center',
-                    }}
-                  >
-                    <div style={{
-                      width: '44px', height: '44px', borderRadius: '50%', background: 'var(--action-bg)',
-                      color: 'var(--action)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      marginBottom: '10px',
-                    }}>
-                      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
-                        <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" />
-                        <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" />
-                        <path d="M10 6h4" />
-                        <path d="M10 10h4" />
-                        <path d="M10 14h4" />
-                        <path d="M10 18h4" />
-                      </svg>
-                    </div>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink)' }}>New Vendor</div>
+                <div
+                  onClick={handleAddAnother}
+                  style={{
+                    border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '28px 12px',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', minHeight: '148px', boxSizing: 'border-box', textAlign: 'center',
+                  }}
+                >
+                  <div style={{
+                    width: '40px', height: '40px', borderRadius: '50%', background: 'var(--action-bg)',
+                    color: 'var(--action)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '18px', fontWeight: 700, marginBottom: '10px',
+                  }}>
+                    +
                   </div>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink)' }}>New Expense</div>
+                </div>
+
+                <div
+                  onClick={handleNewReport}
+                  style={{
+                    border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '28px 12px',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', minHeight: '148px', boxSizing: 'border-box', textAlign: 'center',
+                  }}
+                >
+                  <div style={{
+                    width: '40px', height: '40px', borderRadius: '50%', background: 'var(--action-bg)',
+                    color: 'var(--action)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '16px', marginBottom: '10px',
+                  }}>
+                    ◷
+                  </div>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink)' }}>New Report</div>
                 </div>
               </div>
-            ) : (
-              <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '20px', marginBottom: '28px' }}>
-                <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--ink)', marginBottom: '16px' }}>Quick Add</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '14px' }}>
-                  <QuickAddDropzone onReady={handleQuickReceipt} />
-
-                  <div
-                    onClick={handleAddAnother}
-                    style={{
-                      border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '28px 12px',
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                      cursor: 'pointer', minHeight: '148px', boxSizing: 'border-box', textAlign: 'center',
-                    }}
-                  >
-                    <div style={{
-                      width: '40px', height: '40px', borderRadius: '50%', background: 'var(--action-bg)',
-                      color: 'var(--action)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '18px', fontWeight: 700, marginBottom: '10px',
-                    }}>
-                      +
-                    </div>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink)' }}>New Expense</div>
-                  </div>
-
-                  <div
-                    onClick={handleNewReport}
-                    style={{
-                      border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '28px 12px',
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                      cursor: 'pointer', minHeight: '148px', boxSizing: 'border-box', textAlign: 'center',
-                    }}
-                  >
-                    <div style={{
-                      width: '40px', height: '40px', borderRadius: '50%', background: 'var(--action-bg)',
-                      color: 'var(--action)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '16px', marginBottom: '10px',
-                    }}>
-                      ◷
-                    </div>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink)' }}>New Report</div>
-                  </div>
-                </div>
-              </div>
-            )}
+            </div>
 
             <HomeScreenAddons
               user={user}
