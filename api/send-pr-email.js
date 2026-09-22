@@ -7,7 +7,10 @@ function fmtAmt(n) { return `₹${Number(n || 0).toLocaleString('en-IN')}` }
 
 const TYPES = ['submitted', 'advanced', 'action_needed', 'rejected', 'finalized']
 
-function buildEmail({ type, prNumber, amount, actorName, reason, nextLevelLabel, poNumber, timelineSteps }) {
+// Exported so api/intake/pr.js can send the identical "submitted"
+// confirmation for a PR that came in via Nucleus, instead of duplicating
+// this copy.
+export function buildEmail({ type, prNumber, amount, actorName, reason, nextLevelLabel, poNumber, timelineSteps }) {
   let subject, headline, headlineColor, bodyLine
 
   switch (type) {

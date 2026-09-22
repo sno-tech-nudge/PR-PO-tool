@@ -11,7 +11,10 @@ const STATUS_BADGE = {
   rejected:  { label: 'Rejected',         color: '#B91C1C', bg: '#FEF2F2' },
 }
 
-function buildEmail({ type, vendorOrgName, vendorId, actorName, reason, comment, panNumber, submitterEmail }) {
+// Exported so api/intake/vendor.js can send the identical "submitted"
+// confirmation for a vendor that came in via Nucleus, instead of duplicating
+// this copy.
+export function buildEmail({ type, vendorOrgName, vendorId, actorName, reason, comment, panNumber, submitterEmail }) {
   const isApproved = type === 'approved'
   const isBlockedKyc = type === 'aadhaar_pan_not_linked'
   const vendorLabel = vendorId ? `${vendorOrgName} (${vendorId})` : vendorOrgName
