@@ -32,7 +32,15 @@ function getPeriod(expenses) {
 }
 
 export default function ReportPreview({ expenses, results, reportDetails, user, onSubmitted, onBack }) {
-  const [fallbackReference] = useState(() => generateReportReference())
+  // Defensive only — NewReportModal already generates and saves the real
+  // report_reference before this screen is ever reached, so this almost
+  // never actually gets used. Kept correctly prefixed anyway: vendor if the
+  // report's own po_related/po_id says so, or any of its expenses are
+  // themselves tied to a PO or a registered vendor.
+  const [fallbackReference] = useState(() => generateReportReference(
+    reportDetails?.po_related === true || reportDetails?.po_id != null
+      || expenses.some(e => e.po_number || e.vendor_id)
+  ))
   const reference = reportDetails?.report_reference || fallbackReference
   const reportId = reportDetails?.report_id || null
 

@@ -5,7 +5,10 @@ import { attachPendingBalances, poOptionLabel } from '../../lib/poBalance'
 import StepIndicator from '../shared/StepIndicator'
 
 export default function NewReportModal({ user, onCreated, onClose }) {
-  const [reference] = useState(() => generateReportReference())
+  // Generated once "Related to a Purchase Order?" is answered (in
+  // handleContinue below), not eagerly on mount — the prefix depends on that
+  // answer, which isn't known yet at mount time.
+  const [reference, setReference] = useState('')
   const [businessPurpose, setBusinessPurpose] = useState('')
   const [durationStart, setDurationStart] = useState('')
   const [durationEnd, setDurationEnd] = useState('')
@@ -47,6 +50,10 @@ export default function NewReportModal({ user, onCreated, onClose }) {
       return
     }
     setError(null)
+    // Regenerated every time (not just once) so going Back and switching the
+    // answer always leaves the reference correctly prefixed for whichever
+    // answer is current when Continue is clicked.
+    setReference(generateReportReference(poRelated === true))
     setStep(2)
   }
 
