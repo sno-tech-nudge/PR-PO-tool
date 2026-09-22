@@ -55,6 +55,7 @@ export default function NotificationBell({ user, onOpenReport, onOpenPR, onOpenV
   }
 
   const unreadCount = notifications.filter(n => !n.is_read).length
+  const readCount = notifications.length - unreadCount
 
   async function markRead(id) {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
@@ -64,6 +65,13 @@ export default function NotificationBell({ user, onOpenReport, onOpenPR, onOpenV
   async function markAllRead() {
     setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
     await supabase.from('expense_notifications').update({ is_read: true }).eq('recipient_id', user.email).eq('is_read', false)
+  }
+
+  // Deletes only already-read notifications — unread ones are left alone so
+  // this can never be used to accidentally dismiss something not yet seen.
+  async function clearRead() {
+    setNotifications(prev => prev.filter(n => !n.is_read))
+    await supabase.from('expense_notifications').delete().eq('recipient_id', user.email).eq('is_read', true)
   }
 
   function handleClick(n) {
@@ -111,9 +119,17 @@ export default function NotificationBell({ user, onOpenReport, onOpenPR, onOpenV
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderBottom: '1px solid var(--taupe-100)' }}>
             <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--ink)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Notifications</span>
-            {unreadCount > 0 && (
-              <span onClick={markAllRead} style={{ fontSize: '11px', color: 'var(--action)', cursor: 'pointer' }}>Mark all as read</span>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {unreadCount > 0 && (
+                <span onClick={markAllRead} style={{ fontSize: '11px', color: 'var(--action)', cursor: 'pointer' }}>Mark all as read</span>
+              )}
+              {unreadCount > 0 && readCount > 0 && (
+                <span style={{ fontSize: '11px', color: 'var(--taupe-400)' }}>·</span>
+              )}
+              {readCount > 0 && (
+                <span onClick={clearRead} style={{ fontSize: '11px', color: 'var(--text-muted)', cursor: 'pointer' }}>Clear read</span>
+              )}
+            </div>
           </div>
           <div style={{ overflowY: 'auto', flex: 1 }}>
             {notifications.length === 0 ? (
