@@ -67,7 +67,6 @@ export default function HomeScreenAddons({
   onResumePRDraft, onResumeVendorDraft,
   onOpenExpenseApprovals, onOpenPRApprovals, onOpenFinance,
   onViewPR, onViewVendor, onOpenReportApproval,
-  hideExpenseFeatures = false,
 }) {
   const [stats, setStats]                 = useState(null)
   const [recentReports, setRecentReports] = useState([])
@@ -77,7 +76,7 @@ export default function HomeScreenAddons({
   const [approvalQueue, setApprovalQueue] = useState([])
   const [personalMini, setPersonalMini]   = useState(null)
 
-  useEffect(() => { load() }, [user?.email, hideExpenseFeatures])
+  useEffect(() => { load() }, [user?.email])
 
   async function load() {
     const email = user?.email
@@ -110,20 +109,16 @@ export default function HomeScreenAddons({
       { data: myReportApprovals },
       { data: pipelineReports },
     ] = await Promise.all([
-      hideExpenseFeatures
-        ? Promise.resolve({ count: 0 })
-        : supabase.from('expense_details')
-            .select('*', { count: 'exact', head: true })
-            .eq('status', 'saved')
-            .eq('user_email', email),
-      hideExpenseFeatures
-        ? Promise.resolve({ data: [] })
-        : supabase.from('expense_reports')
-            .select('id,report_reference,total_amount,status,created_at,brand')
-            .eq('employee_email', email)
-            .not('status', 'eq', 'saved')
-            .order('created_at', { ascending: false })
-            .limit(50),
+      supabase.from('expense_details')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'saved')
+        .eq('user_email', email),
+      supabase.from('expense_reports')
+        .select('id,report_reference,total_amount,status,created_at,brand')
+        .eq('employee_email', email)
+        .not('status', 'eq', 'saved')
+        .order('created_at', { ascending: false })
+        .limit(50),
       supabase.from('purchase_requests')
         .select('id, pr_number, amount, vendors(org_name)')
         .eq('requested_by', email)
@@ -189,10 +184,7 @@ export default function HomeScreenAddons({
       role === 'fl'
         ? supabase.from('report_approvals').select('status, created_at, actioned_at').eq('approver_email', email).in('status', ['approved', 'rejected'])
         : Promise.resolve({ data: [] }),
-      // Report amounts for the "In Pipeline" total — fetched independently
-      // of `hideExpenseFeatures` (which only hides the report *list*/detail
-      // UI for employees during this testing round) so the pipeline figure
-      // stays honest even while that list itself stays hidden.
+      // Report amounts for the "In Pipeline" total.
       isEmployee
         ? supabase.from('expense_reports').select('total_amount, status').eq('employee_email', email).in('status', REPORT_PIPELINE_STATUSES)
         : Promise.resolve({ data: [] }),
@@ -270,24 +262,8 @@ export default function HomeScreenAddons({
 
   return (
     <div>
-      {/* Expense reporting stats/history are out of scope for this testing
-          round (Vendor/PR/PO only) — show a plain status card instead. */}
-      {hideExpenseFeatures && (
-        <div style={{ background: 'var(--taupe-50)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '16px 18px', marginBottom: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--ink)' }}>Expense reporting</span>
-            <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: 'var(--radius-md)', background: 'var(--taupe-100)', color: 'var(--text-muted)' }}>
-              Coming soon
-            </span>
-          </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-            We're currently testing Vendor, Purchase Request, and Purchase Order workflows. Expense capture and reports will open up here soon.
-          </div>
-        </div>
-      )}
-
       {/* Stat cards */}
-      {!hideExpenseFeatures && stats && (
+      {stats && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '24px' }}>
           <div style={{ background: 'var(--taupe-50)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '14px 12px' }}>
             <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--ink)', lineHeight: 1 }}>{stats.unreported}</div>
@@ -436,7 +412,7 @@ export default function HomeScreenAddons({
       )}
 
       {/* Recent reports */}
-      {!hideExpenseFeatures && recentActivity.length === 0 && recentReports.length > 0 && (
+      {recentActivity.length === 0 && recentReports.length > 0 && (
         <div style={{ marginBottom: '24px' }}>
           <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
             Recent Reports
@@ -483,24 +459,22 @@ export default function HomeScreenAddons({
       )}
 
       {/* Policy reminders */}
-      {!hideExpenseFeatures && (
-        <div>
-          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
-            Policy Reminders
-          </div>
-          <div style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
-            {POLICY_REMINDERS.map((r, i) => (
-              <div key={i} style={{
-                padding: '11px 14px',
-                borderBottom: i < POLICY_REMINDERS.length - 1 ? '1px solid var(--taupe-100)' : 'none',
-                background: 'var(--taupe-50)',
-              }}>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '18px' }}>{r.text}</span>
-              </div>
-            ))}
-          </div>
+      <div>
+        <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
+          Policy Reminders
         </div>
-      )}
+        <div style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+          {POLICY_REMINDERS.map((r, i) => (
+            <div key={i} style={{
+              padding: '11px 14px',
+              borderBottom: i < POLICY_REMINDERS.length - 1 ? '1px solid var(--taupe-100)' : 'none',
+              background: 'var(--taupe-50)',
+            }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '18px' }}>{r.text}</span>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Personal snapshot — a small always-visible summary for employees
           and FL specifically; Finance/Admin already get the full version

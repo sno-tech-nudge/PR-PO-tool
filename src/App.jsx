@@ -584,7 +584,6 @@ export default function App() {
               onViewPR={(id) => { setAppScreen('pr-list'); openPRDetail(id) }}
               onViewVendor={(id) => { setAppScreen('vendors'); openVendorDetail(id) }}
               onOpenReportApproval={(id) => { setApprovalReportId(id); setAppScreen('approval-view') }}
-              hideExpenseFeatures={user.role === 'employee'}
             />
           </div>
         )}
