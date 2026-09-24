@@ -1,6 +1,5 @@
 import { callGemini } from './gemini.js'
-
-const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions'
+import { callGroq } from './groq.js'
 
 export async function checkDocumentQuality(base64Image) {
   return await callGemini(base64Image,
@@ -90,7 +89,6 @@ export async function extractPaymentAmount(base64Image) {
 
 export async function generateManagerSummary(report, expenses) {
   if (!expenses || !expenses.length) return null
-  const key = import.meta.env.VITE_GROQ_API_KEY
 
   const byCategory = {}
   for (const exp of expenses) {
@@ -122,29 +120,11 @@ Reply with JSON only, no markdown, no code blocks:
   "recommendation_note": "One sentence explaining why"
 }`
 
-  try {
-    const response = await fetch(GROQ_API_URL, {
-      method: 'POST', mode: 'cors',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        max_tokens: 400, temperature: 0,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    })
-    const data = await response.json()
-    if (data.error) return null
-    const text = data.choices[0].message.content
-    const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim()
-    return JSON.parse(cleaned)
-  } catch {
-    return null
-  }
+  return await callGroq([{ role: 'user', content: prompt }], { max_tokens: 400 })
 }
 
 export async function runAIVouchCheck(report, expenses) {
   if (!expenses || !expenses.length) return null
-  const key = import.meta.env.VITE_GROQ_API_KEY
 
   const expLines = expenses.map((exp, i) => {
     return [
@@ -204,30 +184,7 @@ verdict values: "approve" | "query" | "flag"
 expense verdict values: "pass" | "warn" | "flag"
 confidence values: "high" | "medium" | "low"`
 
-  try {
-    const response = await fetch(GROQ_API_URL, {
-      method: 'POST',
-      mode: 'cors',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${key}`,
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        max_tokens: 900,
-        temperature: 0,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    })
-    const data = await response.json()
-    if (data.error) { console.log('Groq vouch error:', data.error.message); return null }
-    const text = data.choices[0].message.content
-    const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim()
-    return JSON.parse(cleaned)
-  } catch (err) {
-    console.log('AI vouch check failed:', err.message)
-    return null
-  }
+  return await callGroq([{ role: 'user', content: prompt }], { max_tokens: 900 })
 }
 
 // mimeType is optional — every browser call site pre-converts to a JPEG and
@@ -293,7 +250,6 @@ Use null for any field not visible. date format: DD/MM/YYYY. All amounts as numb
 
 export async function generatePRSummary(prData, vendorData) {
   if (!prData || !vendorData) return null
-  const key = import.meta.env.VITE_GROQ_API_KEY
   const prompt = `Generate a 2-sentence summary for a purchase request that needs approval.
 
 PR Details:
@@ -307,56 +263,15 @@ PR Details:
 Reply with raw JSON only, no markdown:
 {"summary":"Two sentences: what this purchase is for and key vendor/amount context for the approver."}`
 
-  try {
-    const response = await fetch(GROQ_API_URL, {
-      method: 'POST', mode: 'cors',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        max_tokens: 200, temperature: 0,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    })
-    const data = await response.json()
-    if (data.error) return null
-    const text = data.choices[0].message.content
-    const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim()
-    const parsed = JSON.parse(cleaned)
-    return parsed.summary
-  } catch {
-    return null
-  }
+  const result = await callGroq([{ role: 'user', content: prompt }], { max_tokens: 200 })
+  return result?.summary ?? null
 }
 
 export async function suggestCategory(vendorName) {
   if (!vendorName) return null
-  try {
-    const response = await fetch(GROQ_API_URL, {
-      method: 'POST',
-      mode: 'cors',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_GROQ_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        max_tokens: 50,
-        temperature: 0,
-        messages: [
-          {
-            role: 'user',
-            content: `Given this vendor name: "${vendorName}", what expense category does it belong to? Reply with JSON only, no markdown, no code blocks: { "category": one of these exact values only: "Travel Fare" or "Bike Fare" or "Lodging and Boarding" or "Food" or "Learning and Development" or "Consultant Fee" or "Professional Fee" or "Retainership / Consultancy" or "Legal Fees" or "Courier" or "Service" or "Staff Welfare" or "Filing Fees" or "Furniture and Fixtures" or "Housekeeping" or "Leasehold Improvements" or "Medicine" or "Relocation Allowance" or "Repairs and Maintenance" or "Subscription / Software" or "Other" }`
-          }
-        ]
-      })
-    })
-    const data = await response.json()
-    if (data.error) return null
-    const text = data.choices[0].message.content
-    const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim()
-    const parsed = JSON.parse(cleaned)
-    return parsed.category
-  } catch {
-    return null
-  }
+  const result = await callGroq([{
+    role: 'user',
+    content: `Given this vendor name: "${vendorName}", what expense category does it belong to? Reply with JSON only, no markdown, no code blocks: { "category": one of these exact values only: "Travel Fare" or "Bike Fare" or "Lodging and Boarding" or "Food" or "Learning and Development" or "Consultant Fee" or "Professional Fee" or "Retainership / Consultancy" or "Legal Fees" or "Courier" or "Service" or "Staff Welfare" or "Filing Fees" or "Furniture and Fixtures" or "Housekeeping" or "Leasehold Improvements" or "Medicine" or "Relocation Allowance" or "Repairs and Maintenance" or "Subscription / Software" or "Other" }`,
+  }], { max_tokens: 50 })
+  return result?.category ?? null
 }

@@ -25,15 +25,22 @@ const REQUEST_TIMEOUT_MS = 12000
 // fourth shot.
 const MAX_ATTEMPTS = 3
 
-async function callGeminiOnce(base64Image, prompt, attempt, mimeType) {
-  // import.meta.env is a Vite-only property — undefined under plain Node
-  // (e.g. an api/ serverless function reusing this module for server-side
-  // OCR), where process.env is what actually holds the key instead.
-  // globalThis.process (rather than a bare `process` reference) is what
-  // makes this safe in the browser bundle too, where `process` isn't
-  // declared at all — a bare reference would throw ReferenceError, but a
-  // property access on globalThis just reads back `undefined`.
-  const key = import.meta.env?.VITE_GEMINI_API_KEY || globalThis.process?.env?.VITE_GEMINI_API_KEY
+// True only under Node (this project's api/ serverless functions) — never in
+// the browser bundle, where `process` isn't declared at all. This is what
+// decides whether a call goes straight to Google (server, real API key
+// available) or through /api/ai/gemini instead (browser — no key present at
+// all anymore, by design: GEMINI_API_KEY has no VITE_ prefix, so Vite never
+// inlines it into client JS, unlike the old VITE_GEMINI_API_KEY it replaces).
+function isServerRuntime() {
+  return typeof globalThis.process !== 'undefined' && !!globalThis.process.versions?.node
+}
+
+// One real Gemini API call — server-side only, real key required. Exported
+// so api/ai/gemini.js (the browser-facing proxy) can call this directly:
+// when that endpoint runs, it's always in Node, so this is exactly the
+// function it needs, no re-entrant environment check required.
+export async function callGeminiDirect(base64Image, prompt, mimeType) {
+  const key = globalThis.process?.env?.GEMINI_API_KEY
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
   try {
@@ -72,17 +79,17 @@ async function callGeminiOnce(base64Image, prompt, attempt, mimeType) {
     })
     const data = await response.json()
     if (data.error) {
-      console.error(`Gemini attempt ${attempt} — API error:`, data.error.message)
+      console.error('Gemini API error:', data.error.message)
       return { ok: false }
     }
     const candidate = data.candidates?.[0]
     const finishReason = candidate?.finishReason
     if (finishReason && finishReason !== 'STOP') {
-      console.error(`Gemini attempt ${attempt} — finished with reason "${finishReason}" instead of STOP (truncated or blocked response).`, data.promptFeedback || '')
+      console.error(`Gemini finished with reason "${finishReason}" instead of STOP (truncated or blocked response).`, data.promptFeedback || '')
     }
     const text = candidate?.content?.parts?.[0]?.text
     if (!text) {
-      console.error(`Gemini attempt ${attempt} — empty response.`, JSON.stringify(data).slice(0, 300))
+      console.error('Gemini — empty response.', JSON.stringify(data).slice(0, 300))
       return { ok: false }
     }
     const cleaned = text
@@ -93,27 +100,46 @@ async function callGeminiOnce(base64Image, prompt, attempt, mimeType) {
     try {
       return { ok: true, value: JSON.parse(cleaned) }
     } catch {
-      console.error(`Gemini attempt ${attempt} — returned non-JSON despite responseMimeType, raw text:`, text.slice(0, 300))
+      console.error('Gemini — returned non-JSON despite responseMimeType, raw text:', text.slice(0, 300))
       return { ok: false }
     }
   } catch (error) {
-    console.error(`Gemini attempt ${attempt} — call failed:`, error.name === 'AbortError' ? 'Request timed out' : error.message)
+    console.error('Gemini — call failed:', error.name === 'AbortError' ? 'Request timed out' : error.message)
     return { ok: false }
   } finally {
     clearTimeout(timeout)
   }
 }
 
+// One attempt via the server-side proxy — used from the browser, where no
+// Gemini key is present at all anymore. The proxy itself makes exactly one
+// Gemini call per request (no internal retry), since the retry loop below
+// already retries by calling this endpoint again — retrying at both layers
+// would multiply attempts unnecessarily.
+async function callGeminiViaProxy(base64Image, prompt, mimeType) {
+  try {
+    const res = await fetch('/api/ai/gemini', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ base64Image, prompt, mimeType }),
+    })
+    const data = await res.json()
+    return data.ok ? { ok: true, value: data.value } : { ok: false }
+  } catch {
+    return { ok: false }
+  }
+}
+
 // mimeType defaults to 'image/jpeg' — every existing browser caller already
-// pre-converts to JPEG client-side and never passes this, so their behavior
-// is unchanged. api/intake/extract.js is the one caller that passes
-// 'application/pdf' for a PDF document, since Gemini can read PDFs natively
-// without needing to rasterize a page to an image first.
+// pre-converts to JPEG client-side and never passes this. api/intake/extract.js
+// is the one caller that passes 'application/pdf' for a PDF document, since
+// Gemini can read PDFs natively without needing to rasterize a page first.
 export async function callGemini(base64Image, prompt, mimeType) {
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    const result = await callGeminiOnce(base64Image, prompt, attempt, mimeType)
+  const attempt = isServerRuntime() ? callGeminiDirect : callGeminiViaProxy
+  for (let i = 1; i <= MAX_ATTEMPTS; i++) {
+    const result = await attempt(base64Image, prompt, mimeType)
     if (result.ok) return result.value
-    if (attempt < MAX_ATTEMPTS) console.log(`Gemini attempt ${attempt} failed, retrying…`)
+    if (i < MAX_ATTEMPTS) console.log(`Gemini attempt ${i} failed, retrying…`)
   }
   return null
 }

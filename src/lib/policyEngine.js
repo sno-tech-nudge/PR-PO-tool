@@ -1,4 +1,4 @@
-const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions'
+import { callGroq } from './groq.js'
 
 const METRO_CITIES = [
   'ahmedabad', 'bangalore', 'bengaluru', 'chennai',
@@ -243,25 +243,11 @@ export async function checkNonReimbursableAI(expense) {
     }
     if (!expense.amount || expense.amount <= 500) return passed('non_reimbursable')
 
-    const response = await fetch(GROQ_API_URL, {
-      method: 'POST',
-      mode: 'cors',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${import.meta.env.VITE_GROQ_API_KEY}` },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        max_tokens: 150,
-        temperature: 0,
-        messages: [{
-          role: 'user',
-          content: `You are checking an expense claim against The Nudge Institute's expense policy.\n\nExpense details:\nVendor: ${expense.vendor || 'Unknown'}\nCategory: ${expense.category || 'Unknown'}\nAmount: ₹${expense.amount}\nDescription: ${expense.description || 'None'}\nPurpose: ${expense.purpose_type || 'Unknown'}\n\nValid expense categories: Travel, Accommodation, Meals, Learning and Development, Printing and Stationery, Rent Expense, Subgranting, Client Entertainment, Field Visit, Office Supplies, Other.\n\nNon-reimbursable items per policy:\n- Alcoholic beverages and tobacco\n- Credit card late fees\n- Preferred seat assignments, early boarding, unauthorized class upgrades\n- Home to office transport on regular workdays\n- Personal items lost, stolen, or damaged\n- Vehicle repair and maintenance\n- Traffic violations and fines\n\nDoes this expense appear to contain any non-reimbursable items?\n\nReply with JSON only, no markdown: { "contains_non_reimbursable": true or false, "reason": string or null, "confidence": "high" or "medium" or "low" }`,
-        }],
-      }),
-    })
-    const data = await response.json()
-    if (data.error) return passed('non_reimbursable')
-    const text = data.choices[0].message.content
-    const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim()
-    const parsed = JSON.parse(cleaned)
+    const parsed = await callGroq([{
+      role: 'user',
+      content: `You are checking an expense claim against The Nudge Institute's expense policy.\n\nExpense details:\nVendor: ${expense.vendor || 'Unknown'}\nCategory: ${expense.category || 'Unknown'}\nAmount: ₹${expense.amount}\nDescription: ${expense.description || 'None'}\nPurpose: ${expense.purpose_type || 'Unknown'}\n\nValid expense categories: Travel, Accommodation, Meals, Learning and Development, Printing and Stationery, Rent Expense, Subgranting, Client Entertainment, Field Visit, Office Supplies, Other.\n\nNon-reimbursable items per policy:\n- Alcoholic beverages and tobacco\n- Credit card late fees\n- Preferred seat assignments, early boarding, unauthorized class upgrades\n- Home to office transport on regular workdays\n- Personal items lost, stolen, or damaged\n- Vehicle repair and maintenance\n- Traffic violations and fines\n\nDoes this expense appear to contain any non-reimbursable items?\n\nReply with JSON only, no markdown: { "contains_non_reimbursable": true or false, "reason": string or null, "confidence": "high" or "medium" or "low" }`,
+    }], { max_tokens: 150 })
+    if (!parsed) return passed('non_reimbursable')
     if (parsed.contains_non_reimbursable && parsed.confidence === 'high') {
       return failed('non_reimbursable', `This expense may include non-reimbursable items. ${parsed.reason || ''}. Please review before submitting.`)
     }
