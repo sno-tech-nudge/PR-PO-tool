@@ -28,7 +28,7 @@ const MAX_ATTEMPTS = 3
 // True only under Node (this project's api/ serverless functions) — never in
 // the browser bundle, where `process` isn't declared at all. This is what
 // decides whether a call goes straight to Google (server, real API key
-// available) or through /api/ai/gemini instead (browser — no key present at
+// available) or through /api/ai/proxy instead (browser — no key present at
 // all anymore, by design: GEMINI_API_KEY has no VITE_ prefix, so Vite never
 // inlines it into client JS, unlike the old VITE_GEMINI_API_KEY it replaces).
 function isServerRuntime() {
@@ -36,7 +36,7 @@ function isServerRuntime() {
 }
 
 // One real Gemini API call — server-side only, real key required. Exported
-// so api/ai/gemini.js (the browser-facing proxy) can call this directly:
+// so api/ai/proxy.js (the browser-facing proxy) can call this directly:
 // when that endpoint runs, it's always in Node, so this is exactly the
 // function it needs, no re-entrant environment check required.
 export async function callGeminiDirect(base64Image, prompt, mimeType) {
@@ -115,13 +115,17 @@ export async function callGeminiDirect(base64Image, prompt, mimeType) {
 // Gemini key is present at all anymore. The proxy itself makes exactly one
 // Gemini call per request (no internal retry), since the retry loop below
 // already retries by calling this endpoint again — retrying at both layers
-// would multiply attempts unnecessarily.
+// would multiply attempts unnecessarily. Shares one endpoint with Groq's own
+// proxy (api/ai/proxy.js, dispatched by `provider`) rather than a dedicated
+// /api/ai/gemini route — this account's Vercel plan caps Serverless
+// Functions per deployment, and a route per provider was one function too
+// many.
 async function callGeminiViaProxy(base64Image, prompt, mimeType) {
   try {
-    const res = await fetch('/api/ai/gemini', {
+    const res = await fetch('/api/ai/proxy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ base64Image, prompt, mimeType }),
+      body: JSON.stringify({ provider: 'gemini', base64Image, prompt, mimeType }),
     })
     const data = await res.json()
     return data.ok ? { ok: true, value: data.value } : { ok: false }

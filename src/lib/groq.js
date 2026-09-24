@@ -2,7 +2,10 @@
 // suggestions) — see gemini.js for why image extraction stays on Gemini
 // instead. Same environment-aware split as gemini.js: server-side calls Groq
 // directly with a real key; the browser has no key at all and goes through
-// /api/ai/groq instead.
+// /api/ai/proxy instead (a single endpoint shared with Gemini's own proxy,
+// dispatched by `provider` — this account's Vercel plan caps Serverless
+// Functions per deployment, and a route per provider was one function too
+// many).
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions'
 
 function isServerRuntime() {
@@ -10,7 +13,7 @@ function isServerRuntime() {
 }
 
 // One real Groq call — server-side only, real key required. Exported so
-// api/ai/groq.js (the browser-facing proxy) can call this directly: that
+// api/ai/proxy.js (the browser-facing proxy) can call this directly: that
 // endpoint always runs in Node, so this is exactly the function it needs.
 // llama-3.3-70b-versatile (the model this used until now) has been removed
 // from this Groq account — confirmed via GET /openai/v1/models returning a
@@ -46,10 +49,10 @@ export async function callGroqDirect(messages, { model = 'qwen/qwen3.8-27b', max
 
 async function callGroqViaProxy(messages, options) {
   try {
-    const res = await fetch('/api/ai/groq', {
+    const res = await fetch('/api/ai/proxy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages, ...options }),
+      body: JSON.stringify({ provider: 'groq', messages, ...options }),
     })
     const data = await res.json()
     return data.ok ? data.value : null
