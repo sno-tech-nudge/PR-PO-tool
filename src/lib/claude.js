@@ -230,7 +230,11 @@ confidence values: "high" | "medium" | "low"`
   }
 }
 
-export async function extractChequeDetails(base64Image) {
+// mimeType is optional — every browser call site pre-converts to a JPEG and
+// never passes it (defaults to 'image/jpeg' in gemini.js). Only the
+// server-side api/intake/extract.js passes 'application/pdf', since Gemini
+// reads PDFs natively without needing to rasterize a page to an image.
+export async function extractChequeDetails(base64Image, mimeType) {
   return await callGemini(base64Image,
     `You are extracting bank account and address details from an Indian cancelled cheque, bank statement, or passbook image.
 The beneficiary_name is the account holder's name printed on the cheque (not the bank's name).
@@ -238,47 +242,52 @@ The account_number and ifsc_code are usually printed at the bottom of the cheque
 If a postal address for the account holder/organisation is printed anywhere on the document (often near the account holder's name), also extract it, split into a street/building line and the city, state, and 6-digit pincode.
 Reply with raw JSON only — no markdown, no backticks, no explanation:
 {"beneficiary_name":string,"account_number":string,"ifsc_code":string,"bank_name":string,"branch":string,"address_line1":string,"city":string,"state":string,"pincode":string}
-Use null for any field not visible. Do not guess.`
+Use null for any field not visible. Do not guess.`,
+    mimeType
   )
 }
 
-export async function extractPanCardDetails(base64Image) {
+export async function extractPanCardDetails(base64Image, mimeType) {
   return await callGemini(base64Image,
     `You are extracting the PAN (Permanent Account Number) from an Indian PAN card, or a scanned/photographed copy of one.
 The PAN is a 10-character code printed on the card, format: 5 uppercase letters, then 4 digits, then 1 uppercase letter (e.g. ABCDE1234F).
 Reply with raw JSON only — no markdown, no backticks, no explanation:
 {"pan_number":string}
-Use null if not clearly visible. Do not guess.`
+Use null if not clearly visible. Do not guess.`,
+    mimeType
   )
 }
 
-export async function extractGstCertDetails(base64Image) {
+export async function extractGstCertDetails(base64Image, mimeType) {
   return await callGemini(base64Image,
     `You are extracting the GSTIN from an Indian GST Registration Certificate (Form GST REG-06), or a scanned/photographed copy of one.
 The GSTIN is a 15-character code, usually printed near the top under "Registration Number" or "GSTIN", format: 2 digits (state code) + 5 uppercase letters + 4 digits + 1 uppercase letter + 1 digit-or-letter + "Z" + 1 alphanumeric (e.g. 29ABCDE1234F1Z5).
 Reply with raw JSON only — no markdown, no backticks, no explanation:
 {"gstin":string}
-Use null if not clearly visible. Do not guess.`
+Use null if not clearly visible. Do not guess.`,
+    mimeType
   )
 }
 
-export async function extractMsmeCertDetails(base64Image) {
+export async function extractMsmeCertDetails(base64Image, mimeType) {
   return await callGemini(base64Image,
     `You are extracting details from an Indian MSME/Udyam Registration Certificate, or a scanned/photographed copy of one.
 The registration_number (also called "Udyam Registration Number" or "UDYAM No.") is printed near the top, format like UDYAM-KA-03-1234567 (older Udyog Aadhaar certificates instead have a 12-character alphanumeric UAN — extract whichever is present).
 The category is the enterprise classification, printed as one of: Micro, Small, or Medium.
 Reply with raw JSON only — no markdown, no backticks, no explanation:
 {"registration_number":string,"category":string}
-Use null for any field not clearly visible. Do not guess.`
+Use null for any field not clearly visible. Do not guess.`,
+    mimeType
   )
 }
 
-export async function extractVendorQuote(base64Image) {
+export async function extractVendorQuote(base64Image, mimeType) {
   return await callGemini(base64Image,
     `You are extracting data from a vendor quote or invoice document. Extract all key fields accurately.
 Reply with raw JSON only — no markdown, no backticks, no explanation:
 {"vendor_name":string,"quote_number":string,"date":string,"line_items":[{"description":string,"qty":number,"unit_price":number,"total":number}],"subtotal":number,"tax":number,"total_amount":number}
-Use null for any field not visible. date format: DD/MM/YYYY. All amounts as numbers.`
+Use null for any field not visible. date format: DD/MM/YYYY. All amounts as numbers.`,
+    mimeType
   )
 }
 

@@ -22,12 +22,20 @@ const EXTRACTORS = {
   quote: extractVendorQuote,
 }
 
-// Every extractor in claude.js was built for a base64 JPEG the browser had
-// already normalized to (imageFileToJpegBase64) — there's no PDF-to-image
-// conversion available in this Node runtime, so a PDF upload just skips
-// extraction gracefully (same "OCR is convenience-only, never blocking"
-// contract every other caller of these extractors already relies on).
-const IMAGE_EXT = /\.(jpe?g|png|webp|heic|heif)$/i
+// Vendor/PR documents uploaded from Nucleus are commonly exported PDFs, not
+// just camera photos — Gemini reads a PDF's content directly via the same
+// inline_data mechanism as an image, given the real mime type, so this maps
+// every accepted extension straight through rather than only handling
+// images and skipping everything else.
+const MIME_BY_EXT = {
+  pdf: 'application/pdf',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+  heic: 'image/heic',
+  heif: 'image/heif',
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -42,7 +50,9 @@ export default async function handler(req, res) {
     res.status(400).json({ error: `type must be one of ${Object.keys(EXTRACTORS).join(', ')}, and bucket/storage_path are required` })
     return
   }
-  if (!IMAGE_EXT.test(storage_path)) {
+  const ext = (storage_path.split('.').pop() || '').toLowerCase()
+  const mimeType = MIME_BY_EXT[ext]
+  if (!mimeType) {
     res.status(200).json({ ok: false, reason: 'unsupported_file_type' })
     return
   }
@@ -52,7 +62,7 @@ export default async function handler(req, res) {
     if (downloadError) throw downloadError
 
     const base64 = Buffer.from(await blob.arrayBuffer()).toString('base64')
-    const result = await extractor(base64)
+    const result = await extractor(base64, mimeType)
 
     res.status(200).json({ ok: !!result, data: result })
   } catch (err) {

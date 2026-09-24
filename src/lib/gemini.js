@@ -25,7 +25,7 @@ const REQUEST_TIMEOUT_MS = 12000
 // fourth shot.
 const MAX_ATTEMPTS = 3
 
-async function callGeminiOnce(base64Image, prompt, attempt) {
+async function callGeminiOnce(base64Image, prompt, attempt, mimeType) {
   // import.meta.env is a Vite-only property — undefined under plain Node
   // (e.g. an api/ serverless function reusing this module for server-side
   // OCR), where process.env is what actually holds the key instead.
@@ -44,7 +44,7 @@ async function callGeminiOnce(base64Image, prompt, attempt) {
       body: JSON.stringify({
         contents: [{
           parts: [
-            { inline_data: { mime_type: 'image/jpeg', data: base64Image } },
+            { inline_data: { mime_type: mimeType || 'image/jpeg', data: base64Image } },
             { text: prompt },
           ],
         }],
@@ -104,9 +104,14 @@ async function callGeminiOnce(base64Image, prompt, attempt) {
   }
 }
 
-export async function callGemini(base64Image, prompt) {
+// mimeType defaults to 'image/jpeg' — every existing browser caller already
+// pre-converts to JPEG client-side and never passes this, so their behavior
+// is unchanged. api/intake/extract.js is the one caller that passes
+// 'application/pdf' for a PDF document, since Gemini can read PDFs natively
+// without needing to rasterize a page to an image first.
+export async function callGemini(base64Image, prompt, mimeType) {
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    const result = await callGeminiOnce(base64Image, prompt, attempt)
+    const result = await callGeminiOnce(base64Image, prompt, attempt, mimeType)
     if (result.ok) return result.value
     if (attempt < MAX_ATTEMPTS) console.log(`Gemini attempt ${attempt} failed, retrying…`)
   }
