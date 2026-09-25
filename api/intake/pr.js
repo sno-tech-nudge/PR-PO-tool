@@ -6,7 +6,7 @@
 // one raised directly here.
 import { supabaseAdmin, requireIntakeAuth, nextDocNumber } from '../_lib/supabaseAdmin.js'
 import { sendViaResend } from '../_lib/mailer.js'
-import { buildEmail as buildPrEmail } from '../send-pr-email.js'
+import { buildPrEmail } from '../send-email.js'
 import { buildLevelAwareSteps } from '../../src/lib/prStatusSteps.js'
 
 const PR_MIN = 25000

@@ -1,15 +1,16 @@
-// Fires PR lifecycle emails via the /api/send-pr-email Vercel function.
-// Same "best-effort, never blocks the DB update it follows" pattern as
-// notifyRole/notifySlack in prApprovalActions.js — email delivery failing
-// should never surface as a failed approval/rejection/submission.
+// Fires PR lifecycle emails via the shared /api/send-email Vercel function
+// (entity: "pr"). Same "best-effort, never blocks the DB update it follows"
+// pattern as notifyRole/notifySlack in prApprovalActions.js — email
+// delivery failing should never surface as a failed
+// approval/rejection/submission.
 export async function sendPREmail({ type, recipientEmail, prNumber, amount, actorName, reason, nextLevelLabel, poNumber, timelineSteps }) {
   const hasRecipient = Array.isArray(recipientEmail) ? recipientEmail.length > 0 : !!recipientEmail
   if (!hasRecipient) return
   try {
-    const res = await fetch('/api/send-pr-email', {
+    const res = await fetch('/api/send-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, recipientEmail, prNumber, amount, actorName, reason, nextLevelLabel, poNumber, timelineSteps }),
+      body: JSON.stringify({ entity: 'pr', type, recipientEmail, prNumber, amount, actorName, reason, nextLevelLabel, poNumber, timelineSteps }),
     })
     if (!res.ok) {
       const data = await res.json().catch(() => ({}))

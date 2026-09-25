@@ -1,7 +1,7 @@
-// Shared email-sending helpers — used by api/send-pr-email.js,
-// api/send-report-email.js, and api/send-vendor-email.js so all three
-// lifecycle-status emails share one brand header, one status-visual
-// renderer, and one Resend call instead of each hand-rolling its own.
+// Shared email-sending helpers — used by api/send-email.js (feedback, PR,
+// report, and vendor lifecycle emails) so all four share one brand header,
+// one status-visual renderer, and one Resend call instead of each
+// hand-rolling its own.
 //
 // Files/folders prefixed with "_" inside api/ are never turned into their
 // own Vercel route, so this file is safe as a private, shared module.

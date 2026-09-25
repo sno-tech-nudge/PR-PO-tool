@@ -5,7 +5,7 @@
 // same approval queue, same document-numbering sequence.
 import { supabaseAdmin, requireIntakeAuth, nextDocNumber } from '../_lib/supabaseAdmin.js'
 import { sendViaResend } from '../_lib/mailer.js'
-import { buildEmail as buildVendorEmail } from '../send-vendor-email.js'
+import { buildVendorEmail } from '../send-email.js'
 
 // Mirrors the regexes in src/components/vendor/VendorForm.jsx — duplicated
 // rather than imported, since that file is a React component with browser-

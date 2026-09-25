@@ -4,7 +4,7 @@
 // client's non-blocking try/catch, which is exactly why the client-side
 // calls were never actually reaching Slack) - server-to-server calls have
 // no CORS restriction, so this just forwards the message through.
-// Mirrors api/send-vendor-email.js: the real webhook URL lives only here,
+// Mirrors api/send-email.js: the real webhook URL lives only here,
 // server-side, never in the client bundle.
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
