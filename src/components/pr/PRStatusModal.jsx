@@ -63,6 +63,7 @@ function buildSteps(pr, approvals, po) {
       key: 'submitted', label: 'Submitted',
       state: isDraft ? 'waiting' : 'done',
       date: pr.submitted_at, actor: getDisplayName(pr.requested_by), role: 'Requester',
+      tag: pr.source === 'nucleus' ? 'Submitted through Nucleus' : null,
     },
     isDraft
       ? { key: 'level-1', label: 'Functional Leader', state: 'waiting', date: null, actor: null }
@@ -183,6 +184,11 @@ function VerticalTimeline({ pr, steps }) {
                 )}
                 {isCurrent && (
                   <div style={{ fontSize: '11px', color: 'var(--gold-text)', marginTop: '2px', fontWeight: 600 }}>Awaiting decision</div>
+                )}
+                {step.tag && (
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px', fontStyle: 'italic' }}>
+                    {step.tag}
+                  </div>
                 )}
                 {step.note && (
                   <div style={{ fontSize: '11px', color: 'var(--clay-text)', marginTop: '4px', background: 'var(--clay-bg)', border: '1px solid var(--clay-border)', borderRadius: 'var(--radius-sm)', padding: '6px 8px' }}>

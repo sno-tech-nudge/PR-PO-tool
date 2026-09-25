@@ -46,6 +46,7 @@ function buildSteps(vendor) {
       key: 'submitted', label: 'Submitted',
       state: isDraft ? 'waiting' : 'done',
       date: vendor.submitted_at, actor: getDisplayName(vendor.submitted_by), role: 'Submitter',
+      tag: vendor.source === 'nucleus' ? 'Submitted through Nucleus' : null,
     },
     {
       key: 'accepted', label: 'Accepted by Finance',
@@ -165,6 +166,11 @@ function VerticalTimeline({ vendor, steps }) {
                 )}
                 {isCurrent && (
                   <div style={{ fontSize: '11px', color: 'var(--gold-text)', marginTop: '2px', fontWeight: 600 }}>Awaiting Finance decision</div>
+                )}
+                {step.tag && (
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px', fontStyle: 'italic' }}>
+                    {step.tag}
+                  </div>
                 )}
                 {step.note && (
                   <div style={{ fontSize: '11px', color: 'var(--clay-text)', marginTop: '4px', background: 'var(--clay-bg)', border: '1px solid var(--clay-border)', borderRadius: 'var(--radius-sm)', padding: '6px 8px' }}>

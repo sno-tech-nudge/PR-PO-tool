@@ -182,6 +182,11 @@ export default async function handler(req, res) {
       pr_number: prNumber,
       vendor_id: v.vendor_id,
       requested_by: v.submitted_by,
+      // Every row through this endpoint came from Nucleus's intake bridge —
+      // PRStatusModal.jsx reads this to show "Submitted through Nucleus" on
+      // the Submitted step. A row submitted directly in this tool never
+      // passes through here, so it keeps the column's 'app' default.
+      source: 'nucleus',
       amount: total,
       quantity: lineItems.length === 1 ? lineItems[0].quantity || null : null,
       rate_per_unit: lineItems.length === 1 ? lineItems[0].rate_per_unit || null : null,

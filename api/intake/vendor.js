@@ -89,6 +89,11 @@ export default async function handler(req, res) {
 
     const payload = {
       vendor_id: vendorId,
+      // Every row through this endpoint came from Nucleus's intake bridge —
+      // VendorStatusModal.jsx reads this to show "Submitted through Nucleus"
+      // on the Submitted step. A vendor registered directly in this tool
+      // never passes through here, so it keeps the column's 'app' default.
+      source: 'nucleus',
       org_name: v.org_name.trim(),
       org_type: v.org_type,
       nature_of_business: v.nature_of_business,
