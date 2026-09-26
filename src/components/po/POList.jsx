@@ -2,7 +2,10 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { canAccessFinance } from '../../lib/auth'
 import { downloadCSV, posToRows } from '../../lib/exportUtils'
+import { attachPendingBalances } from '../../lib/poBalance'
 import POExportModal from './POExportModal'
+import SubmitPOExpense from './SubmitPOExpense'
+import POStatusModal from './POStatusModal'
 
 const EXPORT_KEY = 'nudge_po_export_fields'
 const DEFAULT_EXPORT_FIELDS = ['po_number', 'status', 'entity', 'amount', 'generated_at', 'approved_at', 'pr_number', 'requested_by', 'purpose', 'category', 'vendor_org_name']
@@ -49,6 +52,8 @@ export default function POList({ user, onViewPO }) {
   const [tab, setTab]     = useState('all')
   const [search, setSearch] = useState('')
   const [showExportModal, setShowExportModal] = useState(false)
+  const [invoicePO, setInvoicePO] = useState(null)
+  const [statusPO, setStatusPO] = useState(null)
 
   const isFinance = canAccessFinance(user.role)
 
@@ -81,7 +86,12 @@ export default function POList({ user, onViewPO }) {
     }
 
     const { data } = await q
-    setPOs((data || []).filter(p => p != null))
+    const clean = (data || []).filter(p => p != null)
+    // Batched, not per-row — same helper the PO-picker dropdown already uses
+    // (ReportDetails.jsx) so "how much is left on this PO" only ever has one
+    // computation, not a second copy of the pending-balance math.
+    const withPending = await attachPendingBalances(clean)
+    setPOs(withPending)
     setLoading(false)
   }
 
@@ -184,7 +194,7 @@ export default function POList({ user, onViewPO }) {
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '700px' }}>
               <thead>
                 <tr style={{ background: 'var(--taupe-50)', borderBottom: '1px solid var(--taupe-200)' }}>
-                  {['PO Number', 'Vendor', 'Linked PR', 'Entity', 'Amount', 'Date', 'Status', ''].map(h => (
+                  {['PO Number', 'Vendor', 'Linked PR', 'Entity', 'Amount', 'Pending', 'Date', 'Status', ''].map(h => (
                     <th key={h} style={{
                       padding: '10px 14px', textAlign: 'left',
                       fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)',
@@ -224,6 +234,29 @@ export default function POList({ user, onViewPO }) {
                       <td style={{ padding: '12px 14px', fontSize: '13px', color: 'var(--ink)', fontWeight: 600, whiteSpace: 'nowrap' }}>
                         {fmtAmt(po.amount)}
                       </td>
+                      <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
+                        {po.status === 'issued' && po.pending > 0 ? (
+                          <button
+                            onClick={() => setInvoicePO(po)}
+                            title="Attach an invoice against this PO's pending balance"
+                            style={{
+                              padding: '3px 10px', fontSize: '13px', fontWeight: 600,
+                              background: 'var(--gold-bg)', color: 'var(--gold-text)',
+                              border: '1px solid var(--gold-border)', borderRadius: 'var(--radius-sm)',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {fmtAmt(po.pending)}
+                          </button>
+                        ) : (
+                          <span style={{
+                            fontSize: '13px',
+                            color: po.pending > 0 ? 'var(--gold-text)' : 'var(--moss-text)',
+                          }}>
+                            {po.status === 'issued' ? fmtAmt(po.pending) : '—'}
+                          </span>
+                        )}
+                      </td>
                       <td style={{ padding: '12px 14px', fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                         {fmtDate(po.generated_at)}
                       </td>
@@ -237,16 +270,28 @@ export default function POList({ user, onViewPO }) {
                         </span>
                       </td>
                       <td style={{ padding: '12px 14px' }}>
-                        <button
-                          onClick={() => onViewPO(po.id)}
-                          style={{
-                            padding: '5px 12px', fontSize: '12px', fontWeight: 500,
-                            background: 'transparent', border: '1px solid var(--taupe-200)',
-                            borderRadius: 'var(--radius-md)', cursor: 'pointer', color: 'var(--ink)',
-                          }}
-                        >
-                          View
-                        </button>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            onClick={() => setStatusPO(po)}
+                            style={{
+                              padding: '5px 12px', fontSize: '12px', fontWeight: 500, whiteSpace: 'nowrap',
+                              background: 'transparent', border: '1px solid var(--taupe-200)',
+                              borderRadius: 'var(--radius-md)', cursor: 'pointer', color: 'var(--ink)',
+                            }}
+                          >
+                            View Status
+                          </button>
+                          <button
+                            onClick={() => onViewPO(po.id)}
+                            style={{
+                              padding: '5px 12px', fontSize: '12px', fontWeight: 500,
+                              background: 'transparent', border: '1px solid var(--taupe-200)',
+                              borderRadius: 'var(--radius-md)', cursor: 'pointer', color: 'var(--ink)',
+                            }}
+                          >
+                            View
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   )
@@ -262,6 +307,35 @@ export default function POList({ user, onViewPO }) {
           selectedKeys={loadExportFields()}
           onExport={handleExport}
           onClose={() => setShowExportModal(false)}
+        />
+      )}
+
+      {/* Clicking a pending amount opens the same invoice-capture flow
+          PODetail.jsx offers — the embedded purchase_requests(*)/vendors(*)
+          join above already gives this row everything SubmitPOExpense needs,
+          so no extra fetch is required to jump straight here from the list. */}
+      {invoicePO && (
+        <SubmitPOExpense
+          po={invoicePO}
+          pr={invoicePO.purchase_requests}
+          vendor={invoicePO.vendors}
+          user={user}
+          pending={invoicePO.pending}
+          onClose={() => setInvoicePO(null)}
+          onSubmitted={async () => { setInvoicePO(null); await load() }}
+        />
+      )}
+
+      {statusPO && (
+        <POStatusModal
+          po={statusPO}
+          pr={statusPO.purchase_requests}
+          vendor={statusPO.vendors}
+          user={user}
+          pending={statusPO.pending}
+          totalSubmitted={(Number(statusPO.amount) || 0) - (Number(statusPO.pending) || 0)}
+          onClose={() => setStatusPO(null)}
+          onSubmitted={async () => { setStatusPO(null); await load() }}
         />
       )}
     </div>
