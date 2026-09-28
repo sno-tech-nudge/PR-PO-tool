@@ -300,8 +300,12 @@ export default function FinanceDashboard({ user, showToast, onBack }) {
             )}
           </div>
 
-          {/* Tab bar */}
-          <div style={{ display: 'flex', gap: '0', marginTop: '4px', overflowX: 'auto' }}>
+          {/* Tab bar — flex-wrap instead of overflowX:auto, same fix as
+              PRList.jsx: a container with only overflowX set also silently
+              gets overflowY:auto per spec the instant content is even 1px
+              taller than the box, producing a stray vertical scrollbar
+              alongside the intended horizontal one. */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 4px', marginTop: '4px', overflow: 'hidden' }}>
             {TABS.map(t => (
               <div
                 key={t.key}

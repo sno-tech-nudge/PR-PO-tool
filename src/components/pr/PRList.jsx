@@ -94,7 +94,12 @@ export default function PRList({ user, onViewPR, onCreatePR, onResumeDraft }) {
         }}
       />
 
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--taupe-200)', marginBottom: '16px', gap: '0', overflowX: 'auto' }}>
+      {/* flex-wrap (not overflow scroll) so all 6 tabs always fit without a
+          scrollbar — a container with only overflowX set also silently gets
+          overflowY: auto per the CSS spec the instant content is even 1px
+          taller than the box, which was producing a stray vertical
+          scrollbar here too (not just the intended horizontal one). */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', borderBottom: '1px solid var(--taupe-200)', marginBottom: '16px', gap: '2px 4px', overflow: 'hidden' }}>
         {[['all','All'],['submitted','Pending'],['approved','Approved'],['po_generated','PO Issued'],['rejected','Rejected'],['draft','Draft']].map(([key, label]) => {
           const count = key === 'all' ? prs.length : prs.filter(p => p.status === key).length
           return (
@@ -102,7 +107,7 @@ export default function PRList({ user, onViewPR, onCreatePR, onResumeDraft }) {
               key={key}
               onClick={() => setFilter(key)}
               style={{
-                padding: '8px 14px', fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap',
+                padding: '8px 10px', fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap',
                 fontWeight: filter === key ? 600 : 400,
                 color: filter === key ? 'var(--text)' : 'var(--text-muted)',
                 borderBottom: filter === key ? '2px solid var(--action)' : '2px solid transparent',

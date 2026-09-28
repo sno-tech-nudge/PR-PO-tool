@@ -141,8 +141,8 @@ export default function POList({ user, onViewPO }) {
         )}
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--taupe-200)', marginBottom: '16px', gap: 0 }}>
+      {/* Tabs — flex-wrap so a longer tab set never needs a scrollbar */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', borderBottom: '1px solid var(--taupe-200)', marginBottom: '16px', gap: '2px 4px' }}>
         {TABS.map(([key, label]) => (
           <div
             key={key}

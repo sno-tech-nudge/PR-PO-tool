@@ -172,7 +172,7 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
               {isFinance ? 'Vendor Management' : 'My Vendors'}
             </h1>
           </div>
-          <div style={{ display: 'flex', gap: '0', marginTop: '4px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 4px', marginTop: '4px' }}>
             {tabs.map(([key, label]) => (
               <div
                 key={key}

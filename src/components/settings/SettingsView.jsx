@@ -117,7 +117,7 @@ export default function SettingsView({ user }) {
       <div style={{ background: 'var(--surface-card)', borderBottom: '1px solid var(--taupe-200)', padding: '0 28px' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '14px 0 0' }}>
           <h1 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--ink)', margin: '0 0 8px' }}>Settings</h1>
-          <div style={{ display: 'flex', gap: '4px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
             {[
               ['profile', 'My Profile'],
               ...(isAdmin ? [['team', 'Team & Roles']] : []),

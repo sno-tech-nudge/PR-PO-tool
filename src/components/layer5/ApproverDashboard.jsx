@@ -168,7 +168,7 @@ export default function ApproverDashboard({ onViewReport, onBack }) {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--taupe-200)', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', borderBottom: '1px solid var(--taupe-200)', marginBottom: '20px', gap: '2px 4px' }}>
         {[
           { key: 'pending', label: `Pending (${pending.length})` },
           { key: 'reviewed', label: `Reviewed (${reviewed.length})` },

@@ -215,7 +215,7 @@ export default function NewExpense({ user, onContinueToDetails, onBack }) {
       )}
 
       {showTabs && (
-        <div style={{ display: 'flex', borderBottom: '1px solid var(--taupe-200)', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', borderBottom: '1px solid var(--taupe-200)', marginBottom: '20px', gap: '2px 4px' }}>
           {[['single', 'Add Expense'], ['bulk', 'Bulk Add Expenses']].map(([key, label]) => (
             <div
               key={key}
