@@ -5,8 +5,10 @@ import { ENTITIES, EXPENSE_NATURES, getPrograms, getDonorsForProgram } from '../
 import { preloadDirectory, getActiveDirectoryEntries } from '../../lib/directory'
 import { attachPendingBalances, poOptionLabel } from '../../lib/poBalance'
 import { toInputDate, fromInputDate } from '../../lib/dateFormat'
+import { insertExpenseDetails } from '../../lib/expenseDetailsSave'
 import AmountInput from '../shared/AmountInput'
 import InfoTip from '../shared/InfoTip'
+import VoiceInputButton from '../shared/VoiceInputButton'
 
 const CATEGORIES = [
   'Travel Fare', 'Lodging and Boarding', 'Food', 'Bike Fare',
@@ -399,13 +401,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
 
     const { error: err } = isEdit
       ? await supabase.from('expense_details').update(payload).eq('id', existingExpense.id)
-      : await supabase.from('expense_details').insert({
-          ...payload,
-          capture_id: layer1Data?.capture_id ?? null,
-          submitted_at: new Date().toISOString(),
-          user_email: user?.email ?? null,
-          status: 'saved',
-        })
+      : await insertExpenseDetails({ payload, captureId: layer1Data?.capture_id, userEmail: user?.email })
     if (err) {
       console.error('Expense save error:', err)
       setError(`Save failed: ${err.message}`)
@@ -667,13 +663,16 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
       {/* Description */}
       <div style={fieldWrap}>
         <label style={labelStyle}>Description{required}</label>
-        <input
-          type="text"
-          value={note}
-          onChange={e => setNote(e.target.value)}
-          placeholder="What was this expense for"
-          style={{ ...inputStyle, border: errBorder('description') }}
-        />
+        <div style={{ position: 'relative' }}>
+          <input
+            type="text"
+            value={note}
+            onChange={e => setNote(e.target.value)}
+            placeholder="What was this expense for"
+            style={{ ...inputStyle, border: errBorder('description'), paddingRight: '40px' }}
+          />
+          <VoiceInputButton value={note} onChange={setNote} />
+        </div>
         {errors.description && <div style={errorText}>{errors.description}</div>}
       </div>
 

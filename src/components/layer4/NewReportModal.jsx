@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { generateReportReference } from '../../lib/reportReference'
 import { attachPendingBalances, poOptionLabel } from '../../lib/poBalance'
 import StepIndicator from '../shared/StepIndicator'
+import VoiceInputButton from '../shared/VoiceInputButton'
 
 export default function NewReportModal({ user, onCreated, onClose }) {
   // Generated once "Related to a Purchase Order?" is answered (in
@@ -16,12 +17,10 @@ export default function NewReportModal({ user, onCreated, onClose }) {
   const [error, setError] = useState(null)
 
   // Step 1 — asked first, before anything else about the report, in its
-  // own popup. Step 2 collects the actual report details (name/purpose/
-  // duration). The report itself decides whether it's tied to a PO; kept
-  // required so it can't be skipped and revisited later — ReportDetails
-  // (step 2 of the report-building flow, not to be confused with this
-  // modal's own step 2) shows this as a read-only summary with a
-  // "Change" option instead of asking again.
+  // own popup, and the ONE place this is ever answered. Step 2 collects the
+  // actual report details (name/purpose/duration). ReportDetails (step 2 of
+  // the report-building flow, not to be confused with this modal's own step
+  // 2) only ever displays this answer read-only — it never re-asks it.
   const [step, setStep] = useState(1)
   const [poRelated, setPoRelated] = useState(null)
   const [poOptions, setPoOptions] = useState([])
@@ -188,16 +187,19 @@ export default function NewReportModal({ user, onCreated, onClose }) {
 
               <div style={{ marginBottom: '18px' }}>
                 <label style={labelStyle}>Business Purpose</label>
-                <textarea
-                  value={businessPurpose}
-                  onChange={e => setBusinessPurpose(e.target.value.slice(0, 500))}
-                  placeholder="Max 500 characters"
-                  rows={3}
-                  style={{
-                    ...inputStyle, height: 'auto', padding: '10px 12px',
-                    resize: 'vertical', fontFamily: 'inherit',
-                  }}
-                />
+                <div style={{ position: 'relative' }}>
+                  <textarea
+                    value={businessPurpose}
+                    onChange={e => setBusinessPurpose(e.target.value.slice(0, 500))}
+                    placeholder="Max 500 characters"
+                    rows={3}
+                    style={{
+                      ...inputStyle, height: 'auto', padding: '10px 12px', paddingRight: '40px',
+                      resize: 'vertical', fontFamily: 'inherit',
+                    }}
+                  />
+                  <VoiceInputButton value={businessPurpose} onChange={setBusinessPurpose} maxLength={500} />
+                </div>
                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', textAlign: 'right' }}>
                   {businessPurpose.length}/500
                 </div>

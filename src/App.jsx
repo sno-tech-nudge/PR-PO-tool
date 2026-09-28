@@ -91,6 +91,11 @@ export default function App() {
   const [layer4ReportDetails, setLayer4ReportDetails] = useState(null)
   const [newReportMeta, setNewReportMeta] = useState(null)
   const [showNewReportModal, setShowNewReportModal] = useState(false)
+  // Ids selected from the standalone "My Expenses" browser before a report
+  // exists yet — tagged onto the draft the moment NewReportModal creates it,
+  // so they land pre-selected in ExpenseSelector via its own existing
+  // report_id-match effect, same as dropping a receipt onto a report page.
+  const [pendingPreSelectedExpenseIds, setPendingPreSelectedExpenseIds] = useState([])
 
   const [submissionData, setSubmissionData] = useState(null)
   const [currentReportId, setCurrentReportId] = useState(null)
@@ -199,6 +204,11 @@ export default function App() {
 
   function handleNewReport() { setShowNewReportModal(true) }
 
+  function handleRaiseReportFromSelection(selectedIds) {
+    setPendingPreSelectedExpenseIds(selectedIds)
+    setShowNewReportModal(true)
+  }
+
   async function enterReportWorkspace(reportRow) {
     setNewReportMeta(reportRow)
     setLayer4Expenses([]); setLayer4Results([])
@@ -215,6 +225,10 @@ export default function App() {
 
   async function handleReportCreated(reportRow) {
     setShowNewReportModal(false)
+    if (pendingPreSelectedExpenseIds.length > 0) {
+      await supabase.from('expense_details').update({ report_id: reportRow.id }).in('id', pendingPreSelectedExpenseIds)
+      setPendingPreSelectedExpenseIds([])
+    }
     await enterReportWorkspace(reportRow)
   }
 
@@ -290,6 +304,11 @@ export default function App() {
     // (Vendor/PR/PO only), so History is hidden for them too rather than
     // linking to a feature that isn't open yet.
     ...(role !== 'finance' && role !== 'employee' ? [{ key: 'history', label: 'History', icon: '☰' }] : []),
+    // Finance doesn't file its own expense reports, so it stays excluded
+    // here too — but this one is otherwise open to everyone, including
+    // employees, since raising a report from what's already been saved is
+    // core to what they'd use it for.
+    ...(role !== 'finance' ? [{ key: 'my-expenses', label: 'My Expenses', icon: '🧾' }] : []),
     ...(canAccessApprovals(role) ? [{ key: 'approvals', label: 'Approvals', icon: '✓' }] : []),
     ...(canAccessFinance(role)   ? [{ key: 'finance',   label: 'Finance',   icon: '₹' }] : []),
     { key: 'pr-list', label: 'Purchase Requests',  icon: '◫' },
@@ -572,7 +591,7 @@ export default function App() {
           <NewReportModal
             user={user}
             onCreated={handleReportCreated}
-            onClose={() => setShowNewReportModal(false)}
+            onClose={() => { setShowNewReportModal(false); setPendingPreSelectedExpenseIds([]) }}
           />
         )}
 
@@ -678,6 +697,14 @@ export default function App() {
             user={user}
             onViewReport={handleViewReport}
             onBack={() => setAppScreen('list')}
+          />
+        )}
+
+        {appScreen === 'my-expenses' && (
+          <ExpenseSelector
+            user={user}
+            standalone
+            onRaiseReport={handleRaiseReportFromSelection}
           />
         )}
 

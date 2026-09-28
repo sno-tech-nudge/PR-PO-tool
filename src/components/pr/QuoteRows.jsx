@@ -1,5 +1,6 @@
 import AmountInput from '../shared/AmountInput'
 import QuoteUpload from './QuoteUpload'
+import VoiceInputButton from '../shared/VoiceInputButton'
 
 // Quotes captured as rows (Zoho-style): each row = one vendor quote with
 // vendor name, amount, an uploaded document, and a "selected vendor" radio.
@@ -67,13 +68,16 @@ export default function QuoteRows({ value = {}, onChange, requiredQuotes = 2, er
           <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: '5px' }}>
             Single Source Justification<span style={{ color: 'var(--clay-text)', marginLeft: '2px' }}>*</span>
           </label>
-          <textarea
-            value={value.singleSourceJustification || ''}
-            onChange={e => set({ singleSourceJustification: e.target.value })}
-            placeholder="Explain why this procurement can only be done from a single vendor (proprietary product, sole distributor, technical reasons, etc.)"
-            rows={4}
-            style={{ width: '100%', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', padding: '10px', fontSize: '13px', color: 'var(--ink)', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }}
-          />
+          <div style={{ position: 'relative' }}>
+            <textarea
+              value={value.singleSourceJustification || ''}
+              onChange={e => set({ singleSourceJustification: e.target.value })}
+              placeholder="Explain why this procurement can only be done from a single vendor (proprietary product, sole distributor, technical reasons, etc.)"
+              rows={4}
+              style={{ width: '100%', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', padding: '10px', paddingRight: '40px', fontSize: '13px', color: 'var(--ink)', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }}
+            />
+            <VoiceInputButton value={value.singleSourceJustification || ''} onChange={v => set({ singleSourceJustification: v })} />
+          </div>
 
           {/* Even a single-vendor purchase still needs its one quotation attached */}
           <div style={{ marginTop: '14px', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '14px', background: 'var(--surface-card)' }}>

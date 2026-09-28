@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase'
 import ExpenseDetails from '../layer2/ExpenseDetails'
 import QuickAddDropzone from '../capture/QuickAddDropzone'
 
-export default function ExpenseSelector({ expenses: initialExpenses, results: initialResults, user, reportMeta, onPreview, onBack }) {
+export default function ExpenseSelector({ expenses: initialExpenses, results: initialResults, user, reportMeta, onPreview, onBack, standalone, onRaiseReport }) {
   const [expenses, setExpenses] = useState(initialExpenses || [])
   const [loading, setLoading] = useState(!initialExpenses || initialExpenses.length === 0)
   const [selected, setSelected] = useState(new Set())
@@ -12,6 +12,7 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
   const [showAddPanel, setShowAddPanel] = useState(!!reportMeta)
   const [newLayer1Data, setNewLayer1Data] = useState(null)
   const [addingNew, setAddingNew] = useState(false)
+  const [thumbnails, setThumbnails] = useState({}) // expense id -> signed image url
 
   const results = initialResults || []
 
@@ -48,6 +49,37 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
     }
   }, [])
 
+  // Batch-fetch one thumbnail per expense (its receipt, falling back to its
+  // payment proof) — one query for the linked expense_captures rows, then
+  // one batched signed-URL call, rather than a request per row.
+  useEffect(() => {
+    async function loadThumbnails() {
+      const captureIds = [...new Set(expenses.map(e => e.capture_id).filter(Boolean))]
+      if (captureIds.length === 0) { setThumbnails({}); return }
+      const { data: captures } = await supabase
+        .from('expense_captures')
+        .select('id, receipt_storage_path, payment_storage_path')
+        .in('id', captureIds)
+      const pathByCaptureId = {}
+      const allPaths = []
+      ;(captures || []).forEach(c => {
+        const path = c.receipt_storage_path || c.payment_storage_path
+        if (path) { pathByCaptureId[c.id] = path; allPaths.push(path) }
+      })
+      if (allPaths.length === 0) { setThumbnails({}); return }
+      const { data: signed } = await supabase.storage.from('expense-documents').createSignedUrls(allPaths, 3600)
+      const urlByPath = {}
+      ;(signed || []).forEach(s => { if (s?.signedUrl) urlByPath[s.path] = s.signedUrl })
+      const map = {}
+      expenses.forEach(e => {
+        const path = e.capture_id ? pathByCaptureId[e.capture_id] : null
+        if (path && urlByPath[path]) map[e.id] = urlByPath[path]
+      })
+      setThumbnails(map)
+    }
+    loadThumbnails()
+  }, [expenses])
+
   function handleExpenseSaved() {
     setEditingExpense(null)
     setAddingNew(false)
@@ -66,6 +98,10 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
     if (r && r.violations && r.violations.length > 0) violatedIds.add(exp.id)
     if (exp.policy_status === 'blocked') blockedIds.add(exp.id)
   })
+  // A "Save expense, finish details later" quick-save row has no entity
+  // set yet — it can't be validly included in a report until someone opens
+  // it and fills in the rest, so it's shown but not selectable.
+  const incompleteIds = new Set(expenses.filter(e => e.entity == null).map(e => e.id))
 
   function getViolationMessage(expId) {
     const idx = expenses.findIndex(e => e.id === expId)
@@ -86,7 +122,7 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
   }
 
   function toggleSelect(expId) {
-    if (blockedIds.has(expId)) return
+    if (blockedIds.has(expId) || incompleteIds.has(expId)) return
     setSelected(prev => {
       const next = new Set(prev)
       if (next.has(expId)) next.delete(expId)
@@ -96,7 +132,7 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
   }
 
   function selectAll() {
-    setSelected(new Set(expenses.filter(e => !blockedIds.has(e.id)).map(e => e.id)))
+    setSelected(new Set(expenses.filter(e => !blockedIds.has(e.id) && !incompleteIds.has(e.id)).map(e => e.id)))
   }
 
   function clearAll() {
@@ -105,12 +141,16 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
 
   function handlePreview() {
     if (selected.size === 0) return
-    const sel = expenses.filter(e => selected.has(e.id))
-    const selResults = sel.map(e => {
-      const idx = expenses.findIndex(exp => exp.id === e.id)
-      return results[idx] || { violations: [], flags: [] }
-    })
-    onPreview(sel, selResults)
+    if (onPreview) {
+      const sel = expenses.filter(e => selected.has(e.id))
+      const selResults = sel.map(e => {
+        const idx = expenses.findIndex(exp => exp.id === e.id)
+        return results[idx] || { violations: [], flags: [] }
+      })
+      onPreview(sel, selResults)
+      return
+    }
+    if (onRaiseReport) onRaiseReport([...selected])
   }
 
   const selectedExpenses = expenses.filter(e => selected.has(e.id))
@@ -136,15 +176,17 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
   function renderRow(exp, globalIndex) {
     const i = globalIndex !== undefined ? globalIndex : expenses.findIndex(e => e.id === exp.id)
     const isBlocked = blockedIds.has(exp.id)
+    const isIncomplete = incompleteIds.has(exp.id)
     const hasViolation = violatedIds.has(exp.id)
     const isSelected = selected.has(exp.id)
-    const badge = getPolicyBadge(exp, i)
+    const badge = isIncomplete ? { label: 'Needs details', color: 'var(--action)', bg: 'var(--action-bg)' } : getPolicyBadge(exp, i)
     const violationMsg = (isBlocked || hasViolation) ? getViolationMessage(exp.id) : null
+    const thumb = thumbnails[exp.id]
 
     return (
       <div key={exp.id}>
         <div
-          onClick={() => toggleSelect(exp.id)}
+          onClick={() => (isIncomplete ? setEditingExpense(exp) : toggleSelect(exp.id))}
           style={{
             display: 'flex', alignItems: 'center', padding: '16px', minHeight: '72px',
             borderBottom: '1px solid var(--taupe-200)',
@@ -158,10 +200,11 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
             width: '20px', height: '20px', flexShrink: 0,
             border: `1.5px solid ${isSelected ? 'var(--text)' : 'var(--taupe-200)'}`,
             background: isSelected ? 'var(--text)' : 'var(--surface-card)',
-            marginRight: '16px',
+            marginRight: '12px',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             borderRadius: 'var(--radius-xs)',
-            pointerEvents: isBlocked ? 'none' : 'auto',
+            pointerEvents: (isBlocked || isIncomplete) ? 'none' : 'auto',
+            opacity: isIncomplete ? 0.4 : 1,
           }}>
             {isSelected && (
               <div style={{
@@ -169,6 +212,20 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
                 borderLeft: '2px solid var(--surface-card)', borderBottom: '2px solid var(--surface-card)',
                 transform: 'rotate(-45deg)', marginTop: '-3px',
               }} />
+            )}
+          </div>
+
+          {/* Thumbnail */}
+          <div style={{
+            width: '40px', height: '40px', flexShrink: 0, marginRight: '12px',
+            borderRadius: 'var(--radius-xs)', overflow: 'hidden',
+            border: '1px solid var(--taupe-200)', background: 'var(--taupe-50)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            {thumb ? (
+              <img src={thumb} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <span style={{ fontSize: '16px', color: 'var(--text-muted)' }}>📄</span>
             )}
           </div>
 
@@ -194,12 +251,14 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
                 }}>
                   {badge.label}
                 </div>
-                <span
-                  onClick={e => { e.stopPropagation(); setEditingExpense(exp) }}
-                  style={{ fontSize: '11px', color: 'var(--text-muted)', textDecoration: 'underline', cursor: 'pointer' }}
-                >
-                  Edit
-                </span>
+                {!isIncomplete && (
+                  <span
+                    onClick={e => { e.stopPropagation(); setEditingExpense(exp) }}
+                    style={{ fontSize: '11px', color: 'var(--text-muted)', textDecoration: 'underline', cursor: 'pointer' }}
+                  >
+                    Edit
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -279,14 +338,18 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
 
       {/* Header */}
       <div style={{ padding: '20px 20px 0' }}>
-        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>{reportMeta ? 'Add expenses to this report' : 'Create Report'}</div>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+          {reportMeta ? 'Add expenses to this report' : standalone ? 'My Expenses' : 'Create Report'}
+        </div>
         <div style={{ fontSize: '20px', fontWeight: 500, color: 'var(--text)', marginBottom: '8px' }}>
-          {reportMeta ? 'Drag receipts in, or pick from saved expenses' : 'Select expenses to include'}
+          {reportMeta ? 'Drag receipts in, or pick from saved expenses' : standalone ? 'Browse and select your saved expenses' : 'Select expenses to include'}
         </div>
         <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: '1.5' }}>
           {reportMeta
             ? 'Each receipt is auto-read and added straight into this report — check the fields it fills in before submitting.'
-            : 'Choose which expenses to include in this report. You can create multiple reports from your saved expenses.'}
+            : standalone
+              ? 'Everything you’ve saved but not yet included in a report. Select one or more to raise a report, or just browse.'
+              : 'Choose which expenses to include in this report. You can create multiple reports from your saved expenses.'}
         </div>
         <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
           <span onClick={selectAll} style={{ fontSize: '13px', color: 'var(--text)', textDecoration: 'underline', cursor: 'pointer' }}>
@@ -386,7 +449,7 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
               cursor: selected.size > 0 ? 'pointer' : 'default',
             }}
           >
-            Preview report →
+            {onPreview ? 'Preview report →' : 'Raise report →'}
           </div>
         </div>
       </div>

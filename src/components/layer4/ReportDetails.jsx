@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { attachPendingBalances, poOptionLabel } from '../../lib/poBalance'
+import { attachPendingBalances } from '../../lib/poBalance'
+import VoiceInputButton from '../shared/VoiceInputButton'
 
 const PURPOSE_OPTIONS = [
   { key: 'internal', label: 'Internal team work', placeholder: 'What was the meeting or work about' },
   { key: 'field', label: 'Field programme or beneficiary visit', placeholder: 'Which programme or location' },
   { key: 'donor', label: 'Donor or client engagement', placeholder: 'Who attended and what was covered' },
-  { key: 'office', label: 'Office or admin', placeholder: 'What was this for' },
+  { key: 'others', label: 'Others', placeholder: 'What was this for' },
 ]
 
 function SectionLabel({ children, mt }) {
@@ -17,21 +18,28 @@ function SectionLabel({ children, mt }) {
   )
 }
 
-function TapCard({ selected, onClick, main, sub, fullWidth }) {
+function TapCard({ selected, onClick, main, sub, fullWidth, revealHint }) {
   return (
     <div
       onClick={onClick}
       style={{
         flex: fullWidth ? undefined : 1,
         width: fullWidth ? '100%' : undefined,
-        padding: '12px 14px', cursor: 'pointer', marginBottom: fullWidth ? '8px' : 0,
-        border: `1.5px solid ${selected ? 'var(--text)' : 'var(--taupe-200)'}`,
+        padding: '12px 14px', cursor: 'pointer', marginBottom: fullWidth && !(selected && revealHint) ? '8px' : 0,
+        border: `1.5px solid ${selected ? 'var(--action)' : 'var(--taupe-200)'}`,
+        borderBottom: selected && revealHint ? '1.5px solid var(--action)' : undefined,
         background: selected ? 'var(--taupe-50)' : 'var(--surface-card)',
-        borderRadius: 'var(--radius-sm)',
+        borderRadius: revealHint && selected ? 'var(--radius-sm) var(--radius-sm) 0 0' : 'var(--radius-sm)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px',
       }}
     >
-      <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>{main}</div>
-      {sub && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{sub}</div>}
+      <div>
+        <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>{main}</div>
+        {sub && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{sub}</div>}
+      </div>
+      {revealHint && selected && (
+        <div style={{ fontSize: '13px', color: 'var(--action)', flexShrink: 0 }}>▾</div>
+      )}
     </div>
   )
 }
@@ -47,22 +55,35 @@ function PendingBalanceNote({ total, poPending, poLoading }) {
   )
 }
 
-function TextInput({ value, onChange, placeholder, label }) {
+function TextInput({ value, onChange, placeholder, label, connected }) {
   return (
-    <div style={{ marginTop: '8px' }}>
+    <div
+      className={connected ? 'reveal-panel' : undefined}
+      style={{
+        marginTop: connected ? 0 : '8px', marginBottom: connected ? '8px' : 0,
+        padding: connected ? '12px 14px' : 0,
+        border: connected ? '1.5px solid var(--action)' : 'none',
+        borderTop: connected ? 'none' : undefined,
+        borderRadius: connected ? '0 0 var(--radius-sm) var(--radius-sm)' : 0,
+        background: connected ? 'var(--taupe-50)' : 'transparent',
+      }}
+    >
       {label && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>{label}</div>}
-      <input
-        type="text"
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        style={{
-          width: '100%', height: '44px', border: '1px solid var(--taupe-200)',
-          borderRadius: 'var(--radius-sm)', padding: '0 12px', fontSize: '13px',
-          color: 'var(--text)', outline: 'none', boxSizing: 'border-box',
-          background: 'var(--surface-card)', fontFamily: 'inherit',
-        }}
-      />
+      <div style={{ position: 'relative' }}>
+        <input
+          type="text"
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder={placeholder}
+          style={{
+            width: '100%', height: '44px', border: '1px solid var(--taupe-200)',
+            borderRadius: 'var(--radius-sm)', padding: '0 40px 0 12px', fontSize: '13px',
+            color: 'var(--text)', outline: 'none', boxSizing: 'border-box',
+            background: 'var(--surface-card)', fontFamily: 'inherit',
+          }}
+        />
+        <VoiceInputButton value={value} onChange={onChange} />
+      </div>
     </div>
   )
 }
@@ -99,20 +120,16 @@ export default function ReportDetails({ expenses, reportMeta, user, onContinue, 
   const count = (expenses || []).length
   const derivedEntity = mostCommonEntity(expenses)
 
-  // Section 0 — PO relation. This question now gets asked up front, when
-  // the report is first created (NewReportModal), so for a report created
-  // through that flow poRelated/selectedPOId arrive here already answered
-  // — shown as a read-only summary with a "Change" option rather than
-  // asked again. A report created before this question moved (po_related
-  // still null on its row) falls back to asking it here instead, exactly
-  // as this section used to work unconditionally.
-  const [poRelated, setPoRelated] = useState(reportMeta?.po_related ?? null) // true | false
+  // Section 0 — PO relation. This is answered once, up front, when the
+  // report is first created (NewReportModal's own step 1) — it is never
+  // re-asked here, only displayed read-only below. A report created before
+  // this question existed (po_related still null on its row) is treated as
+  // "not related to a PO", same as an explicit "No" would be.
+  const poRelated = reportMeta?.po_related ?? false // true | false
   const [poOptions, setPoOptions] = useState([])
   const [selectedPOId, setSelectedPOId] = useState(reportMeta?.po_id || '')
   const [poPending, setPoPending] = useState(null) // { amount, pending } once a PO is picked
   const [poLoading, setPoLoading] = useState(false)
-  const [poError, setPoError] = useState(null)
-  const [editingPO, setEditingPO] = useState(reportMeta?.po_related == null)
 
   useEffect(() => {
     if (poRelated !== true || poOptions.length) return
@@ -139,7 +156,6 @@ export default function ReportDetails({ expenses, reportMeta, user, onContinue, 
   async function handleSelectPO(id) {
     setSelectedPOId(id)
     setPoPending(null)
-    setPoError(null)
     if (!id) return
     setPoLoading(true)
     const po = poOptions.find(p => p.id === id)
@@ -155,7 +171,7 @@ export default function ReportDetails({ expenses, reportMeta, user, onContinue, 
     setPoLoading(false)
   }
 
-  const poSectionValid = poRelated === false || (poRelated === true && !!selectedPOId && !!poPending && total <= poPending.pending)
+  const poSectionValid = !poRelated || (!!selectedPOId && !!poPending && total <= poPending.pending)
 
   // Section B — Purpose (required — the one substantive question left
   // here once PO/Who/Trip/Prior-approval/Entity all moved to being
@@ -185,13 +201,6 @@ export default function ReportDetails({ expenses, reportMeta, user, onContinue, 
       description: purposeDescription,
       reimbursement_type: reimbType,
     })
-  }
-
-  const inputStyle = {
-    width: '100%', height: '44px', border: '1px solid var(--taupe-200)',
-    borderRadius: 'var(--radius-sm)', padding: '0 12px', fontSize: '13px',
-    color: 'var(--text)', outline: 'none', boxSizing: 'border-box',
-    background: 'var(--surface-card)', fontFamily: 'inherit',
   }
 
   return (
@@ -233,80 +242,39 @@ export default function ReportDetails({ expenses, reportMeta, user, onContinue, 
 
       <div style={{ height: '1px', background: 'var(--taupe-200)', marginBottom: '24px' }} />
 
-      {/* SECTION 0 — PO relation. Answered already at report creation for
-          any report made through NewReportModal — shown read-only with a
-          "Change" option; only genuinely asked here for an older report
-          that never got asked (po_related still null). */}
-      <SectionLabel>Purchase Order{editingPO && <span style={{ color: 'var(--clay-text)' }}> *</span>}</SectionLabel>
-
-      {!editingPO ? (
-        <div style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '12px 14px', marginBottom: '12px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
-            <div>
-              {poRelated ? (
-                <>
-                  <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>
-                    Related to {poOptions.find(p => p.id === selectedPOId)?.po_number || 'a Purchase Order'}
-                  </div>
-                  {poOptions.find(p => p.id === selectedPOId)?.vendors?.org_name && (
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                      {poOptions.find(p => p.id === selectedPOId).vendors.org_name}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>Not related to a Purchase Order</div>
-              )}
+      {/* SECTION 0 — PO relation. Answered once, up front, in NewReportModal
+          when the report was created — shown here read-only, never re-asked. */}
+      <SectionLabel>Purchase Order</SectionLabel>
+      <div style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '12px 14px', marginBottom: '12px' }}>
+        {poRelated ? (
+          <>
+            <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>
+              Related to {poOptions.find(p => p.id === selectedPOId)?.po_number || 'a Purchase Order'}
             </div>
-            <span
-              onClick={() => setEditingPO(true)}
-              style={{ fontSize: '12px', color: 'var(--action)', cursor: 'pointer', textDecoration: 'underline', flexShrink: 0 }}
-            >
-              Change
-            </span>
-          </div>
-          {poRelated && <PendingBalanceNote total={total} poPending={poPending} poLoading={poLoading} />}
-        </div>
-      ) : (
-        <>
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-            <TapCard selected={poRelated === true} onClick={() => setPoRelated(true)} main="Yes" sub="Paying an invoice against an issued PO" />
-            <TapCard selected={poRelated === false} onClick={() => { setPoRelated(false); setSelectedPOId(''); setPoPending(null) }} main="No" sub="A normal expense claim" />
-          </div>
-
-          {poRelated === true && (
-            <div style={{ marginBottom: '12px' }}>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>Which Purchase Order</div>
-              <select
-                value={selectedPOId}
-                onChange={e => handleSelectPO(e.target.value)}
-                style={{ ...inputStyle, paddingLeft: '10px' }}
-              >
-                <option value="">Select a PO…</option>
-                {poOptions.map(po => (
-                  <option key={po.id} value={po.id}>{poOptionLabel(po)}</option>
-                ))}
-              </select>
-
-              <PendingBalanceNote total={total} poPending={poPending} poLoading={poLoading} />
-
-              {poError && <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginTop: '8px' }}>{poError}</div>}
-            </div>
-          )}
-        </>
-      )}
+            {poOptions.find(p => p.id === selectedPOId)?.vendors?.org_name && (
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                {poOptions.find(p => p.id === selectedPOId).vendors.org_name}
+              </div>
+            )}
+            <PendingBalanceNote total={total} poPending={poPending} poLoading={poLoading} />
+          </>
+        ) : (
+          <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>Not related to a Purchase Order</div>
+        )}
+      </div>
 
       <div style={{ height: '1px', background: 'var(--taupe-200)', marginBottom: '24px' }} />
 
       {/* SECTION B — Purpose (required) */}
       <SectionLabel>What were these expenses for<span style={{ color: 'var(--clay-text)' }}> *</span></SectionLabel>
       {PURPOSE_OPTIONS.map(opt => (
-        <div key={opt.key}>
+        <div key={opt.key} style={{ marginBottom: '8px' }}>
           <TapCard
             selected={purposeKey === opt.key}
             onClick={() => setPurposeKey(purposeKey === opt.key ? null : opt.key)}
             main={opt.label}
             fullWidth
+            revealHint
           />
           {purposeKey === opt.key && (
             <TextInput
@@ -314,15 +282,16 @@ export default function ReportDetails({ expenses, reportMeta, user, onContinue, 
               onChange={setPurposeDescription}
               placeholder={opt.placeholder}
               label="Brief description"
+              connected
             />
           )}
         </div>
       ))}
 
-      {/* SECTION F — Reimbursement (required) */}
+      {/* SECTION F — Reimbursement (required) — bank transfer only, the org
+          never pays out in petty cash */}
       <SectionLabel mt={24}>How would you like to be reimbursed<span style={{ color: 'var(--clay-text)' }}> *</span></SectionLabel>
       <TapCard selected={reimbType === 'bank_transfer'} onClick={() => setReimbType(reimbType === 'bank_transfer' ? null : 'bank_transfer')} main="Bank transfer" sub="Transferred to your registered account" fullWidth />
-      <TapCard selected={reimbType === 'petty_cash'} onClick={() => setReimbType(reimbType === 'petty_cash' ? null : 'petty_cash')} main="Petty cash" sub="Collected from finance team in person" fullWidth />
 
       {/* Fixed bottom bar */}
       <div style={{ position: 'fixed', bottom: 0, left: '220px', right: 0, zIndex: 10 }}>
@@ -330,16 +299,6 @@ export default function ReportDetails({ expenses, reportMeta, user, onContinue, 
           maxWidth: '480px', margin: '0 auto',
           background: 'var(--surface-card)', borderTop: '1px solid var(--taupe-200)', padding: '16px',
         }}>
-          {poRelated === null && (
-            <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginBottom: '8px' }}>
-              Answer whether this report is related to a Purchase Order before continuing.
-            </div>
-          )}
-          {poRelated === true && !selectedPOId && (
-            <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginBottom: '8px' }}>
-              Select which Purchase Order this report is related to before continuing.
-            </div>
-          )}
           {poSectionValid && !purposeValid && (
             <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginBottom: '8px' }}>
               Answer what these expenses were for before continuing.

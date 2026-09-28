@@ -8,6 +8,7 @@ import PanDuplicateModal from './PanDuplicateModal'
 import { sendVendorEmail } from '../../lib/vendorEmail'
 import { getFinanceEmails } from '../../lib/auth'
 import InfoTip from '../shared/InfoTip'
+import VoiceInputButton from '../shared/VoiceInputButton'
 
 const ORG_TYPES = [
   'Private Limited', 'Public Limited', 'LLP', 'Partnership', 'Proprietorship', 'HUF',
@@ -1326,18 +1327,21 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
             <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gold-text)', marginBottom: '12px' }}>MSME Registration Details</div>
             <Field id="msme_details" label="MSME Registration Details" required error={liveErrors.msme_details}
               hint="If MSME is yes, please provide the registration details">
-              <textarea
-                value={f.msme_details}
-                onChange={e => setF(p => ({ ...p, msme_details: e.target.value }))}
-                placeholder="MSME Udyam Registration Number, category (Micro/Small/Medium), etc."
-                rows={3}
-                style={{
-                  width: '100%', border: `1px solid ${liveErrors.msme_details ? 'var(--clay-text)' : 'var(--gold-border)'}`,
-                  borderRadius: 'var(--radius-sm)', padding: '10px', fontSize: '13px', color: 'var(--ink)',
-                  outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit',
-                  background: 'var(--surface-card)',
-                }}
-              />
+              <div style={{ position: 'relative' }}>
+                <textarea
+                  value={f.msme_details}
+                  onChange={e => setF(p => ({ ...p, msme_details: e.target.value }))}
+                  placeholder="MSME Udyam Registration Number, category (Micro/Small/Medium), etc."
+                  rows={3}
+                  style={{
+                    width: '100%', border: `1px solid ${liveErrors.msme_details ? 'var(--clay-text)' : 'var(--gold-border)'}`,
+                    borderRadius: 'var(--radius-sm)', padding: '10px', paddingRight: '40px', fontSize: '13px', color: 'var(--ink)',
+                    outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit',
+                    background: 'var(--surface-card)',
+                  }}
+                />
+                <VoiceInputButton value={f.msme_details} onChange={v => setF(p => ({ ...p, msme_details: v }))} />
+              </div>
             </Field>
             <FileUpload id="msme_cert"
               label="MSME Registration Certificate"
@@ -1470,18 +1474,21 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
             {f.is_related_to_org === true && (
               <div style={full}>
                 <Field id="related_org_description" label="Describe the relationship / connection" required error={liveErrors.related_org_description}>
-                  <textarea
-                    value={f.related_org_description}
-                    onChange={e => setF(p => ({ ...p, related_org_description: e.target.value }))}
-                    placeholder="e.g. Vendor is owned by a family member of an employee"
-                    rows={3}
-                    style={{
-                      width: '100%', border: `1px solid ${liveErrors.related_org_description ? 'var(--clay-text)' : 'var(--taupe-400)'}`,
-                      borderRadius: 'var(--radius-sm)', padding: '10px', fontSize: '13px', color: 'var(--ink)',
-                      outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit',
-                      background: 'var(--surface-card)',
-                    }}
-                  />
+                  <div style={{ position: 'relative' }}>
+                    <textarea
+                      value={f.related_org_description}
+                      onChange={e => setF(p => ({ ...p, related_org_description: e.target.value }))}
+                      placeholder="e.g. Vendor is owned by a family member of an employee"
+                      rows={3}
+                      style={{
+                        width: '100%', border: `1px solid ${liveErrors.related_org_description ? 'var(--clay-text)' : 'var(--taupe-400)'}`,
+                        borderRadius: 'var(--radius-sm)', padding: '10px', paddingRight: '40px', fontSize: '13px', color: 'var(--ink)',
+                        outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit',
+                        background: 'var(--surface-card)',
+                      }}
+                    />
+                    <VoiceInputButton value={f.related_org_description} onChange={v => setF(p => ({ ...p, related_org_description: v }))} />
+                  </div>
                 </Field>
               </div>
             )}

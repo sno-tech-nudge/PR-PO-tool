@@ -4,6 +4,7 @@ import { createPendingPO, approvePRLevel, rejectPRLevel } from '../../lib/prAppr
 import { canAccessApprovals, canAccessFinance } from '../../lib/auth'
 import { getDisplayName } from '../../lib/directory'
 import AmountInput from '../shared/AmountInput'
+import VoiceInputButton from '../shared/VoiceInputButton'
 import PRStatusTimeline from './PRStatusTimeline'
 import PRAttachmentsModal from './PRAttachmentsModal'
 
@@ -453,13 +454,16 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
           ) : (
             <div>
               <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)', marginBottom: '8px' }}>Rejection reason</div>
-              <textarea
-                value={reason}
-                onChange={e => setReason(e.target.value)}
-                rows={3}
-                placeholder="Explain why this purchase request is being rejected…"
-                style={{ width: '100%', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', fontSize: '13px', color: 'var(--ink)', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit', marginBottom: '12px' }}
-              />
+              <div style={{ position: 'relative', marginBottom: '12px' }}>
+                <textarea
+                  value={reason}
+                  onChange={e => setReason(e.target.value)}
+                  rows={3}
+                  placeholder="Explain why this purchase request is being rejected…"
+                  style={{ width: '100%', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', paddingRight: '40px', fontSize: '13px', color: 'var(--ink)', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }}
+                />
+                <VoiceInputButton value={reason} onChange={setReason} />
+              </div>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button
                   onClick={handleReject}

@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import PanDuplicateModal from './PanDuplicateModal'
 import { sendVendorEmail } from '../../lib/vendorEmail'
 import { getDisplayName } from '../../lib/directory'
+import VoiceInputButton from '../shared/VoiceInputButton'
 
 // Sole Proprietorship shares the same Aadhaar-based document requirement as
 // Individual/Freelancer per Finance's Vendor Document Requirements sheet.
@@ -254,17 +255,20 @@ export default function VendorApprovalView({ vendor, user, onBack, onActioned })
             {!rejecting ? (
               <div>
                 <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)', marginBottom: '8px' }}>Comment (optional)</div>
-                <textarea
-                  value={approveComment}
-                  onChange={e => setApproveComment(e.target.value)}
-                  placeholder="Any notes for the record or for the submitter — shown to them alongside the approval."
-                  rows={2}
-                  style={{
-                    width: '100%', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '10px 12px',
-                    fontSize: '13px', color: 'var(--ink)', outline: 'none', resize: 'vertical',
-                    boxSizing: 'border-box', fontFamily: 'inherit', marginBottom: '14px',
-                  }}
-                />
+                <div style={{ position: 'relative', marginBottom: '14px' }}>
+                  <textarea
+                    value={approveComment}
+                    onChange={e => setApproveComment(e.target.value)}
+                    placeholder="Any notes for the record or for the submitter — shown to them alongside the approval."
+                    rows={2}
+                    style={{
+                      width: '100%', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', paddingRight: '40px',
+                      fontSize: '13px', color: 'var(--ink)', outline: 'none', resize: 'vertical',
+                      boxSizing: 'border-box', fontFamily: 'inherit',
+                    }}
+                  />
+                  <VoiceInputButton value={approveComment} onChange={setApproveComment} />
+                </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <button
                     onClick={handleApprove}
@@ -285,17 +289,20 @@ export default function VendorApprovalView({ vendor, user, onBack, onActioned })
             ) : (
               <div>
                 <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)', marginBottom: '8px' }}>Reason for rejection</div>
-                <textarea
-                  value={reason}
-                  onChange={e => setReason(e.target.value)}
-                  placeholder="Be specific — the submitter will see this and use it to correct the vendor record."
-                  rows={3}
-                  style={{
-                    width: '100%', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '10px 12px',
-                    fontSize: '13px', color: 'var(--ink)', outline: 'none', resize: 'vertical',
-                    boxSizing: 'border-box', fontFamily: 'inherit', marginBottom: '12px',
-                  }}
-                />
+                <div style={{ position: 'relative', marginBottom: '12px' }}>
+                  <textarea
+                    value={reason}
+                    onChange={e => setReason(e.target.value)}
+                    placeholder="Be specific — the submitter will see this and use it to correct the vendor record."
+                    rows={3}
+                    style={{
+                      width: '100%', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', paddingRight: '40px',
+                      fontSize: '13px', color: 'var(--ink)', outline: 'none', resize: 'vertical',
+                      boxSizing: 'border-box', fontFamily: 'inherit',
+                    }}
+                  />
+                  <VoiceInputButton value={reason} onChange={setReason} />
+                </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <button
                     onClick={handleReject}

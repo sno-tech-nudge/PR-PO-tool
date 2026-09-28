@@ -8,6 +8,7 @@ import { useNetworkStatus } from '../../hooks/useNetworkStatus'
 import { supabase } from '../../lib/supabase'
 import { saveToQueue, getUnsynced, markSynced } from '../../lib/offlineQueue'
 import { detectUPI } from '../../lib/claude'
+import { insertExpenseDetails, buildQuickSaveExpensePayload } from '../../lib/expenseDetailsSave'
 
 const STEPS = {
   STEP1: 'step1',
@@ -26,6 +27,8 @@ export default function NewExpense({ user, onContinueToDetails, onBack }) {
   const [singleDocument, setSingleDocument] = useState(false)
   const [capturedOffline, setCapturedOffline] = useState(false)
   const [syncNotification, setSyncNotification] = useState(false)
+  const [quickSaving, setQuickSaving] = useState(false)
+  const [quickSaveError, setQuickSaveError] = useState(null)
   const captureIdRef = useRef(null)
   const { isOnline } = useNetworkStatus()
 
@@ -193,6 +196,21 @@ export default function NewExpense({ user, onContinueToDetails, onBack }) {
     }
   }
 
+  async function handleQuickSave(data) {
+    setQuickSaving(true)
+    setQuickSaveError(null)
+    const payload = buildQuickSaveExpensePayload(data)
+    const { error: err } = await insertExpenseDetails({ payload, captureId: captureIdRef.current, userEmail: user?.email })
+    if (err) {
+      console.error('Quick-save expense error:', err)
+      setQuickSaveError(`Save failed: ${err.message}`)
+      setQuickSaving(false)
+      return
+    }
+    setQuickSaving(false)
+    onBack()
+  }
+
   // The tab switcher only makes sense before any capture progress has been
   // made — once you're mid-flow (payment step, cross-validation, etc.) the
   // tabs disappear so switching can't discard in-progress work.
@@ -302,6 +320,9 @@ export default function NewExpense({ user, onContinueToDetails, onBack }) {
           singleDocument={singleDocument}
           capturedOffline={capturedOffline}
           onContinue={(data) => onContinueToDetails({ ...data, capture_id: captureIdRef.current })}
+          onQuickSave={handleQuickSave}
+          quickSaving={quickSaving}
+          quickSaveError={quickSaveError}
         />
       )}
     </div>

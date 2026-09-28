@@ -8,6 +8,7 @@ import POTemplate from '../pr/POTemplate'
 import SubmitPOExpense from './SubmitPOExpense'
 import PRAttachmentsModal from '../pr/PRAttachmentsModal'
 import PRRequestDetailsCard from '../pr/PRRequestDetailsCard'
+import VoiceInputButton from '../shared/VoiceInputButton'
 
 function fmtDate(d) {
   if (!d) return '—'
@@ -392,13 +393,16 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
           ) : (
             <div>
               <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)', marginBottom: '8px' }}>Rejection reason</div>
-              <textarea
-                value={poRejectReason}
-                onChange={e => setPoRejectReason(e.target.value)}
-                rows={3}
-                placeholder="Why is this purchase order being rejected? (e.g. vendor legitimacy concerns, missing documentation)"
-                style={{ width: '100%', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', fontSize: '13px', color: 'var(--ink)', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit', marginBottom: '12px' }}
-              />
+              <div style={{ position: 'relative', marginBottom: '12px' }}>
+                <textarea
+                  value={poRejectReason}
+                  onChange={e => setPoRejectReason(e.target.value)}
+                  rows={3}
+                  placeholder="Why is this purchase order being rejected? (e.g. vendor legitimacy concerns, missing documentation)"
+                  style={{ width: '100%', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', paddingRight: '40px', fontSize: '13px', color: 'var(--ink)', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }}
+                />
+                <VoiceInputButton value={poRejectReason} onChange={setPoRejectReason} />
+              </div>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button
                   onClick={handleRejectPO}

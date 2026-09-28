@@ -15,6 +15,7 @@ import DonorAllocations from '../shared/DonorAllocations'
 import AmountBreakdown from '../shared/AmountBreakdown'
 import StepIndicator from '../shared/StepIndicator'
 import InfoTip from '../shared/InfoTip'
+import VoiceInputButton from '../shared/VoiceInputButton'
 
 const FREQUENCIES = ['One-time', 'Monthly', 'Quarterly', 'Annually']
 
@@ -693,14 +694,17 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
           </div>
 
           <Field id="purpose" label="Purpose / Description" error={liveErrors.purpose} required>
-            <textarea
-              value={purpose}
-              onChange={e => setPurpose(e.target.value)}
-              onBlur={() => validateField('purpose')}
-              placeholder="Describe what this purchase is for and why it is needed"
-              rows={3}
-              style={{ width: '100%', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', padding: '10px', fontSize: '13px', color: 'var(--ink)', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }}
-            />
+            <div style={{ position: 'relative' }}>
+              <textarea
+                value={purpose}
+                onChange={e => setPurpose(e.target.value)}
+                onBlur={() => validateField('purpose')}
+                placeholder="Describe what this purchase is for and why it is needed"
+                rows={3}
+                style={{ width: '100%', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', padding: '10px', paddingRight: '40px', fontSize: '13px', color: 'var(--ink)', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }}
+              />
+              <VoiceInputButton value={purpose} onChange={setPurpose} />
+            </div>
           </Field>
 
           <div style={{ marginBottom: '18px' }}>

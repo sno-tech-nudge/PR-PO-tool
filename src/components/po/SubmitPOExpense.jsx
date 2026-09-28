@@ -6,6 +6,7 @@ import { EXPENSE_NATURES } from '../../lib/donorData'
 import { PR_CATEGORIES } from '../../lib/prConstants'
 import AttachmentDropzone from '../shared/AttachmentDropzone'
 import AmountInput from '../shared/AmountInput'
+import VoiceInputButton from '../shared/VoiceInputButton'
 
 // Not personal-expense payment instruments (that's ExpenseDetails.jsx's
 // PAYMENT_MODES, e.g. "Self - UPI"/"Company Card") — this is how Finance
@@ -390,7 +391,10 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
             </Field>
           </div>
           <Field label="Purpose / Description">
-            <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} style={textareaStyle} />
+            <div style={{ position: 'relative' }}>
+              <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} style={{ ...textareaStyle, paddingRight: '40px' }} />
+              <VoiceInputButton value={description} onChange={setDescription} />
+            </div>
           </Field>
           <Field label="Vendor GSTIN">
             <input value={gstin} onChange={e => setGstin(e.target.value)} style={inputStyle} />

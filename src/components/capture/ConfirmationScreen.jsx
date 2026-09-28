@@ -7,9 +7,23 @@ const PAYMENT_LABELS = {
   cash: 'Cash',
 }
 
-export default function ConfirmationScreen({ receiptExtracted, paymentData, matchedAmount, singleDocument, capturedOffline, onContinue }) {
+export default function ConfirmationScreen({ receiptExtracted, paymentData, matchedAmount, singleDocument, capturedOffline, onContinue, onQuickSave, quickSaving, quickSaveError }) {
   const { isOnline } = useNetworkStatus()
   const isOffline = capturedOffline || !isOnline
+
+  function buildContinueData() {
+    return {
+      amount: matchedAmount ?? receiptExtracted?.amount ?? null,
+      vendor: receiptExtracted?.vendor ?? null,
+      date: receiptExtracted?.date ?? null,
+      category: receiptExtracted?.category ?? null,
+      invoice_number: receiptExtracted?.invoice_number ?? null,
+      gstin: receiptExtracted?.gstin ?? null,
+      payment_method: paymentData?.paymentType ?? null,
+      is_upi: paymentData?.upiData?.is_upi ?? false,
+      single_document: singleDocument ?? false,
+    }
+  }
 
   const amount = matchedAmount ?? receiptExtracted?.amount ?? null
   const vendor = receiptExtracted?.vendor ?? null
@@ -68,17 +82,7 @@ export default function ConfirmationScreen({ receiptExtracted, paymentData, matc
       )}
 
       <button
-        onClick={() => onContinue && onContinue({
-          amount: matchedAmount ?? receiptExtracted?.amount ?? null,
-          vendor: receiptExtracted?.vendor ?? null,
-          date: receiptExtracted?.date ?? null,
-          category: receiptExtracted?.category ?? null,
-          invoice_number: receiptExtracted?.invoice_number ?? null,
-          gstin: receiptExtracted?.gstin ?? null,
-          payment_method: paymentData?.paymentType ?? null,
-          is_upi: paymentData?.upiData?.is_upi ?? false,
-          single_document: singleDocument ?? false,
-        })}
+        onClick={() => onContinue && onContinue(buildContinueData())}
         style={{
           width: '100%', height: '48px', background: 'var(--action)', color: 'var(--surface-card)',
           border: 'none', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: 'var(--radius-sm)',
@@ -86,6 +90,29 @@ export default function ConfirmationScreen({ receiptExtracted, paymentData, matc
       >
         Continue to expense details
       </button>
+
+      {onQuickSave && !isOffline && (
+        <>
+          <button
+            onClick={() => onQuickSave(buildContinueData())}
+            disabled={quickSaving}
+            style={{
+              width: '100%', height: '48px', marginTop: '10px',
+              background: 'var(--surface-card)', color: quickSaving ? 'var(--text-muted)' : 'var(--text)',
+              border: '1px solid var(--action)', fontSize: '14px', fontWeight: 500,
+              cursor: quickSaving ? 'default' : 'pointer', borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            {quickSaving ? 'Saving…' : 'Save expense, finish details later'}
+          </button>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px', textAlign: 'center' }}>
+            You can add the rest — entity, description, and who it was for — anytime before including this in a report.
+          </div>
+          {quickSaveError && (
+            <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginTop: '8px' }}>{quickSaveError}</div>
+          )}
+        </>
+      )}
     </div>
   )
 }
