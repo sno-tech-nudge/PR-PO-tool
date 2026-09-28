@@ -14,6 +14,7 @@ import AdvanceTable from './AdvanceTable'
 import DonorAllocations from '../shared/DonorAllocations'
 import AmountBreakdown from '../shared/AmountBreakdown'
 import StepIndicator from '../shared/StepIndicator'
+import InfoTip from '../shared/InfoTip'
 
 const FREQUENCIES = ['One-time', 'Monthly', 'Quarterly', 'Annually']
 
@@ -43,11 +44,12 @@ function scrollToField(key) {
   el.querySelector('input, select, textarea, button')?.focus({ preventScroll: true })
 }
 
-function Field({ id, label, error, required, hint, children }) {
+function Field({ id, label, error, required, hint, info, children }) {
   return (
     <div id={id} style={{ marginBottom: '18px', scrollMarginTop: '80px' }}>
-      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: '5px' }}>
+      <label style={{ display: 'flex', alignItems: 'center', fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: '5px' }}>
         {label}{required && <span style={{ color: 'var(--clay-text)', marginLeft: '2px' }}>*</span>}
+        {info && <InfoTip text={info} />}
       </label>
       {hint && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '5px' }}>{hint}</div>}
       {children}
@@ -598,7 +600,14 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
       {/* ── Section 1: Program & Donor Details ── */}
       {step === 0 && (
         <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '24px' }}>
-          <Field id="allocations" label="Donor / Programme Allocation" error={liveErrors.allocations} required hint="Split this spend across donors / programmes — must total 100%">
+          <Field
+            id="allocations"
+            label="Donor / Programme Allocation"
+            error={liveErrors.allocations}
+            required
+            hint="Split this spend across donors / programmes — must total 100%"
+            info="Most purchases only need one row. Add another row only if this specific purchase's cost is genuinely being split across more than one donor or programme — for example, half funded by one grant and half by another. If in doubt, one row at 100% is almost always right."
+          >
             <DonorAllocations value={allocations} onChange={setAllocations} error={liveErrors.allocations} />
           </Field>
 
@@ -717,6 +726,10 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
         {vendorId && lineItemsValid(breakdown.items || []) && breakdownTotals({ ...breakdown, base: itemsBase }).valid && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
             <div id="quotes" style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '24px', scrollMarginTop: '80px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--ink)', marginBottom: '4px', display: 'flex', alignItems: 'center' }}>
+                Quotes
+                <InfoTip text={`"Single source" means only one vendor can realistically do this job (e.g. a proprietary product or sole distributor) — pick that and explain why instead of hunting for quotes that don't really exist. Otherwise, upload ${requiredQuotes} competing quotes and mark which one you're going with; with more than one quote, you'll also need a comparative statement showing how they were compared.`} />
+              </div>
               <PolicyBanner type="info">
                 <strong>Policy requirement:</strong> {requiredQuotes} quote{requiredQuotes > 1 ? 's are' : ' is'} required for this purchase (₹{numericAmount.toLocaleString('en-IN')}). Quotes ensure the organisation gets the best price.
               </PolicyBanner>
@@ -724,7 +737,10 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
             </div>
 
             <div id="advance" style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '24px', scrollMarginTop: '80px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--ink)', marginBottom: '4px' }}>Payment Terms</div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--ink)', marginBottom: '4px', display: 'flex', alignItems: 'center' }}>
+                Payment Terms
+                <InfoTip text="Advance is the percentage paid to the vendor upfront, before delivery — the rest follows on a credit term (e.g. Net 30 Days means due 30 days after delivery/invoice). Defaults to 30%; going over that just needs approver awareness, but a 100% advance needs the Functional Leader's approval by email and a screenshot of it before this PR can proceed." />
+              </div>
               <AdvanceTable value={advanceState} onChange={setAdvanceState} error={liveErrors.advance} />
             </div>
           </div>

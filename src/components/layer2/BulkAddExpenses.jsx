@@ -4,6 +4,7 @@ import { extractReceiptData } from '../../lib/claude'
 import { imageFileToJpegBase64, pdfPageToBase64 } from '../../lib/receiptImage'
 import { toInputDate, fromInputDate } from '../../lib/dateFormat'
 import AmountInput from '../shared/AmountInput'
+import InfoTip from '../shared/InfoTip'
 
 const CATEGORIES = [
   'Travel Fare', 'Lodging and Boarding', 'Food', 'Bike Fare',
@@ -237,6 +238,9 @@ export default function BulkAddExpenses({ user, onSaved, onBack }) {
               {['', 'Date', 'Merchant', 'Category', 'Amount', 'Reimbursable', 'Payment Mode', ''].map((h, i) => (
                 <th key={i} style={{ padding: '10px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>
                   {h}
+                  {h === 'Reimbursable' && (
+                    <InfoTip text="Tick this if you paid out of your own pocket and need this amount paid back to you. Leave it unticked if the company already paid (e.g. a company card) — that's usually not something you need reimbursed for." />
+                  )}
                 </th>
               ))}
             </tr>

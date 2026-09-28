@@ -7,6 +7,7 @@ import { imageFileToJpegBase64, pdfPageToBase64 } from '../../lib/receiptImage'
 import PanDuplicateModal from './PanDuplicateModal'
 import { sendVendorEmail } from '../../lib/vendorEmail'
 import { getFinanceEmails } from '../../lib/auth'
+import InfoTip from '../shared/InfoTip'
 
 const ORG_TYPES = [
   'Private Limited', 'Public Limited', 'LLP', 'Partnership', 'Proprietorship', 'HUF',
@@ -101,11 +102,12 @@ function scrollToField(key) {
 // Organisation next to Nature of Business) must have their inputs line up
 // regardless of which one happens to carry a hint, and a hint wrapping to
 // two lines used to shove that field's input down past its neighbour's.
-function Field({ id, label, error, required, hint, children }) {
+function Field({ id, label, error, required, hint, info, children }) {
   return (
     <div id={id} style={{ marginBottom: '18px', scrollMarginTop: '80px' }}>
-      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: '5px' }}>
+      <label style={{ display: 'flex', alignItems: 'center', fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: '5px' }}>
         {label}{required && <span style={{ color: 'var(--clay-text)', marginLeft: '2px' }}>*</span>}
+        {info && <InfoTip text={info} />}
       </label>
       {children}
       {hint && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>{hint}</div>}
@@ -215,7 +217,7 @@ function YesNo({ value, onChange, error }) {
   )
 }
 
-function SectionHeader({ number, title, subtitle }) {
+function SectionHeader({ number, title, subtitle, info }) {
   return (
     <div style={{ marginBottom: '22px', paddingBottom: '14px', borderBottom: '2px solid var(--taupe-100)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -225,7 +227,10 @@ function SectionHeader({ number, title, subtitle }) {
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
         }}>{number}</div>
         <div>
-          <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--ink)' }}>{title}</div>
+          <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--ink)', display: 'flex', alignItems: 'center' }}>
+            {title}
+            {info && <InfoTip text={info} />}
+          </div>
           {subtitle && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px' }}>{subtitle}</div>}
         </div>
       </div>
@@ -1131,7 +1136,13 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
               onChange={setAadhaarFile}
             />
             <div style={{ marginTop: '4px' }}>
-              <Field id="aadhaar_pan_linked" label="Are your Aadhaar and PAN linked?" required error={liveErrors.aadhaar_pan_linked}>
+              <Field
+                id="aadhaar_pan_linked"
+                label="Are your Aadhaar and PAN linked?"
+                required
+                error={liveErrors.aadhaar_pan_linked}
+                info="Answering No will block this registration from being submitted at all — an individual/proprietor vendor can't be registered without a linked Aadhaar and PAN. If they aren't linked yet, link them first via the Income Tax e-filing portal, then come back and answer Yes."
+              >
                 <YesNo
                   value={f.aadhaar_pan_linked}
                   onChange={v => setF(p => ({ ...p, aadhaar_pan_linked: v }))}
@@ -1164,6 +1175,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           number="2"
           title="Attachments"
           subtitle={f.org_type ? `Documents required for ${f.org_type}` : 'Select Type of Organisation above to see exactly what’s needed'}
+          info="Which document is required here changes based on the Type of Organisation you selected above — for example a Private Limited company needs its Certificate of Incorporation, while an Individual/Freelancer needs an Aadhaar copy instead. Pick the org type first if you haven't already."
         />
 
         <div style={grid2}>

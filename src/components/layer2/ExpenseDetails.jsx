@@ -6,6 +6,7 @@ import { preloadDirectory, getActiveDirectoryEntries } from '../../lib/directory
 import { attachPendingBalances, poOptionLabel } from '../../lib/poBalance'
 import { toInputDate, fromInputDate } from '../../lib/dateFormat'
 import AmountInput from '../shared/AmountInput'
+import InfoTip from '../shared/InfoTip'
 
 const CATEGORIES = [
   'Travel Fare', 'Lodging and Boarding', 'Food', 'Bike Fare',
@@ -782,6 +783,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
         <label htmlFor="claim-reimbursement" style={{ fontSize: '13px', color: 'var(--text)', cursor: 'pointer' }}>
           Claim reimbursement
         </label>
+        <InfoTip text="Check this if you paid out of your own pocket and need this amount paid back to you. Leave it unchecked if the company already paid — for example, if you picked Company Card as the Payment Mode above, this expense usually isn't something you need reimbursed for." />
       </div>
 
       {programs.length > 0 && (
