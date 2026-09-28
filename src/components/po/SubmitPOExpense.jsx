@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { extractInvoiceDetails } from '../../lib/claude'
+import { imageFileToJpegBase64, pdfPageToBase64 } from '../../lib/receiptImage'
 import { EXPENSE_NATURES } from '../../lib/donorData'
 import { PR_CATEGORIES } from '../../lib/prConstants'
 import AttachmentDropzone from '../shared/AttachmentDropzone'
@@ -15,6 +17,12 @@ const ATTACHMENT_LABELS = ['Invoice', 'Receipt', 'Quotation', 'Other']
 function fmtAmt(n) {
   if (n == null) return '—'
   return '₹' + Number(n).toLocaleString('en-IN')
+}
+
+function ordinal(n) {
+  const s = ['th', 'st', 'nd', 'rd']
+  const v = n % 100
+  return n + (s[(v - 20) % 10] || s[v] || s[0])
 }
 
 function Field({ label, required, children }) {
@@ -60,10 +68,17 @@ const textareaStyle = { width: '100%', border: '1px solid var(--taupe-400)', bor
 export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose, onSubmitted }) {
   const [stage, setStage] = useState(1)
 
-  // Stage 1 — this invoice's core numbers.
+  // Stage 1 — this invoice's core numbers. Invoice Number is never typed —
+  // it's read straight off the attached invoice via OCR (see handleInvoiceFile).
   const [amount, setAmount] = useState('')
   const [invoiceNumber, setInvoiceNumber] = useState('')
+  const [invoiceFile, setInvoiceFile] = useState(null)
+  const [ocrExtracting, setOcrExtracting] = useState(false)
+  const [ocrExtracted, setOcrExtracted] = useState(null)
+  const [ocrNotice, setOcrNotice] = useState(null)
   const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHODS[0])
+  const [paymentLabel, setPaymentLabel] = useState('')
+  const [priorCount, setPriorCount] = useState(null)
   const [stage1Error, setStage1Error] = useState(null)
 
   // Stage 2 — pre-filled from the PR, editable.
@@ -76,7 +91,8 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
   const [description, setDescription] = useState(pr?.purpose || '')
   const [gstin, setGstin] = useState(vendor?.gstin || '')
 
-  // Stage 2 — attachments (first row is the primary invoice document).
+  // Stage 2 — attachments (first row is the primary invoice document,
+  // seeded from Stage 1's upload once we get there).
   const [attachments, setAttachments] = useState([{ label: 'Invoice', file: null }])
 
   const [saving, setSaving] = useState(false)
@@ -84,11 +100,58 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
 
   const amt = Number(amount)
   const overPending = amount !== '' && amt > pending
+  const amountLeftAfter = amount !== '' && !overPending ? Math.max(0, pending - amt) : null
+
+  // How many invoices have already been captured against this PO — powers
+  // the "Suggested: Nth payment" placeholder so nobody has to count by hand.
+  useEffect(() => {
+    let cancelled = false
+    async function loadCount() {
+      const { count } = await supabase
+        .from('expense_details')
+        .select('id', { count: 'exact', head: true })
+        .eq('po_number', po.po_number)
+      if (!cancelled) setPriorCount(count || 0)
+    }
+    loadCount()
+    return () => { cancelled = true }
+  }, [po.po_number])
+
+  async function handleInvoiceFile(file) {
+    setInvoiceFile(file)
+    setOcrExtracted(null)
+    setOcrNotice(null)
+    if (!file) return
+    setOcrExtracting(true)
+    try {
+      const { base64 } = file.type === 'application/pdf'
+        ? await pdfPageToBase64(file)
+        : await imageFileToJpegBase64(file)
+      const extracted = await extractInvoiceDetails(base64)
+      if (extracted && (extracted.invoice_number || extracted.total_amount != null)) {
+        setOcrExtracted(extracted)
+        if (extracted.invoice_number) setInvoiceNumber(extracted.invoice_number)
+        if (extracted.total_amount != null && !amount) setAmount(String(extracted.total_amount))
+      } else {
+        setOcrNotice('Could not read this invoice automatically — no problem, just enter the amount yourself below; the invoice is still attached and counts as your record for this payment.')
+      }
+    } catch (err) {
+      console.error('Invoice OCR failed:', err)
+      setOcrNotice('Could not read this invoice automatically — no problem, just enter the amount yourself below; the invoice is still attached and counts as your record for this payment.')
+    }
+    setOcrExtracting(false)
+  }
 
   function handleContinue() {
+    if (!invoiceFile) { setStage1Error('Attach the invoice for this payment.'); return }
     if (!amount || amt <= 0) { setStage1Error('Enter an invoice amount.'); return }
     if (overPending) { setStage1Error(`Amount cannot exceed the pending PO balance of ${fmtAmt(pending)}.`); return }
     setStage1Error(null)
+    setAttachments(prev => {
+      const next = [...prev]
+      next[0] = { label: 'Invoice', file: invoiceFile }
+      return next
+    })
     setStage(2)
   }
 
@@ -146,6 +209,7 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
           invoice_number: invoiceNumber.trim() || null,
           payment_method: paymentMethod || null,
           po_number: po.po_number || null,
+          po_payment_label: paymentLabel.trim() || null,
           supporting_attachments: rest.length ? rest : null,
           capture_id: captureRow.id,
           submitted_at: new Date().toISOString(),
@@ -176,7 +240,7 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
       >
         <div
           onClick={e => e.stopPropagation()}
-          style={{ background: 'var(--surface-card)', borderRadius: 'var(--radius-md)', padding: '24px', width: '100%', maxWidth: '440px' }}
+          style={{ background: 'var(--surface-card)', borderRadius: 'var(--radius-md)', padding: '24px', width: '100%', maxWidth: '460px', maxHeight: '90vh', overflowY: 'auto' }}
         >
           <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--ink)', marginBottom: '4px' }}>
             Submit expense for this PO
@@ -191,6 +255,37 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
             </div>
           )}
 
+          <Field label="Invoice" required>
+            <AttachmentDropzone accept="image/*,.pdf" file={invoiceFile} onChange={handleInvoiceFile} />
+            {ocrExtracting && (
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>Reading invoice…</div>
+            )}
+            {ocrNotice && (
+              <div style={{ fontSize: '11px', color: 'var(--gold-text)', marginTop: '6px' }}>{ocrNotice}</div>
+            )}
+            {ocrExtracted && (
+              <div style={{ background: 'var(--moss-bg)', border: '1px solid var(--moss-border)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', marginTop: '8px' }}>
+                <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--moss-text)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
+                  Extracted from document
+                </div>
+                {[
+                  ['Invoice No.', ocrExtracted.invoice_number],
+                  ['Vendor', ocrExtracted.vendor_name],
+                  ['Date', ocrExtracted.date],
+                  ['Total Amount', ocrExtracted.total_amount != null ? fmtAmt(ocrExtracted.total_amount) : null],
+                ].filter(([, v]) => v).map(([label, value]) => (
+                  <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--ink)', padding: '2px 0' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>{label}</span>
+                    <span>{value}</span>
+                  </div>
+                ))}
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px', fontStyle: 'italic' }}>
+                  Double-check these against the document before saving.
+                </div>
+              </div>
+            )}
+          </Field>
+
           <Field label="Invoice Amount" required>
             <AmountInput value={amount} onChange={setAmount} error={overPending} inputStyle={{ height: '40px', fontSize: '14px' }} />
             {overPending && (
@@ -198,14 +293,30 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
                 Exceeds pending balance of {fmtAmt(pending)}.
               </div>
             )}
+            {amountLeftAfter != null && (
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                After this payment: {fmtAmt(amountLeftAfter)} will still be pending on this PO.
+              </div>
+            )}
           </Field>
-          <Field label="Invoice Number">
-            <input value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} style={inputStyle} />
-          </Field>
+
           <Field label="Payment Method">
             <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} style={inputStyle}>
               {PAYMENT_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
             </select>
+          </Field>
+
+          <Field label="Which payment is this? (optional)">
+            <input
+              value={paymentLabel}
+              onChange={e => setPaymentLabel(e.target.value)}
+              placeholder={priorCount != null ? `e.g. ${ordinal(priorCount + 1)} of 4 (Quarterly)` : 'e.g. 2nd of 4 (Quarterly)'}
+              style={inputStyle}
+            />
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+              If this PO is being paid in installments (e.g. quarterly), describe which one this is —
+              {priorCount != null && ` ${priorCount} payment${priorCount === 1 ? '' : 's'} already captured against this PO so far.`}
+            </div>
           </Field>
 
           <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
@@ -241,6 +352,7 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
           <span style={{ fontFamily: 'monospace' }}>{po.po_number}</span>
           {pr?.pr_number ? ` · ${pr.pr_number}` : ''}
           {vendor?.org_name ? ` · ${vendor.org_name}` : ''}
+          {paymentLabel ? ` · ${paymentLabel}` : ''}
           {` · this invoice ${fmtAmt(amt)} of ${fmtAmt(pending)} pending`}
         </div>
 
@@ -285,12 +397,13 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
           </Field>
         </SectionCard>
 
-        <SectionCard title="Attachments" sub="Invoice, receipt, quotation — whatever supports this payment">
+        <SectionCard title="Attachments" sub="Invoice already attached — add a receipt, quotation, or anything else that supports this payment">
           {attachments.map((a, i) => (
             <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '12px' }}>
               <select
                 value={a.label}
                 onChange={e => updateAttachment(i, { label: e.target.value })}
+                disabled={i === 0}
                 style={{ ...inputStyle, width: '140px', flexShrink: 0 }}
               >
                 {ATTACHMENT_LABELS.map(l => <option key={l} value={l}>{l}</option>)}
@@ -309,7 +422,6 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
               )}
             </div>
           ))}
-          {attachments.length === 1 && <div style={{ fontSize: '11px', color: 'var(--clay-text)', marginBottom: '10px' }}>* First attachment (Invoice) is required</div>}
           <button
             type="button"
             onClick={addAttachment}

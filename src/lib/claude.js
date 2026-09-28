@@ -248,6 +248,21 @@ Use null for any field not visible. date format: DD/MM/YYYY. All amounts as numb
   )
 }
 
+// Used by SubmitPOExpense.jsx (PO tranche/invoice capture) so the person
+// never has to manually type the invoice number — it's read straight off
+// the invoice document itself, same "best-effort, never a gate" contract as
+// every other OCR call here.
+export async function extractInvoiceDetails(base64Image, mimeType) {
+  return await callGemini(base64Image,
+    `You are extracting data from a vendor invoice document. Extract all key fields accurately.
+The invoice_number is the invoice's own reference number (often printed near the top, labeled "Invoice No.", "Invoice #", or similar).
+Reply with raw JSON only — no markdown, no backticks, no explanation:
+{"invoice_number":string,"vendor_name":string,"date":string,"total_amount":number,"tax":number}
+Use null for any field not clearly visible. date format: DD/MM/YYYY. All amounts as numbers. Do not guess.`,
+    mimeType
+  )
+}
+
 export async function generatePRSummary(prData, vendorData) {
   if (!prData || !vendorData) return null
   const prompt = `Generate a 2-sentence summary for a purchase request that needs approval.
