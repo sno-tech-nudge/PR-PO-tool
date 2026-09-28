@@ -94,12 +94,11 @@ export default function PRList({ user, onViewPR, onCreatePR, onResumeDraft }) {
         }}
       />
 
-      {/* flex-wrap (not overflow scroll) so all 6 tabs always fit without a
-          scrollbar — a container with only overflowX set also silently gets
-          overflowY: auto per the CSS spec the instant content is even 1px
-          taller than the box, which was producing a stray vertical
-          scrollbar here too (not just the intended horizontal one). */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', borderBottom: '1px solid var(--taupe-200)', marginBottom: '16px', gap: '2px 4px', overflow: 'hidden' }}>
+      {/* Single row, horizontal scroll only if it doesn't fit — never wraps
+          to a second line, never shows a vertical scrollbar. The
+          .tab-scroll class (src/index.css) pins overflow-y:hidden
+          explicitly and styles the horizontal scrollbar thin/on-brand. */}
+      <div className="tab-scroll" style={{ display: 'flex', borderBottom: '1px solid var(--taupe-200)', marginBottom: '16px', gap: '4px' }}>
         {[['all','All'],['submitted','Pending'],['approved','Approved'],['po_generated','PO Issued'],['rejected','Rejected'],['draft','Draft']].map(([key, label]) => {
           const count = key === 'all' ? prs.length : prs.filter(p => p.status === key).length
           return (
@@ -107,7 +106,7 @@ export default function PRList({ user, onViewPR, onCreatePR, onResumeDraft }) {
               key={key}
               onClick={() => setFilter(key)}
               style={{
-                padding: '8px 10px', fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap',
+                padding: '8px 10px', fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
                 fontWeight: filter === key ? 600 : 400,
                 color: filter === key ? 'var(--text)' : 'var(--text-muted)',
                 borderBottom: filter === key ? '2px solid var(--action)' : '2px solid transparent',

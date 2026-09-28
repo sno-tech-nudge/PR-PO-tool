@@ -172,13 +172,13 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
               {isFinance ? 'Vendor Management' : 'My Vendors'}
             </h1>
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 4px', marginTop: '4px' }}>
+          <div className="tab-scroll" style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
             {tabs.map(([key, label]) => (
               <div
                 key={key}
                 onClick={() => setFilter(key)}
                 style={{
-                  padding: '10px 18px', fontSize: '13px',
+                  padding: '10px 18px', fontSize: '13px', whiteSpace: 'nowrap', flexShrink: 0,
                   fontWeight: filter === key ? 600 : 400,
                   color: filter === key ? 'var(--action)' : 'var(--text-muted)',
                   borderBottom: filter === key ? '2px solid var(--action)' : '2px solid transparent',

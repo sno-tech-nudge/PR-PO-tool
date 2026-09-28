@@ -215,13 +215,13 @@ export default function NewExpense({ user, onContinueToDetails, onBack }) {
       )}
 
       {showTabs && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', borderBottom: '1px solid var(--taupe-200)', marginBottom: '20px', gap: '2px 4px' }}>
+        <div className="tab-scroll" style={{ display: 'flex', borderBottom: '1px solid var(--taupe-200)', marginBottom: '20px', gap: '4px' }}>
           {[['single', 'Add Expense'], ['bulk', 'Bulk Add Expenses']].map(([key, label]) => (
             <div
               key={key}
               onClick={() => setActiveTab(key)}
               style={{
-                padding: '10px 16px', fontSize: '13px', cursor: 'pointer',
+                padding: '10px 16px', fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
                 fontWeight: activeTab === key ? 600 : 400,
                 color: activeTab === key ? 'var(--text)' : 'var(--text-muted)',
                 borderBottom: activeTab === key ? '2px solid var(--action)' : '2px solid transparent',

@@ -116,13 +116,13 @@ export default function FinancePRsView({ onViewPR }) {
         style={{ width: '100%', height: '36px', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '0 12px', fontSize: '13px', color: 'var(--ink)', outline: 'none', background: 'var(--surface-card)', boxSizing: 'border-box', marginBottom: '16px' }}
       />
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', borderBottom: '1px solid var(--taupe-200)', marginBottom: '16px', gap: '2px 4px' }}>
+      <div className="tab-scroll" style={{ display: 'flex', borderBottom: '1px solid var(--taupe-200)', marginBottom: '16px', gap: '4px' }}>
         {tabs.map(([key, label]) => (
           <div
             key={key}
             onClick={() => setTab(key)}
             style={{
-              padding: '10px 16px', fontSize: '13px', cursor: 'pointer',
+              padding: '10px 16px', fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
               fontWeight: tab === key ? 600 : 400,
               color: tab === key ? 'var(--ink)' : 'var(--text-muted)',
               borderBottom: tab === key ? '2px solid var(--action)' : '2px solid transparent',

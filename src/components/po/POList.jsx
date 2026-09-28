@@ -141,14 +141,15 @@ export default function POList({ user, onViewPO }) {
         )}
       </div>
 
-      {/* Tabs — flex-wrap so a longer tab set never needs a scrollbar */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', borderBottom: '1px solid var(--taupe-200)', marginBottom: '16px', gap: '2px 4px' }}>
+      {/* Tabs — single row, horizontal scroll only if needed (see .tab-scroll
+          in src/index.css); never wraps or shows a vertical scrollbar. */}
+      <div className="tab-scroll" style={{ display: 'flex', borderBottom: '1px solid var(--taupe-200)', marginBottom: '16px', gap: '4px' }}>
         {TABS.map(([key, label]) => (
           <div
             key={key}
             onClick={() => setTab(key)}
             style={{
-              padding: '10px 16px', fontSize: '13px', cursor: 'pointer',
+              padding: '10px 16px', fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
               fontWeight: tab === key ? 600 : 400,
               color: tab === key ? 'var(--ink)' : 'var(--text-muted)',
               borderBottom: tab === key ? '2px solid var(--action)' : '2px solid transparent',

@@ -300,12 +300,10 @@ export default function FinanceDashboard({ user, showToast, onBack }) {
             )}
           </div>
 
-          {/* Tab bar — flex-wrap instead of overflowX:auto, same fix as
-              PRList.jsx: a container with only overflowX set also silently
-              gets overflowY:auto per spec the instant content is even 1px
-              taller than the box, producing a stray vertical scrollbar
-              alongside the intended horizontal one. */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 4px', marginTop: '4px', overflow: 'hidden' }}>
+          {/* Tab bar — single row, horizontal scroll only if needed, never
+              wraps or shows a vertical scrollbar (see .tab-scroll in
+              src/index.css). */}
+          <div className="tab-scroll" style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
             {TABS.map(t => (
               <div
                 key={t.key}
@@ -318,6 +316,7 @@ export default function FinanceDashboard({ user, showToast, onBack }) {
                   borderBottom: tab === t.key ? '2px solid var(--action)' : '2px solid transparent',
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
+                  flexShrink: 0,
                   position: 'relative',
                   marginBottom: '-1px',
                   display: 'flex', alignItems: 'center', gap: '6px',

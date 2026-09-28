@@ -45,3 +45,30 @@ body {
 .sidebar-nav::-webkit-scrollbar-thumb:hover {
   background: rgba(196, 130, 111, 0.55);
 }
+
+/* Same thin, on-brand scrollbar recipe, horizontal — for tab bars that
+   scroll sideways when there are more tabs than fit. overflow-y stays
+   hidden explicitly: a container with only overflow-x set otherwise gets
+   overflow-y: auto too per the CSS spec the instant content is even 1px
+   taller than the box, producing a stray vertical scrollbar alongside the
+   intended horizontal one. */
+.tab-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-wrap: nowrap;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(196, 130, 111, 0.35) transparent;
+}
+.tab-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+.tab-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.tab-scroll::-webkit-scrollbar-thumb {
+  background: rgba(196, 130, 111, 0.35);
+  border-radius: 2px;
+}
+.tab-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(196, 130, 111, 0.55);
+}

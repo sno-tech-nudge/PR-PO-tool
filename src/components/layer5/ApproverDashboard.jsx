@@ -168,7 +168,7 @@ export default function ApproverDashboard({ onViewReport, onBack }) {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', borderBottom: '1px solid var(--taupe-200)', marginBottom: '20px', gap: '2px 4px' }}>
+      <div className="tab-scroll" style={{ display: 'flex', borderBottom: '1px solid var(--taupe-200)', marginBottom: '20px', gap: '4px' }}>
         {[
           { key: 'pending', label: `Pending (${pending.length})` },
           { key: 'reviewed', label: `Reviewed (${reviewed.length})` },
@@ -177,7 +177,7 @@ export default function ApproverDashboard({ onViewReport, onBack }) {
             key={t.key}
             onClick={() => setTab(t.key)}
             style={{
-              padding: '10px 16px', fontSize: '13px', cursor: 'pointer',
+              padding: '10px 16px', fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
               fontWeight: tab === t.key ? 500 : 400,
               color: tab === t.key ? 'var(--text)' : 'var(--text-muted)',
               borderBottom: tab === t.key ? '2px solid var(--action)' : '2px solid transparent',

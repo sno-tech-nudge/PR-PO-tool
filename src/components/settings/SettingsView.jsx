@@ -117,7 +117,7 @@ export default function SettingsView({ user }) {
       <div style={{ background: 'var(--surface-card)', borderBottom: '1px solid var(--taupe-200)', padding: '0 28px' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '14px 0 0' }}>
           <h1 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--ink)', margin: '0 0 8px' }}>Settings</h1>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+          <div className="tab-scroll" style={{ display: 'flex', gap: '4px' }}>
             {[
               ['profile', 'My Profile'],
               ...(isAdmin ? [['team', 'Team & Roles']] : []),
@@ -127,7 +127,7 @@ export default function SettingsView({ user }) {
                 key={key}
                 onClick={() => setTab(key)}
                 style={{
-                  padding: '10px 16px', fontSize: '13px', cursor: 'pointer',
+                  padding: '10px 16px', fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
                   fontWeight: tab === key ? 600 : 400,
                   color: tab === key ? 'var(--action)' : 'var(--text-muted)',
                   borderBottom: tab === key ? '2px solid var(--action)' : '2px solid transparent',
