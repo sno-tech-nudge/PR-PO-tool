@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { getDisplayName } from '../../lib/directory'
+import { fetchAllRows } from '../../lib/fetchAllRows'
 
 function fmtDate(d) {
   if (!d) return '—'
@@ -70,11 +71,16 @@ export default function FinancePRsView({ onViewPR }) {
 
   async function load({ silent = false } = {}) {
     if (!silent) setLoading(true)
-    const { data } = await supabase
-      .from('purchase_requests')
-      .select('*, vendors(org_name), pr_approvals(*)')
-      .neq('status', 'draft')
-      .order('submitted_at', { ascending: false })
+    // Unbounded, org-wide — needs paging past Supabase's default 1000-row
+    // cap now that real historical PRs have pushed this table past it.
+    const data = await fetchAllRows((from, to) =>
+      supabase
+        .from('purchase_requests')
+        .select('*, vendors(org_name), pr_approvals(*)')
+        .neq('status', 'draft')
+        .order('submitted_at', { ascending: false })
+        .range(from, to)
+    )
     setPRs(data || [])
     setLoading(false)
   }

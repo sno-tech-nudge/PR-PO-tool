@@ -1,5 +1,37 @@
 import { supabase } from './supabase'
 
+// PostgREST rejects a single .in() filter outright (HTTP 400) once the
+// value list gets long enough to blow its request-size limit — silently,
+// from this code's point of view, since the query result is just `undefined`
+// rather than a thrown error. 1000+ values (the scale this table reached
+// once real historical POs were imported) reliably tips over it. Chunking
+// keeps every individual request well under that ceiling; the results are
+// merged back together as if it had been one query.
+const IN_CHUNK_SIZE = 150
+
+function chunk(arr, size) {
+  const out = []
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size))
+  return out
+}
+
+async function selectInChunks(table, select, column, values, extra) {
+  if (!values.length) return []
+  const results = await Promise.all(
+    chunk(values, IN_CHUNK_SIZE).map(async part => {
+      let q = supabase.from(table).select(select).in(column, part)
+      if (extra) q = extra(q)
+      const { data, error } = await q
+      if (error) {
+        console.error(`Batched ${table} query failed for a chunk:`, error)
+        return []
+      }
+      return data || []
+    })
+  )
+  return results.flat()
+}
+
 // Computes "amount still pending" for each PO in `pos` (each needs at least
 // {id, po_number, amount}), batched across all of them in two queries
 // instead of one pair of queries per PO — needed to show a real number next
@@ -11,9 +43,9 @@ export async function attachPendingBalances(pos) {
   if (!pos.length) return pos
   const ids = pos.map(p => p.id)
   const poNumbers = pos.map(p => p.po_number).filter(Boolean)
-  const [{ data: reports }, { data: expenses }] = await Promise.all([
-    supabase.from('expense_reports').select('po_id, total_amount, status').in('po_id', ids),
-    supabase.from('expense_details').select('po_number, amount').in('po_number', poNumbers).eq('status', 'saved'),
+  const [reports, expenses] = await Promise.all([
+    selectInChunks('expense_reports', 'po_id, total_amount, status', 'po_id', ids),
+    selectInChunks('expense_details', 'po_number, amount', 'po_number', poNumbers, q => q.eq('status', 'saved')),
   ])
   const reportsByPO = {}
   for (const r of reports || []) {

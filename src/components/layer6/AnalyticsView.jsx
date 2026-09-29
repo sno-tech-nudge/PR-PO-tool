@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { avgTAT, prApprovedAt, daysBetween } from '../../lib/tat'
 import { getDisplayName } from '../../lib/directory'
 import { fiscalYearStartStr } from '../../lib/formCalc'
+import { fetchAllRows } from '../../lib/fetchAllRows'
 
 const REFRESH_MS = 30000
 const DEFAULT_PO_THRESHOLD = 50000
@@ -161,11 +162,14 @@ export default function AnalyticsView({ user, onViewPR, onViewPO, onViewVendor }
   const loadAudit = useCallback(async () => {
     if (!isAdmin) { setAuditLoading(false); return }
     setAuditLoading(true)
-    const [{ data: vendorRows }, { data: poRows }, { data: reportRows }, { data: advRows }] = await Promise.all([
-      supabase.from('vendors').select('id, vendor_id, org_name, pan_number, status, submitted_by'),
-      supabase.from('purchase_orders').select('id, po_number, amount, approved_at, status, vendors(org_name)').in('status', ['issued', 'completed']),
-      supabase.from('expense_reports').select('po_id').not('po_id', 'is', null),
-      supabase.from('purchase_requests').select('id, pr_number, amount, status, vendors(org_name)').gte('advance_percent', 100).neq('status', 'rejected'),
+    // Deliberately unbounded/org-wide (see comment above) — each needs
+    // paging past Supabase's default 1000-row cap, which real historical
+    // data has now pushed several of these tables past.
+    const [vendorRows, poRows, reportRows, advRows] = await Promise.all([
+      fetchAllRows((from, to) => supabase.from('vendors').select('id, vendor_id, org_name, pan_number, status, submitted_by').range(from, to)),
+      fetchAllRows((from, to) => supabase.from('purchase_orders').select('id, po_number, amount, approved_at, status, vendors(org_name)').in('status', ['issued', 'completed']).range(from, to)),
+      fetchAllRows((from, to) => supabase.from('expense_reports').select('po_id').not('po_id', 'is', null).range(from, to)),
+      fetchAllRows((from, to) => supabase.from('purchase_requests').select('id, pr_number, amount, status, vendors(org_name)').gte('advance_percent', 100).neq('status', 'rejected').range(from, to)),
     ])
     setVendors(vendorRows || [])
     setPOs(poRows || [])

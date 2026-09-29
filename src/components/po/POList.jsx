@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { canAccessFinance } from '../../lib/auth'
 import { downloadCSV, posToRows } from '../../lib/exportUtils'
 import { attachPendingBalances } from '../../lib/poBalance'
+import { fetchAllRows } from '../../lib/fetchAllRows'
 import POExportModal from './POExportModal'
 import SubmitPOExpense from './SubmitPOExpense'
 import POStatusModal from './POStatusModal'
@@ -75,17 +76,20 @@ export default function POList({ user, onViewPO }) {
     // nested purchase_requests object comes back (leaving it null for a
     // non-match) while still returning the parent purchase_orders row, so
     // employees could see other people's POs with a blank PR card attached.
-    let q = supabase
-      .from('purchase_orders')
-      .select(isEmployee ? '*, purchase_requests!inner(*), vendors(*)' : '*, purchase_requests(*), vendors(*)')
-      .order('generated_at', { ascending: false })
-
-    // Employees only see their own POs
-    if (isEmployee) {
-      q = q.eq('purchase_requests.requested_by', user.email)
-    }
-
-    const { data } = await q
+    // This table now runs well past Supabase's default 1000-row cap on a
+    // single select() — page through with .range() instead of one
+    // unbounded query, or the oldest POs silently stop showing up here.
+    const data = await fetchAllRows((from, to) => {
+      let q = supabase
+        .from('purchase_orders')
+        .select(isEmployee ? '*, purchase_requests!inner(*), vendors(*)' : '*, purchase_requests(*), vendors(*)')
+        .order('generated_at', { ascending: false })
+      // Employees only see their own POs
+      if (isEmployee) {
+        q = q.eq('purchase_requests.requested_by', user.email)
+      }
+      return q.range(from, to)
+    })
     const clean = (data || []).filter(p => p != null)
     // Batched, not per-row — same helper the PO-picker dropdown already uses
     // (ReportDetails.jsx) so "how much is left on this PO" only ever has one
