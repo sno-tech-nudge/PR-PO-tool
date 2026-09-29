@@ -9,6 +9,7 @@ import { insertExpenseDetails } from '../../lib/expenseDetailsSave'
 import AmountInput from '../shared/AmountInput'
 import InfoTip from '../shared/InfoTip'
 import VoiceInputButton from '../shared/VoiceInputButton'
+import { useIsMobile } from '../../hooks/useIsMobile'
 
 const CATEGORIES = [
   'Travel Fare', 'Lodging and Boarding', 'Food', 'Bike Fare',
@@ -126,6 +127,7 @@ function AttendeeMultiSelect({ selected, onChange, directoryEntries }) {
 }
 
 export default function ExpenseDetails({ layer1Data, existingExpense = null, defaultReportId = '', user, onSaved, onBack }) {
+  const isMobile = useIsMobile()
   const isEdit = !!existingExpense
   const [reportId, setReportId] = useState(existingExpense?.report_id || defaultReportId || '')
   const [reportOptions, setReportOptions] = useState([])
@@ -928,7 +930,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
       )}
 
       {/* Fixed bottom */}
-      <div style={{ position: 'fixed', bottom: 0, left: '220px', right: 0, zIndex: 10 }}>
+      <div style={{ position: 'fixed', bottom: 0, left: isMobile ? 0 : '220px', right: 0, zIndex: 10 }}>
         <div style={{
           maxWidth: '480px', margin: '0 auto',
           background: 'var(--surface-card)', borderTop: '1px solid var(--taupe-200)', padding: '16px',

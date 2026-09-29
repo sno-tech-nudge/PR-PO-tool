@@ -211,6 +211,19 @@ export default function NewExpense({ user, onContinueToDetails, onBack }) {
     onBack()
   }
 
+  // Lets someone go back and retake the receipt photo right from the
+  // confirmation screen when OCR came back with nothing useful, instead of
+  // abandoning the whole capture and starting over from the sidebar.
+  function handleRetake() {
+    setReceiptData(null)
+    setPaymentData(null)
+    setMatchedAmount(null)
+    setSingleDocument(false)
+    setCapturedOffline(false)
+    captureIdRef.current = null
+    setStep(STEPS.STEP1)
+  }
+
   // The tab switcher only makes sense before any capture progress has been
   // made — once you're mid-flow (payment step, cross-validation, etc.) the
   // tabs disappear so switching can't discard in-progress work.
@@ -323,6 +336,7 @@ export default function NewExpense({ user, onContinueToDetails, onBack }) {
           onQuickSave={handleQuickSave}
           quickSaving={quickSaving}
           quickSaveError={quickSaveError}
+          onRetake={handleRetake}
         />
       )}
     </div>

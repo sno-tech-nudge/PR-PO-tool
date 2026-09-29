@@ -5,6 +5,7 @@ import { imageFileToJpegBase64, pdfPageToBase64 } from '../../lib/receiptImage'
 import { toInputDate, fromInputDate } from '../../lib/dateFormat'
 import AmountInput from '../shared/AmountInput'
 import InfoTip from '../shared/InfoTip'
+import { useIsMobile } from '../../hooks/useIsMobile'
 
 const CATEGORIES = [
   'Travel Fare', 'Lodging and Boarding', 'Food', 'Bike Fare',
@@ -39,6 +40,7 @@ function blankRow() {
 // makes) and prepended as a pre-filled row, keeping every field editable
 // since a handwritten or low-quality photo won't always extract cleanly.
 export default function BulkAddExpenses({ user, onSaved, onBack }) {
+  const isMobile = useIsMobile()
   const [rows, setRows] = useState(Array.from({ length: 5 }, blankRow))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -301,7 +303,7 @@ export default function BulkAddExpenses({ user, onSaved, onBack }) {
         <div style={{ fontSize: '13px', color: 'var(--clay-text)', marginTop: '16px' }}>{error}</div>
       )}
 
-      <div style={{ position: 'fixed', bottom: 0, left: '220px', right: 0, zIndex: 10 }}>
+      <div style={{ position: 'fixed', bottom: 0, left: isMobile ? 0 : '220px', right: 0, zIndex: 10 }}>
         <div style={{ background: 'var(--surface-card)', borderTop: '1px solid var(--taupe-200)', padding: '16px 20px', display: 'flex', gap: '10px', maxWidth: '960px', margin: '0 auto' }}>
           <button
             onClick={handleSave}

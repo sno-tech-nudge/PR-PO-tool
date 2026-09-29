@@ -3,6 +3,7 @@ import wordmarkLogo from './assets/logos/thenudge-wordmark-cream.png'
 import { supabase } from './lib/supabase'
 import { getSession, canAccessApprovals, canAccessFinance, canCreatePR, isObserver, signOut } from './lib/auth'
 import { preloadDirectory } from './lib/directory'
+import { useIsMobile } from './hooks/useIsMobile'
 import LoginScreen from './components/auth/LoginScreen'
 import OfflineBanner from './components/capture/OfflineBanner'
 import NewExpense from './components/capture/NewExpense'
@@ -67,6 +68,11 @@ const SCREEN_PARENT = {
 export default function App() {
   const [user, setUser] = useState(null)
   const [sessionLoading, setSessionLoading] = useState(true)
+  // The sidebar is fixed/always-visible on desktop; below the mobile
+  // breakpoint it becomes a slide-out drawer instead, closed by default so
+  // it doesn't eat most of a phone-width screen.
+  const isMobile = useIsMobile()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -333,12 +339,21 @@ export default function App() {
     // remount, resetting all of FinanceDashboard's internal state for free.
     if (key === 'finance' && appScreen === 'finance') setFinanceResetKey(k => k + 1)
     setAppScreen(key)
+    if (isMobile) setSidebarOpen(false)
   }
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--taupe-50)' }}>
 
-      {/* ── Left sidebar ── */}
+      {/* Backdrop — closes the drawer on outside click, mobile only */}
+      {isMobile && sidebarOpen && (
+        <div
+          onClick={() => setSidebarOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(26,26,26,0.5)', zIndex: 49 }}
+        />
+      )}
+
+      {/* ── Left sidebar — a slide-out drawer on mobile, always visible on desktop ── */}
       <div style={{
         width: SIDEBAR_W,
         minHeight: '100vh',
@@ -349,6 +364,8 @@ export default function App() {
         flexDirection: 'column',
         zIndex: 50,
         boxShadow: '2px 0 12px rgba(140,50,37,0.25)',
+        transform: isMobile ? (sidebarOpen ? 'translateX(0)' : 'translateX(-100%)') : 'none',
+        transition: 'transform 0.2s ease',
       }}>
         {/* Logo */}
         <div style={{ padding: '22px 20px 18px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
@@ -391,7 +408,7 @@ export default function App() {
               <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '10px 0' }} />
 
               <div
-                onClick={handleAddAnother}
+                onClick={() => { handleAddAnother(); if (isMobile) setSidebarOpen(false) }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
                   padding: '9px 16px 9px 17px', cursor: 'pointer',
@@ -403,7 +420,7 @@ export default function App() {
                 New Expense
               </div>
               <div
-                onClick={handleNewReport}
+                onClick={() => { handleNewReport(); if (isMobile) setSidebarOpen(false) }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
                   padding: '9px 16px 9px 17px', cursor: 'pointer',
@@ -452,7 +469,28 @@ export default function App() {
       </div>
 
       {/* ── Main content ── */}
-      <div style={{ marginLeft: SIDEBAR_W, flex: 1, minHeight: '100vh', overflowX: 'hidden' }}>
+      <div style={{ marginLeft: isMobile ? 0 : SIDEBAR_W, flex: 1, minHeight: '100vh', overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}>
+        {isMobile && (
+          <div style={{
+            position: 'sticky', top: 0, zIndex: 30,
+            display: 'flex', alignItems: 'center', gap: '12px',
+            height: '52px', padding: '0 16px',
+            background: 'var(--surface-hot)', boxShadow: '0 1px 6px rgba(140,50,37,0.2)',
+          }}>
+            <button
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Open menu"
+              style={{
+                width: '32px', height: '32px', border: 'none', background: 'transparent',
+                color: 'var(--surface-card)', fontSize: '20px', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+              }}
+            >
+              ☰
+            </button>
+            <img src={wordmarkLogo} alt="The/Nudge" style={{ height: '16px', width: 'auto', display: 'block' }} />
+          </div>
+        )}
         <OfflineBanner />
 
         {toast && (

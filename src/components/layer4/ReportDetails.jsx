@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { attachPendingBalances } from '../../lib/poBalance'
 import VoiceInputButton from '../shared/VoiceInputButton'
+import { useIsMobile } from '../../hooks/useIsMobile'
 
 const PURPOSE_OPTIONS = [
   { key: 'internal', label: 'Internal team work', placeholder: 'What was the meeting or work about' },
@@ -116,6 +117,7 @@ function mostCommonEntity(expenses) {
 }
 
 export default function ReportDetails({ expenses, reportMeta, user, onContinue, onBack }) {
+  const isMobile = useIsMobile()
   const total = (expenses || []).reduce((s, e) => s + (e.amount || 0), 0)
   const count = (expenses || []).length
   const derivedEntity = mostCommonEntity(expenses)
@@ -294,7 +296,7 @@ export default function ReportDetails({ expenses, reportMeta, user, onContinue, 
       <TapCard selected={reimbType === 'bank_transfer'} onClick={() => setReimbType(reimbType === 'bank_transfer' ? null : 'bank_transfer')} main="Bank transfer" sub="Transferred to your registered account" fullWidth />
 
       {/* Fixed bottom bar */}
-      <div style={{ position: 'fixed', bottom: 0, left: '220px', right: 0, zIndex: 10 }}>
+      <div style={{ position: 'fixed', bottom: 0, left: isMobile ? 0 : '220px', right: 0, zIndex: 10 }}>
         <div style={{
           maxWidth: '480px', margin: '0 auto',
           background: 'var(--surface-card)', borderTop: '1px solid var(--taupe-200)', padding: '16px',

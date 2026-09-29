@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import ExpenseDetails from '../layer2/ExpenseDetails'
 import QuickAddDropzone from '../capture/QuickAddDropzone'
+import { useIsMobile } from '../../hooks/useIsMobile'
 
 export default function ExpenseSelector({ expenses: initialExpenses, results: initialResults, user, reportMeta, onPreview, onBack, standalone, onRaiseReport }) {
+  const isMobile = useIsMobile()
   const [expenses, setExpenses] = useState(initialExpenses || [])
   const [loading, setLoading] = useState(!initialExpenses || initialExpenses.length === 0)
   const [selected, setSelected] = useState(new Set())
@@ -429,7 +431,7 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
 
       {/* Fixed bottom bar */}
       <div style={{
-        position: 'fixed', bottom: 0, left: '220px', right: 0,
+        position: 'fixed', bottom: 0, left: isMobile ? 0 : '220px', right: 0,
         zIndex: 10,
       }}>
         <div style={{

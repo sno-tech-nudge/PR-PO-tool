@@ -7,6 +7,7 @@ import { runAllChecks } from '../../lib/policyEngine'
 import ExpenseApprovalCard from './ExpenseApprovalCard'
 import RejectionModal from './RejectionModal'
 import NotificationToast from './NotificationToast'
+import { useIsMobile } from '../../hooks/useIsMobile'
 
 const PURPOSE_LABELS = {
   internal: 'Internal team work',
@@ -41,6 +42,7 @@ function SummaryRow({ label, value, alt }) {
 }
 
 export default function ApproverReportView({ reportId, user, onBack, showToast }) {
+  const isMobile = useIsMobile()
   const [report, setReport] = useState(null)
   const [expenses, setExpenses] = useState([])
   const [pendingApproval, setPendingApproval] = useState(null)
@@ -333,7 +335,7 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
 
       {/* Fixed decision bar — only shown when this viewer can act on the current level */}
       {!isAlreadyReviewed && roleMatches && (
-        <div style={{ position: 'fixed', bottom: 0, left: '220px', right: 0, zIndex: 10 }}>
+        <div style={{ position: 'fixed', bottom: 0, left: isMobile ? 0 : '220px', right: 0, zIndex: 10 }}>
           <div style={{
             maxWidth: '480px', margin: '0 auto',
             background: 'var(--surface-card)', borderTop: '1px solid var(--taupe-200)', padding: '16px',

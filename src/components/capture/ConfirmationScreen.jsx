@@ -7,9 +7,13 @@ const PAYMENT_LABELS = {
   cash: 'Cash',
 }
 
-export default function ConfirmationScreen({ receiptExtracted, paymentData, matchedAmount, singleDocument, capturedOffline, onContinue, onQuickSave, quickSaving, quickSaveError }) {
+export default function ConfirmationScreen({ receiptExtracted, paymentData, matchedAmount, singleDocument, capturedOffline, onContinue, onQuickSave, quickSaving, quickSaveError, onRetake }) {
   const { isOnline } = useNetworkStatus()
   const isOffline = capturedOffline || !isOnline
+  // OCR ran (we're not offline) but came back with neither of the two most
+  // important fields — worth telling the person plainly rather than letting
+  // two quiet "Not detected" rows speak for themselves.
+  const nothingExtracted = !isOffline && !receiptExtracted?.amount && !receiptExtracted?.vendor
 
   function buildContinueData() {
     return {
@@ -47,6 +51,29 @@ export default function ConfirmationScreen({ receiptExtracted, paymentData, matc
       <div style={{ fontSize: '20px', fontWeight: 500, color: 'var(--text)', marginBottom: '20px' }}>
         Documents saved
       </div>
+
+      {nothingExtracted && (
+        <div style={{
+          border: '1px solid var(--gold-text)',
+          background: 'var(--gold-bg)',
+          padding: '12px',
+          borderRadius: 'var(--radius-sm)',
+          fontSize: '13px',
+          color: 'var(--gold-text)',
+          marginBottom: '16px',
+        }}>
+          Nothing extracted yet — we couldn't automatically read this receipt. No problem: save it now
+          and fill in the details yourself, or retake the photo for a clearer read.
+          {onRetake && (
+            <div
+              onClick={onRetake}
+              style={{ fontSize: '12px', fontWeight: 600, textDecoration: 'underline', cursor: 'pointer', marginTop: '8px' }}
+            >
+              Retake photo
+            </div>
+          )}
+        </div>
+      )}
 
       <div style={{ border: '1px solid var(--taupe-200)', padding: '20px', borderRadius: 'var(--radius-sm)', marginBottom: '16px' }}>
         {rows.map((row, i) => (

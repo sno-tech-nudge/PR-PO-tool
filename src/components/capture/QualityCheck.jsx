@@ -1,5 +1,14 @@
+// Plain-language, actionable guidance per detected issue — telling someone
+// their photo is merely "blurry" doesn't tell them what to actually do
+// differently on the retake.
+const ISSUE_GUIDANCE = {
+  blurry: 'This photo looks blurry. Hold your phone steady, get a little closer to the receipt, and make sure it’s in focus before taking the photo.',
+  dark: 'This photo is too dark to read clearly. Try taking it somewhere brighter, or turn on your flash.',
+  cropped: 'Part of the receipt looks like it’s cut off. Make sure the whole receipt fits inside the frame before taking the photo.',
+}
+
 export default function QualityCheck({ issue, onRetake, onUseAnyway }) {
-  const issueText = issue === 'blurry' ? 'blurry' : issue === 'dark' ? 'too dark' : issue === 'cropped' ? 'cropped' : issue
+  const guidance = ISSUE_GUIDANCE[issue] || 'This photo may be hard to read clearly.'
 
   return (
     <div style={{
@@ -23,7 +32,7 @@ export default function QualityCheck({ issue, onRetake, onUseAnyway }) {
           Document may be hard to read
         </div>
         <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>
-          This photo appears to be {issueText}. Finance may not be able to verify it.
+          {guidance} A clearer photo also helps Finance verify it faster.
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <button

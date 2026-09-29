@@ -9,6 +9,7 @@ import ReportSummaryCard from './ReportSummaryCard'
 import ExpenseLineItem from './ExpenseLineItem'
 import PDFTemplate from './PDFTemplate'
 import GeneratingPDF from './GeneratingPDF'
+import { useIsMobile } from '../../hooks/useIsMobile'
 
 function parseExpenseDate(dateStr) {
   if (!dateStr) return null
@@ -32,6 +33,7 @@ function getPeriod(expenses) {
 }
 
 export default function ReportPreview({ expenses, results, reportDetails, user, onSubmitted, onBack }) {
+  const isMobile = useIsMobile()
   // Defensive only — NewReportModal already generates and saves the real
   // report_reference before this screen is ever reached, so this almost
   // never actually gets used. Kept correctly prefixed anyway: vendor if the
@@ -333,7 +335,7 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
       </div>
 
       {/* Fixed bottom bar */}
-      <div style={{ position: 'fixed', bottom: 0, left: '220px', right: 0, zIndex: 10 }}>
+      <div style={{ position: 'fixed', bottom: 0, left: isMobile ? 0 : '220px', right: 0, zIndex: 10 }}>
         <div style={{
           maxWidth: '480px', margin: '0 auto',
           background: 'var(--surface-card)', borderTop: '1px solid var(--taupe-200)', padding: '16px',
