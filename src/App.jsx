@@ -15,7 +15,6 @@ import ExpenseDetails from './components/layer2/ExpenseDetails'
 import PolicyCheck from './components/layer3/PolicyCheck'
 import ExpenseSelector from './components/layer4/ExpenseSelector'
 import ReportPreview from './components/layer4/ReportPreview'
-import ReportDetails from './components/layer4/ReportDetails'
 import NewReportModal from './components/layer4/NewReportModal'
 import SubmissionConfirmation from './components/layer5/SubmissionConfirmation'
 import ReportStatus from './components/layer5/ReportStatus'
@@ -178,13 +177,26 @@ export default function App() {
     setLayer4Screen('selector'); setAppScreen('layer4')
   }
 
+  // Goes straight to the preview/submit screen — the intermediate "report
+  // details" step (PO relation, purpose, reimbursement method) was removed
+  // per Finance: PO relation is already answered once, up front, in
+  // NewReportModal, and purpose/reimbursement type aren't needed at all.
+  // Everything ReportPreview still needs (report_id/reference, business
+  // purpose, duration, the PO answer) already lives on the draft report row
+  // created by NewReportModal — entity is derived from the expenses
+  // themselves, inside ReportPreview.
   function handleLayer4Preview(selected, selResults) {
     setSelectedExpenses(selected); setSelectedResults(selResults)
-    setLayer4Screen('details')
-  }
-
-  function handleLayer4Details(reportDetails) {
-    setLayer4ReportDetails(reportDetails); setLayer4Screen('preview')
+    setLayer4ReportDetails({
+      report_id: newReportMeta?.id || null,
+      report_reference: newReportMeta?.report_reference || null,
+      business_purpose: newReportMeta?.business_purpose || null,
+      duration_start: newReportMeta?.duration_start || null,
+      duration_end: newReportMeta?.duration_end || null,
+      po_related: newReportMeta?.po_related ?? null,
+      linked_po_id: newReportMeta?.po_related ? newReportMeta?.po_id : null,
+    })
+    setLayer4Screen('preview')
   }
 
   function handleLayer4Submitted(data) { setSubmissionData(data); setAppScreen('layer5') }
@@ -603,17 +615,6 @@ export default function App() {
           />
         )}
 
-        {appScreen === 'layer4' && layer4Screen === 'details' && (
-          <ReportDetails
-            expenses={selectedExpenses}
-            results={selectedResults}
-            reportMeta={newReportMeta}
-            user={user}
-            onContinue={handleLayer4Details}
-            onBack={() => setLayer4Screen('selector')}
-          />
-        )}
-
         {appScreen === 'layer4' && layer4Screen === 'preview' && (
           <ReportPreview
             expenses={selectedExpenses}
@@ -621,7 +622,7 @@ export default function App() {
             reportDetails={layer4ReportDetails}
             user={user}
             onSubmitted={handleLayer4Submitted}
-            onBack={() => setLayer4Screen('details')}
+            onBack={() => setLayer4Screen('selector')}
           />
         )}
 

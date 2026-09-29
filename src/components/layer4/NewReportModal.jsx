@@ -16,11 +16,11 @@ export default function NewReportModal({ user, onCreated, onClose }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
-  // Step 1 — asked first, before anything else about the report, in its
-  // own popup, and the ONE place this is ever answered. Step 2 collects the
-  // actual report details (name/purpose/duration). ReportDetails (step 2 of
-  // the report-building flow, not to be confused with this modal's own step
-  // 2) only ever displays this answer read-only — it never re-asks it.
+  // Step 1 — asked first, before anything else about the report, in its own
+  // popup. Step 2 collects the actual report details (name/purpose/
+  // duration). This answer is carried through as a pre-filled default all
+  // the way to ReportPreview (the final screen), which lets it be changed
+  // there before submitting rather than asking it again from scratch.
   const [step, setStep] = useState(1)
   const [poRelated, setPoRelated] = useState(null)
   const [poOptions, setPoOptions] = useState([])

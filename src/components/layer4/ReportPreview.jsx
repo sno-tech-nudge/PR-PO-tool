@@ -5,6 +5,7 @@ import { getApprovalRules } from '../../lib/approvalEngine'
 import { generateExpenseReportPDF, downloadPDF, uploadPDFToSupabase } from '../../lib/pdfGenerator'
 import { generateReportReference } from '../../lib/reportReference'
 import { sendReportEmail } from '../../lib/reportEmail'
+import { attachPendingBalances, poOptionLabel } from '../../lib/poBalance'
 import ReportSummaryCard from './ReportSummaryCard'
 import ExpenseLineItem from './ExpenseLineItem'
 import PDFTemplate from './PDFTemplate'
@@ -32,6 +33,21 @@ function getPeriod(expenses) {
   return `${formatDateLong(dates[0])} to ${formatDateLong(dates[dates.length - 1])}`
 }
 
+// Every expense already states its own Entity (ExpenseDetails) — rather than
+// ask again at the report level, pick whichever entity shows up most often
+// across the included expenses. Drives FCRA/TNF-US policy flagging and the
+// report's own entity tag below.
+function mostCommonEntity(expenses) {
+  const counts = {}
+  for (const e of expenses || []) {
+    if (!e.entity) continue
+    counts[e.entity] = (counts[e.entity] || 0) + 1
+  }
+  const entries = Object.entries(counts)
+  if (!entries.length) return null
+  return entries.reduce((best, cur) => (cur[1] > best[1] ? cur : best))[0]
+}
+
 export default function ReportPreview({ expenses, results, reportDetails, user, onSubmitted, onBack }) {
   const isMobile = useIsMobile()
   // Defensive only — NewReportModal already generates and saves the real
@@ -55,12 +71,60 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
   const [submitting, setSubmitting] = useState(false)
   const [rules, setRules] = useState([])
 
+  // Purchase Order relation — pre-filled from the answer already given when
+  // the report was created (NewReportModal's step 1), editable here in case
+  // it needs correcting before submitting, rather than re-asked from scratch.
+  const [poRelated, setPoRelated] = useState(reportDetails?.po_related ?? null)
+  const [selectedPOId, setSelectedPOId] = useState(reportDetails?.linked_po_id || '')
+  const [poOptions, setPoOptions] = useState([])
+  const [poPending, setPoPending] = useState(null)
+  const [poLoading, setPoLoading] = useState(false)
+
   useEffect(() => { getApprovalRules(supabase).then(setRules) }, [])
 
+  useEffect(() => {
+    if (poRelated !== true || poOptions.length) return
+    supabase.from('purchase_orders')
+      .select('id, po_number, amount, vendors(org_name), purchase_requests!inner(requested_by)')
+      .eq('status', 'issued')
+      .eq('purchase_requests.requested_by', user?.email ?? '')
+      .order('created_at', { ascending: false }).limit(200)
+      .then(async ({ data }) => setPoOptions(await attachPendingBalances(data || [])))
+  }, [poRelated, poOptions.length, user?.email])
+
+  // The PO answered when the report was created only has its id — run the
+  // same pending-balance check once the option list (needed to look up its
+  // po_number) has loaded, so the pre-filled selection shows a real balance.
+  useEffect(() => {
+    if (poRelated === true && selectedPOId && poOptions.length && !poPending && !poLoading) {
+      handleSelectPO(selectedPOId)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [poOptions, poRelated, selectedPOId, poPending, poLoading])
+
+  async function handleSelectPO(id) {
+    setSelectedPOId(id)
+    setPoPending(null)
+    if (!id) return
+    setPoLoading(true)
+    const po = poOptions.find(p => p.id === id)
+    const [{ data: linkedReports }, { data: savedExpenses }] = await Promise.all([
+      supabase.from('expense_reports').select('total_amount, status').eq('po_id', id),
+      supabase.from('expense_details').select('amount').eq('po_number', po?.po_number || '').eq('status', 'saved'),
+    ])
+    const reportsTotal = (linkedReports || []).filter(r => r.status !== 'rejected').reduce((s, r) => s + (Number(r.total_amount) || 0), 0)
+    const savedTotal = (savedExpenses || []).reduce((s, e) => s + (Number(e.amount) || 0), 0)
+    const claimed = reportsTotal + savedTotal
+    const pending = Math.max(0, (Number(po?.amount) || 0) - claimed)
+    setPoPending({ amount: po?.amount, pending })
+    setPoLoading(false)
+  }
+
   const total = expenses.reduce((sum, e) => sum + (e.amount || 0), 0)
+  const poSectionValid = poRelated === false || (poRelated === true && !!selectedPOId && !!poPending && total <= poPending.pending)
   const period = getPeriod(expenses)
   const approvalRoute = determineApprovalRoute(expenses, rules)
-  const entity = reportDetails?.entity || null
+  const entity = mostCommonEntity(expenses)
   const generatedAt = new Date().toLocaleString('en-IN', {
     day: 'numeric', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
@@ -76,9 +140,9 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
     reportDetails,
   }), [reference, entity, period, approvalRoute, generatedAt, results, reportDetails])
 
-  // Entity is only known at this stage (chosen in ReportDetails, Layer 4) — re-run the
-  // entity-aware checks here so FCRA/TNF-US flagging actually fires. Advisory only, same
-  // as every other policy check in this app; never blocks submission.
+  // Entity is derived right above (mostCommonEntity) rather than asked — re-run
+  // the entity-aware checks here so FCRA/TNF-US flagging actually fires. Advisory
+  // only, same as every other policy check in this app; never blocks submission.
   const entityChecks = entity
     ? expenses.map(exp => ({
         expense: exp,
@@ -130,6 +194,16 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
   }
 
   async function handleSubmit() {
+    if (!poSectionValid) {
+      setSubmitError(
+        poRelated == null
+          ? 'Answer whether this report is related to a Purchase Order before submitting.'
+          : !selectedPOId
+            ? 'Select which Purchase Order this report is related to before submitting.'
+            : `This report's ₹${Number(total).toLocaleString('en-IN')} exceeds the ₹${Number(poPending?.pending ?? 0).toLocaleString('en-IN')} still pending on the selected PO.`
+      )
+      return
+    }
     setSubmitError(null)
     setGeneratingText('Preparing your report')
     setGenerating(true)
@@ -163,9 +237,7 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
       pdf_storage_path: pdfPath || null,
       selected_expense_ids: expenses.map(e => e.id),
       employee_email: user?.email ?? null,
-      po_related: reportDetails?.po_related ?? null,
-      purpose_type: reportDetails?.purpose_type ?? null,
-      purpose_description: reportDetails?.description ?? null,
+      po_related: poRelated,
     }
 
     try {
@@ -182,42 +254,27 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
       // Flips these out of the 'saved' pool every "available expenses" query
       // filters on (enterReportWorkspace, ExpenseSelector.refetch, the
       // Unreported count) — without this they'd keep showing up as
-      // selectable in every future report forever. Reimbursement type is
-      // asked once per report (ReportDetails) but read per-expense
-      // everywhere it's displayed (FinanceDashboard, AdminReportDetail,
-      // ReimbursementCard, CSV export), so it's written onto every
-      // included expense here rather than only on the report row.
+      // selectable in every future report forever.
       await supabase
         .from('expense_details')
-        .update({
-          status: 'reported', policy_status: 'submitted', approval_route: approvalRoute.route,
-          ...(reportDetails?.reimbursement_type ? { reimbursement_type: reportDetails.reimbursement_type } : {}),
-        })
+        .update({ status: 'reported', policy_status: 'submitted', approval_route: approvalRoute.route })
         .in('id', expenses.map(e => e.id))
 
-      // The person's explicit "is this related to a PO?" answer (ReportDetails,
-      // Step 2) is authoritative. When they picked one, link the report to it
-      // and back-fill po_number onto any included expense so PODetail's
-      // pending-balance tracking picks this report up too — but never
-      // overwrite a po_number an expense already carries (e.g. one captured
-      // via SubmitPOExpense against a *different* PO).
-      if (reportDetails?.po_related && reportDetails?.linked_po_id) {
-        await supabase.from('expense_reports').update({ po_id: reportDetails.linked_po_id }).eq('id', report.id)
-        const { data: linkedPO } = await supabase.from('purchase_orders').select('po_number').eq('id', reportDetails.linked_po_id).maybeSingle()
+      // The person's "is this related to a PO?" answer — pre-filled from
+      // NewReportModal but editable right here, and validated above
+      // (poSectionValid) before submission is ever allowed — is authoritative.
+      // Link the report to the chosen PO and back-fill po_number onto any
+      // included expense so PODetail's pending-balance tracking picks this
+      // report up too — but never overwrite a po_number an expense already
+      // carries (e.g. one captured via SubmitPOExpense against a *different* PO).
+      if (poRelated && selectedPOId) {
+        await supabase.from('expense_reports').update({ po_id: selectedPOId }).eq('id', report.id)
+        const { data: linkedPO } = await supabase.from('purchase_orders').select('po_number').eq('id', selectedPOId).maybeSingle()
         if (linkedPO) {
           const unTaggedIds = expenses.filter(e => !e.po_number).map(e => e.id)
           if (unTaggedIds.length) {
             await supabase.from('expense_details').update({ po_number: linkedPO.po_number }).in('id', unTaggedIds)
           }
-        }
-      } else if (reportDetails?.po_related == null) {
-        // Legacy fallback for anything that skipped the new required prompt
-        // (shouldn't happen going forward, kept for safety): infer a link
-        // only when every included expense already shares one po_number.
-        const poNumbers = [...new Set(expenses.map(e => e.po_number).filter(Boolean))]
-        if (poNumbers.length === 1) {
-          const { data: po } = await supabase.from('purchase_orders').select('id').eq('po_number', poNumbers[0]).maybeSingle()
-          if (po) await supabase.from('expense_reports').update({ po_id: po.id }).eq('id', report.id)
         }
       }
 
@@ -278,6 +335,69 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
           durationStart={reportDetails?.duration_start}
           durationEnd={reportDetails?.duration_end}
         />
+
+        {/* Purchase Order relation — pre-filled from NewReportModal's answer,
+            changeable here before submitting. */}
+        <div style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '16px', marginTop: '16px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)', marginBottom: '10px' }}>
+            Related to a Purchase Order?
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <div
+              onClick={() => setPoRelated(true)}
+              style={{
+                flex: 1, padding: '10px 12px', cursor: 'pointer',
+                border: `1.5px solid ${poRelated === true ? 'var(--action)' : 'var(--taupe-200)'}`,
+                background: poRelated === true ? 'var(--taupe-50)' : 'var(--surface-card)',
+                borderRadius: 'var(--radius-sm)',
+              }}
+            >
+              <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>Yes</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Paying an invoice against an issued PO</div>
+            </div>
+            <div
+              onClick={() => { setPoRelated(false); setSelectedPOId(''); setPoPending(null) }}
+              style={{
+                flex: 1, padding: '10px 12px', cursor: 'pointer',
+                border: `1.5px solid ${poRelated === false ? 'var(--action)' : 'var(--taupe-200)'}`,
+                background: poRelated === false ? 'var(--taupe-50)' : 'var(--surface-card)',
+                borderRadius: 'var(--radius-sm)',
+              }}
+            >
+              <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>No</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>A normal expense claim</div>
+            </div>
+          </div>
+
+          {poRelated === true && (
+            <div style={{ marginTop: '10px' }}>
+              <select
+                value={selectedPOId}
+                onChange={e => handleSelectPO(e.target.value)}
+                style={{
+                  width: '100%', height: '40px', border: '1px solid var(--taupe-200)',
+                  borderRadius: 'var(--radius-sm)', padding: '0 10px', fontSize: '13px',
+                  color: 'var(--text)', outline: 'none', boxSizing: 'border-box',
+                  background: 'var(--surface-card)', fontFamily: 'inherit',
+                }}
+              >
+                <option value="">Select a PO…</option>
+                {poOptions.map(po => (
+                  <option key={po.id} value={po.id}>{poOptionLabel(po)}</option>
+                ))}
+              </select>
+              {poLoading && (
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>Checking pending balance…</div>
+              )}
+              {poPending && (
+                <div style={{ fontSize: '12px', color: total > poPending.pending ? 'var(--clay-text)' : 'var(--text-muted)', marginTop: '8px' }}>
+                  PO amount ₹{Number(poPending.amount).toLocaleString('en-IN')} · pending ₹{Number(poPending.pending).toLocaleString('en-IN')}
+                  {total > poPending.pending && ` — this report's ₹${Number(total).toLocaleString('en-IN')} exceeds what's still pending on this PO.`}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)', margin: '20px 0 12px' }}>
           Expenses included
@@ -355,6 +475,15 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
           {submitError && (
             <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginBottom: '8px' }}>{submitError}</div>
           )}
+          {!submitError && !poSectionValid && (
+            <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginBottom: '8px' }}>
+              {poRelated == null
+                ? 'Answer whether this report is related to a Purchase Order before submitting.'
+                : !selectedPOId
+                  ? 'Select which Purchase Order this report is related to before submitting.'
+                  : 'This report exceeds what’s still pending on the selected PO.'}
+            </div>
+          )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <button
@@ -372,13 +501,13 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
             </button>
             <button
               onClick={handleSubmit}
-              disabled={submitting}
+              disabled={submitting || !poSectionValid}
               style={{
                 width: '100%', height: '48px',
-                background: submitting ? 'var(--text-muted)' : 'var(--text)',
+                background: submitting || !poSectionValid ? 'var(--text-muted)' : 'var(--text)',
                 color: 'var(--surface-card)', border: 'none',
                 fontSize: '14px', fontWeight: 500,
-                cursor: submitting ? 'default' : 'pointer', borderRadius: 'var(--radius-sm)',
+                cursor: submitting || !poSectionValid ? 'default' : 'pointer', borderRadius: 'var(--radius-sm)',
               }}
             >
               {submitting ? 'Submitting…' : 'Submit for approval'}

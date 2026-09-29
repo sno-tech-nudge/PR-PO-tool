@@ -72,15 +72,3 @@ body {
 .tab-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(196, 130, 111, 0.55);
 }
-
-/* Slide-and-fade entrance for a field that appears right after selecting an
-   option above it (e.g. ReportDetails.jsx's purpose/reimbursement cards) —
-   without this, the field just silently appears with no visual cue that it
-   was the click above that revealed it. */
-@keyframes reveal-panel-in {
-  from { opacity: 0; transform: translateY(-6px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.reveal-panel {
-  animation: reveal-panel-in 0.18s ease-out;
-}

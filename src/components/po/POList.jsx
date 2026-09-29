@@ -91,9 +91,9 @@ export default function POList({ user, onViewPO }) {
       return q.range(from, to)
     })
     const clean = (data || []).filter(p => p != null)
-    // Batched, not per-row — same helper the PO-picker dropdown already uses
-    // (ReportDetails.jsx) so "how much is left on this PO" only ever has one
-    // computation, not a second copy of the pending-balance math.
+    // Batched, not per-row — same helper the PO-picker dropdowns already use
+    // (ExpenseDetails.jsx, ReportPreview.jsx) so "how much is left on this
+    // PO" only ever has one computation, not a second copy of the math.
     const withPending = await attachPendingBalances(clean)
     setPOs(withPending)
     setLoading(false)

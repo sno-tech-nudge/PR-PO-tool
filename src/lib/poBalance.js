@@ -38,7 +38,8 @@ async function selectInChunks(table, select, column, values, extra) {
 // to every option in a PO dropdown (people often can't tell two POs with
 // the same vendor apart by number alone) without firing N+1 requests.
 // Mirrors the single-PO version already used when a specific PO is picked
-// (ReportDetails.jsx's handleSelectPO, PODetail.jsx's pending-balance card).
+// (ReportPreview.jsx's/ExpenseDetails.jsx's handleSelectPO, PODetail.jsx's
+// pending-balance card).
 export async function attachPendingBalances(pos) {
   if (!pos.length) return pos
   const ids = pos.map(p => p.id)
