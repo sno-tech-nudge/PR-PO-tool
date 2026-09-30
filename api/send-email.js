@@ -292,9 +292,75 @@ async function handleReport(req, res, apiKey) {
   res.status(200).json(result)
 }
 
+// --- advance ---------------------------------------------------------------
+
+const ADVANCE_TYPES = ['submitted', 'approved', 'rejected', 'auto_rejected', 'recorded']
+
+function buildAdvanceEmail({ type, amount, description, actorName, reason }) {
+  let subject, headline, headlineColor, bodyLine
+
+  switch (type) {
+    case 'submitted':
+      subject = `Advance Request Submitted: ${fmtAmt(amount)}`
+      headline = 'Advance Request Submitted'
+      headlineColor = '#1A1A1A'
+      bodyLine = `Your advance request for <strong>${fmtAmt(amount)}</strong>${description ? ` (${escapeHtml(description)})` : ''} has been submitted and is now awaiting approval.`
+      break
+    case 'approved':
+      subject = `Advance Approved: ${fmtAmt(amount)}`
+      headline = 'Advance Approved'
+      headlineColor = '#16A34A'
+      bodyLine = `Your advance request for <strong>${fmtAmt(amount)}</strong> was approved by ${escapeHtml(actorName || 'an approver')}. Finance will record the disbursement next.`
+      break
+    case 'rejected':
+      subject = `Advance Rejected: ${fmtAmt(amount)}`
+      headline = 'Rejected'
+      headlineColor = '#DC2626'
+      bodyLine = `Your advance request for <strong>${fmtAmt(amount)}</strong> was rejected by ${escapeHtml(actorName || 'an approver')}.${reason ? ` Reason: ${escapeHtml(reason)}.` : ''}`
+      break
+    case 'auto_rejected':
+      subject = `Advance Auto-Rejected: ${fmtAmt(amount)}`
+      headline = 'Auto-Rejected'
+      headlineColor = '#DC2626'
+      bodyLine = `Your advance request for <strong>${fmtAmt(amount)}</strong> was automatically rejected.${reason ? ` Reason: ${escapeHtml(reason)}.` : ''}`
+      break
+    case 'recorded':
+      subject = `Advance Disbursed: ${fmtAmt(amount)}`
+      headline = 'Advance Disbursed'
+      headlineColor = '#16A34A'
+      bodyLine = `Your advance of <strong>${fmtAmt(amount)}</strong> has been recorded as disbursed by ${escapeHtml(actorName || 'Finance')}. Link it to an expense report once you've spent it.`
+      break
+  }
+
+  const html = wrapEmailShell({
+    headerHtml: renderBrandHeader(),
+    statusHtml: '',
+    bodyHtml: `<div style="font-size:16px;font-weight:700;color:${headlineColor};margin-bottom:10px;">${headline}</div>${bodyLine}`,
+  })
+  const text = `${headline}\n\n${bodyLine.replace(/<[^>]+>/g, '')}`
+  return { subject, html, text }
+}
+
+async function handleAdvance(req, res, apiKey) {
+  const { type, recipientEmail, amount, description, actorName, reason } = req.body || {}
+  if (!ADVANCE_TYPES.includes(type)) {
+    res.status(400).json({ error: `type must be one of ${ADVANCE_TYPES.join(', ')}` })
+    return
+  }
+  const recipients = Array.isArray(recipientEmail) ? recipientEmail.filter(Boolean) : [recipientEmail].filter(Boolean)
+  if (recipients.length === 0) {
+    res.status(400).json({ error: 'recipientEmail is required' })
+    return
+  }
+  const { subject, html, text } = buildAdvanceEmail({ type, amount, description, actorName, reason })
+  const fromAddress = process.env.RESEND_FROM_EMAIL || 'The Nudge Institute <onboarding@resend.dev>'
+  const result = await sendViaResend({ apiKey, from: fromAddress, to: recipients, subject, html, text })
+  res.status(200).json(result)
+}
+
 // --- dispatch ---------------------------------------------------------------
 
-const HANDLERS = { feedback: handleFeedback, vendor: handleVendor, pr: handlePr, report: handleReport }
+const HANDLERS = { feedback: handleFeedback, vendor: handleVendor, pr: handlePr, report: handleReport, advance: handleAdvance }
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -312,7 +378,7 @@ export default async function handler(req, res) {
   const { entity } = req.body || {}
   const run = HANDLERS[entity]
   if (!run) {
-    res.status(400).json({ error: 'entity must be one of feedback, vendor, pr, report' })
+    res.status(400).json({ error: 'entity must be one of feedback, vendor, pr, report, advance' })
     return
   }
 

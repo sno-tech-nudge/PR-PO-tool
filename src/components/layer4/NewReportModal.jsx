@@ -26,6 +26,13 @@ export default function NewReportModal({ user, onCreated, onClose }) {
   const [poOptions, setPoOptions] = useState([])
   const [selectedPOId, setSelectedPOId] = useState('')
 
+  // Only ever asked when poRelated === false — an expense can't be linked to
+  // both a PO and an advance, and the PO question is answered first, so the
+  // advance question simply doesn't appear at all once PO is answered Yes.
+  const [advanceRelated, setAdvanceRelated] = useState(null)
+  const [advanceOptions, setAdvanceOptions] = useState([])
+  const [selectedAdvanceId, setSelectedAdvanceId] = useState('')
+
   useEffect(() => {
     if (poRelated !== true || poOptions.length) return
     // !inner turns the embedded relation into a real join filter, so only
@@ -39,6 +46,21 @@ export default function NewReportModal({ user, onCreated, onClose }) {
       .then(async ({ data }) => setPoOptions(await attachPendingBalances(data || [])))
   }, [poRelated, poOptions.length, user?.email])
 
+  useEffect(() => {
+    if (advanceRelated !== true || advanceOptions.length) return
+    // Recorded (disbursed) advances only, and one-to-one with a report — an
+    // advance already linked to any report (draft or submitted) drops out.
+    Promise.all([
+      supabase.from('advances').select('id, amount, description, expected_usage_date')
+        .eq('requested_by', user?.email ?? '').eq('status', 'recorded')
+        .order('created_at', { ascending: false }),
+      supabase.from('expense_reports').select('advance_id').not('advance_id', 'is', null),
+    ]).then(([{ data: advances }, { data: linked }]) => {
+      const linkedIds = new Set((linked || []).map(r => r.advance_id))
+      setAdvanceOptions((advances || []).filter(a => !linkedIds.has(a.id)))
+    })
+  }, [advanceRelated, advanceOptions.length, user?.email])
+
   function handleContinue() {
     if (poRelated === null) {
       setError('Please answer whether this report is related to a Purchase Order.')
@@ -46,6 +68,14 @@ export default function NewReportModal({ user, onCreated, onClose }) {
     }
     if (poRelated === true && !selectedPOId) {
       setError('Please select which Purchase Order this report is related to.')
+      return
+    }
+    if (poRelated === false && advanceRelated === null) {
+      setError('Please answer whether this report is related to an advance.')
+      return
+    }
+    if (poRelated === false && advanceRelated === true && !selectedAdvanceId) {
+      setError('Please select which advance this report is related to.')
       return
     }
     setError(null)
@@ -74,6 +104,8 @@ export default function NewReportModal({ user, onCreated, onClose }) {
         status: 'draft',
         po_related: poRelated,
         po_id: poRelated ? selectedPOId : null,
+        advance_related: poRelated ? false : advanceRelated === true,
+        advance_id: (poRelated || advanceRelated !== true) ? null : selectedAdvanceId,
       })
       .select()
       .single()
@@ -133,7 +165,7 @@ export default function NewReportModal({ user, onCreated, onClose }) {
               <label style={labelStyle}>Related to a Purchase Order?{required}</label>
               <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
                 <div
-                  onClick={() => setPoRelated(true)}
+                  onClick={() => { setPoRelated(true); setAdvanceRelated(null); setSelectedAdvanceId('') }}
                   style={{
                     flex: 1, padding: '12px 14px', cursor: 'pointer',
                     border: `1.5px solid ${poRelated === true ? 'var(--text)' : 'var(--taupe-200)'}`,
@@ -168,6 +200,58 @@ export default function NewReportModal({ user, onCreated, onClose }) {
                       <option key={po.id} value={po.id}>{poOptionLabel(po)}</option>
                     ))}
                   </select>
+                </div>
+              )}
+
+              {/* Only asked once the PO question is answered "No" — an
+                  expense can never be linked to both a PO and an advance. */}
+              {poRelated === false && (
+                <div style={{ marginTop: '18px' }}>
+                  <label style={labelStyle}>Related to an advance?{required}</label>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                    <div
+                      onClick={() => setAdvanceRelated(true)}
+                      style={{
+                        flex: 1, padding: '12px 14px', cursor: 'pointer',
+                        border: `1.5px solid ${advanceRelated === true ? 'var(--text)' : 'var(--taupe-200)'}`,
+                        background: advanceRelated === true ? 'var(--taupe-50)' : 'var(--surface-card)', borderRadius: 'var(--radius-sm)',
+                      }}
+                    >
+                      <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>Yes</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Settling a disbursed advance</div>
+                    </div>
+                    <div
+                      onClick={() => { setAdvanceRelated(false); setSelectedAdvanceId('') }}
+                      style={{
+                        flex: 1, padding: '12px 14px', cursor: 'pointer',
+                        border: `1.5px solid ${advanceRelated === false ? 'var(--text)' : 'var(--taupe-200)'}`,
+                        background: advanceRelated === false ? 'var(--taupe-50)' : 'var(--surface-card)', borderRadius: 'var(--radius-sm)',
+                      }}
+                    >
+                      <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>No</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>A normal expense claim</div>
+                    </div>
+                  </div>
+
+                  {advanceRelated === true && (
+                    <div style={{ marginTop: '10px' }}>
+                      <select
+                        value={selectedAdvanceId}
+                        onChange={e => setSelectedAdvanceId(e.target.value)}
+                        style={{ ...inputStyle, paddingLeft: '10px' }}
+                      >
+                        <option value="">Select an advance…</option>
+                        {advanceOptions.map(a => (
+                          <option key={a.id} value={a.id}>₹{Number(a.amount).toLocaleString('en-IN')} — {a.description}</option>
+                        ))}
+                      </select>
+                      {advanceOptions.length === 0 && (
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
+                          No disbursed advances available to settle.
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

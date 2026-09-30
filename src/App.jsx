@@ -45,6 +45,12 @@ import PRApproverDashboard from './components/pr/PRApproverDashboard'
 import POList from './components/po/POList'
 import PODetail from './components/po/PODetail'
 
+// Advance module
+import AdvanceList from './components/advance/AdvanceList'
+import AdvanceForm from './components/advance/AdvanceForm'
+import AdvanceApproverDashboard from './components/advance/AdvanceApproverDashboard'
+import AdvanceApprovalView from './components/advance/AdvanceApprovalView'
+
 // Audit module
 import AuditTrail from './components/audit/AuditTrail'
 
@@ -61,6 +67,7 @@ const SCREEN_PARENT = {
   reimbursed: 'list',
   'approval-view': 'approvals',
   'pr-approval-view': 'approvals',
+  'advance-approval-view': 'approvals',
   'po-list': 'po-list',
 }
 
@@ -127,6 +134,10 @@ export default function App() {
   const [viewingPOId, setViewingPOId] = useState(null)
   const [poSubScreen, setPOSubScreen] = useState('list')
   const [approvalsTab, setApprovalsTab] = useState('expenses')
+
+  // Advance state
+  const [advanceSubScreen, setAdvanceSubScreen] = useState('list')
+  const [approvingAdvance, setApprovingAdvance] = useState(null)
 
   // Audit trail — entry point is always a PO id (a report's own audit
   // trail is just that PO's trail, resolved via the report's po_id), plus
@@ -287,6 +298,9 @@ export default function App() {
   function openPODetail(id) { setViewingPOId(id); setPOSubScreen('detail') }
   function openPOList()     { setPOSubScreen('list'); setViewingPOId(null) }
 
+  function openAdvanceList() { setAdvanceSubScreen('list') }
+  function openAdvanceForm() { setAdvanceSubScreen('form') }
+
   function openAuditTrail(poId) {
     setAuditTrailReturnScreen(appScreen)
     setAuditTrailPOId(poId)
@@ -329,6 +343,7 @@ export default function App() {
     ...(role !== 'finance' ? [{ key: 'my-expenses', label: 'My Expenses', icon: '🧾' }] : []),
     ...(canAccessApprovals(role) ? [{ key: 'approvals', label: 'Approvals', icon: '✓' }] : []),
     ...(canAccessFinance(role)   ? [{ key: 'finance',   label: 'Finance',   icon: '₹' }] : []),
+    { key: 'advances', label: 'Advances', icon: '⏱' },
     { key: 'pr-list', label: 'Purchase Requests',  icon: '◫' },
     { key: 'po-list', label: 'Purchase Orders',    icon: '◻' },
     { key: 'vendors', label: canAccessFinance(role) ? 'Vendor Management' : 'Vendors', icon: '⬡' },
@@ -344,6 +359,7 @@ export default function App() {
     if (key === 'vendors') openVendorList()
     if (key === 'pr-list') openPRList()
     if (key === 'po-list') openPOList()
+    if (key === 'advances') openAdvanceList()
     // FinanceDashboard keeps its own drill-down state internally (tab,
     // vendor sub-screens, etc.) — App has nothing to reset directly, and
     // re-clicking "Finance" while already on it is a same-value setAppScreen
@@ -660,7 +676,7 @@ export default function App() {
               display: 'flex', padding: '0 24px',
               background: 'var(--surface-card)', borderBottom: '1px solid var(--taupe-200)',
             }}>
-              {[['expenses', 'Expense Reports'], ['prs', 'Purchase Requests']].map(([key, label]) => (
+              {[['expenses', 'Expense Reports'], ['prs', 'Purchase Requests'], ['advances', 'Advances']].map(([key, label]) => (
                 <div
                   key={key}
                   onClick={() => setApprovalsTab(key)}
@@ -690,6 +706,11 @@ export default function App() {
                 onBack={() => setAppScreen('list')}
               />
             )}
+            {approvalsTab === 'advances' && (
+              <AdvanceApproverDashboard
+                onViewAdvance={(advance) => { setApprovingAdvance(advance); setAppScreen('advance-approval-view') }}
+              />
+            )}
           </div>
         )}
 
@@ -712,6 +733,18 @@ export default function App() {
             onViewPO={(id) => { setAppScreen('po-list'); openPODetail(id) }}
             showToast={showToast}
             backLabel="PR Approvals"
+          />
+        )}
+
+        {appScreen === 'advance-approval-view' && (
+          <AdvanceApprovalView
+            advance={approvingAdvance}
+            user={user}
+            onBack={() => setAppScreen('approvals')}
+            onActioned={(action) => {
+              showToast(`Advance ${action}.`, action === 'approved' ? 'approved' : 'rejected')
+              setAppScreen('approvals')
+            }}
           />
         )}
 
@@ -744,6 +777,21 @@ export default function App() {
             user={user}
             standalone
             onRaiseReport={handleRaiseReportFromSelection}
+          />
+        )}
+
+        {/* ── Advance screens ── */}
+        {appScreen === 'advances' && advanceSubScreen === 'list' && (
+          <AdvanceList user={user} onCreateAdvance={openAdvanceForm} />
+        )}
+        {appScreen === 'advances' && advanceSubScreen === 'form' && (
+          <AdvanceForm
+            user={user}
+            onSaved={() => {
+              showToast('Advance request submitted.', 'info')
+              openAdvanceList()
+            }}
+            onBack={openAdvanceList}
           />
         )}
 
