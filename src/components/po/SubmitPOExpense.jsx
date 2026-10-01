@@ -190,6 +190,18 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
         .single()
       if (captureErr) throw captureErr
 
+      // Same PO PDF "Download PO PDF" opens from PODetail.jsx — but that one
+      // is a short-lived (1hr) signed URL meant for an immediate click, not
+      // for storing. This copy needs to still resolve years from now from
+      // inside a saved expense record, so it's signed with a long expiry.
+      let poPdfLink = null
+      if (po.pdf_storage_path) {
+        const { data: signed } = await supabase.storage
+          .from('po-pdfs')
+          .createSignedUrl(po.pdf_storage_path, 60 * 60 * 24 * 365 * 10)
+        poPdfLink = signed?.signedUrl || null
+      }
+
       const { data: detail, error: detailErr } = await supabase
         .from('expense_details')
         .insert({
@@ -207,6 +219,7 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
           donor_name: donor.trim() || null,
           gstin: gstin.trim() || null,
           invoice_number: invoiceNumber.trim() || null,
+          po_pdf_link: poPdfLink,
           payment_method: PO_PAYMENT_METHOD,
           po_number: po.po_number || null,
           po_payment_label: paymentLabel.trim() || null,

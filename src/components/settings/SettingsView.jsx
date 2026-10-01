@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { ROLES, getRoleLabel, canAccessFinance } from '../../lib/auth'
+import { FUNCTIONS } from '../../lib/functionRouting'
 import MyProfile from './MyProfile'
 import ApprovalRulesView from './ApprovalRulesView'
 
-const EMPTY_FORM = { name: '', email: '', role: 'employee', can_approve_vendors: false }
+const EMPTY_FORM = { name: '', email: '', role: 'employee', can_approve_vendors: false, function: '' }
 
 export default function SettingsView({ user }) {
   const isAdmin = user.role === 'admin'
@@ -62,6 +63,7 @@ export default function SettingsView({ user }) {
     const { error: err } = await supabase.from('team_members').insert({
       name, email, role: form.role,
       can_approve_vendors: form.role === 'finance' ? form.can_approve_vendors : false,
+      function: form.function || null,
     })
     setSaving(false)
     if (err) { setError(err.code === '23505' ? 'That email is already a team member.' : err.message); return }
@@ -88,6 +90,15 @@ export default function SettingsView({ user }) {
   async function handleApproveToggle(member, checked) {
     setMembers(prev => prev.map(m => m.id === member.id ? { ...m, can_approve_vendors: checked } : m))
     await supabase.from('team_members').update({ can_approve_vendors: checked }).eq('id', member.id)
+  }
+
+  // Which Function this person belongs to — drives per-function FL approval
+  // routing (src/lib/functionRouting.js); a PR they raise resolves its FL
+  // level to whoever that Function's FUNCTION_FL_EMAIL entry names, falling
+  // back to today's any-FL-approves behavior when left unassigned.
+  async function handleFunctionChange(member, fn) {
+    setMembers(prev => prev.map(m => m.id === member.id ? { ...m, function: fn || null } : m))
+    await supabase.from('team_members').update({ function: fn || null }).eq('id', member.id)
   }
 
   // Only bumps a marker (analytics_reset_at) that Personal Analytics filters
@@ -222,6 +233,17 @@ export default function SettingsView({ user }) {
                 Can approve vendors
               </label>
             )}
+            <div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Function (optional)</div>
+              <select
+                value={form.function}
+                onChange={e => setForm(f => ({ ...f, function: e.target.value }))}
+                style={{ ...selectStyle, height: '34px' }}
+              >
+                <option value="">—</option>
+                {FUNCTIONS.map(fn => <option key={fn} value={fn}>{fn}</option>)}
+              </select>
+            </div>
             <button
               type="submit" disabled={saving}
               style={{
@@ -244,7 +266,7 @@ export default function SettingsView({ user }) {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: 'var(--taupe-50)', borderBottom: '1px solid var(--taupe-200)' }}>
-                  {['Name', 'Email', 'Role', 'Can Approve Vendors', ''].map(h => (
+                  {['Name', 'Email', 'Role', 'Function', 'Can Approve Vendors', ''].map(h => (
                     <th key={h} style={{ padding: '10px 14px', fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       {h}
                     </th>
@@ -265,6 +287,16 @@ export default function SettingsView({ user }) {
                           style={selectStyle}
                         >
                           {ROLES.map(r => <option key={r} value={r}>{getRoleLabel(r)}</option>)}
+                        </select>
+                      </td>
+                      <td style={{ padding: '10px 14px' }}>
+                        <select
+                          value={m.function || ''}
+                          onChange={e => handleFunctionChange(m, e.target.value)}
+                          style={selectStyle}
+                        >
+                          <option value="">—</option>
+                          {FUNCTIONS.map(fn => <option key={fn} value={fn}>{fn}</option>)}
                         </select>
                       </td>
                       <td style={{ padding: '10px 14px' }}>

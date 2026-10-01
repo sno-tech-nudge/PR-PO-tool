@@ -2,11 +2,12 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { getPRApprovalLevels, getRequiredQuotes } from '../../lib/approvalEngine'
 import { getEmailsByRole } from '../../lib/auth'
+import { resolveFLEmail } from '../../lib/functionRouting'
 import { sendPREmail } from '../../lib/prEmail'
 import { buildPRTimelineSteps } from '../../lib/prStatusSteps'
 import { generatePRSummary } from '../../lib/claude'
 import { EXPENSE_NATURES, validateAllocations, primaryAllocation } from '../../lib/donorData'
-import { quotesValidity, advanceValidity, breakdownTotals, lineItemsBase, lineItemsValid, distinctCategories, getFiscalYearPrefix, fiscalYearStartStr } from '../../lib/formCalc'
+import { quotesValidity, advanceValidity, breakdownTotals, lineItemsBase, lineItemsValid, looksLikeAmount, distinctCategories, getFiscalYearPrefix, fiscalYearStartStr } from '../../lib/formCalc'
 import { notifySlack, recordUrl } from '../../lib/slack'
 import VendorSelector from './VendorSelector'
 import QuoteRows from './QuoteRows'
@@ -230,7 +231,12 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
     }
     if (s === 1) {
       if (!vendorId) e.vendorId = 'Please select a vendor'
-      if (!lineItemsValid(breakdown.items || [])) { e.amount = 'Enter quantity, category, and rate per unit for every line item.'; e.itemFields = true }
+      if (!lineItemsValid(breakdown.items || [])) {
+        e.amount = (breakdown.items || []).some(it => looksLikeAmount(it.description))
+          ? 'One of your line items has an amount typed into the description — describe what it is instead.'
+          : 'Enter quantity, category, and rate per unit for every line item.'
+        e.itemFields = true
+      }
       else if (!breakdownTotals({ ...breakdown, base: itemsBase }).valid) e.amount = 'Enter tax for this purchase.'
       if (numericAmount > 0 && numericAmount < PR_MIN)
         e.amount = `Purchases under ₹25,000 don't need a PR — submit as an expense claim instead.`
@@ -486,14 +492,23 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
       if (aiSummary) await supabase.from('purchase_requests').update({ ai_summary: aiSummary }).eq('id', prId)
 
       // Approval records — fixed FL → PR Approver chain (required_role is
-      // what PRDetail.jsx checks against the acting user's role).
+      // what PRDetail.jsx checks against the acting user's role). The FL
+      // level additionally resolves to the ONE specific FL responsible for
+      // the requester's own Function (team_members.function), if they have
+      // one assigned and it maps to a real account — required_approver_email
+      // then takes precedence over the role-based check in PRDetail.jsx.
+      // Resolved once here, at submission time, so a later change to the
+      // requester's Function or the Function->FL map never reroutes a PR
+      // that's already mid-flight.
       const levels = getPRApprovalLevels()
+      const flEmail = resolveFLEmail(user.function)
       const approvalRecords = levels.map((l, idx) => ({
         pr_id:          prId,
         approver_level: l.level,
         approver_name:  l.label,
         approver_email: '',
         required_role:  l.role,
+        required_approver_email: l.role === 'fl' ? flEmail : null,
         status:         idx === 0 ? 'pending' : 'waiting',
       }))
       await supabase.from('pr_approvals').insert(approvalRecords)
@@ -501,11 +516,13 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
       // Notify FL (level 1 approver) — best-effort, must never block a
       // successful submission (the postgrest-js query builder only
       // implements .then(), not .catch(), so chaining .catch() on it
-      // throws a TypeError instead of suppressing the error).
+      // throws a TypeError instead of suppressing the error). Notifies just
+      // the resolved FL when there is one, otherwise falls back to every
+      // fl-role person exactly as before.
       const advNote = advFlags.requiresFLEmail ? ' — 100% ADVANCE: email approval required.' : ''
       const categoriesLabel = distinctCategories(cleanItems).join(', ')
       try {
-        const flEmails = await getEmailsByRole('fl')
+        const flEmails = flEmail ? [flEmail] : await getEmailsByRole('fl')
         await Promise.all(flEmails.map(email => supabase.from('expense_notifications').insert({
           recipient_id: email,
           type: 'pr_submitted',
@@ -607,7 +624,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
             error={liveErrors.allocations}
             required
             hint="Split this spend across donors / programmes — must total 100%"
-            info="Most purchases only need one row. Add another row only if this specific purchase's cost is genuinely being split across more than one donor or programme — for example, half funded by one grant and half by another. If in doubt, one row at 100% is almost always right."
+            info="Allocation is which donor/programme budget this purchase's cost gets charged against — the percentage says how much of the total comes from each one. Most purchases only need one row, at 100%. Add another row only if this specific purchase's cost is genuinely being split across more than one donor or programme — for example, half funded by one grant and half by another. If in doubt, one row at 100% is almost always right."
           >
             <DonorAllocations value={allocations} onChange={setAllocations} error={liveErrors.allocations} />
           </Field>

@@ -38,12 +38,25 @@ export function lineItemsBase(items = []) {
   return items.reduce((sum, it) => sum + (Number(it.quantity) || 0) * (Number(it.ratePerUnit) || 0), 0)
 }
 
+// Catches a description that's just an amount typed into the wrong box
+// (e.g. "25000" or "₹25,000") — stripping currency symbols, commas, and
+// whitespace should leave something that isn't purely digits. A real
+// description containing some digits (e.g. "2 nights at Hotel X") still
+// has letters left over once those are stripped, so it isn't flagged.
+export function looksLikeAmount(text) {
+  const stripped = String(text || '').replace(/[₹$,.\s]/g, '')
+  return stripped.length > 0 && /^\d+$/.test(stripped)
+}
+
 // Valid once every row has a quantity, a category, and a rate entered
 // (empty/blank rows are dropped before this is called from the form's
-// submit path).
+// submit path), and — if a description was given at all — it reads as an
+// actual description rather than a restated amount.
 export function lineItemsValid(items = []) {
   const rows = items.filter(it => it.quantity !== '' && it.quantity != null || it.ratePerUnit !== '' && it.ratePerUnit != null || it.category || it.description)
-  return rows.length > 0 && rows.every(it => (Number(it.quantity) || 0) > 0 && (Number(it.ratePerUnit) || 0) > 0 && !!it.category)
+  return rows.length > 0 && rows.every(it =>
+    (Number(it.quantity) || 0) > 0 && (Number(it.ratePerUnit) || 0) > 0 && !!it.category && !looksLikeAmount(it.description)
+  )
 }
 
 // Distinct, non-empty categories across every line item, in first-seen

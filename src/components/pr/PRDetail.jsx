@@ -68,7 +68,13 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
   useEffect(() => {
     if (!pr) return
     const pending = approvals.find(a => a.status === 'pending')
-    const matches = pending?.required_role ? user.role === pending.required_role : canAccessApprovals(user.role)
+    // Super FL bypasses per-function FL routing entirely — can act on the
+    // FL level of any PR regardless of which specific FL it resolved to.
+    const matches = pending?.required_role === 'fl' && user.role === 'super_fl'
+      ? true
+      : pending?.required_approver_email
+        ? user.email === pending.required_approver_email
+        : pending?.required_role ? user.role === pending.required_role : canAccessApprovals(user.role)
     // Not eligible to act right now — skip presence entirely. No need to
     // reset reviewingBy here since the badge only ever renders inside the
     // canAction block below, so a stale value here is simply never shown.
@@ -188,10 +194,20 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
   // no one can approve/reject out of turn or approve their own request just
   // by holding the admin role. required_role is null on PRs submitted before
   // this gate existed, so those legacy rows fall back to the old
-  // any-approver-role rule.
-  const roleMatches = currentPending?.required_role
-    ? user.role === currentPending.required_role
-    : canAccessApprovals(user.role)
+  // any-approver-role rule. required_approver_email narrows the FL level
+  // further still, to the ONE specific Functional Leader resolved for the
+  // requester's Function at submission time (see functionRouting.js) — when
+  // present it takes precedence over the role check, same "no exceptions,
+  // not even admin" rule as above. The one deliberate exception: `super_fl`
+  // is a standing override role that can act on the FL level of ANY PR
+  // regardless of which specific FL it resolved to (currently just Anurag).
+  const roleMatches = currentPending?.required_role === 'fl' && user.role === 'super_fl'
+    ? true
+    : currentPending?.required_approver_email
+      ? user.email === currentPending.required_approver_email
+      : currentPending?.required_role
+        ? user.role === currentPending.required_role
+        : canAccessApprovals(user.role)
   const canAction = pr.status === 'submitted' && !!currentPending && roleMatches
   const isFullyApproved = pr.status === 'approved' || pr.status === 'po_generated'
 

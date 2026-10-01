@@ -48,6 +48,22 @@ async function notifyRole(role, { type, message, relatedType, relatedId }) {
   } catch { /* non-blocking */ }
 }
 
+// Notifies whoever actually needs to act on a pr_approvals level — the one
+// specific resolved FL (required_approver_email) if this level has one,
+// otherwise every team member holding required_role exactly as before.
+async function notifyApprover(approvalRow, { type, message, relatedType, relatedId }) {
+  if (approvalRow?.required_approver_email) {
+    try {
+      await supabase.from('expense_notifications').insert({
+        recipient_id: approvalRow.required_approver_email, type, message,
+        related_type: relatedType, related_id: relatedId,
+      })
+    } catch { /* non-blocking */ }
+    return
+  }
+  if (approvalRow?.required_role) await notifyRole(approvalRow.required_role, { type, message, relatedType, relatedId })
+}
+
 // Approves whichever pr_approvals row is currently 'pending' for this PR.
 // If another level is 'waiting', advances it to 'pending', keeps the PR
 // 'submitted', and notifies whoever holds that level's required_role that
@@ -72,14 +88,12 @@ export async function approvePRLevel({ prId, approvals, user, pr }) {
   if (nextWaiting) {
     await supabase.from('pr_approvals').update({ status: 'pending' }).eq('id', nextWaiting.id)
     await supabase.from('purchase_requests').update({ status: 'submitted' }).eq('id', prId)
-    if (nextWaiting.required_role) {
-      notifyRole(nextWaiting.required_role, {
-        type: 'pr_pending_review',
-        message: `PR ${pr?.pr_number || ''} for ₹${Number(pr?.amount || 0).toLocaleString('en-IN')} is now pending your review as ${nextWaiting.approver_name}.`,
-        relatedType: 'pr',
-        relatedId: prId,
-      })
-    }
+    notifyApprover(nextWaiting, {
+      type: 'pr_pending_review',
+      message: `PR ${pr?.pr_number || ''} for ₹${Number(pr?.amount || 0).toLocaleString('en-IN')} is now pending your review as ${nextWaiting.approver_name}.`,
+      relatedType: 'pr',
+      relatedId: prId,
+    })
     notifySlack(`✅ PR <${recordUrl('pr', prId)}|${pr?.pr_number || prId}> approved by ${currentPending.approver_name} (${user.name}) — now awaiting *${nextWaiting.approver_name}* approval.`)
 
     // In-app bell notification for the requester — previously only an email
@@ -102,8 +116,8 @@ export async function approvePRLevel({ prId, approvals, user, pr }) {
     sendPREmail({
       type: 'advanced', recipientEmail: pr?.requested_by, prNumber: pr?.pr_number,
       amount: pr?.amount, actorName: user.name, nextLevelLabel: nextWaiting.approver_name, timelineSteps,
-    })
-    getApproverEmailsForLevel(nextWaiting.required_role).then(emails => sendPREmail({
+    });
+    (nextWaiting.required_approver_email ? Promise.resolve([nextWaiting.required_approver_email]) : getApproverEmailsForLevel(nextWaiting.required_role)).then(emails => sendPREmail({
       type: 'action_needed', recipientEmail: emails, prNumber: pr?.pr_number,
       amount: pr?.amount, nextLevelLabel: nextWaiting.approver_name, timelineSteps,
     }))

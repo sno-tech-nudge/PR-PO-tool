@@ -1,4 +1,4 @@
-import { lineItemsBase, breakdownTotals } from '../../lib/formCalc'
+import { lineItemsBase, breakdownTotals, looksLikeAmount } from '../../lib/formCalc'
 import { blockNonNumericKey, sanitizeNumericPaste, sanitizeNumericValue } from '../../lib/numericInput'
 import { PR_CATEGORIES } from '../../lib/prConstants'
 import AmountInput from './AmountInput'
@@ -59,14 +59,24 @@ export default function AmountBreakdown({ value = {}, onChange, errors = {} }) {
           const rowAmount = (Number(it.quantity) || 0) * (Number(it.ratePerUnit) || 0)
           return (
             <div key={i} style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', background: '#FAFBFC' }}>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
-                <input
-                  type="text"
-                  value={it.description}
-                  onChange={e => updateItem(i, { description: e.target.value })}
-                  placeholder={`Item ${i + 1} description (optional)`}
-                  style={{ flex: 1, height: '34px', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', padding: '0 10px', fontSize: '13px', color: 'var(--ink)', background: 'var(--surface-card)', outline: 'none', boxSizing: 'border-box' }}
-                />
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>
+                What is this item? (optional)
+              </label>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginBottom: '2px' }}>
+                <div style={{ flex: 1 }}>
+                  <input
+                    type="text"
+                    value={it.description}
+                    onChange={e => updateItem(i, { description: e.target.value })}
+                    placeholder="What was bought/booked — e.g. 'Venue rental for workshop', not the amount"
+                    style={{ width: '100%', height: '34px', border: `1px solid ${looksLikeAmount(it.description) ? 'var(--clay-text)' : 'var(--taupe-400)'}`, borderRadius: 'var(--radius-sm)', padding: '0 10px', fontSize: '13px', color: 'var(--ink)', background: 'var(--surface-card)', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                  {looksLikeAmount(it.description) && (
+                    <div style={{ fontSize: '11px', color: 'var(--clay-text)', marginTop: '4px' }}>
+                      This looks like an amount, not a description — say what the item actually is instead (the amount belongs in Rate per Unit below).
+                    </div>
+                  )}
+                </div>
                 {items.length > 1 && (
                   <button
                     type="button"

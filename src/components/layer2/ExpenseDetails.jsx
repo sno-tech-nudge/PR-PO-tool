@@ -255,7 +255,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
     setPoId(id)
     if (!id) return
     setPoLoading(true)
-    const { data: po } = await supabase.from('purchase_orders').select('po_number, pr_id, vendor_id').eq('id', id).single()
+    const { data: po } = await supabase.from('purchase_orders').select('po_number, pr_id, vendor_id, pdf_storage_path').eq('id', id).single()
     if (po) {
       setPoNumber(po.po_number || '')
       const [{ data: pr }, { data: v }] = await Promise.all([
@@ -276,6 +276,17 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
       if (v) {
         setVendor(prev => prev || v.org_name || '')
         setGstin(prev => prev || v.gstin || '')
+      }
+      // Same PO PDF someone downloads from PODetail.jsx's "Download PO PDF"
+      // link — but that one is a short-lived (1hr) signed URL meant for an
+      // immediate click, not for storing. This copy needs to still resolve
+      // years from now from inside a saved expense record, so it's signed
+      // with a long expiry instead of the short one used there.
+      if (po.pdf_storage_path) {
+        const { data: signed } = await supabase.storage
+          .from('po-pdfs')
+          .createSignedUrl(po.pdf_storage_path, 60 * 60 * 24 * 365 * 10)
+        if (signed?.signedUrl) setPoPdfLink(prev => prev || signed.signedUrl)
       }
     }
     setPoLoading(false)

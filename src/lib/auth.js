@@ -5,11 +5,12 @@ import { supabase } from './supabase'
 // instead of a hardcoded map — see src/components/settings/SettingsView.jsx.
 // No passwords: access is still just "type an authorised email," identical
 // trust model to before, now editable by an admin instead of a developer.
-export const ROLES = ['employee', 'fl', 'admin', 'finance', 'pr_approver', 'coo', 'observer']
+export const ROLES = ['employee', 'fl', 'super_fl', 'admin', 'finance', 'pr_approver', 'coo', 'observer']
 
 const ROLE_LABEL = {
   employee:    'Employee',
   fl:          'Functional Leader',
+  super_fl:    'Super FL',
   admin:       'Admin',
   finance:     'Finance Team',
   pr_approver: 'PR Approver',
@@ -31,6 +32,7 @@ function buildUser(row) {
     name:                row.name,
     roleLabel:           getRoleLabel(row.role),
     can_approve_vendors: !!row.can_approve_vendors,
+    function:            row.function || null,
   }
 }
 
@@ -39,7 +41,7 @@ async function lookupMember(email) {
   if (!normalized) return null
   const { data } = await supabase
     .from('team_members')
-    .select('name, email, role, can_approve_vendors')
+    .select('name, email, role, can_approve_vendors, function')
     .ilike('email', normalized)
     .maybeSingle()
   return data || null
@@ -86,7 +88,7 @@ export async function getEmailsByRole(role) {
 // already lets act there — the email reaches exactly who can actually act.
 export async function getApproverEmailsForLevel(requiredRole) {
   if (requiredRole) return getEmailsByRole(requiredRole)
-  const { data } = await supabase.from('team_members').select('email').in('role', ['admin', 'finance', 'fl', 'pr_approver', 'coo'])
+  const { data } = await supabase.from('team_members').select('email').in('role', ['admin', 'finance', 'fl', 'super_fl', 'pr_approver', 'coo'])
   return (data || []).map(r => r.email)
 }
 
@@ -94,7 +96,7 @@ export async function getApproverEmailsForLevel(requiredRole) {
 // admin bypasses every restriction below — "admin has both finance & employee
 // view... can access & do anything."
 export const canAccessFinance   = (role) => role === 'admin' || role === 'finance'
-export const canAccessApprovals = (role) => role === 'admin' || role === 'finance' || role === 'fl' || role === 'pr_approver' || role === 'coo'
+export const canAccessApprovals = (role) => role === 'admin' || role === 'finance' || role === 'fl' || role === 'super_fl' || role === 'pr_approver' || role === 'coo'
 export const isObserver         = (role) => role === 'observer'
 
 // The one fine-grained guardrail explicitly requested: within Finance,
