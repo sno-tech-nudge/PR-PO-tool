@@ -82,7 +82,6 @@ export default function SubmissionConfirmation({ submission, onStartNew, onTrack
         <InfoRow label="Total amount" value={total ? `₹${Number(total).toLocaleString('en-IN')}` : '—'} alt={true} />
         <InfoRow label="Expenses" value={expenseCount ? `${expenseCount} item${expenseCount !== 1 ? 's' : ''}` : '—'} alt={false} />
         <InfoRow label="Submitted to" value={approvalRoute?.label || '—'} alt={true} />
-        <InfoRow label="Expected by" value="Next Friday if approved by Wednesday" alt={false} />
       </div>
 
       {pdfUploadPending && (

@@ -79,17 +79,63 @@ export default function POList({ user, onViewPO }) {
     // This table now runs well past Supabase's default 1000-row cap on a
     // single select() — page through with .range() instead of one
     // unbounded query, or the oldest POs silently stop showing up here.
-    const data = await fetchAllRows((from, to) => {
-      let q = supabase
-        .from('purchase_orders')
-        .select(isEmployee ? '*, purchase_requests!inner(*), vendors(*)' : '*, purchase_requests(*), vendors(*)')
-        .order('generated_at', { ascending: false })
-      // Employees only see their own POs
-      if (isEmployee) {
-        q = q.eq('purchase_requests.requested_by', user.email)
-      }
-      return q.range(from, to)
-    })
+    let data
+    if (isEmployee) {
+      data = await fetchAllRows((from, to) =>
+        supabase
+          .from('purchase_orders')
+          .select('*, purchase_requests!inner(*), vendors(*)')
+          .eq('purchase_requests.requested_by', user.email)
+          .order('generated_at', { ascending: false })
+          .range(from, to)
+      )
+    } else if (!isFinance) {
+      // Everyone else who isn't Finance/Admin (fl, pr_approver, coo,
+      // observer) doesn't approve POs themselves — only Finance does (see
+      // PODetail.jsx's isPOApprover) — so they only need visibility into
+      // what's still awaiting a decision (not the org's entire PO history;
+      // the moment Finance acts, status leaves 'pending_approval' and the
+      // PO drops out of this half on its own), PLUS any PO they themselves
+      // raised in the past regardless of its current status — e.g. a
+      // Functional Leader who has since changed roles, or whose historical
+      // Zoho-migrated POs are mapped to their email. Two separate queries,
+      // merged and de-duplicated, rather than one combined OR filter — a
+      // combined filter mixing a top-level column with an embedded-table
+      // column inside a single .or() is easy to get subtly wrong, and this
+      // table is large enough that getting it wrong would leak real data.
+      const [pending, own] = await Promise.all([
+        fetchAllRows((from, to) =>
+          supabase
+            .from('purchase_orders')
+            .select('*, purchase_requests(*), vendors(*)')
+            .eq('status', 'pending_approval')
+            .order('generated_at', { ascending: false })
+            .range(from, to)
+        ),
+        fetchAllRows((from, to) =>
+          supabase
+            .from('purchase_orders')
+            .select('*, purchase_requests!inner(*), vendors(*)')
+            .eq('purchase_requests.requested_by', user.email)
+            .order('generated_at', { ascending: false })
+            .range(from, to)
+        ),
+      ])
+      const seen = new Set()
+      data = [...pending, ...own].filter(po => {
+        if (!po || seen.has(po.id)) return false
+        seen.add(po.id)
+        return true
+      })
+    } else {
+      data = await fetchAllRows((from, to) =>
+        supabase
+          .from('purchase_orders')
+          .select('*, purchase_requests(*), vendors(*)')
+          .order('generated_at', { ascending: false })
+          .range(from, to)
+      )
+    }
     const clean = (data || []).filter(p => p != null)
     // Batched, not per-row — same helper the PO-picker dropdowns already use
     // (ExpenseDetails.jsx, ReportPreview.jsx) so "how much is left on this
@@ -240,7 +286,7 @@ export default function POList({ user, onViewPO }) {
                         {fmtAmt(po.amount)}
                       </td>
                       <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
-                        {po.status === 'issued' && po.pending > 0 ? (
+                        {po.status === 'issued' && po.pending > 0 && po.purchase_requests?.requested_by === user.email ? (
                           <button
                             onClick={() => setInvoicePO(po)}
                             title="Attach an invoice against this PO's pending balance"

@@ -794,8 +794,11 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
               advFlags.requiresFLEmail
                 ? ['FL Approval Email', advanceState.screenshotPath ? 'Screenshot attached' : 'Not attached']
                 : null,
+              // Only append "…" when the text is actually cut off — always adding it
+              // (even for a 9-character justification) reads as though there's a hard
+              // character limit on this field, and there isn't one.
               quoteState.singleSource
-                ? ['Quotes', `Single source — ${quoteState.singleSourceJustification.substring(0, 60)}…`]
+                ? ['Quotes', `Single source — ${quoteState.singleSourceJustification.slice(0, 60)}${quoteState.singleSourceJustification.length > 60 ? '…' : ''}`]
                 : ['Quotes', `${quotesValidity(quoteState, requiredQuotes).uploaded} of ${requiredQuotes} uploaded`],
               ['Submission Timestamp', new Date().toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })],
             ].filter(Boolean).map(([label, val]) => (

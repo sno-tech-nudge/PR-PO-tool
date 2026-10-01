@@ -430,7 +430,9 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
             <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               Expense Submissions
             </div>
-            {pendingAmount > 0 && (
+            {/* Only the PO's own requester submits an expense against it —
+                not Finance, not anyone else who can merely view this page. */}
+            {pendingAmount > 0 && pr?.requested_by === user.email && (
               <button
                 onClick={() => setShowSubmitExpense(true)}
                 style={{ height: '32px', padding: '0 14px', fontSize: '12px', fontWeight: 600, background: 'var(--action)', color: 'var(--surface-card)', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}

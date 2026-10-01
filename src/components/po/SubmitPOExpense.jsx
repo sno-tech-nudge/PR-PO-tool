@@ -8,12 +8,12 @@ import AttachmentDropzone from '../shared/AttachmentDropzone'
 import AmountInput from '../shared/AmountInput'
 import VoiceInputButton from '../shared/VoiceInputButton'
 
-// Not personal-expense payment instruments (that's ExpenseDetails.jsx's
-// PAYMENT_MODES, e.g. "Self - UPI"/"Company Card") — this is how Finance
-// actually paid the vendor for this invoice, a different concept, kept as
-// its own small list local to this form rather than reusing that vocabulary.
-const PAYMENT_METHODS = ['Bank Transfer', 'Cheque', 'UPI', 'Other']
 const ATTACHMENT_LABELS = ['Invoice', 'Receipt', 'Quotation', 'Other']
+
+// Payment method used to be a per-invoice choice here, but the org only
+// ever pays vendors by bank transfer — removed the picker, this is the
+// only value `expense_details.payment_method` ever needs to carry now.
+const PO_PAYMENT_METHOD = 'Bank Transfer'
 
 function fmtAmt(n) {
   if (n == null) return '—'
@@ -77,7 +77,6 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
   const [ocrExtracting, setOcrExtracting] = useState(false)
   const [ocrExtracted, setOcrExtracted] = useState(null)
   const [ocrNotice, setOcrNotice] = useState(null)
-  const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHODS[0])
   const [paymentLabel, setPaymentLabel] = useState('')
   const [priorCount, setPriorCount] = useState(null)
   const [stage1Error, setStage1Error] = useState(null)
@@ -208,7 +207,7 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
           donor_name: donor.trim() || null,
           gstin: gstin.trim() || null,
           invoice_number: invoiceNumber.trim() || null,
-          payment_method: paymentMethod || null,
+          payment_method: PO_PAYMENT_METHOD,
           po_number: po.po_number || null,
           po_payment_label: paymentLabel.trim() || null,
           supporting_attachments: rest.length ? rest : null,
@@ -299,12 +298,6 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
                 After this payment: {fmtAmt(amountLeftAfter)} will still be pending on this PO.
               </div>
             )}
-          </Field>
-
-          <Field label="Payment Method">
-            <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} style={inputStyle}>
-              {PAYMENT_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
           </Field>
 
           <Field label="Which payment is this? (optional)">
