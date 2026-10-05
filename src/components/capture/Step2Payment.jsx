@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { checkDocumentQuality, detectUPI, extractPaymentAmount } from '../../lib/claude'
 import QualityCheck from './QualityCheck'
+import { useFileDrop } from '../../hooks/useFileDrop'
 
 async function imageFileToJpegBase64(file) {
   return new Promise((resolve, reject) => {
@@ -73,6 +74,12 @@ export default function Step2Payment({ receiptExtracted, onComplete, onBack }) {
     setBase64(null)
     setError(null)
   }
+
+  const { dragging, dropProps } = useFileDrop({
+    accept: 'image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf',
+    disabled: !(selectedType && selectedType !== 'cash') || !!preview,
+    onFiles: files => handleFileSelect({ target: { files } }),
+  })
 
   async function handleFileSelect(e) {
     const selected = e.target.files?.[0]
@@ -214,7 +221,10 @@ export default function Step2Payment({ receiptExtracted, onComplete, onBack }) {
       )}
 
       {showCapture && !preview && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
+        <div {...dropProps} style={{
+          display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px', padding: '12px', borderRadius: 'var(--radius-md)',
+          border: `2px dashed ${dragging ? 'var(--action)' : 'transparent'}`, background: dragging ? 'var(--action-bg)' : 'transparent',
+        }}>
           <button
             onClick={() => cameraRef.current?.click()}
             style={{
@@ -233,6 +243,9 @@ export default function Step2Payment({ receiptExtracted, onComplete, onBack }) {
           >
             Upload from gallery or files
           </button>
+          <div style={{ fontSize: '12px', color: dragging ? 'var(--action)' : 'var(--text-muted)', textAlign: 'center' }}>
+            {dragging ? 'Drop the receipt here' : 'or drag & drop a receipt here'}
+          </div>
           <input ref={cameraRef} type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" capture="environment" style={{ display: 'none' }} onChange={handleFileSelect} />
           <input ref={galleryRef} type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf" style={{ display: 'none' }} onChange={handleFileSelect} />
         </div>

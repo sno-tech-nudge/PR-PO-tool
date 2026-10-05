@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { processApproval, createNotification } from '../../lib/approvalEngine'
 import { canAccessApprovals } from '../../lib/auth'
+import { getActiveDelegationsForDelegate, delegationCovers } from '../../lib/delegation'
 import { generateManagerSummary } from '../../lib/claude'
 import { runAllChecks } from '../../lib/policyEngine'
 import ExpenseApprovalCard from './ExpenseApprovalCard'
@@ -56,6 +57,7 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
   const [aiLoading, setAiLoading] = useState(false)
   const [linkedPO, setLinkedPO] = useState(null)
   const [policyResults, setPolicyResults] = useState({}) // expenseId -> { violations, flags }
+  const [delegations, setDelegations] = useState([]) // out-of-office delegations where this viewer is the delegate
 
   useEffect(() => {
     if (!reportId) return
@@ -98,6 +100,7 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
         .order('created_at', { ascending: true })
         .limit(1)
       setPendingApproval(apprList?.[0] || null)
+      setDelegations(await getActiveDelegationsForDelegate(user))
       setLoading(false)
 
       // Auto-generate AI summary for manager
@@ -122,7 +125,7 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
         .map(([id, note]) => `[${id.slice(-6)}]: ${note}`)
         .join('; ')
 
-      await processApproval(reportId, pendingApproval.approver_level, 'approved', combinedNotes || '', supabase, user?.email, report, user?.name)
+      await processApproval(reportId, pendingApproval.approver_level, 'approved', combinedNotes || '', supabase, user?.email, report, user?.name, delegationUsed?.delegator_email)
       await createNotification(
         report?.employee_email,
         reportId,
@@ -144,7 +147,7 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
   async function handleReject(reason) {
     if (!pendingApproval) return
     try {
-      await processApproval(reportId, pendingApproval.approver_level, 'rejected', reason, supabase, user?.email, report, user?.name)
+      await processApproval(reportId, pendingApproval.approver_level, 'rejected', reason, supabase, user?.email, report, user?.name, delegationUsed?.delegator_email)
       await createNotification(
         report?.employee_email,
         reportId,
@@ -201,9 +204,15 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
   // Manager has no natural 1:1 role in the roster, so required_role stays
   // null for it and falls back to the coarse any-approver-role rule, same
   // as legacy rows created before this column existed.
-  const roleMatches = pendingApproval?.required_role
+  const ownRoleMatches = pendingApproval?.required_role
     ? user.role === pendingApproval.required_role
     : canAccessApprovals(user.role)
+  // Covering for someone out of office — only when the viewer wouldn't
+  // already have access, so a real approver is never logged "on behalf of".
+  const delegationUsed = !ownRoleMatches && pendingApproval
+    ? delegationCovers(delegations, { requiredRole: pendingApproval.required_role })
+    : null
+  const roleMatches = ownRoleMatches || !!delegationUsed
 
   return (
     <div style={{ maxWidth: '480px', margin: '0 auto', padding: '20px', width: '100%', paddingBottom: '140px' }}>

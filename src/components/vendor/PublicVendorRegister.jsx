@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import VendorForm from './VendorForm'
+import LanguageToggle from '../shared/LanguageToggle'
 
 // No-login public entry point — reached at /vendor-register/:token (see the
 // pathname check in App.jsx, before the session/login gate runs at all).
@@ -36,9 +37,14 @@ export default function PublicVendorRegister({ token }) {
   }
 
   const shellStyle = {
-    minHeight: '100vh', background: 'var(--taupe-50)',
+    minHeight: '100vh', background: 'var(--taupe-50)', position: 'relative',
     display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px',
   }
+  const shellToggle = (
+    <div style={{ position: 'absolute', top: '16px', right: '16px' }}>
+      <LanguageToggle tone="light" />
+    </div>
+  )
   const cardStyle = {
     width: '100%', maxWidth: '440px', background: 'var(--surface-card)', border: '1px solid var(--taupe-200)',
     borderRadius: 'var(--radius-xl)', padding: '40px', textAlign: 'center',
@@ -47,6 +53,7 @@ export default function PublicVendorRegister({ token }) {
   if (state === 'loading') {
     return (
       <div style={shellStyle}>
+        {shellToggle}
         <div style={cardStyle}>
           <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Loading…</div>
         </div>
@@ -57,6 +64,7 @@ export default function PublicVendorRegister({ token }) {
   if (state === 'invalid') {
     return (
       <div style={shellStyle}>
+        {shellToggle}
         <div style={cardStyle}>
           <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--ink)', marginBottom: '10px' }}>
             This link is no longer valid
@@ -77,6 +85,7 @@ export default function PublicVendorRegister({ token }) {
   if (state === 'done') {
     return (
       <div style={shellStyle}>
+        {shellToggle}
         <div style={cardStyle}>
           <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--ink)', marginBottom: '10px' }}>
             Thanks — you're all set
@@ -93,11 +102,14 @@ export default function PublicVendorRegister({ token }) {
   const guestUser = { email: invite.created_by_email, name: invite.created_by_name || '', role: 'employee' }
   return (
     <div style={{ background: 'var(--taupe-50)', minHeight: '100vh' }}>
-      <div style={{ background: 'var(--surface-card)', borderBottom: '1px solid var(--taupe-200)', padding: '18px 20px' }}>
-        <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-          The Nudge Institute
+      <div style={{ background: 'var(--surface-card)', borderBottom: '1px solid var(--taupe-200)', padding: '18px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+        <div>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+            The Nudge Institute
+          </div>
+          <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--ink)' }}>Vendor Registration</div>
         </div>
-        <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--ink)' }}>Vendor Registration</div>
+        <LanguageToggle tone="light" />
       </div>
       <VendorForm user={guestUser} onSaved={handleSubmitted} hideBack isGuestSubmission />
     </div>

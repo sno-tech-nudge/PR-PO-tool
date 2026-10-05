@@ -11,6 +11,7 @@ import ExpenseLineItem from './ExpenseLineItem'
 import PDFTemplate from './PDFTemplate'
 import GeneratingPDF from './GeneratingPDF'
 import { useIsMobile } from '../../hooks/useIsMobile'
+import { logActivity } from '../../lib/activityLog'
 
 function parseExpenseDate(dateStr) {
   if (!dateStr) return null
@@ -246,6 +247,7 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
         : await supabase.from('expense_reports').insert(reportPayload).select().single()
 
       if (error) throw error
+      logActivity({ entityType: 'report', entityId: report.id, entityRef: reference, action: reportId ? 'resubmitted' : 'submitted', toValue: 'submitted', actor: user, note: `Total ₹${Number(total || 0).toLocaleString('en-IN')} · ${expenses.length} expense(s)` })
 
       await supabase
         .from('report_expenses')
@@ -259,6 +261,22 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
         .from('expense_details')
         .update({ status: 'reported', policy_status: 'submitted', approval_route: approvalRoute.route })
         .in('id', expenses.map(e => e.id))
+
+      // policy_status above is overwritten with 'submitted' for every report,
+      // so keep what the rule engine actually found per expense — this is
+      // what the Finance Policy Violations dashboard reads. Best-effort.
+      ;(results || []).forEach((r, i) => {
+        const exp = expenses[i]
+        if (!exp) return
+        const items = [
+          ...(r?.violations || []).map(v => ({ kind: 'violation', rule: v.rule, message: v.message || '', severity: v.severity || null })),
+          ...(r?.flags || []).map(f => ({ kind: 'flag', rule: f.rule, message: f.message || '', severity: f.severity || null })),
+        ]
+        if (!items.length && !exp.policy_flags) return
+        supabase.from('expense_details').update({ policy_flags: items.length ? items : null }).eq('id', exp.id).then(({ error: flagErr }) => {
+          if (flagErr) console.error('Saving policy flags failed:', flagErr.message)
+        })
+      })
 
       // The person's "is this related to a PO?" answer — pre-filled from
       // NewReportModal but editable right here, and validated above

@@ -7,6 +7,7 @@ import ReimbursementBatch from './ReimbursementBatch'
 import FinancePRsView from './FinancePRsView'
 import ApprovalHistoryView from './ApprovalHistoryView'
 import AnalyticsView from './AnalyticsView'
+import PolicyViolationsView from './PolicyViolationsView'
 import PRDetail from '../pr/PRDetail'
 import VendorList from '../vendor/VendorList'
 import VendorSearch from '../vendor/VendorSearch'
@@ -25,6 +26,7 @@ const TABS = [
   { key: 'vendors',  label: 'Vendors' },
   { key: 'approval-history', label: 'Approval History' },
   { key: 'analytics', label: 'Analytics' },
+  { key: 'violations', label: 'Policy Violations' },
 ]
 
 const shellStyle = { background: 'var(--taupe-50)', minHeight: '100vh' }
@@ -367,6 +369,10 @@ export default function FinanceDashboard({ user, showToast, onBack }) {
             onViewPR={setViewingPRId}
             onViewPO={setViewingPOId}
           />
+        )}
+
+        {tab === 'violations' && (
+          <PolicyViolationsView onViewReport={id => setDetailReportId(id)} />
         )}
 
         {tab === 'analytics' && (

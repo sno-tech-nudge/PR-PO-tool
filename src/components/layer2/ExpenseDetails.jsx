@@ -10,6 +10,7 @@ import { insertExpenseDetails } from '../../lib/expenseDetailsSave'
 import AmountInput from '../shared/AmountInput'
 import InfoTip from '../shared/InfoTip'
 import VoiceInputButton from '../shared/VoiceInputButton'
+import ReceiptSidePanel from '../shared/ReceiptSidePanel'
 import { useIsMobile } from '../../hooks/useIsMobile'
 
 const CATEGORIES = [
@@ -127,7 +128,11 @@ function AttendeeMultiSelect({ selected, onChange, directoryEntries }) {
   )
 }
 
-export default function ExpenseDetails({ layer1Data, existingExpense = null, defaultReportId = '', user, onSaved, onBack }) {
+// `reportPO` ({ related, poId }) is passed when this expense is being added
+// inside a report whose PO answer is already known (given when the report was
+// started) — the PO question is then not asked again here; it's inherited, and
+// the final report preview is the one place it can be revisited.
+export default function ExpenseDetails({ layer1Data, existingExpense = null, defaultReportId = '', reportPO = null, user, onSaved, onBack }) {
   const isMobile = useIsMobile()
   const isEdit = !!existingExpense
   const [reportId, setReportId] = useState(existingExpense?.report_id || defaultReportId || '')
@@ -182,7 +187,22 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
   const [poId, setPoId] = useState('')
   const [poOptions, setPoOptions] = useState([])
   const [poLoading, setPoLoading] = useState(false)
-  const [poRelated, setPoRelated] = useState(null)
+  // The attached receipt sits in the free space to the right of the form so
+  // it can be read from while typing. Only on screens wide enough to hold
+  // both; narrower ones keep the single centred column as before.
+  const receiptCaptureId = existingExpense?.capture_id ?? layer1Data?.capture_id ?? null
+  const [receiptShown, setReceiptShown] = useState(false)
+  const [wideEnough, setWideEnough] = useState(() => window.innerWidth - 220 >= 980)
+  useEffect(() => {
+    const onResize = () => setWideEnough(window.innerWidth - 220 >= 980)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+  const showPanel = !isMobile && wideEnough && !!receiptCaptureId
+  const panelOpen = showPanel && receiptShown
+
+  const poAnswerKnown = !!reportPO && reportPO.related != null
+  const [poRelated, setPoRelated] = useState(poAnswerKnown ? !!reportPO.related : null)
 
   const [entity, setEntity] = useState(existingExpense?.entity || '')
   const [program, setProgram] = useState(existingExpense?.program || '')
@@ -254,6 +274,12 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
     }
     loadPOs()
   }, [user?.email])
+
+  // Report already linked to a PO: pull that PO's details in once, up front.
+  useEffect(() => {
+    if (!isEdit && poAnswerKnown && reportPO.related && reportPO.poId) handlePOSelect(reportPO.poId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Attaching a PO pulls in the same classification the PO's own PR was
   // approved under (entity/program/donor/nature/category) plus its vendor
@@ -449,7 +475,8 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
   const required = <span style={{ color: 'var(--clay-text)' }}> *</span>
 
   return (
-    <div style={{ maxWidth: '480px', margin: '0 auto', padding: '20px', width: '100%', paddingBottom: '100px' }}>
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: '24px', maxWidth: panelOpen ? '1000px' : '480px', margin: '0 auto', padding: '20px', width: '100%', paddingBottom: '100px', boxSizing: 'border-box' }}>
+    <div style={{ flex: '0 1 480px', minWidth: 0, width: '100%' }}>
       {/* Back */}
       <div
         onClick={onBack}
@@ -472,7 +499,13 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
           entity/programme/donor/category to fill in the rest of the
           form); editing an existing expense keeps the old unforced
           dropdown instead of re-asking. */}
-      {!isEdit ? (
+      {!isEdit && poAnswerKnown ? (
+        poRelated ? (
+          <div style={{ ...fieldWrap, fontSize: '12px', color: 'var(--moss-text)', background: 'var(--moss-bg)', border: '1px solid var(--moss-border)', borderRadius: 'var(--radius-sm)', padding: '8px 12px' }}>
+            {poLoading ? 'Filling in details from this PO…' : <>Paying against Purchase Order <strong style={{ fontFamily: 'monospace' }}>{poNumber || '…'}</strong></>}
+          </div>
+        ) : null
+      ) : !isEdit ? (
         <div style={fieldWrap}>
           <label style={labelStyle}>Is this related to a Purchase Order?{required}</label>
           <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
@@ -955,9 +988,11 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
       {/* Fixed bottom */}
       <div style={{ position: 'fixed', bottom: 0, left: isMobile ? 0 : '220px', right: 0, zIndex: 10 }}>
         <div style={{
-          maxWidth: '480px', margin: '0 auto',
-          background: 'var(--surface-card)', borderTop: '1px solid var(--taupe-200)', padding: '16px',
+          maxWidth: panelOpen ? '1000px' : '480px', margin: '0 auto',
+          background: 'var(--surface-card)', borderTop: '1px solid var(--taupe-200)', padding: '16px 20px',
+          boxSizing: 'border-box',
         }}>
+          <div style={{ maxWidth: '440px', margin: panelOpen ? '0 auto 0 0' : '0 auto' }}>
           <button
             onClick={handleSave}
             disabled={saving}
@@ -971,8 +1006,11 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
           >
             {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Save expense'}
           </button>
+          </div>
         </div>
       </div>
+    </div>
+    {showPanel && <ReceiptSidePanel captureId={receiptCaptureId} onVisibleChange={setReceiptShown} />}
     </div>
   )
 }

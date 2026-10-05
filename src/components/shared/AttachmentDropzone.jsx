@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useFileDrop } from '../../hooks/useFileDrop'
 
 // Shared "attachment box" look — a clickable dashed box instead of a bare
 // native file input, matching the style VendorForm.jsx's own FileUpload
@@ -13,6 +14,7 @@ export default function AttachmentDropzone({
   disabled = false,
 }) {
   const hasFile = !!(file || uploadedLabel)
+  const { dragging, dropProps } = useFileDrop({ accept, disabled, onFiles: files => onChange(files[0] || null) })
 
   // Lets someone confirm they picked the right file before submitting the
   // whole form — `file` is still just a local File object at this point
@@ -29,16 +31,17 @@ export default function AttachmentDropzone({
 
   return (
     <div
+      {...dropProps}
       style={{
-        border: `2px dashed ${hasFile ? 'var(--moss-text)' : 'var(--taupe-400)'}`,
+        border: `2px dashed ${dragging ? 'var(--action)' : hasFile ? 'var(--moss-text)' : 'var(--taupe-400)'}`,
         borderRadius: 'var(--radius-md)', padding: '16px', textAlign: 'center',
-        background: hasFile ? 'var(--moss-bg)' : 'var(--taupe-50)',
+        background: dragging ? 'var(--action-bg)' : hasFile ? 'var(--moss-bg)' : 'var(--taupe-50)',
         opacity: disabled ? 0.6 : 1, transition: '0.15s', boxSizing: 'border-box',
       }}
     >
       <label style={{ display: 'block', cursor: disabled ? 'default' : 'pointer' }}>
         <div style={{ fontSize: '12px', color: hasFile ? 'var(--moss-text)' : 'var(--text-muted)', marginBottom: hasFile ? 0 : '8px' }}>
-          {file ? `✓ ${file.name}` : uploadedLabel ? `✓ ${uploadedLabel}` : placeholder}
+          {dragging ? 'Drop the file here' : file ? `✓ ${file.name}` : uploadedLabel ? `✓ ${uploadedLabel}` : `${placeholder} or drag & drop`}
         </div>
         {!hasFile && (
           <span style={{

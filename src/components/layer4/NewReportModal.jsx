@@ -5,11 +5,15 @@ import { attachPendingBalances, poOptionLabel } from '../../lib/poBalance'
 import StepIndicator from '../shared/StepIndicator'
 import VoiceInputButton from '../shared/VoiceInputButton'
 
-export default function NewReportModal({ user, onCreated, onClose }) {
+// `fixedPO` ({ id, po_number }) is passed when the report is started straight
+// from a PO's "Submit Expense" flow: the PO answer is already known, so the PO
+// question is skipped entirely (it's asked once up front only when a report
+// is started cold, and once more at the end in the final preview).
+export default function NewReportModal({ user, onCreated, onClose, fixedPO = null }) {
   // Generated once "Related to a Purchase Order?" is answered (in
   // handleContinue below), not eagerly on mount — the prefix depends on that
   // answer, which isn't known yet at mount time.
-  const [reference, setReference] = useState('')
+  const [reference, setReference] = useState(() => (fixedPO ? generateReportReference(true) : ''))
   const [businessPurpose, setBusinessPurpose] = useState('')
   const [durationStart, setDurationStart] = useState('')
   const [durationEnd, setDurationEnd] = useState('')
@@ -21,10 +25,10 @@ export default function NewReportModal({ user, onCreated, onClose }) {
   // duration). This answer is carried through as a pre-filled default all
   // the way to ReportPreview (the final screen), which lets it be changed
   // there before submitting rather than asking it again from scratch.
-  const [step, setStep] = useState(1)
-  const [poRelated, setPoRelated] = useState(null)
+  const [step, setStep] = useState(fixedPO ? 2 : 1)
+  const [poRelated, setPoRelated] = useState(fixedPO ? true : null)
   const [poOptions, setPoOptions] = useState([])
-  const [selectedPOId, setSelectedPOId] = useState('')
+  const [selectedPOId, setSelectedPOId] = useState(fixedPO?.id || '')
 
   // Only ever asked when poRelated === false — an expense can't be linked to
   // both a PO and an advance, and the PO question is answered first, so the
@@ -158,7 +162,13 @@ export default function NewReportModal({ user, onCreated, onClose }) {
 
         {/* Body */}
         <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
-          <StepIndicator current={step - 1} total={2} labels={['Purchase Order', 'Report Details']} />
+          {fixedPO ? (
+            <div style={{ fontSize: '12px', color: 'var(--moss-text)', background: 'var(--moss-bg)', border: '1px solid var(--moss-border)', borderRadius: 'var(--radius-sm)', padding: '8px 12px', marginBottom: '16px' }}>
+              Linked to Purchase Order <strong style={{ fontFamily: 'monospace' }}>{fixedPO.po_number}</strong>
+            </div>
+          ) : (
+            <StepIndicator current={step - 1} total={2} labels={['Purchase Order', 'Report Details']} />
+          )}
 
           {step === 1 && (
             <div>
@@ -356,7 +366,7 @@ export default function NewReportModal({ user, onCreated, onClose }) {
                 {saving ? 'Saving…' : 'Save'}
               </button>
               <button
-                onClick={() => { setError(null); setStep(1) }}
+                onClick={() => { setError(null); if (fixedPO) onClose(); else setStep(1) }}
                 disabled={saving}
                 style={{
                   height: '44px', padding: '0 24px',
@@ -365,7 +375,7 @@ export default function NewReportModal({ user, onCreated, onClose }) {
                   cursor: 'pointer', borderRadius: 'var(--radius-sm)',
                 }}
               >
-                Back
+                {fixedPO ? 'Cancel' : 'Back'}
               </button>
             </>
           )}

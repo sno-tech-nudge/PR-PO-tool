@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
+import { initLanguage } from './lib/i18n/engine'
 
 // A focused native <input type="number"> changes its value on mouse-wheel
 // scroll by default — a frequent source of silently-wrong amounts when
@@ -12,6 +13,9 @@ document.addEventListener('wheel', () => {
   const el = document.activeElement
   if (el instanceof HTMLInputElement && el.type === 'number') el.blur()
 }, { passive: true })
+
+// Restores the saved language (English unless someone switched to Hindi).
+initLanguage()
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

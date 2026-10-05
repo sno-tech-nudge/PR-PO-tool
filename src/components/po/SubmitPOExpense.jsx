@@ -65,7 +65,7 @@ const textareaStyle = { width: '100%', border: '1px solid var(--taupe-400)', bor
 // alongside other expenses) via the normal "New Report" flow, where the
 // report gets its date range/name and is submitted for approval on its
 // own. Never touches the PR/PO's own status.
-export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose, onSubmitted }) {
+export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose, onSubmitted, onNextToReport }) {
   const [stage, setStage] = useState(1)
 
   // Stage 1 — this invoice's core numbers, manually entered (no attachment
@@ -115,7 +115,10 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
     setStage(2)
   }
 
-  async function handleSave() {
+  // mode 'save' stores the invoice and stops; 'next' stores it and carries on
+  // straight into a new report for this PO, so a whole claim can be finished
+  // in one pass instead of saving first and starting a report separately.
+  async function handleSave(mode = 'save') {
     if (!amount || amt <= 0 || overPending) { setError('Check the invoice amount before saving.'); return }
 
     setSaving(true)
@@ -165,7 +168,8 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
         .single()
       if (detailErr) throw detailErr
 
-      onSubmitted(detail)
+      if (mode === 'next' && onNextToReport) onNextToReport({ expenseId: detail.id })
+      else onSubmitted(detail)
     } catch (err) {
       setError(err.message || 'Could not save this invoice. Please try again.')
     } finally {
@@ -318,27 +322,40 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
         </SectionCard>
 
         <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: 1.5 }}>
-          This saves the invoice — it won't be submitted for approval yet. Add it to a report
-          (any time, on its own or alongside other expenses) from Home whenever you're ready.
+          {onNextToReport
+            ? 'Next takes this invoice straight into an expense report for this PO. Or save it now and add it to a report later from Home.'
+            : "This saves the invoice — it won't be submitted for approval yet. Add it to a report (any time, on its own or alongside other expenses) from Home whenever you're ready."}
         </div>
 
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            style={{
-              height: '42px', padding: '0 28px', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 600,
-              background: saving ? 'var(--text-muted)' : 'var(--action)', color: 'var(--surface-card)', border: 'none',
-              cursor: saving ? 'default' : 'pointer',
-            }}
-          >
-            {saving ? 'Saving…' : 'Save Invoice'}
-          </button>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+          {onNextToReport && (
+            <button
+              onClick={() => handleSave('next')}
+              disabled={saving}
+              style={{
+                height: '42px', padding: '0 28px', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 600,
+                background: saving ? 'var(--text-muted)' : 'var(--action)', color: 'var(--surface-card)', border: 'none',
+                cursor: saving ? 'default' : 'pointer',
+              }}
+            >
+              {saving ? 'Saving…' : 'Next: add to report →'}
+            </button>
+          )}
           <button
             onClick={() => setStage(1)}
+            disabled={saving}
             style={{ height: '42px', padding: '0 20px', background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', fontSize: '13px', cursor: 'pointer' }}
           >
             Back
+          </button>
+          <button
+            onClick={() => handleSave('save')}
+            disabled={saving}
+            style={onNextToReport
+              ? { height: '42px', padding: '0 20px', background: 'transparent', color: 'var(--action)', border: 'none', fontSize: '13px', fontWeight: 600, textDecoration: 'underline', cursor: saving ? 'default' : 'pointer' }
+              : { height: '42px', padding: '0 28px', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 600, background: saving ? 'var(--text-muted)' : 'var(--action)', color: 'var(--surface-card)', border: 'none', cursor: saving ? 'default' : 'pointer' }}
+          >
+            {saving && !onNextToReport ? 'Saving…' : 'Save Invoice'}
           </button>
         </div>
       </div>

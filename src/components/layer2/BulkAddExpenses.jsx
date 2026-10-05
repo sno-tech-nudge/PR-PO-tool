@@ -6,6 +6,7 @@ import { toInputDate, fromInputDate } from '../../lib/dateFormat'
 import AmountInput from '../shared/AmountInput'
 import InfoTip from '../shared/InfoTip'
 import { useIsMobile } from '../../hooks/useIsMobile'
+import { useFileDrop } from '../../hooks/useFileDrop'
 
 const CATEGORIES = [
   'Travel Fare', 'Lodging and Boarding', 'Food', 'Bike Fare',
@@ -49,6 +50,12 @@ export default function BulkAddExpenses({ user, onSaved, onBack }) {
   const [uploadError, setUploadError] = useState(null)
   const cameraRef = useRef(null)
   const galleryRef = useRef(null)
+  const { dragging, dropProps } = useFileDrop({
+    accept: 'image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf',
+    multiple: true,
+    disabled: false,
+    onFiles: files => processFiles(files),
+  })
 
   function updateRow(i, patch) {
     setRows(prev => prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)))
@@ -174,7 +181,7 @@ export default function BulkAddExpenses({ user, onSaved, onBack }) {
   }
 
   return (
-    <div style={{ maxWidth: '960px', margin: '0 auto', padding: '24px 20px 100px', width: '100%' }}>
+    <div {...dropProps} style={{ maxWidth: '960px', margin: '0 auto', padding: '24px 20px 100px', width: '100%', outline: dragging ? '2px dashed var(--action)' : 'none', outlineOffset: '-6px', borderRadius: 'var(--radius-md)' }}>
       <div
         onClick={onBack}
         style={{ fontSize: '13px', color: 'var(--text-muted)', cursor: 'pointer', textDecoration: 'underline', marginBottom: '20px' }}
@@ -227,6 +234,9 @@ export default function BulkAddExpenses({ user, onSaved, onBack }) {
         {processing && (
           <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{processingText}</span>
         )}
+        <span style={{ fontSize: '12px', color: dragging ? 'var(--action)' : 'var(--text-muted)' }}>
+          {dragging ? 'Drop the receipts here' : 'or drag & drop receipts anywhere on this page'}
+        </span>
       </div>
 
       {uploadError && (

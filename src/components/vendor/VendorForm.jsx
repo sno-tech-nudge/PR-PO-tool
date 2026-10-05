@@ -7,6 +7,8 @@ import { imageFileToJpegBase64, pdfPageToBase64 } from '../../lib/receiptImage'
 import PanDuplicateModal from './PanDuplicateModal'
 import { sendVendorEmail } from '../../lib/vendorEmail'
 import { getFinanceEmails } from '../../lib/auth'
+import { logActivity } from '../../lib/activityLog'
+import { useFileDrop } from '../../hooks/useFileDrop'
 import InfoTip from '../shared/InfoTip'
 import VoiceInputButton from '../shared/VoiceInputButton'
 
@@ -244,16 +246,17 @@ function SectionHeader({ number, title, subtitle, info }) {
 }
 
 function FileUpload({ id, label, required, error, existing, file, onChange, accept = 'image/*,.pdf' }) {
+  const { dragging, dropProps } = useFileDrop({ accept, onFiles: files => onChange(files[0] || null) })
   return (
     <Field id={id} label={label} required={required} error={error}>
-      <div style={{
-        border: `2px dashed ${error ? 'var(--clay-text)' : file ? 'var(--moss-text)' : 'var(--taupe-400)'}`,
-        borderRadius: 'var(--radius-md)', padding: '16px', background: file ? 'var(--moss-bg)' : 'var(--taupe-50)',
+      <div {...dropProps} style={{
+        border: `2px dashed ${dragging ? 'var(--action)' : error ? 'var(--clay-text)' : file ? 'var(--moss-text)' : 'var(--taupe-400)'}`,
+        borderRadius: 'var(--radius-md)', padding: '16px', background: dragging ? 'var(--action-bg)' : file ? 'var(--moss-bg)' : 'var(--taupe-50)',
         cursor: 'pointer', transition: '0.15s',
       }}>
         <label style={{ cursor: 'pointer', display: 'block' }}>
           <div style={{ fontSize: '12px', color: file ? 'var(--moss-text)' : 'var(--text-muted)', textAlign: 'center', marginBottom: '6px' }}>
-            {file ? `✓ ${file.name}` : existing ? '✓ File already uploaded — click to replace' : 'Click to select file (PDF or image)'}
+            {dragging ? 'Drop the file here' : file ? `✓ ${file.name}` : existing ? '✓ File already uploaded — click to replace or drag & drop' : 'Click to select file (PDF or image) or drag & drop'}
           </div>
           <input
             type="file"
@@ -1018,7 +1021,11 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         result = await supabase.from('vendors').insert(payload).select().single()
       }
       if (result.error) throw result.error
-      if (!draftId) setDraftId(result.data.id)
+      if (!draftId) {
+        setDraftId(result.data.id)
+        // First save only — autosave re-enters this every 45s.
+        logActivity({ entityType: 'vendor', entityId: result.data.id, entityRef: result.data.org_name, action: 'draft_created', toValue: 'draft', actor: user })
+      }
       setDraftSavedAt(new Date())
     } catch (err) {
       setSaveError(err.message || 'Failed to save draft.')
@@ -1114,6 +1121,11 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         result = await supabase.from('vendors').insert(payload).select().single()
       }
       if (result.error) throw result.error
+      logActivity({
+        entityType: 'vendor', entityId: result.data.id, entityRef: result.data.vendor_id || result.data.org_name,
+        action: isEdit ? 'resubmitted' : 'submitted', fromValue: existingVendor?.status || (draftId ? 'draft' : null), toValue: 'pending', actor: user,
+        note: isGuestSubmission ? 'Submitted by the vendor via invite link' : null,
+      })
       sendVendorEmail({
         type: 'submitted', vendorOrgName: result.data.org_name, vendorId: result.data.vendor_id,
         recipientEmail: result.data.submitted_by,

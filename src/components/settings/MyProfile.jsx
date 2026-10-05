@@ -1,4 +1,6 @@
 import { getRoleLabel, canAccessFinance, canAccessApprovals, canApproveVendor, canCreatePR, isObserver } from '../../lib/auth'
+import { DELEGATABLE_ROLES } from '../../lib/delegation'
+import Delegations from './Delegations'
 
 function initials(name) {
   return (name || '')
@@ -95,6 +97,12 @@ export default function MyProfile({ user, members = [] }) {
           ))}
         </div>
       </div>
+
+      {DELEGATABLE_ROLES.includes(user.role) && (
+        <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid var(--taupe-200)' }}>
+          <Delegations user={user} mode="self" />
+        </div>
+      )}
     </div>
   )
 }

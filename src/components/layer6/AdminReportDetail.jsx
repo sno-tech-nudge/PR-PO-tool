@@ -102,12 +102,27 @@ export default function AdminReportDetail({ reportId, user, onBack, onViewAuditT
     if (r && expenses.length > 0) autoRunAI(r, expenses)
   }
 
+  // Saved so the Policy Violations dashboard can roll AI verdicts up org-wide.
+  // Best-effort and fire-and-forget — never blocks showing the result here.
+  function persistAiVerdict(result) {
+    if (!result?.overall?.verdict) return
+    supabase.from('expense_reports').update({
+      ai_vouch_verdict: result.overall.verdict,
+      ai_vouch_confidence: result.overall.confidence || null,
+      ai_vouch_summary: result.overall.summary || null,
+      ai_vouch_checked_at: new Date().toISOString(),
+    }).eq('id', reportId).then(({ error }) => {
+      if (error) console.error('Saving AI verdict failed:', error.message)
+    })
+  }
+
   async function autoRunAI(reportData, expenses) {
     setAiLoading(true)
     setAiError(null)
     const result = await runAIVouchCheck(reportData, expenses)
     if (result) {
       setAiResult(result)
+      persistAiVerdict(result)
       if (!reportData.finance_notes && result.audit_notes) setFinanceNotes(result.audit_notes)
     } else {
       setAiError('AI check failed — run manually if needed.')
@@ -153,7 +168,7 @@ export default function AdminReportDetail({ reportId, user, onBack, onViewAuditT
     const exps = (report.report_expenses || []).map(re => re.expense_details).filter(Boolean)
     const result = await runAIVouchCheck(report, exps)
     if (!result) setAiError('AI check failed. Check your Groq API key or try again.')
-    else setAiResult(result)
+    else { setAiResult(result); persistAiVerdict(result) }
     setAiLoading(false)
   }
 

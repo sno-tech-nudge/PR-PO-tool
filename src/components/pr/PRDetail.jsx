@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { createPendingPO, approvePRLevel, rejectPRLevel } from '../../lib/prApprovalActions'
 import { canAccessApprovals, canAccessFinance, isOwnEmail } from '../../lib/auth'
 import { getDisplayName } from '../../lib/directory'
+import { getActiveDelegationsForDelegate, delegationCovers } from '../../lib/delegation'
 import AmountInput from '../shared/AmountInput'
 import VoiceInputButton from '../shared/VoiceInputButton'
 import PRStatusTimeline from './PRStatusTimeline'
@@ -46,6 +47,9 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
   const [creatingPO, setCreatingPO] = useState(false)
   const [newPOAmount, setNewPOAmount] = useState('')
   const [poError, setPoError]   = useState(null)
+  // Active out-of-office delegations where this viewer is the delegate — lets
+  // them act on an approval level pending for the person they're covering.
+  const [delegations, setDelegations] = useState([])
 
   // Approve / reject — merged in from the former PRApproverView.jsx so a
   // PR's own detail page is the one place everyone (requester, manager,
@@ -75,10 +79,11 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
       : pending?.required_approver_email
         ? isOwnEmail(user, pending.required_approver_email)
         : pending?.required_role ? user.role === pending.required_role : canAccessApprovals(user.role)
+    const coveredByDelegation = !!pending && !!delegationCovers(delegations, { requiredRole: pending.required_role, requiredApproverEmail: pending.required_approver_email })
     // Not eligible to act right now — skip presence entirely. No need to
     // reset reviewingBy here since the badge only ever renders inside the
     // canAction block below, so a stale value here is simply never shown.
-    if (!(pr.status === 'submitted' && pending && matches)) return
+    if (!(pr.status === 'submitted' && pending && (matches || coveredByDelegation))) return
 
     let cancelled = false
     async function heartbeat() {
@@ -106,7 +111,7 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
       clearInterval(interval)
       supabase.from('pr_review_presence').delete().eq('pr_id', prId).eq('viewer_email', user.email).then(() => {})
     }
-  }, [pr?.id, pr?.status, approvals, user.role, user.email])
+  }, [pr?.id, pr?.status, approvals, user.role, user.email, delegations])
 
   async function load() {
     setLoading(true)
@@ -116,6 +121,7 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
     ])
     setPR(prData)
     setApprovals(approvData || [])
+    setDelegations(await getActiveDelegationsForDelegate(user))
     if (prData?.linked_expense_report_id) {
       const { data: rep } = await supabase.from('expense_reports').select('id, report_reference, total_amount, status, brand').eq('id', prData.linked_expense_report_id).single()
       setLinkedReport(rep)
@@ -150,7 +156,7 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
     const currentPending = approvals.find(a => a.status === 'pending')
     if (!currentPending) { setError('No pending approval level found.'); setSaving(false); return }
 
-    const result = await approvePRLevel({ prId, approvals, user, pr })
+    const result = await approvePRLevel({ prId, approvals, user, pr, onBehalfOf: delegationUsed?.delegator_email })
     if (result.isFinal) {
       const newPO = await createPendingPO({ prId, pr, amount: pr.amount })
       if (newPO) {
@@ -169,7 +175,7 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
   async function handleReject() {
     if (!reason.trim()) { setError('Please enter a rejection reason.'); return }
     setSaving(true); setError(null)
-    await rejectPRLevel({ prId, approvals, pr, user, reason: reason.trim() })
+    await rejectPRLevel({ prId, approvals, pr, user, reason: reason.trim(), onBehalfOf: delegationUsed?.delegator_email })
     showToast?.('Purchase request rejected.', 'rejected')
     await load()
     setRejecting(false)
@@ -208,7 +214,13 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
       : currentPending?.required_role
         ? user.role === currentPending.required_role
         : canAccessApprovals(user.role)
-  const canAction = pr.status === 'submitted' && !!currentPending && roleMatches
+  // Covering for someone who's out of office — only counts when the viewer
+  // wouldn't otherwise have access, so a person who is themselves the
+  // approver never gets logged as acting "on behalf of" anyone.
+  const delegationUsed = !roleMatches && currentPending
+    ? delegationCovers(delegations, { requiredRole: currentPending.required_role, requiredApproverEmail: currentPending.required_approver_email })
+    : null
+  const canAction = pr.status === 'submitted' && !!currentPending && (roleMatches || !!delegationUsed)
   const isFullyApproved = pr.status === 'approved' || pr.status === 'po_generated'
 
   return (

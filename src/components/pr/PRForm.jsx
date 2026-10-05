@@ -17,6 +17,7 @@ import AmountBreakdown from '../shared/AmountBreakdown'
 import StepIndicator from '../shared/StepIndicator'
 import InfoTip from '../shared/InfoTip'
 import VoiceInputButton from '../shared/VoiceInputButton'
+import { logActivity } from '../../lib/activityLog'
 
 const FREQUENCIES = ['One-time', 'Monthly', 'Quarterly', 'Annually']
 
@@ -376,7 +377,12 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
         result = await supabase.from('purchase_requests').insert(payload).select().single()
       }
       if (result.error) throw result.error
-      if (!draftId) setDraftId(result.data.id)
+      if (!draftId) {
+        setDraftId(result.data.id)
+        // Only the first save is logged — the 45s autosave re-enters this
+        // function, and an entry per autosave would drown out real events.
+        logActivity({ entityType: 'pr', entityId: result.data.id, entityRef: result.data.pr_number, action: 'draft_created', toValue: 'draft', actor: user })
+      }
       setDraftSavedAt(new Date())
     } catch (err) {
       setSaveError(err.message || 'Failed to save draft.')
@@ -469,6 +475,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
         const { data, error } = await supabase.from('purchase_requests').update(payload).eq('id', existingPR.id).select().single()
         if (error) throw error
         prId = data.id
+        logActivity({ entityType: 'pr', entityId: prId, entityRef: data.pr_number, action: 'resubmitted', fromValue: 'rejected', toValue: 'submitted', actor: user })
         await supabase.from('pr_approvals').delete().eq('pr_id', prId)
       } else if (draftId) {
         // Converting a draft into a real submission — no prior pr_approvals
@@ -477,10 +484,12 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
         const { data, error } = await supabase.from('purchase_requests').update(payload).eq('id', draftId).select().single()
         if (error) throw error
         prId = data.id
+        logActivity({ entityType: 'pr', entityId: prId, entityRef: data.pr_number, action: 'submitted', fromValue: 'draft', toValue: 'submitted', actor: user })
       } else {
         const { data, error } = await supabase.from('purchase_requests').insert(payload).select().single()
         if (error) throw error
         prId = data.id
+        logActivity({ entityType: 'pr', entityId: prId, entityRef: data.pr_number, action: 'submitted', toValue: 'submitted', actor: user })
       }
 
       // AI summary

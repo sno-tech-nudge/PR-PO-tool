@@ -4,6 +4,7 @@ import { ROLES, getRoleLabel, canAccessFinance } from '../../lib/auth'
 import { FUNCTIONS } from '../../lib/functionRouting'
 import MyProfile from './MyProfile'
 import ApprovalRulesView from './ApprovalRulesView'
+import Delegations from './Delegations'
 
 const EMPTY_FORM = { name: '', email: '', role: 'employee', can_approve_vendors: false, function: '' }
 
@@ -131,7 +132,7 @@ export default function SettingsView({ user }) {
           <div className="tab-scroll" style={{ display: 'flex', gap: '4px' }}>
             {[
               ['profile', 'My Profile'],
-              ...(isAdmin ? [['team', 'Team & Roles']] : []),
+              ...(isAdmin ? [['team', 'Team & Roles'], ['delegations', 'Delegations']] : []),
               ['approvals', 'Custom Approval'],
             ].map(([key, label]) => (
               <div
@@ -161,6 +162,14 @@ export default function SettingsView({ user }) {
               <MyProfile user={user} members={members} />
             </div>
           )}
+        </div>
+      )}
+
+      {tab === 'delegations' && isAdmin && (
+        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 28px' }}>
+          <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '28px' }}>
+            <Delegations user={user} mode="admin" />
+          </div>
         </div>
       )}
 

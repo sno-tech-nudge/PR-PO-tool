@@ -1,4 +1,5 @@
 import { sendReportEmail } from './reportEmail'
+import { logActivity } from './activityLog'
 import { getApproverEmailsForLevel, getEmailsByRole } from './auth'
 
 // PR approval chain — fixed for every PR regardless of amount:
@@ -154,15 +155,24 @@ export async function processApproval(
   supabaseClient,
   approverEmail,
   report,
-  approverName
+  approverName,
+  onBehalfOf
 ) {
   const now = new Date().toISOString()
+  const actor = { email: approverEmail, name: approverName }
 
   await supabaseClient
     .from('report_approvals')
     .update({ status: action, notes, actioned_at: now, approver_email: approverEmail || null })
     .eq('report_id', reportId)
     .eq('approver_level', approverLevel)
+
+  logActivity({
+    entityType: 'report', entityId: reportId, entityRef: report?.report_reference,
+    action: action === 'approved' ? 'level_approved' : 'level_rejected',
+    fromValue: 'pending', toValue: action, actor, onBehalfOf,
+    note: [approverLevel, action === 'rejected' ? notes : ''].filter(Boolean).join(' — '),
+  })
 
   if (action === 'approved') {
     const { data: nextApproval } = await supabaseClient
@@ -184,6 +194,7 @@ export async function processApproval(
         .from('expense_reports')
         .update({ status: 'under_review', reviewed_by: approverLevel, reviewed_at: now })
         .eq('id', reportId)
+      logActivity({ entityType: 'report', entityId: reportId, entityRef: report?.report_reference, action: 'status_change', fromValue: report?.status, toValue: 'under_review', actor, onBehalfOf })
 
       sendReportEmail({
         type: 'advanced', recipientEmail: report?.employee_email, reportReference: report?.report_reference,
@@ -198,6 +209,7 @@ export async function processApproval(
         .from('expense_reports')
         .update({ status: 'approved', approved_at: now, reviewed_by: approverLevel, reviewed_at: now })
         .eq('id', reportId)
+      logActivity({ entityType: 'report', entityId: reportId, entityRef: report?.report_reference, action: 'status_change', fromValue: 'under_review', toValue: 'approved', actor, onBehalfOf })
 
       sendReportEmail({
         type: 'advanced', recipientEmail: report?.employee_email, reportReference: report?.report_reference,
@@ -221,6 +233,7 @@ export async function processApproval(
         reviewed_at: now,
       })
       .eq('id', reportId)
+    logActivity({ entityType: 'report', entityId: reportId, entityRef: report?.report_reference, action: 'status_change', fromValue: report?.status, toValue: 'rejected', actor, onBehalfOf, note: notes })
 
     // Free the underlying expenses back into the 'saved' pool — submitting
     // flips them to 'reported' (see ReportPreview.jsx) so they stop showing

@@ -4,6 +4,8 @@ import { approvePO, rejectPO, regeneratePOPdf } from '../../lib/prApprovalAction
 import { canAccessFinance, isOwnEmail } from '../../lib/auth'
 import { getDisplayName } from '../../lib/directory'
 import { downloadPOBundle } from '../../lib/poBundle'
+import { getActiveDelegationsForDelegate, delegationCovers } from '../../lib/delegation'
+import { logActivity } from '../../lib/activityLog'
 import POTemplate from '../pr/POTemplate'
 import SubmitPOExpense from './SubmitPOExpense'
 import PRAttachmentsModal from '../pr/PRAttachmentsModal'
@@ -37,7 +39,7 @@ const STATUS = {
   rejected:         { label: 'Rejected',         color: 'var(--clay-text)', bg: 'var(--clay-bg)' },
 }
 
-export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
+export default function PODetail({ poId, user, onBack, onViewAuditTrail, onRaiseReportFromPO }) {
   const [po, setPO]         = useState(null)
   const [pr, setPR]         = useState(null)
   const [vendor, setVendor] = useState(null)
@@ -56,6 +58,7 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
   const [bundling, setBundling] = useState(false)
   const [bundleError, setBundleError] = useState(null)
   const [regeneratingPdf, setRegeneratingPdf] = useState(false)
+  const [delegations, setDelegations] = useState([])
 
   useEffect(() => { load() }, [poId])
 
@@ -69,6 +72,7 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
 
     if (!poData) { setLoading(false); return }
     setPO(poData)
+    setDelegations(await getActiveDelegationsForDelegate(user))
 
     const [{ data: prData }, { data: vendorData }, { data: expenseData }, { data: savedData }] = await Promise.all([
       supabase.from('purchase_requests').select('*').eq('id', poData.pr_id).single(),
@@ -100,7 +104,7 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
 
   async function handleApprovePO() {
     setApprovingPO(true); setPoError(null)
-    const result = await approvePO({ po, pr, user, setPOData: setPoTemplateData })
+    const result = await approvePO({ po, pr, user, setPOData: setPoTemplateData, onBehalfOf: poDelegation?.delegator_email })
     if (result === true) {
       await load()
     } else {
@@ -125,7 +129,7 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
   async function handleRejectPO() {
     if (!poRejectReason.trim()) { setPoError('Please enter a rejection reason.'); return }
     setApprovingPO(true); setPoError(null)
-    await rejectPO({ poId, reason: poRejectReason.trim(), po, user, pr })
+    await rejectPO({ poId, reason: poRejectReason.trim(), po, user, pr, onBehalfOf: poDelegation?.delegator_email })
     setPO(prev => ({ ...prev, status: 'rejected', rejection_reason: poRejectReason.trim() }))
     setRejectingPO(false)
     setPoRejectReason('')
@@ -135,6 +139,7 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
   async function handleMarkCompleted() {
     setMarkingDone(true)
     await supabase.from('purchase_orders').update({ status: 'completed' }).eq('id', poId)
+    logActivity({ entityType: 'po', entityId: poId, entityRef: po?.po_number, action: 'status_change', fromValue: po?.status, toValue: 'completed', actor: user })
     setPO(prev => ({ ...prev, status: 'completed' }))
     setMarkingDone(false)
   }
@@ -154,6 +159,7 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
     if (!window.confirm('Cancel this purchase order?')) return
     setMarkingDone(true)
     await supabase.from('purchase_orders').update({ status: 'cancelled' }).eq('id', poId)
+    logActivity({ entityType: 'po', entityId: poId, entityRef: po?.po_number, action: 'status_change', fromValue: po?.status, toValue: 'cancelled', actor: user })
     setPO(prev => ({ ...prev, status: 'cancelled' }))
     setMarkingDone(false)
   }
@@ -175,7 +181,10 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
   // no one can approve/reject their own request's PO by holding a broader
   // role. Other Finance-area actions on this page (marking a PO completed,
   // etc.) stay gated to the broader isFinance/admin access.
-  const isPOApprover = user.role === 'finance'
+  // A delegate covering for a Finance team member (out of office) can approve
+  // POs too; admin still can't, and nobody gets it by holding a broader role.
+  const poDelegation = user.role !== 'finance' ? delegationCovers(delegations, { requiredRole: 'finance' }) : null
+  const isPOApprover = user.role === 'finance' || !!poDelegation
   const reportsTotal = linkedExpenses.filter(e => e.status !== 'rejected').reduce((sum, e) => sum + (Number(e.total_amount) || 0), 0)
   const savedTotal = savedExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0)
   const totalSubmitted = reportsTotal + savedTotal
@@ -494,6 +503,9 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
           pending={pendingAmount}
           onClose={() => setShowSubmitExpense(false)}
           onSubmitted={async () => { setShowSubmitExpense(false); await load() }}
+          onNextToReport={onRaiseReportFromPO
+            ? ({ expenseId }) => { setShowSubmitExpense(false); onRaiseReportFromPO({ poId: po.id, poNumber: po.po_number, expenseId }) }
+            : undefined}
         />
       )}
 

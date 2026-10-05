@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import PanDuplicateModal from './PanDuplicateModal'
 import { sendVendorEmail } from '../../lib/vendorEmail'
 import { getDisplayName } from '../../lib/directory'
+import { logActivity } from '../../lib/activityLog'
 import VoiceInputButton from '../shared/VoiceInputButton'
 
 // Sole Proprietorship shares the same Aadhaar-based document requirement as
@@ -73,6 +74,7 @@ export default function VendorApprovalView({ vendor, user, onBack, onActioned })
       notes: comment || null,
     }).eq('id', vendor.id)
     if (err) { setError(err.message); setSaving(false); return }
+    logActivity({ entityType: 'vendor', entityId: vendor.id, entityRef: vendor.vendor_id || vendor.org_name, action: 'status_change', fromValue: vendor.status, toValue: 'approved', actor: user, note: comment || null })
     // Best-effort — the query builder only implements .then(), not .catch(),
     // so a real try/catch is needed here to avoid a TypeError masking success.
     try {
@@ -103,6 +105,7 @@ export default function VendorApprovalView({ vendor, user, onBack, onActioned })
       approved_at: null,
     }).eq('id', vendor.id)
     if (err) { setError(err.message); setSaving(false); return }
+    logActivity({ entityType: 'vendor', entityId: vendor.id, entityRef: vendor.vendor_id || vendor.org_name, action: 'status_change', fromValue: vendor.status, toValue: 'rejected', actor: user, note: reason.trim() })
     try {
       await supabase.from('expense_notifications').insert({
         recipient_id: vendor.submitted_by,

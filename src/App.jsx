@@ -10,6 +10,7 @@ import NewExpense from './components/capture/NewExpense'
 import QuickAddDropzone from './components/capture/QuickAddDropzone'
 import FeedbackWidget from './components/shared/FeedbackWidget'
 import FirstTimeWalkthrough from './components/shared/FirstTimeWalkthrough'
+import LanguageToggle from './components/shared/LanguageToggle'
 import { hasSeenWalkthrough } from './lib/walkthrough'
 import NotificationBell from './components/shared/NotificationBell'
 import SettingsView from './components/settings/SettingsView'
@@ -55,6 +56,7 @@ import AdvanceApprovalView from './components/advance/AdvanceApprovalView'
 
 // Audit module
 import AuditTrail from './components/audit/AuditTrail'
+import ActivityLog from './components/audit/ActivityLog'
 
 const SIDEBAR_W = 220
 
@@ -129,6 +131,9 @@ export default function App() {
   // so they land pre-selected in ExpenseSelector via its own existing
   // report_id-match effect, same as dropping a receipt onto a report page.
   const [pendingPreSelectedExpenseIds, setPendingPreSelectedExpenseIds] = useState([])
+  // Set when a report is started straight from a PO's Submit Expense flow, so
+  // the new-report popup already knows the PO and doesn't ask about it again.
+  const [fixedPOForReport, setFixedPOForReport] = useState(null)
 
   const [submissionData, setSubmissionData] = useState(null)
   const [currentReportId, setCurrentReportId] = useState(null)
@@ -254,6 +259,12 @@ export default function App() {
 
   function handleNewReport() { setShowNewReportModal(true) }
 
+  function handleRaiseReportFromPO({ poId, poNumber, expenseId }) {
+    setPendingPreSelectedExpenseIds([expenseId])
+    setFixedPOForReport({ id: poId, po_number: poNumber })
+    setShowNewReportModal(true)
+  }
+
   function handleRaiseReportFromSelection(selectedIds) {
     setPendingPreSelectedExpenseIds(selectedIds)
     setShowNewReportModal(true)
@@ -275,6 +286,7 @@ export default function App() {
 
   async function handleReportCreated(reportRow) {
     setShowNewReportModal(false)
+    setFixedPOForReport(null)
     if (pendingPreSelectedExpenseIds.length > 0) {
       await supabase.from('expense_details').update({ report_id: reportRow.id }).in('id', pendingPreSelectedExpenseIds)
       setPendingPreSelectedExpenseIds([])
@@ -370,6 +382,9 @@ export default function App() {
     { key: 'vendors', label: canAccessFinance(role) ? 'Vendor Management' : 'Vendors', icon: '⬡' },
     // Everyone gets Settings now — admins see Team & Roles plus their own
     // profile there; everyone else just sees their own read-only profile.
+    // Admin-only system-wide timeline — separate from the per-PO 'Audit Trail'
+    // document chain, which stays reachable only from a PO's own page.
+    ...(role === 'admin' ? [{ key: 'activity-log', label: 'Activity Log', icon: '☷' }] : []),
     { key: 'settings', label: 'Settings', icon: '⚙' },
   ]
 
@@ -494,27 +509,36 @@ export default function App() {
             onOpenVendor={(id) => { setAppScreen('vendors'); openVendorDetail(id) }}
             onOpenPO={(id) => { setAppScreen('po-list'); openPODetail(id) }}
           />
-          <div style={{
-            fontSize: '12px', fontWeight: 600, color: 'var(--surface-card)',
-            marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>
-            {user.name}
+          {/* Name + role on the left; Help and language as small icon buttons
+              on the same line, so the footer stays just this row + Sign out. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{
+                fontSize: '12px', fontWeight: 600, color: 'var(--surface-card)',
+                marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {user.name}
+              </div>
+              <div style={{ fontSize: '10px', color: 'var(--text-on-dark-muted)' }}>
+                {user.roleLabel}
+              </div>
+            </div>
+            <button
+              onClick={handleReplayWalkthrough}
+              aria-label="Help"
+              title="Help — replay the guided tour"
+              style={{
+                width: '28px', height: '28px', flexShrink: 0, padding: 0,
+                background: 'transparent', border: '1px solid rgba(196,130,111,0.35)',
+                color: 'var(--text-on-dark-muted)', borderRadius: 'var(--radius-md)',
+                fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              ?
+            </button>
+            <LanguageToggle tone="dark" style={{ minWidth: '34px', width: '34px', height: '28px', padding: 0, fontSize: '11px', flexShrink: 0 }} />
           </div>
-          <div style={{ fontSize: '10px', color: 'var(--text-on-dark-muted)', marginBottom: '10px' }}>
-            {user.roleLabel}
-          </div>
-          <button
-            onClick={handleReplayWalkthrough}
-            style={{
-              width: '100%', padding: '6px 0', marginBottom: '8px',
-              background: 'transparent',
-              border: '1px solid rgba(196,130,111,0.35)',
-              color: 'var(--text-on-dark-muted)', borderRadius: 'var(--radius-md)',
-              fontSize: '11px', cursor: 'pointer',
-            }}
-          >
-            ? Help
-          </button>
           <button
             onClick={handleSignOut}
             style={{
@@ -568,7 +592,7 @@ export default function App() {
         )}
 
         {appScreen === 'details' && (
-          <div style={{ maxWidth: '520px', margin: '0 auto', padding: '32px 24px' }}>
+          <div style={{ maxWidth: layer1Data?.capture_id ? '1040px' : '520px', margin: '0 auto', padding: '32px 24px' }}>
             <ExpenseDetails
               layer1Data={layer1Data}
               user={user}
@@ -681,8 +705,9 @@ export default function App() {
         {showNewReportModal && (
           <NewReportModal
             user={user}
+            fixedPO={fixedPOForReport}
             onCreated={handleReportCreated}
-            onClose={() => { setShowNewReportModal(false); setPendingPreSelectedExpenseIds([]) }}
+            onClose={() => { setShowNewReportModal(false); setPendingPreSelectedExpenseIds([]); setFixedPOForReport(null) }}
           />
         )}
 
@@ -792,6 +817,10 @@ export default function App() {
           <SettingsView user={user} />
         )}
 
+        {appScreen === 'activity-log' && (
+          <ActivityLog user={user} />
+        )}
+
         {appScreen === 'reimbursed' && (
           <ReimbursedConfirmation
             reportId={reimbursedData?.reportId}
@@ -889,7 +918,7 @@ export default function App() {
           <POList user={user} onViewPO={openPODetail} />
         )}
         {appScreen === 'po-list' && poSubScreen === 'detail' && (
-          <PODetail poId={viewingPOId} user={user} onBack={openPOList} onViewAuditTrail={openAuditTrail} />
+          <PODetail poId={viewingPOId} user={user} onBack={openPOList} onViewAuditTrail={openAuditTrail} onRaiseReportFromPO={handleRaiseReportFromPO} />
         )}
 
         {/* ── Audit trail (admin only) ── */}

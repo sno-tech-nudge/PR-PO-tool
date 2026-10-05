@@ -6,6 +6,7 @@ import { getEmailsByRole, getApproverEmailsForLevel } from './auth'
 import { notifySlack, recordUrl } from './slack'
 import { sendPREmail } from './prEmail'
 import { buildPRTimelineSteps } from './prStatusSteps'
+import { logActivity } from './activityLog'
 
 function fmtAmt(n) { return `₹${Number(n || 0).toLocaleString('en-IN')}` }
 
@@ -70,7 +71,7 @@ async function notifyApprover(approvalRow, { type, message, relatedType, related
 // it's now their turn. Otherwise this was the final level — marks the PR
 // 'approved'. Returns { isFinal, currentPending, nextWaiting } — callers
 // should follow up with createPendingPO() when isFinal is true.
-export async function approvePRLevel({ prId, approvals, user, pr }) {
+export async function approvePRLevel({ prId, approvals, user, pr, onBehalfOf }) {
   const now = new Date().toISOString()
   const currentPending = approvals.find(a => a.status === 'pending')
   if (!currentPending) return { ok: false, error: 'No pending approval level found.' }
@@ -78,6 +79,11 @@ export async function approvePRLevel({ prId, approvals, user, pr }) {
   await supabase.from('pr_approvals').update({
     status: 'approved', actioned_at: now, approver_email: user.email,
   }).eq('id', currentPending.id)
+  logActivity({
+    entityType: 'pr', entityId: prId, entityRef: pr?.pr_number, action: 'level_approved',
+    fromValue: 'pending', toValue: 'approved', actor: user, onBehalfOf,
+    note: `Level ${currentPending.approver_level}: ${currentPending.approver_name || ''}`.trim(),
+  })
 
   // Reflects the update above (plus the next-level promotion below, if any)
   // so the email timeline shows the state the tool will show once reloaded,
@@ -126,6 +132,7 @@ export async function approvePRLevel({ prId, approvals, user, pr }) {
   }
 
   await supabase.from('purchase_requests').update({ status: 'approved' }).eq('id', prId)
+  logActivity({ entityType: 'pr', entityId: prId, entityRef: pr?.pr_number, action: 'status_change', fromValue: 'submitted', toValue: 'approved', actor: user, onBehalfOf })
   notifySlack(`✅ PR <${recordUrl('pr', prId)}|${pr?.pr_number || prId}> fully approved by ${currentPending.approver_name} (${user.name}) — ${fmtAmt(pr?.amount)}, ready for PO.`)
 
   if (pr?.requested_by) {
@@ -165,6 +172,7 @@ export async function createPendingPO({ prId, pr, amount }) {
       amount: poAmount, entity: pr.entity, status: 'pending_approval',
     }).select().single()
     if (error) throw error
+    logActivity({ entityType: 'po', entityId: newPO.id, entityRef: poNumber, action: 'created', toValue: 'pending_approval', note: `For PR ${pr?.pr_number || ''}` })
     notifyRole('finance', {
       type: 'po_pending_review',
       message: `Purchase Order ${poNumber} for ₹${Number(poAmount || 0).toLocaleString('en-IN')} (PR ${pr?.pr_number || ''}) is pending your approval.`,
@@ -215,7 +223,7 @@ async function generateAndStorePOPdf(po, setPOData) {
 // approval (the status flip below), only mean this PO issues without a PDF
 // attached (pdf_storage_path stays null — see regeneratePOPdf below for the
 // recovery path).
-export async function approvePO({ po, pr, user, setPOData }) {
+export async function approvePO({ po, pr, user, setPOData, onBehalfOf }) {
   let pdfPath = null
   try {
     pdfPath = await generateAndStorePOPdf(po, setPOData)
@@ -229,6 +237,8 @@ export async function approvePO({ po, pr, user, setPOData }) {
       status: 'issued', pdf_storage_path: pdfPath || null, approved_by: user.email, approved_at: now,
     }).eq('id', po.id)
     await supabase.from('purchase_requests').update({ status: 'po_generated' }).eq('id', pr.id)
+    logActivity({ entityType: 'po', entityId: po.id, entityRef: po.po_number, action: 'status_change', fromValue: 'pending_approval', toValue: 'issued', actor: user, onBehalfOf })
+    logActivity({ entityType: 'pr', entityId: pr.id, entityRef: pr.pr_number, action: 'status_change', fromValue: 'approved', toValue: 'po_generated', actor: user, onBehalfOf })
     await autoLinkPRToExpense(pr.id, 'pr')
     try {
       await supabase.from('expense_notifications').insert({
@@ -273,8 +283,9 @@ export async function regeneratePOPdf({ po, setPOData }) {
 // Finance rejects a pending PO — it's cancelled with a reason, but the
 // underlying PR stays approved so Finance can create a corrected
 // replacement PO against the same PR without re-running PR approval.
-export async function rejectPO({ poId, reason, po, user, pr }) {
+export async function rejectPO({ poId, reason, po, user, pr, onBehalfOf }) {
   await supabase.from('purchase_orders').update({ status: 'rejected', rejection_reason: reason }).eq('id', poId)
+  logActivity({ entityType: 'po', entityId: poId, entityRef: po?.po_number, action: 'status_change', fromValue: 'pending_approval', toValue: 'rejected', actor: user, onBehalfOf, note: reason })
   if (po && user) {
     notifySlack(`❌ PO <${recordUrl('po', poId)}|${po.po_number}> rejected by ${user.name}. Reason: ${reason}`)
   }
@@ -298,7 +309,7 @@ export async function getAllocatedPOTotal(prId) {
 }
 
 // Rejects whichever pr_approvals row is currently 'pending', and rejects the PR.
-export async function rejectPRLevel({ prId, approvals, pr, user, reason }) {
+export async function rejectPRLevel({ prId, approvals, pr, user, reason, onBehalfOf }) {
   const now = new Date().toISOString()
   const currentPending = approvals.find(a => a.status === 'pending')
   if (currentPending) {
@@ -307,6 +318,7 @@ export async function rejectPRLevel({ prId, approvals, pr, user, reason }) {
     }).eq('id', currentPending.id)
   }
   await supabase.from('purchase_requests').update({ status: 'rejected', rejection_reason: reason, rejected_at: now }).eq('id', prId)
+  logActivity({ entityType: 'pr', entityId: prId, entityRef: pr?.pr_number, action: 'status_change', fromValue: 'submitted', toValue: 'rejected', actor: user, onBehalfOf, note: reason })
   try {
     await supabase.from('expense_notifications').insert({
       recipient_id: pr.requested_by,

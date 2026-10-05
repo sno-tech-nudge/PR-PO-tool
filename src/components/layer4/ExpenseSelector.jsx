@@ -483,6 +483,7 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
             <ExpenseDetails
               layer1Data={newLayer1Data}
               defaultReportId={reportMeta?.id}
+              reportPO={reportMeta ? { related: reportMeta.po_related, poId: reportMeta.po_id } : null}
               user={user}
               onSaved={handleExpenseSaved}
               onBack={() => setAddingNew(false)}

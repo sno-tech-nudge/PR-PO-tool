@@ -93,7 +93,7 @@ export default function AmountBreakdown({ value = {}, onChange, errors = {} }) {
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>
                     Quantity<span style={{ color: 'var(--clay-text)', marginLeft: '2px' }}>*</span>
                   </label>
-                  {countField(it.quantity, v => updateItem(i, { quantity: v }), '1', !!errors.base)}
+                  {countField(it.quantity, v => updateItem(i, { quantity: v }), '0', !!errors.base)}
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>
