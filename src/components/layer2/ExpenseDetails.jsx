@@ -4,6 +4,7 @@ import { suggestCategory } from '../../lib/claude'
 import { ENTITIES, EXPENSE_NATURES, getPrograms, getDonorsForProgram } from '../../lib/donorData'
 import { preloadDirectory, getActiveDirectoryEntries } from '../../lib/directory'
 import { attachPendingBalances, poOptionLabel } from '../../lib/poBalance'
+import { GSTIN_FORMAT_RE } from '../../lib/formCalc'
 import { toInputDate, fromInputDate } from '../../lib/dateFormat'
 import { insertExpenseDetails } from '../../lib/expenseDetailsSave'
 import AmountInput from '../shared/AmountInput'
@@ -151,6 +152,11 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
   const [directoryEntries, setDirectoryEntries] = useState([])
   const [invoiceNumber, setInvoiceNumber] = useState(existingExpense?.invoice_number ?? layer1Data?.invoice_number ?? '')
   const [gstin, setGstin] = useState(existingExpense?.gstin ?? layer1Data?.gstin ?? '')
+  // Shows a format error the moment this field is blurred with something
+  // non-empty and malformed — GSTIN here is optional, so it has no other
+  // validation today and this would otherwise never be caught until a human
+  // reviewer noticed it downstream.
+  const [gstinTouched, setGstinTouched] = useState(false)
   const [note, setNote] = useState(existingExpense?.description ?? '')
   const [reimbursable, setReimbursable] = useState(existingExpense?.reimbursable ?? true)
   const [paymentMode, setPaymentMode] = useState(existingExpense?.payment_method || layer1Data?.payment_method || PAYMENT_MODES[0])
@@ -192,6 +198,10 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
 
   const programs = getPrograms(entity)
   const donors = getDonorsForProgram(entity, program)
+
+  const gstinFormatError = gstinTouched && gstin && !GSTIN_FORMAT_RE.test(gstin.toUpperCase().trim())
+    ? 'Invalid GSTIN (15 characters)'
+    : null
 
   const itemTotal = itemLines.reduce((sum, l) => sum + (parseFloat(l.amount) || 0), 0)
   const effectiveAmount = itemized ? itemTotal : (parseFloat(amount) || 0)
@@ -931,9 +941,11 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
           type="text"
           value={gstin}
           onChange={e => setGstin(e.target.value)}
+          onBlur={() => setGstinTouched(true)}
           placeholder="If mentioned on receipt"
-          style={{ ...inputStyle, fontSize: '13px' }}
+          style={{ ...inputStyle, fontSize: '13px', border: gstinFormatError ? '1px solid var(--clay-text)' : inputStyle.border }}
         />
+        {gstinFormatError && <div style={errorText}>{gstinFormatError}</div>}
       </div>
 
       {error && (

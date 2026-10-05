@@ -9,6 +9,8 @@ import OfflineBanner from './components/capture/OfflineBanner'
 import NewExpense from './components/capture/NewExpense'
 import QuickAddDropzone from './components/capture/QuickAddDropzone'
 import FeedbackWidget from './components/shared/FeedbackWidget'
+import FirstTimeWalkthrough from './components/shared/FirstTimeWalkthrough'
+import { hasSeenWalkthrough } from './lib/walkthrough'
 import NotificationBell from './components/shared/NotificationBell'
 import SettingsView from './components/settings/SettingsView'
 import ExpenseDetails from './components/layer2/ExpenseDetails'
@@ -79,6 +81,11 @@ export default function App() {
   // it doesn't eat most of a phone-width screen.
   const isMobile = useIsMobile()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  // Auto-shows once per browser on a first visit to Home; the sidebar's
+  // "? Help" button can also reopen it any time afterward regardless of the
+  // stored flag (see handleReplayWalkthrough below).
+  const [walkthroughOpen, setWalkthroughOpen] = useState(false)
+  const [walkthroughAutoShown, setWalkthroughAutoShown] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -92,6 +99,20 @@ export default function App() {
   function handleLogin(u) { setUser(u) }
 
   const [appScreen, setAppScreen] = useState('list')
+
+  useEffect(() => {
+    if (appScreen === 'list' && user && !walkthroughAutoShown && !hasSeenWalkthrough()) {
+      setWalkthroughAutoShown(true)
+      setWalkthroughOpen(true)
+    }
+  }, [appScreen, user, walkthroughAutoShown])
+
+  function handleReplayWalkthrough() {
+    setAppScreen('list')
+    setWalkthroughOpen(true)
+    if (isMobile) setSidebarOpen(false)
+  }
+
   const [layer1Data, setLayer1Data] = useState(null)
   const [reportExpenses, setReportExpenses] = useState([])
 
@@ -410,6 +431,7 @@ export default function App() {
             return (
               <div
                 key={key}
+                data-tour-anchor={key === 'pr-list' ? 'pr-nav' : undefined}
                 onClick={() => handleNavClick(key)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
@@ -482,6 +504,18 @@ export default function App() {
             {user.roleLabel}
           </div>
           <button
+            onClick={handleReplayWalkthrough}
+            style={{
+              width: '100%', padding: '6px 0', marginBottom: '8px',
+              background: 'transparent',
+              border: '1px solid rgba(196,130,111,0.35)',
+              color: 'var(--text-on-dark-muted)', borderRadius: 'var(--radius-md)',
+              fontSize: '11px', cursor: 'pointer',
+            }}
+          >
+            ? Help
+          </button>
+          <button
             onClick={handleSignOut}
             style={{
               width: '100%', padding: '6px 0',
@@ -495,6 +529,8 @@ export default function App() {
           </button>
         </div>
       </div>
+
+      <FirstTimeWalkthrough open={walkthroughOpen} onClose={() => setWalkthroughOpen(false)} />
 
       {/* ── Main content ── */}
       <div style={{ marginLeft: isMobile ? 0 : SIDEBAR_W, flex: 1, minHeight: '100vh', overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}>
@@ -553,7 +589,7 @@ export default function App() {
               </div>
             </div>
 
-            <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '20px', marginBottom: '28px' }}>
+            <div data-tour-anchor="quick-add" style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '20px', marginBottom: '28px' }}>
               <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--ink)', marginBottom: '16px' }}>Quick Add</div>
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '14px' }}>
                 <QuickAddDropzone onReady={handleQuickReceipt} />

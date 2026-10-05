@@ -782,6 +782,21 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
             <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>{isEdit ? 'Editing' : 'New'} Purchase Request</div>
             <div style={{ fontSize: '32px', fontWeight: 700, color: 'var(--ink)' }}>₹{numericAmount.toLocaleString('en-IN')}</div>
             <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px', marginBottom: '16px' }}>{vendorData?.org_name || vendorId}</div>
+
+            {/* One-line plain-English recap — e.g. "₹11,80,000 to EDZOLA
+                TECHNOLOGIES, charged 100% to AIC Developmental Foundation" —
+                so the detailed field-by-field breakdown below isn't the only
+                way to sanity-check what's about to be submitted. */}
+            {allocations.length > 0 && (
+              <div style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic', marginBottom: '16px' }}>
+                ₹{numericAmount.toLocaleString('en-IN')} to {vendorData?.org_name || 'this vendor'}, {
+                  allocations.length === 1
+                    ? `charged ${allocations[0].percent}% to ${[allocations[0].donor, allocations[0].entity].filter(Boolean).join(', ') || 'the selected donor/programme'}`
+                    : `split ${allocations.map(a => `${a.percent}% to ${a.donor || a.entity || 'a donor/programme'}`).join(', ')}`
+                }
+              </div>
+            )}
+
             <div style={{ height: '1px', background: 'var(--taupe-100)', marginBottom: '16px' }} />
 
             {/* Line items */}

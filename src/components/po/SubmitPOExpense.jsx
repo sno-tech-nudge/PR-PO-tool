@@ -1,14 +1,9 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
-import { extractInvoiceDetails } from '../../lib/claude'
-import { imageFileToJpegBase64, pdfPageToBase64 } from '../../lib/receiptImage'
 import { EXPENSE_NATURES } from '../../lib/donorData'
 import { PR_CATEGORIES } from '../../lib/prConstants'
-import AttachmentDropzone from '../shared/AttachmentDropzone'
 import AmountInput from '../shared/AmountInput'
 import VoiceInputButton from '../shared/VoiceInputButton'
-
-const ATTACHMENT_LABELS = ['Invoice', 'Receipt', 'Quotation', 'Other']
 
 // Payment method used to be a per-invoice choice here, but the org only
 // ever pays vendors by bank transfer — removed the picker, this is the
@@ -56,7 +51,11 @@ const textareaStyle = { width: '100%', border: '1px solid var(--taupe-400)', bor
 // review that pre-fills everything already known from the approved
 // Purchase Request (entity, program, subprogram, donor, category, expense
 // nature, purpose) — editable, since one specific invoice can differ
-// slightly from what was originally requested — plus attachments.
+// slightly from what was originally requested. No attachment is asked for
+// here — the invoice is already linked to its PO/PR, and every detail
+// Finance needs (vendor, amounts, entity/program/donor, the PO's own PDF)
+// is already visible from that link, so re-attaching the same document
+// each time it's drawn down against would just be redundant busywork.
 //
 // This only *captures* the invoice as a saved expense_details row (same
 // shape ExpenseDetails.jsx writes, same 'saved' pool the Unreported count
@@ -69,14 +68,10 @@ const textareaStyle = { width: '100%', border: '1px solid var(--taupe-400)', bor
 export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose, onSubmitted }) {
   const [stage, setStage] = useState(1)
 
-  // Stage 1 — this invoice's core numbers. Invoice Number is never typed —
-  // it's read straight off the attached invoice via OCR (see handleInvoiceFile).
+  // Stage 1 — this invoice's core numbers, manually entered (no attachment
+  // to OCR them off — see the file-level comment above).
   const [amount, setAmount] = useState('')
   const [invoiceNumber, setInvoiceNumber] = useState('')
-  const [invoiceFile, setInvoiceFile] = useState(null)
-  const [ocrExtracting, setOcrExtracting] = useState(false)
-  const [ocrExtracted, setOcrExtracted] = useState(null)
-  const [ocrNotice, setOcrNotice] = useState(null)
   const [paymentLabel, setPaymentLabel] = useState('')
   const [priorCount, setPriorCount] = useState(null)
   const [stage1Error, setStage1Error] = useState(null)
@@ -90,10 +85,6 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
   const [expenseNature, setExpenseNature] = useState(pr?.expense_type || '')
   const [description, setDescription] = useState(pr?.purpose || '')
   const [gstin, setGstin] = useState(vendor?.gstin || '')
-
-  // Stage 2 — attachments (first row is the primary invoice document,
-  // seeded from Stage 1's upload once we get there).
-  const [attachments, setAttachments] = useState([{ label: 'Invoice', file: null }])
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -117,79 +108,20 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
     return () => { cancelled = true }
   }, [po.po_number])
 
-  async function handleInvoiceFile(file) {
-    setInvoiceFile(file)
-    setOcrExtracted(null)
-    setOcrNotice(null)
-    if (!file) return
-    setOcrExtracting(true)
-    try {
-      const { base64 } = file.type === 'application/pdf'
-        ? await pdfPageToBase64(file)
-        : await imageFileToJpegBase64(file)
-      const extracted = await extractInvoiceDetails(base64)
-      if (extracted && (extracted.invoice_number || extracted.total_amount != null)) {
-        setOcrExtracted(extracted)
-        if (extracted.invoice_number) setInvoiceNumber(extracted.invoice_number)
-        if (extracted.total_amount != null && !amount) setAmount(String(extracted.total_amount))
-      } else {
-        setOcrNotice('Could not read this invoice automatically — no problem, just enter the amount yourself below; the invoice is still attached and counts as your record for this payment.')
-      }
-    } catch (err) {
-      console.error('Invoice OCR failed:', err)
-      setOcrNotice('Could not read this invoice automatically — no problem, just enter the amount yourself below; the invoice is still attached and counts as your record for this payment.')
-    }
-    setOcrExtracting(false)
-  }
-
   function handleContinue() {
-    if (!invoiceFile) { setStage1Error('Attach the invoice for this payment.'); return }
     if (!amount || amt <= 0) { setStage1Error('Enter an invoice amount.'); return }
     if (overPending) { setStage1Error(`Amount cannot exceed the pending PO balance of ${fmtAmt(pending)}.`); return }
     setStage1Error(null)
-    setAttachments(prev => {
-      const next = [...prev]
-      next[0] = { label: 'Invoice', file: invoiceFile }
-      return next
-    })
     setStage(2)
-  }
-
-  function updateAttachment(i, patch) {
-    setAttachments(prev => prev.map((a, idx) => (idx === i ? { ...a, ...patch } : a)))
-  }
-  function addAttachment() {
-    setAttachments(prev => [...prev, { label: 'Other', file: null }])
-  }
-  function removeAttachment(i) {
-    setAttachments(prev => prev.filter((_, idx) => idx !== i))
   }
 
   async function handleSave() {
     if (!amount || amt <= 0 || overPending) { setError('Check the invoice amount before saving.'); return }
-    if (!attachments[0]?.file) { setError('Attach the invoice for this payment.'); return }
 
     setSaving(true)
     setError(null)
 
     try {
-      const uploaded = []
-      for (const a of attachments) {
-        if (!a.file) continue
-        const path = `po-invoices/${po.po_number}/${Date.now()}-${a.label}-${a.file.name}`
-        const { error: uploadErr } = await supabase.storage.from('expense-documents').upload(path, a.file)
-        if (uploadErr) throw uploadErr
-        uploaded.push({ path, label: a.label })
-      }
-      const [primary, ...rest] = uploaded
-
-      const { data: captureRow, error: captureErr } = await supabase
-        .from('expense_captures')
-        .insert({ receipt_storage_path: primary.path, single_document: true, status: 'captured' })
-        .select('id')
-        .single()
-      if (captureErr) throw captureErr
-
       // Same PO PDF "Download PO PDF" opens from PODetail.jsx — but that one
       // is a short-lived (1hr) signed URL meant for an immediate click, not
       // for storing. This copy needs to still resolve years from now from
@@ -223,8 +155,8 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
           payment_method: PO_PAYMENT_METHOD,
           po_number: po.po_number || null,
           po_payment_label: paymentLabel.trim() || null,
-          supporting_attachments: rest.length ? rest : null,
-          capture_id: captureRow.id,
+          supporting_attachments: null,
+          capture_id: null,
           submitted_at: new Date().toISOString(),
           user_email: user?.email ?? null,
           status: 'saved',
@@ -268,35 +200,13 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
             </div>
           )}
 
-          <Field label="Invoice" required>
-            <AttachmentDropzone accept="image/*,.pdf" file={invoiceFile} onChange={handleInvoiceFile} />
-            {ocrExtracting && (
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>Reading invoice…</div>
-            )}
-            {ocrNotice && (
-              <div style={{ fontSize: '11px', color: 'var(--gold-text)', marginTop: '6px' }}>{ocrNotice}</div>
-            )}
-            {ocrExtracted && (
-              <div style={{ background: 'var(--moss-bg)', border: '1px solid var(--moss-border)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', marginTop: '8px' }}>
-                <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--moss-text)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
-                  Extracted from document
-                </div>
-                {[
-                  ['Invoice No.', ocrExtracted.invoice_number],
-                  ['Vendor', ocrExtracted.vendor_name],
-                  ['Date', ocrExtracted.date],
-                  ['Total Amount', ocrExtracted.total_amount != null ? fmtAmt(ocrExtracted.total_amount) : null],
-                ].filter(([, v]) => v).map(([label, value]) => (
-                  <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--ink)', padding: '2px 0' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>{label}</span>
-                    <span>{value}</span>
-                  </div>
-                ))}
-                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px', fontStyle: 'italic' }}>
-                  Double-check these against the document before saving.
-                </div>
-              </div>
-            )}
+          <Field label="Invoice Number (optional)">
+            <input
+              value={invoiceNumber}
+              onChange={e => setInvoiceNumber(e.target.value)}
+              placeholder="If mentioned on the invoice"
+              style={inputStyle}
+            />
           </Field>
 
           <Field label="Invoice Amount" required>
@@ -405,40 +315,6 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
           <Field label="Vendor GSTIN">
             <input value={gstin} onChange={e => setGstin(e.target.value)} style={inputStyle} />
           </Field>
-        </SectionCard>
-
-        <SectionCard title="Attachments" sub="Invoice already attached — add a receipt, quotation, or anything else that supports this payment">
-          {attachments.map((a, i) => (
-            <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '12px' }}>
-              <select
-                value={a.label}
-                onChange={e => updateAttachment(i, { label: e.target.value })}
-                disabled={i === 0}
-                style={{ ...inputStyle, width: '140px', flexShrink: 0 }}
-              >
-                {ATTACHMENT_LABELS.map(l => <option key={l} value={l}>{l}</option>)}
-              </select>
-              <div style={{ flex: 1 }}>
-                <AttachmentDropzone accept="image/*,.pdf" file={a.file} onChange={f => updateAttachment(i, { file: f })} />
-              </div>
-              {i > 0 && (
-                <button
-                  onClick={() => removeAttachment(i)}
-                  title="Remove"
-                  style={{ height: '38px', width: '34px', flexShrink: 0, background: 'var(--surface-card)', color: 'var(--clay-text)', border: '1px solid var(--clay-border)', borderRadius: 'var(--radius-sm)', fontSize: '15px', cursor: 'pointer' }}
-                >
-                  ×
-                </button>
-              )}
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={addAttachment}
-            style={{ height: '32px', padding: '0 14px', background: 'var(--surface-card)', color: 'var(--action)', border: '1px solid var(--action)', borderRadius: 'var(--radius-sm)', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
-          >
-            + Add another attachment
-          </button>
         </SectionCard>
 
         <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: 1.5 }}>

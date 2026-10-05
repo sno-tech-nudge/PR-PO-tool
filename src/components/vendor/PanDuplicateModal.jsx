@@ -2,9 +2,17 @@ import { useState } from 'react'
 import VendorStatusBadge from './VendorStatusBadge'
 import { getDisplayName } from '../../lib/directory'
 
-export default function PanDuplicateModal({ vendors, onAcknowledge, onClose, readOnly = false }) {
+export default function PanDuplicateModal({
+  vendors, onAcknowledge, onClose, readOnly = false,
+  title = 'This PAN is already registered',
+  subtitle,
+  editLabel = 'Go Back and Edit PAN',
+}) {
   const [activeIndex, setActiveIndex] = useState(0)
   const active = vendors[activeIndex]
+  const subtitleText = subtitle ?? (
+    `${vendors.length} other vendor${vendors.length !== 1 ? 's' : ''} already ${vendors.length !== 1 ? 'use' : 'uses'} this PAN. You can still continue — duplicate PAN/GST registrations are allowed.`
+  )
 
   return (
     <div
@@ -16,10 +24,9 @@ export default function PanDuplicateModal({ vendors, onAcknowledge, onClose, rea
         style={{ background: 'var(--surface-card)', width: '100%', maxWidth: '480px', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}
       >
         <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--taupe-200)' }}>
-          <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--ink)' }}>This PAN is already registered</div>
+          <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--ink)' }}>{title}</div>
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
-            {vendors.length} other vendor{vendors.length !== 1 ? 's' : ''} already {vendors.length !== 1 ? 'use' : 'uses'} this PAN. You can still continue —
-            duplicate PAN/GST registrations are allowed.
+            {subtitleText}
           </div>
         </div>
 
@@ -93,7 +100,7 @@ export default function PanDuplicateModal({ vendors, onAcknowledge, onClose, rea
                   fontSize: '13px', fontWeight: 600, cursor: 'pointer',
                 }}
               >
-                Go Back and Edit PAN
+                {editLabel}
               </button>
             </>
           )}

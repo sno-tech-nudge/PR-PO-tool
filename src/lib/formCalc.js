@@ -38,6 +38,12 @@ export function lineItemsBase(items = []) {
   return items.reduce((sum, it) => sum + (Number(it.quantity) || 0) * (Number(it.ratePerUnit) || 0), 0)
 }
 
+// Shared Indian PAN/GSTIN format patterns — single source of truth so every
+// field that collects one (vendor PAN/GSTIN, an expense's optional GSTIN,
+// etc.) validates against the same rule instead of each re-deriving it.
+export const PAN_FORMAT_RE = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/
+export const GSTIN_FORMAT_RE = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/
+
 // Catches a description that's just an amount typed into the wrong box
 // (e.g. "25000" or "₹25,000") — stripping currency symbols, commas, and
 // whitespace should leave something that isn't purely digits. A real

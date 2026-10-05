@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
-import { getFiscalYearPrefix } from '../../lib/formCalc'
+import { getFiscalYearPrefix, PAN_FORMAT_RE, GSTIN_FORMAT_RE } from '../../lib/formCalc'
 import { NATURE_OF_BUSINESS_OPTIONS } from '../../lib/vendorData'
 import { extractChequeDetails, extractPanCardDetails, extractGstCertDetails, extractMsmeCertDetails } from '../../lib/claude'
 import { imageFileToJpegBase64, pdfPageToBase64 } from '../../lib/receiptImage'
@@ -48,8 +48,11 @@ const INDIAN_STATES = [
   'Dadra and Nagar Haveli and Daman and Diu','Delhi','Jammu and Kashmir','Ladakh','Lakshadweep','Puducherry',
 ]
 
-const PAN_RE     = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/
-const GSTIN_RE   = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/
+// PAN/GSTIN patterns now live in formCalc.js (shared with ExpenseDetails.jsx's
+// own GSTIN field) — kept as same-named local aliases so every existing
+// reference below (PAN_RE/GSTIN_RE) needs no further change.
+const PAN_RE     = PAN_FORMAT_RE
+const GSTIN_RE   = GSTIN_FORMAT_RE
 const IFSC_RE    = /^[A-Z]{4}0[A-Z0-9]{6}$/
 const PIN_RE     = /^[0-9]{6}$/
 const PHONE_RE   = /^[0-9]{10}$/
@@ -128,7 +131,7 @@ const disabledStyle = { ...inputStyle(false), background: 'var(--taupe-100)', co
 // an account number) — the same guardrail pattern as phone/Aadhaar below,
 // pulled onto the shared input so any field can opt in with one prop
 // instead of hand-rolling its own onChange.
-function Inp({ field, f, setF, placeholder, type = 'text', disabled, mono, err, upper, maxLength, filter }) {
+function Inp({ field, f, setF, placeholder, type = 'text', disabled, mono, err, upper, maxLength, filter, onBlur }) {
   return (
     <input
       type={type}
@@ -139,6 +142,7 @@ function Inp({ field, f, setF, placeholder, type = 'text', disabled, mono, err, 
         if (upper) v = v.toUpperCase()
         setF(prev => ({ ...prev, [field]: v }))
       }}
+      onBlur={onBlur}
       placeholder={placeholder}
       disabled={disabled}
       maxLength={maxLength}
@@ -277,6 +281,76 @@ function FileUpload({ id, label, required, error, existing, file, onChange, acce
   )
 }
 
+// "Review before submitting" — shown once validation and every duplicate
+// check above has already passed, so this is purely a last plain-English
+// recap before the real insert fires (from "Confirm & Submit" only). Same
+// hand-rolled modal-shell recipe as PanDuplicateModal (translucent fixed
+// backdrop + a centered card, closed by clicking outside or the back link).
+function VendorReviewModal({ f, attachmentCount, onConfirm, onClose }) {
+  const maskedAccount = f.account_number
+    ? `••••${f.account_number.slice(-4)}`
+    : '—'
+  const rows = [
+    ['Organisation', f.org_name || '—'],
+    ['PAN', f.pan_number || '—'],
+    ...(f.is_gstin_registered ? [['GSTIN', f.gstin || '—']] : []),
+    ['Beneficiary Name', f.beneficiary_name || '—'],
+    ['Account Number', maskedAccount],
+    ['IFSC / Bank / Branch', [f.ifsc_code, f.bank_name, f.branch].filter(Boolean).join(' · ') || '—'],
+    ['Attachments', `${attachmentCount} file${attachmentCount === 1 ? '' : 's'} attached`],
+  ]
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(26,26,26,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ background: 'var(--surface-card)', width: '100%', maxWidth: '480px', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}
+      >
+        <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--taupe-200)' }}>
+          <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--ink)' }}>Review before submitting</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
+            Double-check these details — once submitted, this goes to Finance for approval.
+          </div>
+        </div>
+
+        <div style={{ padding: '16px 20px' }}>
+          {rows.map(([label, val]) => (
+            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', padding: '8px 0', borderBottom: '1px solid var(--taupe-100)' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)', flexShrink: 0 }}>{label}</span>
+              <span style={{ fontSize: '13px', color: 'var(--ink)', fontWeight: 600, textAlign: 'right' }}>{val}</span>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', gap: '10px', padding: '16px 20px', borderTop: '1px solid var(--taupe-200)' }}>
+          <button
+            onClick={onConfirm}
+            style={{
+              height: '42px', padding: '0 20px',
+              background: 'var(--action)', color: 'var(--surface-card)', border: 'none', borderRadius: 'var(--radius-md)',
+              fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            Confirm & Submit
+          </button>
+          <button
+            onClick={onClose}
+            style={{
+              height: '42px', padding: '0 20px',
+              background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-md)',
+              fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+            }}
+          >
+            Go Back and Edit
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Atomic — see generatePRNumber's comment in PRForm.jsx; same fix, same reason.
 async function generateVendorId() {
   const fy = getFiscalYearPrefix()
@@ -335,6 +409,28 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
   const [panDuplicates, setPanDuplicates]     = useState([])
   const [showPanDupModal, setShowPanDupModal] = useState(false)
   const [panDupAcknowledged, setPanDupAcknowledged] = useState(false)
+
+  // Same "warn, never block" duplicate pattern as PAN above, run independently
+  // against organisation name (loose/partial match) and account number (exact)
+  // — each with its own state so acknowledging one never dismisses another.
+  const [orgNameDuplicates, setOrgNameDuplicates] = useState([])
+  const [showOrgNameDupModal, setShowOrgNameDupModal] = useState(false)
+  const [orgNameDupAcknowledged, setOrgNameDupAcknowledged] = useState(false)
+  const [acctNumDuplicates, setAcctNumDuplicates] = useState([])
+  const [showAcctNumDupModal, setShowAcctNumDupModal] = useState(false)
+  const [acctNumDupAcknowledged, setAcctNumDupAcknowledged] = useState(false)
+
+  // Lets the PAN format error show the moment someone leaves the field,
+  // instead of only after a first Save/Submit attempt (attemptedMode below).
+  // GSTIN already has its own always-live validity banner (gstinValidation,
+  // see below) so it doesn't need this same treatment.
+  const [panTouched, setPanTouched] = useState(false)
+
+  // Gate for the new "Review before submitting" confirm step — shown only
+  // once every validation/duplicate check already passes; the real insert
+  // fires from its own "Confirm & Submit" button, not from the form's Submit.
+  const [showReviewModal, setShowReviewModal] = useState(false)
+
   // Guards against re-alerting Finance on every repeated Submit click while
   // the form is stuck in the "not linked" state — resets once the answer changes.
   const financeAlertSentRef = useRef(false)
@@ -376,6 +472,12 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
   // the uploaded PAN copy OCR'd to — recomputed every render (not a one-time
   // check at upload time) so it stays right no matter which field changes
   // after the other.
+  // Shows the moment the PAN field is blurred with something non-empty and
+  // malformed in it — independent of attemptedMode/liveErrors above, so this
+  // doesn't wait for a Save/Submit click first.
+  const panFormatError = panTouched && f.pan_number && !PAN_RE.test(f.pan_number.toUpperCase().trim())
+    ? 'Invalid PAN (e.g. ABCDE1234F)'
+    : null
   const panMatchStatus = panExtracted && PAN_RE.test(f.pan_number.toUpperCase().trim())
     ? (panExtracted === f.pan_number.toUpperCase().trim() ? 'match' : 'mismatch')
     : null
@@ -687,6 +789,57 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
     }
   }
 
+  // Generic words that don't help identify *which* organisation this is —
+  // stripped before matching so e.g. "Acme Pvt Ltd" and "Acme Solutions Ltd"
+  // still share enough real signal ("acme") to flag, without every vendor
+  // ending in "Private Limited" cross-matching every other one.
+  const ORG_NAME_STOPWORDS = new Set([
+    'pvt', 'private', 'ltd', 'limited', 'llp', 'inc', 'incorporated', 'co',
+    'company', 'corp', 'corporation', 'the', 'and', 'solutions', 'services',
+  ])
+
+  // Loose/partial match on organisation name — same "warn, never block"
+  // pattern as checkPanDuplicates above, kept as its own separate function
+  // (rather than folded into one shared helper) so the existing PAN path
+  // above is never touched by this addition.
+  async function checkOrgNameDuplicates(name) {
+    const words = name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter(w => w.length >= 3 && !ORG_NAME_STOPWORDS.has(w))
+    if (words.length === 0) { setOrgNameDuplicates([]); return }
+    const currentRowId = existingVendor?.id || draftId
+    const orClause = words.map(w => `org_name.ilike.%${w}%`).join(',')
+    let q = supabase.from('vendors').select('id, vendor_id, org_name, status, submitted_by').or(orClause)
+    if (currentRowId) q = q.neq('id', currentRowId)
+    const { data } = await q
+    if (data && data.length > 0) {
+      setOrgNameDuplicates(data)
+      setShowOrgNameDupModal(true)
+      setOrgNameDupAcknowledged(false)
+    } else {
+      setOrgNameDuplicates([])
+    }
+  }
+
+  // Exact match on account number — same pattern again, own state.
+  async function checkAccountNumberDuplicates(acct) {
+    const cleaned = acct.trim()
+    if (!cleaned) { setAcctNumDuplicates([]); return }
+    const currentRowId = existingVendor?.id || draftId
+    let q = supabase.from('vendors').select('id, vendor_id, org_name, status, submitted_by').eq('account_number', cleaned)
+    if (currentRowId) q = q.neq('id', currentRowId)
+    const { data } = await q
+    if (data && data.length > 0) {
+      setAcctNumDuplicates(data)
+      setShowAcctNumDupModal(true)
+      setAcctNumDupAcknowledged(false)
+    } else {
+      setAcctNumDuplicates([])
+    }
+  }
+
   function validate(mode) {
     const e = {}
     const submit = mode === 'submit'
@@ -921,10 +1074,30 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
       return
     }
     setAttemptedMode(null)
+    // Three independent "warn, never block" duplicate gates — each shows its
+    // own modal and must be acknowledged (or simply doesn't apply) before the
+    // new review-before-submit step appears. Checked in this fixed order so
+    // only one modal shows at a time even if more than one type matched.
     if (panDuplicates.length > 0 && !panDupAcknowledged) {
       setShowPanDupModal(true)
       return
     }
+    if (orgNameDuplicates.length > 0 && !orgNameDupAcknowledged) {
+      setShowOrgNameDupModal(true)
+      return
+    }
+    if (acctNumDuplicates.length > 0 && !acctNumDupAcknowledged) {
+      setShowAcctNumDupModal(true)
+      return
+    }
+    setShowReviewModal(true)
+  }
+
+  // The actual insert/update, split out of handleSubmit so it only ever runs
+  // from the review modal's "Confirm & Submit" — handleSubmit itself now only
+  // validates, runs the duplicate gates, and opens that review step.
+  async function performSubmit() {
+    setShowReviewModal(false)
     setSaving(true); setSaveError(null)
     try {
       const vid = vendorId || await generateVendorId()
@@ -1019,7 +1192,19 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         <div style={grid2}>
           <div style={full}>
             <Field id="org_name" label="Name of Organisation" required error={liveErrors.org_name}>
-              <Inp field="org_name" f={f} setF={setF} placeholder="e.g. Acme Solutions Pvt Ltd" err={!!liveErrors.org_name} />
+              <Inp field="org_name" f={f} setF={setF} placeholder="e.g. Acme Solutions Pvt Ltd" err={!!liveErrors.org_name}
+                onBlur={e => checkOrgNameDuplicates(e.target.value)} />
+              {orgNameDuplicates.length > 0 && (
+                <div
+                  onClick={() => setShowOrgNameDupModal(true)}
+                  style={{
+                    marginTop: '6px', fontSize: '11px', color: 'var(--gold-text)', cursor: 'pointer',
+                    background: 'var(--gold-bg)', border: '1px solid var(--gold-border)', borderRadius: 'var(--radius-sm)', padding: '6px 10px',
+                  }}
+                >
+                  ⚠ {orgNameDuplicates.length} similarly-named vendor{orgNameDuplicates.length !== 1 ? 's' : ''} already registered — click to view
+                </div>
+              )}
             </Field>
           </div>
           <Field id="org_type" label="Type of Organisation" required error={liveErrors.org_type}
@@ -1072,7 +1257,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           <Field label="Country">
             <Inp field="country" f={f} setF={setF} placeholder="India" />
           </Field>
-          <Field id="pan_number" label="PAN Number" required error={liveErrors.pan_number}>
+          <Field id="pan_number" label="PAN Number" required error={liveErrors.pan_number || panFormatError}>
             <input
               type="text"
               value={f.pan_number}
@@ -1084,9 +1269,9 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                 setF(p => ({ ...p, pan_number: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10) }))
                 setPanDupAcknowledged(false)
               }}
-              onBlur={e => checkPanDuplicates(e.target.value)}
+              onBlur={e => { setPanTouched(true); checkPanDuplicates(e.target.value) }}
               placeholder="ABCDE1234F"
-              style={inputStyle(!!liveErrors.pan_number, { fontFamily: 'monospace', letterSpacing: '0.1em' })}
+              style={inputStyle(!!liveErrors.pan_number || !!panFormatError, { fontFamily: 'monospace', letterSpacing: '0.1em' })}
             />
             {PAN_RE.test(f.pan_number.toUpperCase().trim()) && (
               <button
@@ -1509,7 +1694,19 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           </div>
           <Field id="account_number" label="Account Number" required error={liveErrors.account_number}>
             <Inp field="account_number" f={f} setF={setF} placeholder="" mono err={!!liveErrors.account_number}
-              filter={v => v.replace(/\D/g, '').slice(0, 18)} />
+              filter={v => v.replace(/\D/g, '').slice(0, 18)}
+              onBlur={e => checkAccountNumberDuplicates(e.target.value)} />
+            {acctNumDuplicates.length > 0 && (
+              <div
+                onClick={() => setShowAcctNumDupModal(true)}
+                style={{
+                  marginTop: '6px', fontSize: '11px', color: 'var(--gold-text)', cursor: 'pointer',
+                  background: 'var(--gold-bg)', border: '1px solid var(--gold-border)', borderRadius: 'var(--radius-sm)', padding: '6px 10px',
+                }}
+              >
+                ⚠ {acctNumDuplicates.length} other vendor{acctNumDuplicates.length !== 1 ? 's' : ''} already registered with this account number — click to view
+              </div>
+            )}
           </Field>
           <Field id="ifsc_code" label="IFSC Code" required error={liveErrors.ifsc_code}>
             <div style={{ display: 'flex', gap: '6px' }}>
@@ -1636,6 +1833,37 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           vendors={panDuplicates}
           onAcknowledge={() => { setPanDupAcknowledged(true); setShowPanDupModal(false) }}
           onClose={() => setShowPanDupModal(false)}
+        />
+      )}
+
+      {showOrgNameDupModal && (
+        <PanDuplicateModal
+          vendors={orgNameDuplicates}
+          title="A similarly-named vendor already exists"
+          subtitle={`${orgNameDuplicates.length} other vendor${orgNameDuplicates.length !== 1 ? 's' : ''} with a similar organisation name ${orgNameDuplicates.length !== 1 ? 'are' : 'is'} already registered. Double-check this isn't the same organisation under a slightly different name — you can still continue either way.`}
+          editLabel="Go Back and Edit Name"
+          onAcknowledge={() => { setOrgNameDupAcknowledged(true); setShowOrgNameDupModal(false) }}
+          onClose={() => setShowOrgNameDupModal(false)}
+        />
+      )}
+
+      {showAcctNumDupModal && (
+        <PanDuplicateModal
+          vendors={acctNumDuplicates}
+          title="This account number is already registered"
+          subtitle={`${acctNumDuplicates.length} other vendor${acctNumDuplicates.length !== 1 ? 's' : ''} already ${acctNumDuplicates.length !== 1 ? 'use' : 'uses'} this bank account number. You can still continue — this just flags it for a second look.`}
+          editLabel="Go Back and Edit Account Number"
+          onAcknowledge={() => { setAcctNumDupAcknowledged(true); setShowAcctNumDupModal(false) }}
+          onClose={() => setShowAcctNumDupModal(false)}
+        />
+      )}
+
+      {showReviewModal && (
+        <VendorReviewModal
+          f={f}
+          attachmentCount={[chequePath || chequeFile, panPath || panFile, regCertPath || regCertFile, (!f.is_msme || msmeCertPath || msmeCertFile), (!f.is_gstin_registered || gstCertPath || gstCertFile), (!isIndividual || aadhaarPath || aadhaarFile), (!isIndividual || aadhaarProofPath || aadhaarProofFile)].filter(Boolean).length}
+          onConfirm={performSubmit}
+          onClose={() => setShowReviewModal(false)}
         />
       )}
 
