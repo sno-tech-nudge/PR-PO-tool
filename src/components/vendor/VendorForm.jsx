@@ -8,6 +8,7 @@ import PanDuplicateModal from './PanDuplicateModal'
 import { sendVendorEmail } from '../../lib/vendorEmail'
 import { getFinanceEmails } from '../../lib/auth'
 import { logActivity } from '../../lib/activityLog'
+import { notifyVendorSubmitted } from '../../lib/vendorNotifications'
 import { useFileDrop } from '../../hooks/useFileDrop'
 import InfoTip from '../shared/InfoTip'
 import VoiceInputButton from '../shared/VoiceInputButton'
@@ -1126,6 +1127,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         action: isEdit ? 'resubmitted' : 'submitted', fromValue: existingVendor?.status || (draftId ? 'draft' : null), toValue: 'pending', actor: user,
         note: isGuestSubmission ? 'Submitted by the vendor via invite link' : null,
       })
+      notifyVendorSubmitted({ vendor: result.data, submitter: user, viaInviteLink: isGuestSubmission, resubmitted: isEdit })
       sendVendorEmail({
         type: 'submitted', vendorOrgName: result.data.org_name, vendorId: result.data.vendor_id,
         recipientEmail: result.data.submitted_by,

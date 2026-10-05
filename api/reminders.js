@@ -58,20 +58,49 @@ async function remindDrafts(origin) {
   return count
 }
 
+async function emailsByRole(roles) {
+  const { data } = await supabase.from('team_members').select('email').in('role', roles)
+  return (data || []).map(m => m.email)
+}
+
+async function levelRecipients(level) {
+  const pinned = level.required_approver_email
+  const base = pinned ? [pinned] : await emailsByRole([level.required_role])
+  const superFl = level.required_role === 'fl' ? await emailsByRole(['super_fl']) : []
+  const today = new Date().toISOString().slice(0, 10)
+  const { data: dels } = await supabase
+    .from('approval_delegations')
+    .select('delegate_email, delegator_email, delegator_role')
+    .is('revoked_at', null).lte('start_date', today).gte('end_date', today)
+  const delegates = (dels || [])
+    .filter(d => pinned ? d.delegator_email.toLowerCase() === pinned.toLowerCase() : d.delegator_role === level.required_role)
+    .map(d => d.delegate_email)
+  const seen = new Set()
+  return [...base, ...superFl, ...delegates].filter(e => {
+    const k = String(e || '').toLowerCase()
+    if (!k || seen.has(k)) return false
+    seen.add(k)
+    return true
+  })
+}
+
 async function remindPending(origin) {
   const { data } = await supabase
     .from('purchase_requests')
-    .select('id, pr_number, amount, submitted_at, last_reminder_at, pr_approvals(required_role, status)')
+    .select('id, pr_number, amount, submitted_at, last_reminder_at, pr_approvals(required_role, required_approver_email, status)')
     .eq('status', 'submitted')
   let count = 0
   for (const pr of data || []) {
     if (!isDue(pr.submitted_at, pr.last_reminder_at)) continue
     const pendingLevel = (pr.pr_approvals || []).find(a => a.status === 'pending')
     if (!pendingLevel?.required_role) continue
-    const { data: members } = await supabase.from('team_members').select('email').eq('role', pendingLevel.required_role)
-    for (const m of members || []) {
+    // Same audience as the original notification: the one pinned approver if
+    // the level has one (otherwise everyone holding the role), Super FL for
+    // the Functional Leader level, and anyone covering via a delegation.
+    const recipients = await levelRecipients(pendingLevel)
+    for (const email of recipients) {
       await supabase.from('expense_notifications').insert({
-        recipient_id: m.email,
+        recipient_id: email,
         type: 'pr_pending_reminder',
         message: `Reminder: PR ${pr.pr_number} for ${fmtAmt(pr.amount)} is still awaiting your review.`,
         related_type: 'pr', related_id: pr.id,

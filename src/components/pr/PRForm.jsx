@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { getPRApprovalLevels, getRequiredQuotes } from '../../lib/approvalEngine'
-import { getEmailsByRole } from '../../lib/auth'
+import { getApprovalLevelRecipients, notifyEmails } from '../../lib/approverRecipients'
 import { resolveFLEmail } from '../../lib/functionRouting'
 import { sendPREmail } from '../../lib/prEmail'
 import { buildPRTimelineSteps } from '../../lib/prStatusSteps'
@@ -530,16 +530,20 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
       // fl-role person exactly as before.
       const advNote = advFlags.requiresFLEmail ? ' — 100% ADVANCE: email approval required.' : ''
       const categoriesLabel = distinctCategories(cleanItems).join(', ')
-      try {
-        const flEmails = flEmail ? [flEmail] : await getEmailsByRole('fl')
-        await Promise.all(flEmails.map(email => supabase.from('expense_notifications').insert({
-          recipient_id: email,
-          type: 'pr_submitted',
-          message: `New PR ${prNumber} for ₹${bd.total.toLocaleString('en-IN')} (${categoriesLabel}) requires Functional Leader approval.${advNote}`,
-          related_type: 'pr',
-          related_id: prId,
-        })))
-      } catch { /* non-blocking */ }
+      // Approver side: the resolved FL (or every FL), plus Super FL and
+      // anyone covering for the FL via an out-of-office delegation.
+      const flRecipients = await getApprovalLevelRecipients({ requiredRole: 'fl', requiredApproverEmail: flEmail })
+      await notifyEmails(flRecipients, {
+        type: 'pr_submitted',
+        message: `New PR ${prNumber} for ₹${bd.total.toLocaleString('en-IN')} (${categoriesLabel}) requires Functional Leader approval.${advNote}`,
+        relatedType: 'pr', relatedId: prId,
+      })
+      // Requester side: an in-app confirmation too (previously only an email).
+      await notifyEmails([user.email], {
+        type: 'pr_raised',
+        message: `Your PR ${prNumber} for ₹${bd.total.toLocaleString('en-IN')} was submitted and is awaiting Functional Leader approval.`,
+        relatedType: 'pr', relatedId: prId,
+      })
 
       notifySlack(`📝 New PR raised: <${recordUrl('pr', prId)}|${prNumber}> — ₹${bd.total.toLocaleString('en-IN')} (${categoriesLabel}) by ${user.name}. Awaiting *Functional Leader* approval.${advNote}`)
 

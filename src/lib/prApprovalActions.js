@@ -2,7 +2,7 @@ import { supabase } from './supabase'
 import { generatePOPDF, uploadPDFToSupabase } from './pdfGenerator'
 import { autoLinkPRToExpense } from './linkEngine'
 import { getFiscalYearPrefix } from './formCalc'
-import { getEmailsByRole, getApproverEmailsForLevel } from './auth'
+import { getApprovalLevelRecipients, notifyEmails } from './approverRecipients'
 import { notifySlack, recordUrl } from './slack'
 import { sendPREmail } from './prEmail'
 import { buildPRTimelineSteps } from './prStatusSteps'
@@ -41,28 +41,19 @@ export async function generatePONumber() {
 // triggered it. Without this, the next approver in the chain has no way to
 // know it's their turn short of manually checking the Approvals page.
 async function notifyRole(role, { type, message, relatedType, relatedId }) {
-  try {
-    const emails = await getEmailsByRole(role)
-    await Promise.all(emails.map(email => supabase.from('expense_notifications').insert({
-      recipient_id: email, type, message, related_type: relatedType, related_id: relatedId,
-    })))
-  } catch { /* non-blocking */ }
+  const emails = await getApprovalLevelRecipients({ requiredRole: role })
+  await notifyEmails(emails, { type, message, relatedType, relatedId })
 }
 
 // Notifies whoever actually needs to act on a pr_approvals level — the one
 // specific resolved FL (required_approver_email) if this level has one,
 // otherwise every team member holding required_role exactly as before.
 async function notifyApprover(approvalRow, { type, message, relatedType, relatedId }) {
-  if (approvalRow?.required_approver_email) {
-    try {
-      await supabase.from('expense_notifications').insert({
-        recipient_id: approvalRow.required_approver_email, type, message,
-        related_type: relatedType, related_id: relatedId,
-      })
-    } catch { /* non-blocking */ }
-    return
-  }
-  if (approvalRow?.required_role) await notifyRole(approvalRow.required_role, { type, message, relatedType, relatedId })
+  if (!approvalRow?.required_approver_email && !approvalRow?.required_role) return
+  const emails = await getApprovalLevelRecipients({
+    requiredRole: approvalRow.required_role, requiredApproverEmail: approvalRow.required_approver_email,
+  })
+  await notifyEmails(emails, { type, message, relatedType, relatedId })
 }
 
 // Approves whichever pr_approvals row is currently 'pending' for this PR.
@@ -123,7 +114,7 @@ export async function approvePRLevel({ prId, approvals, user, pr, onBehalfOf }) 
       type: 'advanced', recipientEmail: pr?.requested_by, prNumber: pr?.pr_number,
       amount: pr?.amount, actorName: user.name, nextLevelLabel: nextWaiting.approver_name, timelineSteps,
     });
-    (nextWaiting.required_approver_email ? Promise.resolve([nextWaiting.required_approver_email]) : getApproverEmailsForLevel(nextWaiting.required_role)).then(emails => sendPREmail({
+    getApprovalLevelRecipients({ requiredRole: nextWaiting.required_role, requiredApproverEmail: nextWaiting.required_approver_email }).then(emails => sendPREmail({
       type: 'action_needed', recipientEmail: emails, prNumber: pr?.pr_number,
       amount: pr?.amount, nextLevelLabel: nextWaiting.approver_name, timelineSteps,
     }))
@@ -180,7 +171,7 @@ export async function createPendingPO({ prId, pr, amount }) {
       relatedId: newPO.id,
     })
     notifySlack(`📦 PO <${recordUrl('po', newPO.id)}|${poNumber}> created for PR ${pr?.pr_number || ''} — ${fmtAmt(poAmount)} — awaiting *Finance* approval.`)
-    getEmailsByRole('finance').then(emails => sendPREmail({
+    getApprovalLevelRecipients({ requiredRole: 'finance' }).then(emails => sendPREmail({
       type: 'action_needed', recipientEmail: emails, prNumber: pr?.pr_number,
       amount: poAmount, nextLevelLabel: 'Finance (PO issuance)',
     }))

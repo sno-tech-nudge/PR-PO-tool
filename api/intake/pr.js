@@ -240,7 +240,8 @@ export default async function handler(req, res) {
     // Best-effort notifications — must never fail an already-committed
     // submission.
     try {
-      const { data: flMembers } = await supabaseAdmin.from('team_members').select('email').eq('role', 'fl')
+      // Super FL can act on the FL level of any PR, so they're told too.
+      const { data: flMembers } = await supabaseAdmin.from('team_members').select('email').in('role', ['fl', 'super_fl'])
       const advNote = advancePercent >= 100 ? ' — 100% ADVANCE: email approval required.' : ''
       // "(via Nucleus)" tag is deliberate — lets the team gauge Nucleus
       // adoption over time straight from the notification feed, per an

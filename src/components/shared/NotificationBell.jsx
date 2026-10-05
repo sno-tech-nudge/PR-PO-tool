@@ -15,6 +15,8 @@ const TYPE_COLOR = {
   pr_approved: 'var(--moss-text)', vendor_approved: 'var(--moss-text)', approved: 'var(--moss-text)',
   pr_rejected: 'var(--clay-text)', vendor_rejected: 'var(--clay-text)', rejected: 'var(--clay-text)',
   pr_submitted: 'var(--gold-text)', bank_change_request: 'var(--gold-text)', link_suggestion: 'var(--action)',
+  vendor_submitted: 'var(--gold-text)', pr_pending_review: 'var(--gold-text)', po_pending_review: 'var(--gold-text)',
+  pr_pending_reminder: 'var(--gold-text)', pr_raised: 'var(--action)', vendor_raised: 'var(--action)',
 }
 
 // Sidebar-footer notification bell — reads expense_notifications (a table
@@ -22,6 +24,9 @@ const TYPE_COLOR = {
 // used to read). Polls rather than subscribing in realtime, matching this
 // app's existing async-job-queue polling convention elsewhere.
 export default function NotificationBell({ user, onOpenReport, onOpenPR, onOpenVendor, onOpenPO }) {
+  // Someone with two linked logins (e.g. thenudge.org + thedelta.org.in) sees
+  // notifications addressed to either one, whichever they signed in with.
+  const ownEmails = user.ownEmails?.length ? user.ownEmails : [user.email]
   const [notifications, setNotifications] = useState([])
   const [open, setOpen] = useState(false)
   const containerRef = useRef(null)
@@ -48,7 +53,7 @@ export default function NotificationBell({ user, onOpenReport, onOpenPR, onOpenV
     const { data } = await supabase
       .from('expense_notifications')
       .select('*')
-      .eq('recipient_id', user.email)
+      .in('recipient_id', ownEmails)
       .order('created_at', { ascending: false })
       .limit(30)
     setNotifications(data || [])
@@ -64,14 +69,14 @@ export default function NotificationBell({ user, onOpenReport, onOpenPR, onOpenV
 
   async function markAllRead() {
     setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
-    await supabase.from('expense_notifications').update({ is_read: true }).eq('recipient_id', user.email).eq('is_read', false)
+    await supabase.from('expense_notifications').update({ is_read: true }).in('recipient_id', ownEmails).eq('is_read', false)
   }
 
   // Deletes only already-read notifications — unread ones are left alone so
   // this can never be used to accidentally dismiss something not yet seen.
   async function clearRead() {
     setNotifications(prev => prev.filter(n => !n.is_read))
-    await supabase.from('expense_notifications').delete().eq('recipient_id', user.email).eq('is_read', true)
+    await supabase.from('expense_notifications').delete().in('recipient_id', ownEmails).eq('is_read', true)
   }
 
   function handleClick(n) {
