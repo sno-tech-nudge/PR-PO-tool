@@ -87,7 +87,7 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
     supabase.from('purchase_orders')
       .select('id, po_number, amount, vendors(org_name), purchase_requests!inner(requested_by)')
       .eq('status', 'issued')
-      .eq('purchase_requests.requested_by', user?.email ?? '')
+      .in('purchase_requests.requested_by', user?.ownEmails ?? [])
       .order('created_at', { ascending: false }).limit(200)
       .then(async ({ data }) => setPoOptions(await attachPendingBalances(data || [])))
   }, [poRelated, poOptions.length, user?.email])

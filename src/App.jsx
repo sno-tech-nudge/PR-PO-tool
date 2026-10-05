@@ -245,7 +245,7 @@ export default function App() {
     const { data } = await supabase
       .from('expense_details')
       .select('*')
-      .eq('user_email', user.email)
+      .in('user_email', user.ownEmails)
       .eq('status', 'saved')
       .order('created_at', { ascending: false })
     setReportExpenses(data || [])

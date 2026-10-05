@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { createPendingPO, approvePRLevel, rejectPRLevel } from '../../lib/prApprovalActions'
-import { canAccessApprovals, canAccessFinance } from '../../lib/auth'
+import { canAccessApprovals, canAccessFinance, isOwnEmail } from '../../lib/auth'
 import { getDisplayName } from '../../lib/directory'
 import AmountInput from '../shared/AmountInput'
 import VoiceInputButton from '../shared/VoiceInputButton'
@@ -73,7 +73,7 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
     const matches = pending?.required_role === 'fl' && user.role === 'super_fl'
       ? true
       : pending?.required_approver_email
-        ? user.email === pending.required_approver_email
+        ? isOwnEmail(user, pending.required_approver_email)
         : pending?.required_role ? user.role === pending.required_role : canAccessApprovals(user.role)
     // Not eligible to act right now — skip presence entirely. No need to
     // reset reviewingBy here since the badge only ever renders inside the
@@ -182,11 +182,11 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
   // own PRs there) — that list filter alone doesn't stop someone from
   // reaching another PR's detail via a stale link/notification, so enforce
   // it here too. Reported the same as "not found" rather than "forbidden".
-  if (!pr || (user.role === 'employee' && pr.requested_by !== user.email)) {
+  if (!pr || (user.role === 'employee' && !isOwnEmail(user, pr.requested_by))) {
     return <div style={{ padding: '40px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>Request not found.</div>
   }
 
-  const canEdit = user.email === pr.requested_by && pr.status === 'rejected'
+  const canEdit = isOwnEmail(user, pr.requested_by) && pr.status === 'rejected'
   const lc = pr.link_confidence ? LINK_CONF[pr.link_confidence] : null
   const currentPending = approvals.find(a => a.status === 'pending')
   // Each level is only actionable by its assigned role (FL, then PR
@@ -204,7 +204,7 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
   const roleMatches = currentPending?.required_role === 'fl' && user.role === 'super_fl'
     ? true
     : currentPending?.required_approver_email
-      ? user.email === currentPending.required_approver_email
+      ? isOwnEmail(user, currentPending.required_approver_email)
       : currentPending?.required_role
         ? user.role === currentPending.required_role
         : canAccessApprovals(user.role)
@@ -229,7 +229,7 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
             <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>{pr.vendors?.org_name}</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
-            {user.email !== pr.requested_by && (
+            {!isOwnEmail(user, pr.requested_by) && (
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'right' }}>
                 <div>Requested by</div>
                 <div style={{ color: 'var(--ink)', fontWeight: 600 }}>{getDisplayName(pr.requested_by)}</div>

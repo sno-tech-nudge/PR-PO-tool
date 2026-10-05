@@ -210,7 +210,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
         .from('purchase_requests')
         .select('is_recurring, recurring_frequency')
         .eq('vendor_id', id)
-        .eq('requested_by', user.email)
+        .in('requested_by', user.ownEmails)
         .eq('is_recurring', true)
         .order('created_at', { ascending: false })
         .limit(1)

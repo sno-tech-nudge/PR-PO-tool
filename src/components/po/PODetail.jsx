@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { approvePO, rejectPO, regeneratePOPdf } from '../../lib/prApprovalActions'
-import { canAccessFinance } from '../../lib/auth'
+import { canAccessFinance, isOwnEmail } from '../../lib/auth'
 import { getDisplayName } from '../../lib/directory'
 import { downloadPOBundle } from '../../lib/poBundle'
 import POTemplate from '../pr/POTemplate'
@@ -164,7 +164,7 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
   // a stale link/notification, so enforce it here too. Reported the same as
   // "not found" rather than a distinct "forbidden" message, so it doesn't
   // confirm to an employee that a PO they can't see does exist.
-  if (!po || (user.role === 'employee' && pr && pr.requested_by !== user.email)) {
+  if (!po || (user.role === 'employee' && pr && !isOwnEmail(user, pr.requested_by))) {
     return <div style={{ padding: '60px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>Purchase order not found.</div>
   }
 
@@ -432,7 +432,7 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail }) {
             </div>
             {/* Only the PO's own requester submits an expense against it —
                 not Finance, not anyone else who can merely view this page. */}
-            {pendingAmount > 0 && pr?.requested_by === user.email && (
+            {pendingAmount > 0 && isOwnEmail(user, pr?.requested_by) && (
               <button
                 onClick={() => setShowSubmitExpense(true)}
                 style={{ height: '32px', padding: '0 14px', fontSize: '12px', fontWeight: 600, background: 'var(--action)', color: 'var(--surface-card)', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}

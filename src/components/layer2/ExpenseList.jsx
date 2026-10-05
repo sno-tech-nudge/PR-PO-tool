@@ -11,8 +11,8 @@ export default function ExpenseList({ user, onAddAnother, onCreateReport }) {
       .select('*')
       .order('created_at', { ascending: false })
 
-    if (user?.email) {
-      query = query.eq('user_email', user.email)
+    if (user?.ownEmails?.length) {
+      query = query.in('user_email', user.ownEmails)
     }
 
     query.then(({ data }) => {

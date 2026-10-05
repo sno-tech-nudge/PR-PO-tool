@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { canAccessFinance } from '../../lib/auth'
+import { canAccessFinance, isOwnEmail } from '../../lib/auth'
 import { downloadCSV, posToRows } from '../../lib/exportUtils'
 import { attachPendingBalances } from '../../lib/poBalance'
 import { fetchAllRows } from '../../lib/fetchAllRows'
@@ -87,7 +87,7 @@ export default function POList({ user, onViewPO }) {
         supabase
           .from('purchase_orders')
           .select('*, purchase_requests!inner(*), vendors(*)')
-          .eq('purchase_requests.requested_by', user.email)
+          .in('purchase_requests.requested_by', user.ownEmails)
           .order('generated_at', { ascending: false })
           .range(from, to)
       )
@@ -118,7 +118,7 @@ export default function POList({ user, onViewPO }) {
           supabase
             .from('purchase_orders')
             .select('*, purchase_requests!inner(*), vendors(*)')
-            .eq('purchase_requests.requested_by', user.email)
+            .in('purchase_requests.requested_by', user.ownEmails)
             .order('generated_at', { ascending: false })
             .range(from, to)
         ),
@@ -347,7 +347,7 @@ export default function POList({ user, onViewPO }) {
                         {fmtAmt(po.amount)}
                       </td>
                       <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
-                        {po.status === 'issued' && po.pending > 0 && po.purchase_requests?.requested_by === user.email ? (
+                        {po.status === 'issued' && po.pending > 0 && isOwnEmail(user, po.purchase_requests?.requested_by) ? (
                           <button
                             onClick={() => setInvoicePO(po)}
                             title="Attach an invoice against this PO's pending balance"

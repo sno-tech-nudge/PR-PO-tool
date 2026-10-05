@@ -94,11 +94,13 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
       'submitted_at, approved_at, approved_by, rejected_at, rejected_by, rejection_reason, created_at'
     )
     if (!isFinance) {
-      q = q.eq('submitted_by', user.email)
+      q = q.in('submitted_by', user.ownEmails)
     } else {
       // Finance sees every submitted vendor, but drafts are private scratch
-      // work — a draft only shows up here if Finance is the one who saved it.
-      q = q.or(`status.neq.draft,and(status.eq.draft,submitted_by.eq.${user.email})`)
+      // work — a draft only shows up here if Finance is the one who saved it
+      // (under either of their linked emails, if they have one).
+      const ownList = user.ownEmails.join(',')
+      q = q.or(`status.neq.draft,and(status.eq.draft,submitted_by.in.(${ownList}))`)
     }
     q = q.order('created_at', { ascending: false })
     const { data } = await q

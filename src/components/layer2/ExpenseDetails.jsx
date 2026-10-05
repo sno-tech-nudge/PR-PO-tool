@@ -215,7 +215,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
       const { data } = await supabase
         .from('expense_details')
         .select('vendor')
-        .eq('user_email', user?.email ?? '')
+        .in('user_email', user?.ownEmails ?? [])
         .not('vendor', 'is', null)
       const unique = [...new Set((data || []).map(r => r.vendor).filter(Boolean))]
       setMerchantOptions(unique)
@@ -237,7 +237,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
         .from('purchase_orders')
         .select('id, po_number, amount, vendors(org_name), purchase_requests!inner(requested_by)')
         .eq('status', 'issued')
-        .eq('purchase_requests.requested_by', user?.email ?? '')
+        .in('purchase_requests.requested_by', user?.ownEmails ?? [])
         .order('created_at', { ascending: false })
         .limit(200)
       setPoOptions(await attachPendingBalances(data || []))
@@ -297,7 +297,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
       const { data } = await supabase
         .from('expense_reports')
         .select('id, report_reference, brand, status')
-        .eq('employee_email', user?.email ?? '')
+        .in('employee_email', user?.ownEmails ?? [])
         .order('created_at', { ascending: false })
       setReportOptions(data || [])
     }
@@ -324,7 +324,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
       .from('expense_details')
       .select('entity, program, donor_name, expense_nature, category')
       .ilike('vendor', vendorName)
-      .eq('user_email', user?.email ?? '')
+      .in('user_email', user?.ownEmails ?? [])
       .not('entity', 'is', null)
       .order('created_at', { ascending: false })
       .limit(1)

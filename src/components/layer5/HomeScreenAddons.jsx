@@ -79,7 +79,10 @@ export default function HomeScreenAddons({
   useEffect(() => { load() }, [user?.email])
 
   async function load() {
-    const email = user?.email
+    // Almost always just [user.email] — broader only for the handful of
+    // people with two linked accounts (see src/lib/auth.js's ownEmails),
+    // so every "my own records" query below picks up both identities.
+    const emails = user?.ownEmails || []
     const role = user?.role
     const canApprove = canAccessApprovals(role) && !isObserver(role)
     const canFinance = canAccessFinance(role)
@@ -112,22 +115,22 @@ export default function HomeScreenAddons({
       supabase.from('expense_details')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'saved')
-        .eq('user_email', email),
+        .in('user_email', emails),
       supabase.from('expense_reports')
         .select('id,report_reference,total_amount,status,created_at,brand')
-        .eq('employee_email', email)
+        .in('employee_email', emails)
         .not('status', 'eq', 'saved')
         .order('created_at', { ascending: false })
         .limit(50),
       supabase.from('purchase_requests')
         .select('id, pr_number, amount, vendors(org_name)')
-        .eq('requested_by', email)
+        .in('requested_by', emails)
         .eq('status', 'draft')
         .order('created_at', { ascending: false })
         .limit(5),
       supabase.from('vendors')
         .select('id, org_name, vendor_id')
-        .eq('submitted_by', email)
+        .in('submitted_by', emails)
         .eq('status', 'draft')
         .order('created_at', { ascending: false })
         .limit(5),
@@ -145,7 +148,7 @@ export default function HomeScreenAddons({
       isEmployee
         ? supabase.from('purchase_requests')
             .select('id, pr_number, amount, status, created_at')
-            .eq('requested_by', email)
+            .in('requested_by', emails)
             .not('status', 'eq', 'draft')
             .order('created_at', { ascending: false })
             .limit(50)
@@ -153,7 +156,7 @@ export default function HomeScreenAddons({
       isEmployee
         ? supabase.from('vendors')
             .select('id, org_name, vendor_id, status, created_at')
-            .eq('submitted_by', email)
+            .in('submitted_by', emails)
             .not('status', 'eq', 'draft')
             .order('created_at', { ascending: false })
             .limit(3)
@@ -170,23 +173,23 @@ export default function HomeScreenAddons({
             .limit(3)
         : Promise.resolve({ data: [] }),
       showPersonalMini
-        ? supabase.from('purchase_requests').select('id', { count: 'exact', head: true }).eq('requested_by', email).not('status', 'eq', 'draft')
+        ? supabase.from('purchase_requests').select('id', { count: 'exact', head: true }).in('requested_by', emails).not('status', 'eq', 'draft')
         : Promise.resolve({ count: 0 }),
       showPersonalMini
-        ? supabase.from('vendors').select('id', { count: 'exact', head: true }).eq('submitted_by', email).not('status', 'eq', 'draft')
+        ? supabase.from('vendors').select('id', { count: 'exact', head: true }).in('submitted_by', emails).not('status', 'eq', 'draft')
         : Promise.resolve({ count: 0 }),
       showPersonalMini
-        ? supabase.from('expense_reports').select('id', { count: 'exact', head: true }).eq('employee_email', email).not('status', 'eq', 'saved')
+        ? supabase.from('expense_reports').select('id', { count: 'exact', head: true }).in('employee_email', emails).not('status', 'eq', 'saved')
         : Promise.resolve({ count: 0 }),
       role === 'fl'
-        ? supabase.from('pr_approvals').select('status, created_at, actioned_at').eq('approver_email', email).in('status', ['approved', 'rejected'])
+        ? supabase.from('pr_approvals').select('status, created_at, actioned_at').in('approver_email', emails).in('status', ['approved', 'rejected'])
         : Promise.resolve({ data: [] }),
       role === 'fl'
-        ? supabase.from('report_approvals').select('status, created_at, actioned_at').eq('approver_email', email).in('status', ['approved', 'rejected'])
+        ? supabase.from('report_approvals').select('status, created_at, actioned_at').in('approver_email', emails).in('status', ['approved', 'rejected'])
         : Promise.resolve({ data: [] }),
       // Report amounts for the "In Pipeline" total.
       isEmployee
-        ? supabase.from('expense_reports').select('total_amount, status').eq('employee_email', email).in('status', REPORT_PIPELINE_STATUSES)
+        ? supabase.from('expense_reports').select('total_amount, status').in('employee_email', emails).in('status', REPORT_PIPELINE_STATUSES)
         : Promise.resolve({ data: [] }),
     ])
 

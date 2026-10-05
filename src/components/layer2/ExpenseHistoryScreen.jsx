@@ -89,9 +89,9 @@ export default function ExpenseHistoryScreen({ user, onViewReport, onBack }) {
       .order('created_at', { ascending: false })
       .limit(100)
 
-    if (user?.email) {
-      expsQuery = expsQuery.eq('user_email', user.email)
-      repsQuery = repsQuery.eq('employee_email', user.email)
+    if (user?.ownEmails?.length) {
+      expsQuery = expsQuery.in('user_email', user.ownEmails)
+      repsQuery = repsQuery.in('employee_email', user.ownEmails)
     }
 
     const [{ data: exps }, { data: reps }] = await Promise.all([expsQuery, repsQuery])

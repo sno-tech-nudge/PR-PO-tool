@@ -41,7 +41,7 @@ export default function AdvanceList({ user, onCreateAdvance }) {
   async function load() {
     setLoading(true)
     let q = supabase.from('advances').select('*')
-    if (!isFinance) q = q.eq('requested_by', user.email)
+    if (!isFinance) q = q.in('requested_by', user.ownEmails)
     q = q.order('created_at', { ascending: false })
     const { data } = await q
     setAdvances(data || [])

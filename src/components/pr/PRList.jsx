@@ -33,7 +33,7 @@ export default function PRList({ user, onViewPR, onCreatePR, onResumeDraft }) {
     const { data } = await supabase
       .from('purchase_requests')
       .select('id, pr_number, amount, category, entity, purpose, status, submitted_at, created_at, requested_by, rejection_reason, source, vendors(org_name)')
-      .eq('requested_by', user.email)
+      .in('requested_by', user.ownEmails)
       .order('created_at', { ascending: false })
     setPRs(data || [])
     setLoading(false)

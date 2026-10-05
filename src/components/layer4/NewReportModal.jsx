@@ -41,7 +41,7 @@ export default function NewReportModal({ user, onCreated, onClose }) {
     supabase.from('purchase_orders')
       .select('id, po_number, amount, vendors(org_name), purchase_requests!inner(requested_by)')
       .eq('status', 'issued')
-      .eq('purchase_requests.requested_by', user?.email ?? '')
+      .in('purchase_requests.requested_by', user?.ownEmails ?? [])
       .order('created_at', { ascending: false }).limit(200)
       .then(async ({ data }) => setPoOptions(await attachPendingBalances(data || [])))
   }, [poRelated, poOptions.length, user?.email])
@@ -52,7 +52,7 @@ export default function NewReportModal({ user, onCreated, onClose }) {
     // advance already linked to any report (draft or submitted) drops out.
     Promise.all([
       supabase.from('advances').select('id, amount, description, expected_usage_date')
-        .eq('requested_by', user?.email ?? '').eq('status', 'recorded')
+        .in('requested_by', user?.ownEmails ?? []).eq('status', 'recorded')
         .order('created_at', { ascending: false }),
       supabase.from('expense_reports').select('advance_id').not('advance_id', 'is', null),
     ]).then(([{ data: advances }, { data: linked }]) => {

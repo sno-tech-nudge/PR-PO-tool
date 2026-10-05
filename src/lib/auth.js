@@ -25,6 +25,13 @@ export function getRoleLabel(role) {
 }
 
 function buildUser(row) {
+  // Almost always just [their own email] — only non-trivial for the
+  // handful of people who have two separate logins for the same real human
+  // (e.g. a thenudge.org account and a thedelta.org.in account) and have
+  // been explicitly linked via team_members.linked_email. Use this (not
+  // .email) for anything that decides "is this my own record" — see
+  // isOwnEmail below.
+  const ownEmails = [row.email, row.linked_email].filter(Boolean).map(e => e.toLowerCase())
   return {
     id:                  row.email,
     email:               row.email,
@@ -33,6 +40,7 @@ function buildUser(row) {
     roleLabel:           getRoleLabel(row.role),
     can_approve_vendors: !!row.can_approve_vendors,
     function:            row.function || null,
+    ownEmails,
   }
 }
 
@@ -41,10 +49,18 @@ async function lookupMember(email) {
   if (!normalized) return null
   const { data } = await supabase
     .from('team_members')
-    .select('name, email, role, can_approve_vendors, function')
+    .select('name, email, role, can_approve_vendors, function, linked_email')
     .ilike('email', normalized)
     .maybeSingle()
   return data || null
+}
+
+// Centralizes "does this email belong to the current user" — covers the
+// (usual) single-identity case and the linked-account case identically, so
+// every ownership check in the app uses the same rule instead of each
+// reimplementing `=== user.email`.
+export function isOwnEmail(user, email) {
+  return !!email && (user?.ownEmails || []).includes(String(email).toLowerCase())
 }
 
 export async function signIn(email) {
