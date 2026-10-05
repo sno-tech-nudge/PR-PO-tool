@@ -263,6 +263,7 @@ export default function SettingsView({ user }) {
           <div style={{ fontSize: '13px', color: 'var(--text-muted)', padding: '40px 0', textAlign: 'center' }}>No team members match your search.</div>
         ) : (
           <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
+            <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: 'var(--taupe-50)', borderBottom: '1px solid var(--taupe-200)' }}>
@@ -340,6 +341,7 @@ export default function SettingsView({ user }) {
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>

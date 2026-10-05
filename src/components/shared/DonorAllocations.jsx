@@ -1,5 +1,6 @@
 import { ENTITIES, getPrograms, getSubprograms, getDonors, validateAllocations } from '../../lib/donorData'
 import PercentInput from './PercentInput'
+import InfoTip from './InfoTip'
 
 // Multi-donor allocation editor. Each row splits the spend across a
 // entity → programme → sub-programme → donor with a percentage.
@@ -125,7 +126,10 @@ export default function DonorAllocations({ value = [], onChange, error, lockEnti
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Allocation</span>
+                <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
+                  Allocation
+                  <InfoTip text="What % of this purchase's total cost comes from this donor/programme — all rows must add up to 100%." />
+                </span>
                 <PercentInput
                   value={row.percent}
                   onChange={v => update(idx, { percent: v })}

@@ -52,6 +52,8 @@ export default function POList({ user, onViewPO }) {
   const [loading, setLoading] = useState(true)
   const [tab, setTab]     = useState('all')
   const [search, setSearch] = useState('')
+  const [sortBy, setSortBy] = useState('date')
+  const [sortOpen, setSortOpen] = useState(false)
   const [showExportModal, setShowExportModal] = useState(false)
   const [invoicePO, setInvoicePO] = useState(null)
   const [statusPO, setStatusPO] = useState(null)
@@ -159,12 +161,24 @@ export default function POList({ user, onViewPO }) {
     return true
   })
 
+  // Default keeps today's order (newest raised first); "pending" surfaces
+  // the POs with the most money still outstanding — the ones someone's
+  // most likely still waiting to be paid against — first. Only 'issued' POs
+  // actually have a real upcoming payment (matches the Pending column's own
+  // display rule below, which shows '—' for every other status) — without
+  // this, a rejected/cancelled PO's leftover (never-to-be-paid) balance
+  // could outrank a real pending payment on an issued PO.
+  const pendingWeight = p => p.status === 'issued' ? (Number(p.pending) || 0) : -1
+  const sorted = sortBy === 'pending'
+    ? [...filtered].sort((a, b) => pendingWeight(b) - pendingWeight(a))
+    : filtered
+
   const tabCount = (key) => key === 'all' ? pos.length : pos.filter(p => p.status === key).length
 
   function handleExport(fieldKeys) {
     saveExportFields(fieldKeys)
     setShowExportModal(false)
-    const rows = posToRows(filtered, fieldKeys)
+    const rows = posToRows(sorted, fieldKeys)
     const date = new Date().toISOString().slice(0, 10)
     downloadCSV(rows, `nudge-purchase-orders-${tab}-${date}.csv`)
   }
@@ -217,8 +231,8 @@ export default function POList({ user, onViewPO }) {
         ))}
       </div>
 
-      {/* Search */}
-      <div style={{ marginBottom: '16px' }}>
+      {/* Search + sort — kept inline and compact, not a separate filter panel */}
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
         <input
           type="text"
           placeholder="Search by PO number, vendor, entity…"
@@ -230,12 +244,59 @@ export default function POList({ user, onViewPO }) {
             outline: 'none', boxSizing: 'border-box', color: 'var(--ink)',
           }}
         />
+        <div style={{ position: 'relative' }}>
+          <button
+            onClick={() => setSortOpen(o => !o)}
+            title="Sort"
+            aria-label="Sort"
+            style={{
+              width: '34px', height: '34px', flexShrink: 0, padding: 0,
+              border: `1px solid ${sortBy !== 'date' ? 'var(--action)' : 'var(--taupe-200)'}`,
+              borderRadius: 'var(--radius-md)', background: 'var(--surface-card)',
+              color: sortBy !== 'date' ? 'var(--action)' : 'var(--ink)',
+              fontSize: '15px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              // Sits above the backdrop below once open — without this the
+              // backdrop (z-index 90, fixed inset:0) exactly overlaps this
+              // button's own screen position and a second click meant to
+              // close the popover can land ambiguously and fail (same bug
+              // fixed in InfoTip.jsx).
+              position: 'relative', zIndex: 95,
+            }}
+          >
+            ⇅
+          </button>
+
+          {sortOpen && (
+            <>
+              <div onClick={() => setSortOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 90 }} />
+              <div style={{
+                position: 'absolute', top: '40px', left: 0, zIndex: 100,
+                background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)',
+                boxShadow: '0 4px 16px rgba(54, 32, 26,0.12)', width: '220px', padding: '6px',
+              }}>
+                {[['date', 'Newest first'], ['pending', 'Pending amount (highest)']].map(([key, label]) => (
+                  <div
+                    key={key}
+                    onClick={() => { setSortBy(key); setSortOpen(false) }}
+                    style={{
+                      padding: '8px 10px', fontSize: '13px', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
+                      color: sortBy === key ? 'var(--action)' : 'var(--ink)', fontWeight: sortBy === key ? 600 : 400,
+                      background: sortBy === key ? 'var(--action-bg)' : 'transparent',
+                    }}
+                  >
+                    {sortBy === key ? '✓ ' : ''}{label}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Table */}
       {loading ? (
         <div style={{ padding: '60px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>Loading…</div>
-      ) : filtered.length === 0 ? (
+      ) : sorted.length === 0 ? (
         <div style={{ padding: '60px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>
           {search ? 'No purchase orders match your search.' : 'No purchase orders yet.'}
         </div>
@@ -258,13 +319,13 @@ export default function POList({ user, onViewPO }) {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((po, i) => {
+                {sorted.map((po, i) => {
                   const st = STATUS[po.status] || STATUS.issued
                   return (
                     <tr
                       key={po.id}
                       style={{
-                        borderBottom: i < filtered.length - 1 ? '1px solid var(--taupe-100)' : 'none',
+                        borderBottom: i < sorted.length - 1 ? '1px solid var(--taupe-100)' : 'none',
                         background: 'var(--surface-card)',
                       }}
                     >

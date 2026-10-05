@@ -26,6 +26,11 @@ export default function VendorColumnPicker({ allColumns, visibleKeys, onChange }
         style={{
           height: '34px', padding: '0 14px', background: 'var(--surface-card)', color: 'var(--ink)',
           border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 500, cursor: 'pointer',
+          // Sits above the backdrop below once open — without this the
+          // backdrop (z-index 90, fixed inset:0) exactly overlaps this
+          // button's own screen position and a second click meant to close
+          // the popover can land ambiguously and fail (same bug as InfoTip.jsx).
+          position: 'relative', zIndex: 95,
         }}
       >
         Columns ▾

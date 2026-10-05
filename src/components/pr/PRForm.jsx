@@ -624,7 +624,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
             error={liveErrors.allocations}
             required
             hint="Split this spend across donors / programmes — must total 100%"
-            info="Allocation is which donor/programme budget this purchase's cost gets charged against — the percentage says how much of the total comes from each one. Most purchases only need one row, at 100%. Add another row only if this specific purchase's cost is genuinely being split across more than one donor or programme — for example, half funded by one grant and half by another. If in doubt, one row at 100% is almost always right."
+            info="Which donor/programme budget this purchase is charged against. Most purchases only need one row at 100% — add another only if the cost is genuinely split across donors."
           >
             <DonorAllocations value={allocations} onChange={setAllocations} error={liveErrors.allocations} />
           </Field>

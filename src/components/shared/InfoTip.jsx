@@ -38,6 +38,12 @@ export default function InfoTip({ text, side = 'top' }) {
           color: open ? 'var(--surface-card)' : 'var(--action)',
           fontSize: '10px', fontWeight: 700, lineHeight: 1, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+          // Sits ABOVE the full-screen backdrop below (z-index 90) once open —
+          // without this, the backdrop exactly overlaps the icon's own screen
+          // position and a second click meant to re-toggle the button lands
+          // ambiguously between the two overlapping elements and can fail to
+          // close the popover at all.
+          position: 'relative', zIndex: 95,
         }}
       >
         i
