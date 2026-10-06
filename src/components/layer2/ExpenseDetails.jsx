@@ -7,6 +7,7 @@ import { attachPendingBalances, poOptionLabel } from '../../lib/poBalance'
 import { GSTIN_FORMAT_RE } from '../../lib/formCalc'
 import { toInputDate, fromInputDate } from '../../lib/dateFormat'
 import { insertExpenseDetails } from '../../lib/expenseDetailsSave'
+import { PAYMENT_MODES, CARD_NUMBERS, toPaymentMode } from '../../lib/paymentModes'
 import AmountInput from '../shared/AmountInput'
 import InfoTip from '../shared/InfoTip'
 import VoiceInputButton from '../shared/VoiceInputButton'
@@ -20,22 +21,6 @@ const CATEGORIES = [
   'Furniture and Fixtures', 'Housekeeping', 'Leasehold Improvements',
   'Medicine', 'Relocation Allowance', 'Repairs and Maintenance',
   'Subscription / Software', 'Learning and Development', 'Other',
-]
-
-const PAYMENT_MODES = ['Self - Cash/Card', 'Self - UPI', 'Company Card', 'Advance Adjustment']
-
-// Card numbers a Company Card payment can be attributed to.
-const CARD_NUMBERS = [
-  'XXXX-XXXX-XXXX-3800',
-  'XXXX-XXXX-XXXX-3750',
-  'XXXX-XXXX-XXXX-3768',
-  'XXXX-XXXX-XXXX-3735',
-  'XXXX-XXXX-XXXX-3826',
-  'XXXX-XXXX-XXXX-3776',
-  'XXXX-XXXX-XXXX-3784',
-  'XXXX-XXXX-XXXX-3818',
-  'XXXX-XXXX-XXXX-3743',
-  'XXXX-XXXX-XXXX-3792',
 ]
 
 // Searchable multi-select for expense attendees — matches against the org
@@ -164,7 +149,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
   const [gstinTouched, setGstinTouched] = useState(false)
   const [note, setNote] = useState(existingExpense?.description ?? '')
   const [reimbursable, setReimbursable] = useState(existingExpense?.reimbursable ?? true)
-  const [paymentMode, setPaymentMode] = useState(existingExpense?.payment_method || layer1Data?.payment_method || PAYMENT_MODES[0])
+  const [paymentMode, setPaymentMode] = useState(existingExpense?.payment_method || toPaymentMode(layer1Data?.payment_method) || PAYMENT_MODES[0])
   const isCompanyCard = paymentMode === 'Company Card'
   const [suggestedCategory, setSuggestedCategory] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -212,7 +197,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
   const [donorName, setDonorName] = useState(existingExpense?.donor_name || '')
   const [subCategory, setSubCategory] = useState(existingExpense?.sub_category || '')
   const [poPdfLink, setPoPdfLink] = useState(existingExpense?.po_pdf_link || '')
-  const [cardNo, setCardNo] = useState(existingExpense?.card_no || '')
+  const [cardNo, setCardNo] = useState(existingExpense?.card_no || layer1Data?.card_no || '')
   const [paidTo, setPaidTo] = useState(existingExpense?.paid_to || '')
   const [vrPdfLink, setVrPdfLink] = useState(existingExpense?.vr_pdf_link || '')
   const [referenceNumber, setReferenceNumber] = useState(existingExpense?.reference_number || '')

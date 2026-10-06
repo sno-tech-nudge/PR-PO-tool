@@ -18,6 +18,7 @@ import ExpenseDetails from './components/layer2/ExpenseDetails'
 import ExpenseSelector from './components/layer4/ExpenseSelector'
 import ReportPreview from './components/layer4/ReportPreview'
 import ReportWorkspace from './components/layer4/ReportWorkspace'
+import { logActivity } from './lib/activityLog'
 import NewReportModal from './components/layer4/NewReportModal'
 import SubmissionConfirmation from './components/layer5/SubmissionConfirmation'
 import ReportStatus from './components/layer5/ReportStatus'
@@ -228,6 +229,9 @@ export default function App() {
       duration_end: meta?.duration_end || null,
       po_related: meta?.po_related ?? null,
       linked_po_id: meta?.po_related ? meta?.po_id : null,
+      status: meta?.status || null,
+      rejection_reason: meta?.rejection_reason || null,
+      rejected_at: meta?.rejected_at || null,
     })
     setLayer4Screen('preview')
   }
@@ -249,8 +253,43 @@ export default function App() {
       await enterReportWorkspace(reportRow)
       return
     }
+    // Your own returned report opens straight into the editor, with the
+    // reason shown at the top — nothing to hunt for, nothing to restart.
+    const mine = (user?.ownEmails || [user?.email]).map(e => String(e || '').toLowerCase())
+    if (reportRow?.status === 'rejected' && mine.includes(String(reportRow.employee_email || '').toLowerCase())) {
+      await reopenRejectedReport(reportRow)
+      return
+    }
     setCurrentReportId(id)
     setAppScreen('status')
+  }
+
+  // A returned (rejected) report goes back to draft with its rejection reason
+  // kept, and opens in the report workspace with its own expenses loaded.
+  // Its old approval records are cleared when it is resubmitted.
+  async function reopenRejectedReport(reportRow) {
+    await supabase.from('expense_reports').update({ status: 'draft' }).eq('id', reportRow.id).eq('status', 'rejected')
+    const { data: links } = await supabase.from('report_expenses').select('expense_id').eq('report_id', reportRow.id)
+    const ids = (links || []).map(l => l.expense_id)
+    let exps = []
+    if (ids.length) {
+      // Rejection already frees these back to 'saved'; older rejections may
+      // still show 'reported', so make sure either way.
+      await supabase.from('expense_details').update({ status: 'saved', report_id: reportRow.id }).in('id', ids)
+      const { data } = await supabase.from('expense_details').select('*').in('id', ids)
+      exps = data || []
+    }
+    logActivity({ entityType: 'report', entityId: reportRow.id, entityRef: reportRow.report_reference, action: 'reopened_for_edit', fromValue: 'rejected', toValue: 'draft', actor: user })
+    setNewReportMeta({ ...reportRow, status: 'draft', _durationConfirmed: true })
+    setLayer4Expenses([]); setLayer4Results([])
+    setSelectedExpenses(exps); setSelectedResults([])
+    setLayer4Screen(exps.length ? 'workspace' : 'selector')
+    setAppScreen('layer4')
+  }
+
+  async function handleEditRejected(id) {
+    const { data: reportRow } = await supabase.from('expense_reports').select('*').eq('id', id).single()
+    if (reportRow) await reopenRejectedReport(reportRow)
   }
 
   function handleNewReport() { setShowNewReportModal(true) }
@@ -717,6 +756,7 @@ export default function App() {
             user={user}
             onBack={() => setAppScreen('list')}
             onStartNew={handleAddAnother}
+            onEditRejected={handleEditRejected}
             onViewPO={(id) => { setAppScreen('po-list'); openPODetail(id) }}
           />
         )}

@@ -1,5 +1,6 @@
 import { callGemini } from './gemini.js'
 import { callGroq } from './groq.js'
+import { GSTIN_FORMAT_RE } from './formCalc.js'
 
 export async function checkDocumentQuality(base64Image) {
   return await callGemini(base64Image,
@@ -8,7 +9,7 @@ export async function checkDocumentQuality(base64Image) {
 }
 
 export async function extractReceiptData(base64Image) {
-  return await callGemini(base64Image,
+  return tidyReceiptData(await callGemini(base64Image,
     `You are an expert at reading Indian expense receipts, tax invoices, hotel bills, restaurant bills, travel tickets, UPI screenshots, and handwritten bills. Extract all fields accurately.
 
 --- AMOUNT (most important) ---
@@ -69,10 +70,36 @@ A 15-character GST Identification Number. Pattern: 2 digits + 5 uppercase letter
 Example: 19AABCP9484D1Z3, 27AAPFU0939F1ZV, 06AADCM5146R1ZZ
 Look near: GSTIN, GSTN, GST No, GST Reg No, Tax ID
 
+--- PAYMENT MODE ---
+How the bill was paid, ONLY if the receipt states it (look near: Paid By, Payment Mode, Mode of Payment, Tender, Settled by, or a card/UPI/cash line).
+Return exactly one of: "cash", "card" (credit or debit card, POS slip), "upi" (UPI, GPay, PhonePe, Paytm, BHIM), "online" (net banking, wallet, prepaid, "paid online").
+If the receipt does not say, return null. NEVER infer it from the type of business.
+
+--- CARD LAST 4 ---
+If paid by card and the last 4 digits are printed (e.g. XXXX1234, ****1234, "card ending 1234"), return just those 4 digits as a string. Otherwise null.
+
 Reply with raw JSON only — no markdown, no backticks, no explanation:
-{"amount":number,"vendor":string,"date":string,"category":string,"invoice_number":string,"gstin":string}
+{"amount":number,"vendor":string,"date":string,"category":string,"invoice_number":string,"gstin":string,"payment_mode":string,"card_last4":string}
 Use null for any field genuinely not visible. Do not guess.`
-  )
+  ))
+}
+
+// Cleans what the model returned so only usable values reach the form: a
+// GSTIN that isn't a valid 15-character GSTIN, a card number that isn't four
+// digits, or a payment mode outside the known set is dropped rather than
+// pre-filled wrongly.
+function tidyReceiptData(data) {
+  if (!data || typeof data !== 'object') return data
+  const out = { ...data }
+  const gstin = typeof out.gstin === 'string' ? out.gstin.toUpperCase().replace(/\s+/g, '') : null
+  out.gstin = gstin && GSTIN_FORMAT_RE.test(gstin) ? gstin : null
+  const inv = typeof out.invoice_number === 'string' ? out.invoice_number.trim() : null
+  out.invoice_number = inv || null
+  const mode = typeof out.payment_mode === 'string' ? out.payment_mode.trim().toLowerCase() : null
+  out.payment_mode = ['cash', 'card', 'upi', 'online'].includes(mode) ? mode : null
+  const last4 = out.card_last4 != null ? String(out.card_last4).replace(/\D/g, '') : ''
+  out.card_last4 = last4.length === 4 ? last4 : null
+  return out
 }
 
 export async function detectUPI(base64Image) {

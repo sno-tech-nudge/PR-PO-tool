@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { extractReceiptData } from '../../lib/claude'
 import { imageFileToJpegBase64, pdfPageToBase64 } from '../../lib/receiptImage'
+import { paymentFromReceipt } from '../../lib/paymentModes'
 
 // "Quick Add" home-screen dropzone — drop or pick a receipt, it gets OCR'd
 // and uploaded immediately, then hands straight to ExpenseDetails prefilled.
@@ -63,8 +64,8 @@ export default function QuickAddDropzone({ onReady, multiple = false }) {
         category: extracted?.category ?? null,
         invoice_number: extracted?.invoice_number ?? null,
         gstin: extracted?.gstin ?? null,
-        payment_method: null,
-        is_upi: false,
+        ...paymentFromReceipt(extracted),
+        is_upi: extracted?.payment_mode === 'upi',
         single_document: false,
         capture_id: captureRow?.id ?? null,
       })

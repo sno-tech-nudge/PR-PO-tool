@@ -31,7 +31,7 @@ function ActivityItem({ text, timestamp }) {
   )
 }
 
-export default function ReportStatus({ reportId, onBack, onStartNew, onViewPO }) {
+export default function ReportStatus({ reportId, onBack, onEditRejected, onViewPO }) {
   const [report, setReport] = useState(null)
   const [expenses, setExpenses] = useState([])
   const [approvals, setApprovals] = useState([])
@@ -264,7 +264,7 @@ export default function ReportStatus({ reportId, onBack, onStartNew, onViewPO })
       {isRejected && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
           <button
-            onClick={onStartNew}
+            onClick={() => onEditRejected?.(reportId)}
             style={{
               width: '100%', height: '48px', background: 'var(--action)', color: 'var(--surface-card)',
               border: 'none', fontSize: '14px', fontWeight: 500,

@@ -5,6 +5,7 @@ import { isExpenseComplete } from '../../lib/expenseDetailsSave'
 import ExpenseDetails from '../layer2/ExpenseDetails'
 import VoiceInputButton from '../shared/VoiceInputButton'
 import { useIsMobile } from '../../hooks/useIsMobile'
+import RejectionBanner from './RejectionBanner'
 
 const isPdf = path => /\.pdf($|\?)/i.test(path || '')
 
@@ -215,6 +216,8 @@ export default function ReportWorkspace({ reportMeta, expenses: initialRows, use
         </div>
       </div>
 
+      <RejectionBanner report={reportMeta} />
+
       <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start', flexDirection: isMobile ? 'column' : 'row' }}>
         {/* Left — every receipt together */}
         {!isMobile && receiptsPanel}
@@ -263,8 +266,8 @@ export default function ReportWorkspace({ reportMeta, expenses: initialRows, use
           </div>
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
             {incomplete.length > 0
-              ? `${incomplete.length} still need${incomplete.length === 1 ? 's' : ''} details. Open each one and fill in the fields marked *. Everything saves automatically.`
-              : 'All expenses are ready. You can still open any of them to check or edit.'}
+              ? `${incomplete.length} still need${incomplete.length === 1 ? 's' : ''} details. Open each one and fill in the fields marked *. Anything read from your receipt is pre-filled, so check it against the receipt. Everything saves automatically.`
+              : 'All expenses are ready. Anything read from your receipts is pre-filled, so open one to check it against the receipt.'}
           </div>
 
           <div data-tour-anchor="er-forms">

@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { toPaymentMode } from './paymentModes'
 
 // Shared by ExpenseDetails.jsx's full-form save and the capture flow's
 // "Save expense, finish details later" quick-save — one insert envelope so
@@ -26,7 +27,7 @@ export function buildQuickSaveExpensePayload(data) {
     category: data?.category ?? null,
     invoice_number: data?.invoice_number ?? null,
     gstin: data?.gstin ?? null,
-    payment_method: data?.payment_method ?? null,
+    payment_method: toPaymentMode(data?.payment_method),
     report_id: null,
     entity: null,
     program: null,
@@ -38,7 +39,7 @@ export function buildQuickSaveExpensePayload(data) {
     paid_to: null,
     vr_pdf_link: null,
     reference_number: null,
-    card_no: null,
+    card_no: data?.card_no ?? null,
     expense_type: null,
     attendee_count: null,
     per_person_amount: null,

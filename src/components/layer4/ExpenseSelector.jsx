@@ -7,6 +7,7 @@ import { useIsMobile } from '../../hooks/useIsMobile'
 import { useFormTour } from '../../hooks/useFormTour'
 import GuidedTour, { TourButton } from '../shared/GuidedTour'
 import { REPORT_TOUR } from '../../lib/tours'
+import RejectionBanner from './RejectionBanner'
 
 export default function ExpenseSelector({ expenses: initialExpenses, results: initialResults, user, reportMeta, onPreview, onBack, standalone, onRaiseReport }) {
   const isMobile = useIsMobile()
@@ -339,6 +340,7 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
       {/* Report workspace header — this draft report's own page */}
       {reportMeta && (
         <div style={{ padding: '20px 20px 0' }}>
+          <RejectionBanner report={reportMeta} />
           <div style={{ border: '1px solid var(--taupe-200)', overflow: 'hidden' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', borderBottom: '1px solid var(--taupe-200)' }}>
               <span style={{ fontSize: '13px', fontFamily: 'monospace', color: 'var(--text)' }}>{reportMeta.report_reference}</span>

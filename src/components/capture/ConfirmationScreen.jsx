@@ -1,4 +1,5 @@
 import { useNetworkStatus } from '../../hooks/useNetworkStatus'
+import { paymentFromReceipt } from '../../lib/paymentModes'
 
 const PAYMENT_LABELS = {
   upi: 'UPI',
@@ -23,7 +24,9 @@ export default function ConfirmationScreen({ receiptExtracted, paymentData, matc
       category: receiptExtracted?.category ?? null,
       invoice_number: receiptExtracted?.invoice_number ?? null,
       gstin: receiptExtracted?.gstin ?? null,
-      payment_method: paymentData?.paymentType ?? null,
+      // The payment proof decides when there is one; otherwise whatever the
+      // receipt itself says ("Paid by UPI", card last four, ...).
+      ...(paymentData?.paymentType ? { payment_method: paymentData.paymentType } : paymentFromReceipt(receiptExtracted)),
       is_upi: paymentData?.upiData?.is_upi ?? false,
       single_document: singleDocument ?? false,
     }

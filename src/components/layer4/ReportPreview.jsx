@@ -12,6 +12,7 @@ import PDFTemplate from './PDFTemplate'
 import GeneratingPDF from './GeneratingPDF'
 import PolicyViolation from '../layer3/PolicyViolation'
 import PolicyFlag from '../layer3/PolicyFlag'
+import RejectionBanner from './RejectionBanner'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import { logActivity } from '../../lib/activityLog'
 
@@ -257,6 +258,13 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
     }
 
     try {
+      // Resubmitting a returned report: the old approval records (marked
+      // rejected) and expense links would otherwise block a fresh approval
+      // round. The rejection itself stays in the activity log.
+      if (reportId) {
+        await supabase.from('report_approvals').delete().eq('report_id', reportId)
+        await supabase.from('report_expenses').delete().eq('report_id', reportId)
+      }
       const { data: report, error } = reportId
         ? await supabase.from('expense_reports').update(reportPayload).eq('id', reportId).select().single()
         : await supabase.from('expense_reports').insert(reportPayload).select().single()
@@ -358,6 +366,7 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
       </div>
 
       <div style={{ padding: '0 20px' }}>
+        <RejectionBanner report={reportDetails ? { ...reportDetails, id: reportDetails.report_id } : null} />
         <ReportSummaryCard
           reference={reference}
           entity={entity}
@@ -471,7 +480,7 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
                 cursor: submitting || !poSectionValid ? 'default' : 'pointer', borderRadius: 'var(--radius-sm)',
               }}
             >
-              {submitting ? 'Submitting…' : 'Submit for approval'}
+              {submitting ? 'Submitting…' : reportDetails?.rejection_reason ? 'Resubmit for approval' : 'Submit for approval'}
             </button>
           </div>
         </div>
