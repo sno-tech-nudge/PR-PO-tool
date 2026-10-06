@@ -11,7 +11,9 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
   const [selected, setSelected] = useState(new Set())
   const [grouped, setGrouped] = useState(false)
   const [editingExpense, setEditingExpense] = useState(null)
-  const [showAddPanel, setShowAddPanel] = useState(!!reportMeta)
+  // Closed until someone clicks "+ Add expense" — an always-open drop box in
+  // the middle of the page made people unsure whether they had to use it.
+  const [showAddPanel, setShowAddPanel] = useState(false)
   const [newLayer1Data, setNewLayer1Data] = useState(null)
   const [addingNew, setAddingNew] = useState(false)
   const [thumbnails, setThumbnails] = useState({}) // expense id -> signed image url
@@ -344,11 +346,11 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
           {reportMeta ? 'Add expenses to this report' : standalone ? 'My Expenses' : 'Create Report'}
         </div>
         <div style={{ fontSize: '20px', fontWeight: 500, color: 'var(--text)', marginBottom: '8px' }}>
-          {reportMeta ? 'Drag receipts in, or pick from saved expenses' : standalone ? 'Browse and select your saved expenses' : 'Select expenses to include'}
+          {reportMeta ? 'Pick from your saved expenses, or add a new one' : standalone ? 'Browse and select your saved expenses' : 'Select expenses to include'}
         </div>
         <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: '1.5' }}>
           {reportMeta
-            ? 'Each receipt is auto-read and added straight into this report — check the fields it fills in before submitting.'
+            ? "Tick the expenses to include. To add a new one, click + Add expense — drop in a receipt (it's auto-read and added straight into this report) or enter the details manually."
             : standalone
               ? 'Everything you’ve saved but not yet included in a report. Select one or more to raise a report, or just browse.'
               : 'Choose which expenses to include in this report. You can create multiple reports from your saved expenses.'}
@@ -360,12 +362,17 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
           <span onClick={clearAll} style={{ fontSize: '13px', color: 'var(--text-muted)', textDecoration: 'underline', cursor: 'pointer' }}>
             Clear all
           </span>
-          <span
+          <button
+            type="button"
             onClick={() => setShowAddPanel(s => !s)}
-            style={{ fontSize: '13px', color: 'var(--text)', textDecoration: 'underline', cursor: 'pointer', marginLeft: 'auto' }}
+            style={{
+              marginLeft: 'auto', height: '32px', padding: '0 14px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+              borderRadius: 'var(--radius-sm)', border: '1px solid var(--action)',
+              background: showAddPanel ? 'var(--action-bg)' : 'var(--surface-card)', color: 'var(--action)',
+            }}
           >
-            + Add expense
-          </span>
+            {showAddPanel ? '× Close' : '+ Add expense'}
+          </button>
         </div>
 
         {showAddPanel && (
@@ -443,16 +450,20 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
           <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
             {selected.size} selected · ₹{selectedTotal.toLocaleString('en-IN')}
           </div>
-          <div
+          <button
+            type="button"
             onClick={handlePreview}
+            disabled={selected.size === 0}
             style={{
-              fontSize: '14px', fontWeight: 500,
-              color: selected.size > 0 ? 'var(--text)' : 'var(--taupe-200)',
+              height: '44px', padding: '0 24px', border: 'none', borderRadius: 'var(--radius-sm)',
+              fontSize: '14px', fontWeight: 700, whiteSpace: 'nowrap',
+              background: selected.size > 0 ? 'var(--action)' : 'var(--taupe-200)',
+              color: selected.size > 0 ? 'var(--surface-card)' : 'var(--text-muted)',
               cursor: selected.size > 0 ? 'pointer' : 'default',
             }}
           >
             {onPreview ? 'Preview report →' : 'Raise report →'}
-          </div>
+          </button>
         </div>
       </div>
 
