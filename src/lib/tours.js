@@ -30,6 +30,6 @@ export const REPORT_TOUR = [
   { anchor: 'er-list', text: 'These are your saved expenses, including receipts you saved to file later. Tick the ones that belong in this report.' },
   { anchor: 'er-add', text: 'Missing one? Click + Add expense and drop in the receipts. They’re read automatically and added here, ticked.' },
   { anchor: 'er-preview', text: 'Click Continue to report. Next you’ll see all your receipts on the left and the details to fill in on the right.' },
-  { anchor: null, text: 'Fill in the purpose, the duration and any expense marked Needs details. Then go straight to the preview, where any policy flags are shown before you submit.' },
+  { anchor: null, text: 'First confirm the purpose and duration and click Continue. Then fill in any expense marked Needs details, and go straight to the preview, where any policy flags are shown before you submit.' },
   { anchor: null, text: 'After you submit, you’ll see everything you submitted along with the approval timeline. You’ll get a notification at each step.' },
 ]

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { runAllChecks } from '../../lib/policyEngine'
 import { isExpenseComplete } from '../../lib/expenseDetailsSave'
@@ -65,24 +65,20 @@ export default function ReportWorkspace({ reportMeta, expenses: initialRows, use
   const [rows, setRows] = useState(initialRows)
   const [docsByExpense, setDocsByExpense] = useState({}) // id -> [{label,url,path}]
   const [purpose, setPurpose] = useState(reportMeta?.business_purpose || '')
-  const [durStart, setDurStart] = useState(reportMeta?.duration_start || '')
-  const [durEnd, setDurEnd] = useState(reportMeta?.duration_end || '')
+  // Duration comes from the dates read off the receipts (earliest to latest),
+  // and stays blank when no receipt date could be read — the employee then
+  // fills it in themselves. Dates they already confirmed earlier in this same
+  // flow (coming back from the preview) are kept.
+  const derivedDates = initialRows.map(e => toISODate(e.date)).filter(Boolean).sort()
+  const keepSaved = !!reportMeta?._durationConfirmed
+  const [durStart, setDurStart] = useState(keepSaved ? (reportMeta.duration_start || '') : (derivedDates[0] || ''))
+  const [durEnd, setDurEnd] = useState(keepSaved ? (reportMeta.duration_end || '') : (derivedDates[derivedDates.length - 1] || ''))
+  // 'report' = purpose and duration; 'expenses' = the per-expense forms.
+  const [step, setStep] = useState('report')
   const [openId, setOpenId] = useState(() => initialRows.find(e => !isExpenseComplete(e))?.id || null)
   const [showReceipts, setShowReceipts] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
-  const durationPrefilled = useRef(false)
-
-  // Report duration defaults to the span of the chosen expenses' own dates —
-  // editable, and only applied when nothing was entered yet.
-  useEffect(() => {
-    if (durationPrefilled.current || durStart || durEnd) return
-    const dates = rows.map(e => toISODate(e.date)).filter(Boolean).sort()
-    if (!dates.length) return
-    durationPrefilled.current = true
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setDurStart(dates[0]); setDurEnd(dates[dates.length - 1])
-  }, [rows, durStart, durEnd])
 
   // One batched lookup for every receipt and payment proof.
   useEffect(() => {
@@ -135,6 +131,7 @@ export default function ReportWorkspace({ reportMeta, expenses: initialRows, use
   const incomplete = rows.filter(e => !isExpenseComplete(e))
   const total = rows.reduce((s, e) => s + (Number(e.amount) || 0), 0)
   const detailsMissing = !durStart || !durEnd
+  const canContinue = !detailsMissing
   const canPreview = incomplete.length === 0 && !detailsMissing && !busy
 
   async function handlePreview() {
@@ -148,7 +145,7 @@ export default function ReportWorkspace({ reportMeta, expenses: initialRows, use
     const results = await Promise.all(rows.map(exp => runAllChecks(exp, rows)))
       .catch(() => rows.map(() => ({ violations: [], flags: [] })))
     setBusy(false)
-    onPreview(rows, results, { ...reportMeta, business_purpose: purpose || null, duration_start: durStart, duration_end: durEnd })
+    onPreview(rows, results, { ...reportMeta, business_purpose: purpose || null, duration_start: durStart, duration_end: durEnd, _durationConfirmed: true })
   }
 
   const inputStyle = {
@@ -178,7 +175,7 @@ export default function ReportWorkspace({ reportMeta, expenses: initialRows, use
   return (
     <div style={{ maxWidth: '1180px', margin: '0 auto', padding: '20px 20px 120px', width: '100%', boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-        <div onClick={onBack} style={{ fontSize: '13px', color: 'var(--text-muted)', cursor: 'pointer', textDecoration: 'underline' }}>← Back</div>
+        <div onClick={() => (step === 'expenses' ? setStep('report') : onBack())} style={{ fontSize: '13px', color: 'var(--text-muted)', cursor: 'pointer', textDecoration: 'underline' }}>← Back</div>
         <div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Expense Report</div>
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{reportMeta?.report_reference}</div>
@@ -191,6 +188,7 @@ export default function ReportWorkspace({ reportMeta, expenses: initialRows, use
 
         {/* Right — the form */}
         <div style={{ flex: isMobile ? '1 1 auto' : '0 1 520px', minWidth: 0, width: isMobile ? '100%' : undefined }}>
+          {step === 'report' && (
           <div data-tour-anchor="er-details" style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '16px', marginBottom: '20px', background: 'var(--surface-card)' }}>
             <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)', marginBottom: '14px' }}>Report details</div>
             <div style={{ marginBottom: '14px' }}>
@@ -218,10 +216,15 @@ export default function ReportWorkspace({ reportMeta, expenses: initialRows, use
                 <input type="date" value={durStart} onChange={e => setDurStart(e.target.value)} style={inputStyle} />
                 <input type="date" value={durEnd} onChange={e => setDurEnd(e.target.value)} style={inputStyle} />
               </div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Filled in from your expense dates. Change it if the report covers a different period.</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>{durStart && durEnd && derivedDates.length
+                ? 'Taken from the dates on your receipts. Change it if the report covers a different period.'
+                : 'Enter the period this report covers.'}</div>
             </div>
           </div>
+          )}
 
+          {step === 'expenses' && (
+          <>
           <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>
             Expenses ({rows.length})
           </div>
@@ -264,6 +267,9 @@ export default function ReportWorkspace({ reportMeta, expenses: initialRows, use
             })}
           </div>
 
+          </>
+          )}
+
           {isMobile && (
             <div style={{ marginTop: '16px' }}>
               <div onClick={() => setShowReceipts(s => !s)} style={{ fontSize: '13px', color: 'var(--action)', textDecoration: 'underline', cursor: 'pointer', marginBottom: '10px' }}>
@@ -282,29 +288,47 @@ export default function ReportWorkspace({ reportMeta, expenses: initialRows, use
             <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>
               {rows.length} expense{rows.length !== 1 ? 's' : ''} · ₹{total.toLocaleString('en-IN')}
             </div>
-            {(error || incomplete.length > 0 || detailsMissing) && (
+            {step === 'report' && detailsMissing && (
+              <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginTop: '2px' }}>Fill in the report duration to continue.</div>
+            )}
+            {step === 'expenses' && (error || incomplete.length > 0) && (
               <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginTop: '2px' }}>
-                {error || (incomplete.length > 0
-                  ? `${incomplete.length} expense${incomplete.length === 1 ? '' : 's'} still need details.`
-                  : 'Fill in the report duration to continue.')}
+                {error || `${incomplete.length} expense${incomplete.length === 1 ? '' : 's'} still need${incomplete.length === 1 ? 's' : ''} details.`}
               </div>
             )}
           </div>
-          <button
-            type="button"
-            data-tour-anchor="er-preview"
-            onClick={handlePreview}
-            disabled={!canPreview}
-            style={{
-              height: '44px', padding: '0 24px', border: 'none', borderRadius: 'var(--radius-sm)',
-              fontSize: '14px', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0,
-              background: canPreview ? 'var(--action)' : 'var(--taupe-200)',
-              color: canPreview ? 'var(--surface-card)' : 'var(--text-muted)',
-              cursor: canPreview ? 'pointer' : 'default',
-            }}
-          >
-            {busy ? 'Checking…' : 'Preview report →'}
-          </button>
+          {step === 'report' ? (
+            <button
+              type="button"
+              onClick={() => canContinue && setStep('expenses')}
+              disabled={!canContinue}
+              style={{
+                height: '44px', padding: '0 24px', border: 'none', borderRadius: 'var(--radius-sm)',
+                fontSize: '14px', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0,
+                background: canContinue ? 'var(--action)' : 'var(--taupe-200)',
+                color: canContinue ? 'var(--surface-card)' : 'var(--text-muted)',
+                cursor: canContinue ? 'pointer' : 'default',
+              }}
+            >
+              Continue →
+            </button>
+          ) : (
+            <button
+              type="button"
+              data-tour-anchor="er-preview"
+              onClick={handlePreview}
+              disabled={!canPreview}
+              style={{
+                height: '44px', padding: '0 24px', border: 'none', borderRadius: 'var(--radius-sm)',
+                fontSize: '14px', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0,
+                background: canPreview ? 'var(--action)' : 'var(--taupe-200)',
+                color: canPreview ? 'var(--surface-card)' : 'var(--text-muted)',
+                cursor: canPreview ? 'pointer' : 'default',
+              }}
+            >
+              {busy ? 'Checking…' : 'Preview report →'}
+            </button>
+          )}
         </div>
       </div>
     </div>
