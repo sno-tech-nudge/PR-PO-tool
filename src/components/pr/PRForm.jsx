@@ -18,6 +18,9 @@ import StepIndicator from '../shared/StepIndicator'
 import InfoTip from '../shared/InfoTip'
 import VoiceInputButton from '../shared/VoiceInputButton'
 import { logActivity } from '../../lib/activityLog'
+import { useFormTour } from '../../hooks/useFormTour'
+import GuidedTour, { TourButton } from '../shared/GuidedTour'
+import { PR_TOUR } from '../../lib/tours'
 
 const FREQUENCIES = ['One-time', 'Monthly', 'Quarterly', 'Annually']
 
@@ -132,6 +135,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
   const [savingDraft, setSavingDraft] = useState(false)
   const [draftSavedAt, setDraftSavedAt] = useState(null)
   const [saveError, setSaveError] = useState(null)
+  const tour = useFormTour('pr')
   const [showBelowBlock, setShowBelowBlock] = useState(false)
 
   // ── Section 1: Program & Donor Details ──
@@ -604,7 +608,9 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
         <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--ink)', margin: 0 }}>
           {isEdit ? 'Edit Purchase Request' : existingPR?.status === 'draft' ? 'Continue Purchase Request Draft' : 'New Purchase Request'}
         </h2>
+        <TourButton onClick={tour.start} style={{ marginLeft: 'auto' }} />
       </div>
+      <GuidedTour steps={PR_TOUR} open={tour.open} onClose={tour.close} tourKey="pr" />
       {draftSavedAt && (
         <div style={{ fontSize: '11px', color: 'var(--moss-text)', marginBottom: '12px' }}>
           Draft saved ✓ {draftSavedAt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
@@ -625,12 +631,14 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
         }} />
       </div>
 
-      <StepIndicator current={step} total={STEPS.length} labels={STEP_LABELS} />
+      <div data-tour-anchor="pr-steps">
+        <StepIndicator current={step} total={STEPS.length} labels={STEP_LABELS} />
+      </div>
       <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--ink)', marginBottom: '20px' }}>{STEPS[step]}</div>
 
       {/* ── Section 1: Program & Donor Details ── */}
       {step === 0 && (
-        <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '24px' }}>
+        <div data-tour-anchor="pr-allocation" style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '24px' }}>
           <Field
             id="allocations"
             label="Donor / Programme Allocation"

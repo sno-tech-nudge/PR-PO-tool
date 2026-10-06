@@ -2,38 +2,26 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { generateReportReference } from '../../lib/reportReference'
 import { attachPendingBalances, poOptionLabel } from '../../lib/poBalance'
-import StepIndicator from '../shared/StepIndicator'
-import VoiceInputButton from '../shared/VoiceInputButton'
 
 // `fixedPO` ({ id, po_number }) is passed when the report is started straight
 // from a PO's "Submit Expense" flow: the PO answer is already known, so the PO
-// question is skipped entirely (it's asked once up front only when a report
-// is started cold, and once more at the end in the final preview).
+// question is skipped entirely.
+//
+// This popup only asks the two up-front questions (PO / advance, both
+// defaulting to No) and creates the draft report. Everything else about the
+// report (purpose, duration) is filled in on the report workspace itself,
+// after the expenses have been chosen.
 export default function NewReportModal({ user, onCreated, onClose, fixedPO = null }) {
-  // Generated once "Related to a Purchase Order?" is answered (in
-  // handleContinue below), not eagerly on mount — the prefix depends on that
-  // answer, which isn't known yet at mount time.
-  const [reference, setReference] = useState(() => (fixedPO ? generateReportReference(true) : ''))
-  const [businessPurpose, setBusinessPurpose] = useState('')
-  const [durationStart, setDurationStart] = useState('')
-  const [durationEnd, setDurationEnd] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
-  // Step 1 — asked first, before anything else about the report, in its own
-  // popup. Step 2 collects the actual report details (name/purpose/
-  // duration). This answer is carried through as a pre-filled default all
-  // the way to ReportPreview (the final screen), which lets it be changed
-  // there before submitting rather than asking it again from scratch.
-  const [step, setStep] = useState(fixedPO ? 2 : 1)
-  const [poRelated, setPoRelated] = useState(fixedPO ? true : null)
+  const [poRelated, setPoRelated] = useState(!!fixedPO)
   const [poOptions, setPoOptions] = useState([])
   const [selectedPOId, setSelectedPOId] = useState(fixedPO?.id || '')
 
-  // Only ever asked when poRelated === false — an expense can't be linked to
-  // both a PO and an advance, and the PO question is answered first, so the
-  // advance question simply doesn't appear at all once PO is answered Yes.
-  const [advanceRelated, setAdvanceRelated] = useState(null)
+  // Only relevant when poRelated is false — an expense can't be linked to
+  // both a PO and an advance, so the advance question disappears once PO is Yes.
+  const [advanceRelated, setAdvanceRelated] = useState(false)
   const [advanceOptions, setAdvanceOptions] = useState([])
   const [selectedAdvanceId, setSelectedAdvanceId] = useState('')
 
@@ -65,34 +53,13 @@ export default function NewReportModal({ user, onCreated, onClose, fixedPO = nul
     })
   }, [advanceRelated, advanceOptions.length, user?.email])
 
-  function handleContinue() {
-    if (poRelated === null) {
-      setError('Please answer whether this report is related to a Purchase Order.')
-      return
-    }
+  async function handleContinue() {
     if (poRelated === true && !selectedPOId) {
       setError('Please select which Purchase Order this report is related to.')
       return
     }
-    if (poRelated === false && advanceRelated === null) {
-      setError('Please answer whether this report is related to an advance.')
-      return
-    }
     if (poRelated === false && advanceRelated === true && !selectedAdvanceId) {
       setError('Please select which advance this report is related to.')
-      return
-    }
-    setError(null)
-    // Regenerated every time (not just once) so going Back and switching the
-    // answer always leaves the reference correctly prefixed for whichever
-    // answer is current when Continue is clicked.
-    setReference(generateReportReference(poRelated === true))
-    setStep(2)
-  }
-
-  async function handleSave() {
-    if (!durationStart || !durationEnd) {
-      setError('Please fill in the report duration.')
       return
     }
     setSaving(true)
@@ -100,10 +67,7 @@ export default function NewReportModal({ user, onCreated, onClose, fixedPO = nul
     const { data, error: err } = await supabase
       .from('expense_reports')
       .insert({
-        report_reference: reference,
-        business_purpose: businessPurpose || null,
-        duration_start: durationStart,
-        duration_end: durationEnd,
+        report_reference: generateReportReference(poRelated === true),
         employee_email: user?.email ?? null,
         status: 'draft',
         po_related: poRelated,
@@ -166,11 +130,9 @@ export default function NewReportModal({ user, onCreated, onClose, fixedPO = nul
             <div style={{ fontSize: '12px', color: 'var(--moss-text)', background: 'var(--moss-bg)', border: '1px solid var(--moss-border)', borderRadius: 'var(--radius-sm)', padding: '8px 12px', marginBottom: '16px' }}>
               Linked to Purchase Order <strong style={{ fontFamily: 'monospace' }}>{fixedPO.po_number}</strong>
             </div>
-          ) : (
-            <StepIndicator current={step - 1} total={2} labels={['Purchase Order', 'Report Details']} />
-          )}
+          ) : null}
 
-          {step === 1 && (
+          {!fixedPO && (
             <div>
               <label style={labelStyle}>Related to a Purchase Order?{required}</label>
               <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
@@ -267,58 +229,6 @@ export default function NewReportModal({ user, onCreated, onClose, fixedPO = nul
             </div>
           )}
 
-          {step === 2 && (
-            <>
-              <div style={{ marginBottom: '18px' }}>
-                <label style={labelStyle}>Report Name{required}</label>
-                <div style={{
-                  ...inputStyle, display: 'flex', alignItems: 'center',
-                  background: 'var(--taupe-50)', color: 'var(--text-muted)',
-                }}>
-                  {reference} — this field will be auto-generated
-                </div>
-              </div>
-
-              <div style={{ marginBottom: '18px' }}>
-                <label style={labelStyle}>Business Purpose</label>
-                <div style={{ position: 'relative' }}>
-                  <textarea
-                    value={businessPurpose}
-                    onChange={e => setBusinessPurpose(e.target.value.slice(0, 500))}
-                    placeholder="Max 500 characters"
-                    rows={3}
-                    style={{
-                      ...inputStyle, height: 'auto', padding: '10px 12px', paddingRight: '40px',
-                      resize: 'vertical', fontFamily: 'inherit',
-                    }}
-                  />
-                  <VoiceInputButton value={businessPurpose} onChange={setBusinessPurpose} maxLength={500} />
-                </div>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', textAlign: 'right' }}>
-                  {businessPurpose.length}/500
-                </div>
-              </div>
-
-              <div style={{ marginBottom: '8px' }}>
-                <label style={labelStyle}>Duration{required}</label>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <input
-                    type="date"
-                    value={durationStart}
-                    onChange={e => setDurationStart(e.target.value)}
-                    style={inputStyle}
-                  />
-                  <input
-                    type="date"
-                    value={durationEnd}
-                    onChange={e => setDurationEnd(e.target.value)}
-                    style={inputStyle}
-                  />
-                </div>
-              </div>
-            </>
-          )}
-
           {error && (
             <div style={{ fontSize: '13px', color: 'var(--clay-text)', marginTop: '12px' }}>{error}</div>
           )}
@@ -326,59 +236,30 @@ export default function NewReportModal({ user, onCreated, onClose, fixedPO = nul
 
         {/* Footer */}
         <div style={{ flexShrink: 0, display: 'flex', gap: '10px', padding: '16px 20px', borderTop: '1px solid var(--taupe-200)' }}>
-          {step === 1 ? (
-            <>
-              <button
-                onClick={handleContinue}
-                style={{
-                  height: '44px', padding: '0 24px',
-                  background: 'var(--action)', color: 'var(--surface-card)',
-                  border: 'none', fontSize: '14px', fontWeight: 500,
-                  cursor: 'pointer', borderRadius: 'var(--radius-sm)',
-                }}
-              >
-                Continue
-              </button>
-              <button
-                onClick={onClose}
-                style={{
-                  height: '44px', padding: '0 24px',
-                  background: 'var(--surface-card)', color: 'var(--text)',
-                  border: '1px solid var(--taupe-200)', fontSize: '14px', fontWeight: 500,
-                  cursor: 'pointer', borderRadius: 'var(--radius-sm)',
-                }}
-              >
-                Cancel
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                style={{
-                  height: '44px', padding: '0 24px',
-                  background: saving ? 'var(--text-muted)' : 'var(--action)', color: 'var(--surface-card)',
-                  border: 'none', fontSize: '14px', fontWeight: 500,
-                  cursor: saving ? 'default' : 'pointer', borderRadius: 'var(--radius-sm)',
-                }}
-              >
-                {saving ? 'Saving…' : 'Save'}
-              </button>
-              <button
-                onClick={() => { setError(null); if (fixedPO) onClose(); else setStep(1) }}
-                disabled={saving}
-                style={{
-                  height: '44px', padding: '0 24px',
-                  background: 'var(--surface-card)', color: 'var(--text)',
-                  border: '1px solid var(--taupe-200)', fontSize: '14px', fontWeight: 500,
-                  cursor: 'pointer', borderRadius: 'var(--radius-sm)',
-                }}
-              >
-                {fixedPO ? 'Cancel' : 'Back'}
-              </button>
-            </>
-          )}
+          <button
+            onClick={handleContinue}
+            disabled={saving}
+            style={{
+              height: '44px', padding: '0 24px',
+              background: saving ? 'var(--text-muted)' : 'var(--action)', color: 'var(--surface-card)',
+              border: 'none', fontSize: '14px', fontWeight: 500,
+              cursor: saving ? 'default' : 'pointer', borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            {saving ? 'Creating…' : 'Continue'}
+          </button>
+          <button
+            onClick={onClose}
+            disabled={saving}
+            style={{
+              height: '44px', padding: '0 24px',
+              background: 'var(--surface-card)', color: 'var(--text)',
+              border: '1px solid var(--taupe-200)', fontSize: '14px', fontWeight: 500,
+              cursor: 'pointer', borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            Cancel
+          </button>
         </div>
       </div>
     </div>

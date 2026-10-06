@@ -132,7 +132,7 @@ function AttendeeMultiSelect({ selected, onChange, directoryEntries }) {
 // inside a report whose PO answer is already known (given when the report was
 // started) — the PO question is then not asked again here; it's inherited, and
 // the final report preview is the one place it can be revisited.
-export default function ExpenseDetails({ layer1Data, existingExpense = null, defaultReportId = '', reportPO = null, user, onSaved, onBack }) {
+export default function ExpenseDetails({ layer1Data, existingExpense = null, defaultReportId = '', reportPO = null, user, onSaved, onBack, embedded = false }) {
   const isMobile = useIsMobile()
   const isEdit = !!existingExpense
   const [reportId, setReportId] = useState(existingExpense?.report_id || defaultReportId || '')
@@ -198,7 +198,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
-  const showPanel = !isMobile && wideEnough && !!receiptCaptureId
+  const showPanel = !embedded && !isMobile && wideEnough && !!receiptCaptureId
   const panelOpen = showPanel && receiptShown
 
   const poAnswerKnown = !!reportPO && reportPO.related != null
@@ -475,8 +475,12 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
   const required = <span style={{ color: 'var(--clay-text)' }}> *</span>
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: '24px', maxWidth: panelOpen ? '1000px' : '480px', margin: '0 auto', padding: '20px', width: '100%', paddingBottom: '100px', boxSizing: 'border-box' }}>
-    <div style={{ flex: '0 1 480px', minWidth: 0, width: '100%' }}>
+    <div style={embedded
+      ? { width: '100%', boxSizing: 'border-box' }
+      : { display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: '24px', maxWidth: panelOpen ? '1000px' : '480px', margin: '0 auto', padding: '20px', width: '100%', paddingBottom: '100px', boxSizing: 'border-box' }}>
+    <div style={embedded ? { width: '100%' } : { flex: '0 1 480px', minWidth: 0, width: '100%' }}>
+      {!embedded && (
+        <>
       {/* Back */}
       <div
         onClick={onBack}
@@ -491,6 +495,8 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
         {isEdit ? 'Edit expense' : 'Quick details before saving'}
       </div>
       <div style={{ height: '1px', background: 'var(--taupe-200)', marginBottom: '20px' }} />
+        </>
+      )}
 
       {/* ══ Required ══ */}
 
@@ -985,7 +991,24 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
         <div style={{ fontSize: '13px', color: 'var(--clay-text)', marginBottom: '8px' }}>{error}</div>
       )}
 
+      {embedded && (
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          style={{
+            width: '100%', height: '44px',
+            background: saving ? 'var(--text-muted)' : 'var(--text)',
+            color: 'var(--surface-card)', border: 'none',
+            fontSize: '14px', fontWeight: 500,
+            cursor: saving ? 'default' : 'pointer', borderRadius: 'var(--radius-sm)',
+          }}
+        >
+          {saving ? 'Saving…' : 'Save details'}
+        </button>
+      )}
+
       {/* Fixed bottom */}
+      {!embedded && (
       <div style={{ position: 'fixed', bottom: 0, left: isMobile ? 0 : '220px', right: 0, zIndex: 10 }}>
         <div style={{
           maxWidth: panelOpen ? '1000px' : '480px', margin: '0 auto',
@@ -1009,6 +1032,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
           </div>
         </div>
       </div>
+      )}
     </div>
     {showPanel && <ReceiptSidePanel captureId={receiptCaptureId} onVisibleChange={setReceiptShown} />}
     </div>

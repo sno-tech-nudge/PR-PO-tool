@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { downloadPDF } from '../../lib/pdfGenerator'
 import { createApprovalRecords } from '../../lib/approvalEngine'
 import StatusTimeline from './StatusTimeline'
+import { useIsMobile } from '../../hooks/useIsMobile'
 
 function InfoRow({ label, value, alt }) {
   return (
@@ -20,8 +21,58 @@ function InfoRow({ label, value, alt }) {
   )
 }
 
+function formatDay(d) {
+  return d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : null
+}
+
+function Detail({ label, value }) {
+  if (value == null || value === '' || value === false) return null
+  return (
+    <div style={{ marginBottom: '10px', minWidth: 0 }}>
+      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>{label}</div>
+      <div style={{ fontSize: '13px', color: 'var(--text)', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{value}</div>
+    </div>
+  )
+}
+
+// Everything that was just submitted, shown in full on the right.
+function SubmittedExpense({ expense: e, result, index }) {
+  const notes = [...(result?.violations || []), ...(result?.flags || []).filter(f => !f.internalOnly)]
+  return (
+    <div style={{ border: '1px solid var(--taupe-200)', marginBottom: '12px', background: 'var(--surface-card)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', padding: '12px 16px', borderBottom: '1px solid var(--taupe-200)', background: 'var(--taupe-50)' }}>
+        <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text)' }}>{index + 1}. {e.vendor || 'Unknown vendor'}</div>
+        <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)', flexShrink: 0 }}>{e.amount ? `₹${Number(e.amount).toLocaleString('en-IN')}` : '—'}</div>
+      </div>
+      <div style={{ padding: '14px 16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+        <Detail label="Date" value={e.date} />
+        <Detail label="Category" value={e.category} />
+        <Detail label="Entity" value={e.entity} />
+        <Detail label="Programme" value={e.program} />
+        <Detail label="Donor" value={e.donor_name} />
+        <Detail label="Nature of expense" value={e.expense_nature} />
+        <Detail label="Payment method" value={e.payment_method} />
+        <Detail label="Invoice / reference no." value={e.invoice_number} />
+        <Detail label="GSTIN" value={e.gstin} />
+        <Detail label="Purchase Order" value={e.po_number} />
+        <Detail label="Reimbursable" value={e.reimbursable === false ? 'No' : 'Yes'} />
+        <Detail label="People" value={e.attendee_count > 1 ? `${e.attendee_count}${e.per_person_amount ? ` · ₹${Number(e.per_person_amount).toLocaleString('en-IN')} per person` : ''}` : null} />
+      </div>
+      {e.attendee_names && <div style={{ padding: '0 16px' }}><Detail label="Attendees" value={e.attendee_names} /></div>}
+      {e.description && <div style={{ padding: '0 16px' }}><Detail label="Description" value={e.description} /></div>}
+      {notes.length > 0 && (
+        <div style={{ padding: '0 16px 12px' }}>
+          <div style={{ fontSize: '11px', color: 'var(--gold-text)', marginBottom: '4px' }}>Flags noted for your approver</div>
+          {notes.map((n, i) => <div key={i} style={{ fontSize: '12px', color: 'var(--gold-text)', marginBottom: '2px' }}>· {n.message}</div>)}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function SubmissionConfirmation({ submission, onStartNew, onTrackReport }) {
-  const { reference, approvalRoute, expenseCount, total, pdf, pdfUploadPending } = submission || {}
+  const { reference, approvalRoute, expenseCount, total, pdf, pdfUploadPending, expenses = [], results = [], reportDetails } = submission || {}
+  const isMobile = useIsMobile()
   const [reportId, setReportId] = useState(null)
   const [submittedAt] = useState(new Date())
   const [timeLabel, setTimeLabel] = useState('just now')
@@ -67,7 +118,9 @@ export default function SubmissionConfirmation({ submission, onStartNew, onTrack
   }
 
   return (
-    <div style={{ maxWidth: '480px', margin: '0 auto', padding: '24px 20px', width: '100%' }}>
+    <div style={{ maxWidth: expenses.length ? '1100px' : '480px', margin: '0 auto', padding: '24px 20px', width: '100%', boxSizing: 'border-box', display: 'flex', gap: '32px', alignItems: 'flex-start', flexDirection: isMobile ? 'column' : 'row' }}>
+    {/* Left — approval timeline and phase */}
+    <div style={{ flex: expenses.length && !isMobile ? '0 1 440px' : '1 1 auto', minWidth: 0, width: '100%' }}>
       <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>Report Submitted</div>
       <div style={{ fontSize: '20px', fontWeight: 500, color: 'var(--text)', marginBottom: '6px' }}>
         Your report is submitted
@@ -148,6 +201,21 @@ export default function SubmissionConfirmation({ submission, onStartNew, onTrack
           Start new expense
         </button>
       </div>
+    </div>
+
+    {/* Right — the full submitted report */}
+    {expenses.length > 0 && (
+      <div style={{ flex: '1 1 0', minWidth: 0, width: '100%' }}>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>What you submitted</div>
+        {(reportDetails?.business_purpose || reportDetails?.duration_start) && (
+          <div style={{ border: '1px solid var(--taupe-200)', marginBottom: '16px', padding: '14px 16px', background: 'var(--surface-card)' }}>
+            <Detail label="Business purpose" value={reportDetails?.business_purpose} />
+            <Detail label="Duration" value={[reportDetails?.duration_start, reportDetails?.duration_end].filter(Boolean).map(formatDay).join(' – ')} />
+          </div>
+        )}
+        {expenses.map((e, i) => <SubmittedExpense key={e.id} expense={e} result={results[i]} index={i} />)}
+      </div>
+    )}
     </div>
   )
 }

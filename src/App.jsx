@@ -15,9 +15,9 @@ import { hasSeenWalkthrough } from './lib/walkthrough'
 import NotificationBell from './components/shared/NotificationBell'
 import SettingsView from './components/settings/SettingsView'
 import ExpenseDetails from './components/layer2/ExpenseDetails'
-import PolicyCheck from './components/layer3/PolicyCheck'
 import ExpenseSelector from './components/layer4/ExpenseSelector'
 import ReportPreview from './components/layer4/ReportPreview'
+import ReportWorkspace from './components/layer4/ReportWorkspace'
 import NewReportModal from './components/layer4/NewReportModal'
 import SubmissionConfirmation from './components/layer5/SubmissionConfirmation'
 import ReportStatus from './components/layer5/ReportStatus'
@@ -116,7 +116,6 @@ export default function App() {
   }
 
   const [layer1Data, setLayer1Data] = useState(null)
-  const [reportExpenses, setReportExpenses] = useState([])
 
   const [layer4Screen, setLayer4Screen] = useState('selector')
   const [layer4Expenses, setLayer4Expenses] = useState([])
@@ -209,29 +208,26 @@ export default function App() {
   function handleAddAnother()            { setLayer1Data(null); setAppScreen('capture') }
   function handleQuickReceipt(data)      { setLayer1Data(data); setAppScreen('details') }
 
-  function handleProceedToReport({ expenses, results }) {
-    setLayer4Expenses(expenses); setLayer4Results(results)
-    setLayer4Screen('selector'); setAppScreen('layer4')
+  // New-report flow: pick expenses (selector) -> receipts on the left and the
+  // details form on the right (workspace) -> preview/submit. Policy flags are
+  // computed when leaving the workspace and surface on the preview, not
+  // before.
+  function handleSelectionContinue(selected) {
+    setSelectedExpenses(selected)
+    setLayer4Screen('workspace')
   }
 
-  // Goes straight to the preview/submit screen — the intermediate "report
-  // details" step (PO relation, purpose, reimbursement method) was removed
-  // per Finance: PO relation is already answered once, up front, in
-  // NewReportModal, and purpose/reimbursement type aren't needed at all.
-  // Everything ReportPreview still needs (report_id/reference, business
-  // purpose, duration, the PO answer) already lives on the draft report row
-  // created by NewReportModal — entity is derived from the expenses
-  // themselves, inside ReportPreview.
-  function handleLayer4Preview(selected, selResults) {
-    setSelectedExpenses(selected); setSelectedResults(selResults)
+  function handleWorkspacePreview(rows, results, meta) {
+    setNewReportMeta(meta)
+    setSelectedExpenses(rows); setSelectedResults(results)
     setLayer4ReportDetails({
-      report_id: newReportMeta?.id || null,
-      report_reference: newReportMeta?.report_reference || null,
-      business_purpose: newReportMeta?.business_purpose || null,
-      duration_start: newReportMeta?.duration_start || null,
-      duration_end: newReportMeta?.duration_end || null,
-      po_related: newReportMeta?.po_related ?? null,
-      linked_po_id: newReportMeta?.po_related ? newReportMeta?.po_id : null,
+      report_id: meta?.id || null,
+      report_reference: meta?.report_reference || null,
+      business_purpose: meta?.business_purpose || null,
+      duration_start: meta?.duration_start || null,
+      duration_end: meta?.duration_end || null,
+      po_related: meta?.po_related ?? null,
+      linked_po_id: meta?.po_related ? meta?.po_id : null,
     })
     setLayer4Screen('preview')
   }
@@ -270,18 +266,12 @@ export default function App() {
     setShowNewReportModal(true)
   }
 
-  async function enterReportWorkspace(reportRow) {
+  function enterReportWorkspace(reportRow) {
     setNewReportMeta(reportRow)
     setLayer4Expenses([]); setLayer4Results([])
+    setSelectedExpenses([]); setSelectedResults([])
     setLayer4Screen('selector')
-    const { data } = await supabase
-      .from('expense_details')
-      .select('*')
-      .in('user_email', user.ownEmails)
-      .eq('status', 'saved')
-      .order('created_at', { ascending: false })
-    setReportExpenses(data || [])
-    setAppScreen('policy')
+    setAppScreen('layer4')
   }
 
   async function handleReportCreated(reportRow) {
@@ -671,23 +661,24 @@ export default function App() {
           </div>
         )}
 
-        {appScreen === 'policy' && (
-          <PolicyCheck
-            expenses={reportExpenses}
-            onAddAnother={handleAddAnother}
-            onProceedToReport={handleProceedToReport}
-            onBack={() => setAppScreen('list')}
-          />
-        )}
-
         {appScreen === 'layer4' && layer4Screen === 'selector' && (
           <ExpenseSelector
             expenses={layer4Expenses}
             results={layer4Results}
             user={user}
             reportMeta={newReportMeta}
-            onPreview={handleLayer4Preview}
+            onPreview={handleSelectionContinue}
             onBack={() => setAppScreen('list')}
+          />
+        )}
+
+        {appScreen === 'layer4' && layer4Screen === 'workspace' && (
+          <ReportWorkspace
+            reportMeta={newReportMeta}
+            expenses={selectedExpenses}
+            user={user}
+            onBack={() => setLayer4Screen('selector')}
+            onPreview={handleWorkspacePreview}
           />
         )}
 
@@ -698,7 +689,7 @@ export default function App() {
             reportDetails={layer4ReportDetails}
             user={user}
             onSubmitted={handleLayer4Submitted}
-            onBack={() => setLayer4Screen('selector')}
+            onBack={() => setLayer4Screen('workspace')}
           />
         )}
 

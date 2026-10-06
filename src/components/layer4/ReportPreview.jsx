@@ -5,11 +5,13 @@ import { getApprovalRules } from '../../lib/approvalEngine'
 import { generateExpenseReportPDF, downloadPDF, uploadPDFToSupabase } from '../../lib/pdfGenerator'
 import { generateReportReference } from '../../lib/reportReference'
 import { sendReportEmail } from '../../lib/reportEmail'
-import { attachPendingBalances, poOptionLabel } from '../../lib/poBalance'
+import { attachPendingBalances } from '../../lib/poBalance'
 import ReportSummaryCard from './ReportSummaryCard'
 import ExpenseLineItem from './ExpenseLineItem'
 import PDFTemplate from './PDFTemplate'
 import GeneratingPDF from './GeneratingPDF'
+import PolicyViolation from '../layer3/PolicyViolation'
+import PolicyFlag from '../layer3/PolicyFlag'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import { logActivity } from '../../lib/activityLog'
 
@@ -72,10 +74,10 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
   const [submitting, setSubmitting] = useState(false)
   const [rules, setRules] = useState([])
 
-  // Purchase Order relation — pre-filled from the answer already given when
-  // the report was created (NewReportModal's step 1), editable here in case
-  // it needs correcting before submitting, rather than re-asked from scratch.
-  const [poRelated, setPoRelated] = useState(reportDetails?.po_related ?? null)
+  // Purchase Order relation — answered once when the report was created
+  // (NewReportModal) and never asked again here; a PO-linked report still gets
+  // its pending-balance check below before it can be submitted.
+  const poRelated = reportDetails?.po_related === true
   const [selectedPOId, setSelectedPOId] = useState(reportDetails?.linked_po_id || '')
   const [poOptions, setPoOptions] = useState([])
   const [poPending, setPoPending] = useState(null)
@@ -122,7 +124,7 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
   }
 
   const total = expenses.reduce((sum, e) => sum + (e.amount || 0), 0)
-  const poSectionValid = poRelated === false || (poRelated === true && !!selectedPOId && !!poPending && total <= poPending.pending)
+  const poSectionValid = !poRelated || (!!selectedPOId && !!poPending && total <= poPending.pending)
   const period = getPeriod(expenses)
   const approvalRoute = determineApprovalRoute(expenses, rules)
   const entity = mostCommonEntity(expenses)
@@ -165,6 +167,21 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
     ...entityFlags,
   ]
 
+  // Rule violations from the policy check plus the entity-aware ones above,
+  // one entry per expense + rule.
+  const allViolations = (() => {
+    const seen = new Set()
+    return [
+      ...(results || []).flatMap((r, i) => (r?.violations || []).map(v => ({ ...v, expense: expenses[i] }))),
+      ...entityViolations,
+    ].filter(v => {
+      const key = `${v.expense?.id}:${v.rule}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  })()
+
   async function getOrGeneratePDF() {
     if (pdfCache) return pdfCache
     const pdf = await generateExpenseReportPDF(expenses, reportData)
@@ -197,11 +214,9 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
   async function handleSubmit() {
     if (!poSectionValid) {
       setSubmitError(
-        poRelated == null
-          ? 'Answer whether this report is related to a Purchase Order before submitting.'
-          : !selectedPOId
-            ? 'Select which Purchase Order this report is related to before submitting.'
-            : `This report's ₹${Number(total).toLocaleString('en-IN')} exceeds the ₹${Number(poPending?.pending ?? 0).toLocaleString('en-IN')} still pending on the selected PO.`
+        !selectedPOId
+          ? 'This report is not linked to a Purchase Order. Go back and start the report again.'
+          : `This report's ₹${Number(total).toLocaleString('en-IN')} exceeds the ₹${Number(poPending?.pending ?? 0).toLocaleString('en-IN')} still pending on the selected PO.`
       )
       return
     }
@@ -312,6 +327,9 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
         pdf,
         entity,
         pdfUploadPending: !!pdf && !pdfPath,
+        expenses,
+        results,
+        reportDetails,
       })
     } catch {
       setSubmitError('Could not submit. Please try again.')
@@ -354,68 +372,36 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
           durationEnd={reportDetails?.duration_end}
         />
 
-        {/* Purchase Order relation — pre-filled from NewReportModal's answer,
-            changeable here before submitting. */}
-        <div style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '16px', marginTop: '16px' }}>
-          <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)', marginBottom: '10px' }}>
-            Related to a Purchase Order?
-          </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <div
-              onClick={() => setPoRelated(true)}
-              style={{
-                flex: 1, padding: '10px 12px', cursor: 'pointer',
-                border: `1.5px solid ${poRelated === true ? 'var(--action)' : 'var(--taupe-200)'}`,
-                background: poRelated === true ? 'var(--taupe-50)' : 'var(--surface-card)',
-                borderRadius: 'var(--radius-sm)',
-              }}
-            >
-              <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>Yes</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Paying an invoice against an issued PO</div>
+        {/* Linked Purchase Order — read-only, chosen when the report was started */}
+        {poRelated && (
+          <div style={{ border: '1px solid var(--moss-border)', background: 'var(--moss-bg)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', marginTop: '16px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--moss-text)' }}>
+              Paying against Purchase Order{' '}
+              <strong style={{ fontFamily: 'monospace' }}>{poOptions.find(p => p.id === selectedPOId)?.po_number || '…'}</strong>
             </div>
-            <div
-              onClick={() => { setPoRelated(false); setSelectedPOId(''); setPoPending(null) }}
-              style={{
-                flex: 1, padding: '10px 12px', cursor: 'pointer',
-                border: `1.5px solid ${poRelated === false ? 'var(--action)' : 'var(--taupe-200)'}`,
-                background: poRelated === false ? 'var(--taupe-50)' : 'var(--surface-card)',
-                borderRadius: 'var(--radius-sm)',
-              }}
-            >
-              <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>No</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>A normal expense claim</div>
-            </div>
+            {poLoading && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>Checking pending balance…</div>}
+            {poPending && (
+              <div style={{ fontSize: '12px', color: total > poPending.pending ? 'var(--clay-text)' : 'var(--text-muted)', marginTop: '6px' }}>
+                PO amount ₹{Number(poPending.amount).toLocaleString('en-IN')} · pending ₹{Number(poPending.pending).toLocaleString('en-IN')}
+                {total > poPending.pending && ` — this report's ₹${Number(total).toLocaleString('en-IN')} exceeds what's still pending on this PO.`}
+              </div>
+            )}
           </div>
+        )}
 
-          {poRelated === true && (
-            <div style={{ marginTop: '10px' }}>
-              <select
-                value={selectedPOId}
-                onChange={e => handleSelectPO(e.target.value)}
-                style={{
-                  width: '100%', height: '40px', border: '1px solid var(--taupe-200)',
-                  borderRadius: 'var(--radius-sm)', padding: '0 10px', fontSize: '13px',
-                  color: 'var(--text)', outline: 'none', boxSizing: 'border-box',
-                  background: 'var(--surface-card)', fontFamily: 'inherit',
-                }}
-              >
-                <option value="">Select a PO…</option>
-                {poOptions.map(po => (
-                  <option key={po.id} value={po.id}>{poOptionLabel(po)}</option>
-                ))}
-              </select>
-              {poLoading && (
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>Checking pending balance…</div>
-              )}
-              {poPending && (
-                <div style={{ fontSize: '12px', color: total > poPending.pending ? 'var(--clay-text)' : 'var(--text-muted)', marginTop: '8px' }}>
-                  PO amount ₹{Number(poPending.amount).toLocaleString('en-IN')} · pending ₹{Number(poPending.pending).toLocaleString('en-IN')}
-                  {total > poPending.pending && ` — this report's ₹${Number(total).toLocaleString('en-IN')} exceeds what's still pending on this PO.`}
-                </div>
-              )}
+        {/* Policy flags — advisory only, shown here (not earlier in the flow) */}
+        {(allViolations.length > 0 || allFlags.length > 0) && (
+          <div style={{ marginTop: '20px' }}>
+            <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gold-text)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>
+              Policy flags
             </div>
-          )}
-        </div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '10px', lineHeight: 1.5 }}>
+              These are advisory. You can still submit, and your approver will see them.
+            </div>
+            {allViolations.map((v, i) => <PolicyViolation key={`v${i}`} violation={v} expense={v.expense} />)}
+            {allFlags.map((f, i) => <PolicyFlag key={`f${i}`} flag={f} expense={f.expense} />)}
+          </div>
+        )}
 
         <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)', margin: '20px 0 12px' }}>
           Expenses included
@@ -429,47 +415,6 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
           />
         ))}
 
-        {entityViolations.length > 0 && (
-          <div style={{ marginTop: '20px' }}>
-            <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--clay-text)', marginBottom: '10px' }}>
-              Policy notes
-            </div>
-            {entityViolations.map((v, i) => (
-              <div key={i} style={{
-                border: '1px solid var(--clay-text)', background: 'var(--clay-bg)',
-                padding: '12px 16px', marginBottom: '8px',
-              }}>
-                <div style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text)', marginBottom: '4px' }}>
-                  {v.expense?.vendor} {v.expense?.amount ? `· ₹${Number(v.expense.amount).toLocaleString('en-IN')}` : ''}
-                </div>
-                <div style={{ fontSize: '12px', color: 'var(--clay-text)', lineHeight: '1.4' }}>
-                  Policy note — {v.message}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {allFlags.length > 0 && (
-          <div style={{ marginTop: '20px' }}>
-            <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--gold-text)', marginBottom: '10px' }}>
-              Notes for approver
-            </div>
-            {allFlags.map((flag, i) => (
-              <div key={i} style={{
-                border: '1px solid var(--gold-text)', background: 'var(--gold-bg)',
-                padding: '12px 16px', marginBottom: '8px',
-              }}>
-                <div style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text)', marginBottom: '4px' }}>
-                  {flag.expense?.vendor} {flag.expense?.amount ? `· ₹${Number(flag.expense.amount).toLocaleString('en-IN')}` : ''}
-                </div>
-                <div style={{ fontSize: '12px', color: 'var(--gold-text)', lineHeight: '1.4' }}>
-                  {flag.message}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Fixed bottom bar */}
@@ -495,11 +440,9 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
           )}
           {!submitError && !poSectionValid && (
             <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginBottom: '8px' }}>
-              {poRelated == null
-                ? 'Answer whether this report is related to a Purchase Order before submitting.'
-                : !selectedPOId
-                  ? 'Select which Purchase Order this report is related to before submitting.'
-                  : 'This report exceeds what’s still pending on the selected PO.'}
+              {!selectedPOId
+                ? 'This report is not linked to a Purchase Order. Go back and start the report again.'
+                : 'This report exceeds what’s still pending on the selected PO.'}
             </div>
           )}
 

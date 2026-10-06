@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { getFiscalYearPrefix, PAN_FORMAT_RE, GSTIN_FORMAT_RE } from '../../lib/formCalc'
 import { NATURE_OF_BUSINESS_OPTIONS } from '../../lib/vendorData'
-import { extractChequeDetails, extractPanCardDetails, extractGstCertDetails, extractMsmeCertDetails } from '../../lib/claude'
+import { extractChequeDetails, extractPanCardDetails, extractGstCertDetails, extractMsmeCertDetails, extractRegistrationCertDetails } from '../../lib/claude'
+import { toInputDate } from '../../lib/dateFormat'
 import { imageFileToJpegBase64, pdfPageToBase64 } from '../../lib/receiptImage'
 import PanDuplicateModal from './PanDuplicateModal'
 import { sendVendorEmail } from '../../lib/vendorEmail'
@@ -10,6 +11,9 @@ import { getFinanceEmails } from '../../lib/auth'
 import { logActivity } from '../../lib/activityLog'
 import { notifyVendorSubmitted } from '../../lib/vendorNotifications'
 import { useFileDrop } from '../../hooks/useFileDrop'
+import { useFormTour } from '../../hooks/useFormTour'
+import GuidedTour, { TourButton } from '../shared/GuidedTour'
+import { VENDOR_TOUR } from '../../lib/tours'
 import InfoTip from '../shared/InfoTip'
 import VoiceInputButton from '../shared/VoiceInputButton'
 
@@ -363,6 +367,91 @@ async function generateVendorId() {
   return data
 }
 
+// "Documents you'll need" — a live checklist at the top of the form so
+// nobody gets halfway through and then discovers a missing document. Items
+// tick off as each one is attached; conditional ones (GST / MSME) only count
+// once the vendor says they have that registration.
+function DocsChecklist({ items }) {
+  return (
+    <div data-tour-anchor="vendor-docs" style={{
+      background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)',
+      padding: '20px 24px', marginBottom: '16px',
+    }}>
+      <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--ink)' }}>Documents you&apos;ll need</div>
+      <div style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 14px', lineHeight: 1.5 }}>
+        Keep these ready. Attach them in section 2 and we&apos;ll read each one and fill in the form for you. If something can&apos;t be read,
+        you&apos;ll be told exactly which detail to type in yourself.
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {items.map(it => (
+          <div key={it.key} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', opacity: it.have || it.applies ? 1 : 0.65 }}>
+            <span style={{
+              width: '20px', height: '20px', flexShrink: 0, marginTop: '1px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '11px', fontWeight: 700, borderRadius: 'var(--radius-sm)',
+              background: it.have ? 'var(--moss-bg)' : 'var(--taupe-50)', color: it.have ? 'var(--moss-text)' : 'var(--taupe-400)',
+              border: `1px solid ${it.have ? 'var(--moss-border)' : 'var(--taupe-200)'}`,
+            }}>{it.have ? '✓' : ''}</span>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)' }}>
+                {it.label}
+                {!it.applies && <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}> — {it.when}</span>}
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px' }}>Fills in: {it.fills}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '14px' }}>
+        Accepted formats: PDF, JPG, PNG, JPEG · Max 10 MB per file · You can also drag &amp; drop a file onto any upload box.
+      </div>
+    </div>
+  )
+}
+
+// A company's CIN carries its state of registration as two letters at
+// positions 7-8 (e.g. U74999KA2020PTC123456 -> KA). Used as a fallback when
+// the certificate's own "state" couldn't be read.
+const CIN_STATE_CODES = {
+  AN: 'Andaman and Nicobar Islands', AP: 'Andhra Pradesh', AR: 'Arunachal Pradesh', AS: 'Assam', BR: 'Bihar',
+  CH: 'Chandigarh', CT: 'Chhattisgarh', CG: 'Chhattisgarh', DL: 'Delhi', DN: 'Dadra and Nagar Haveli and Daman and Diu',
+  DD: 'Dadra and Nagar Haveli and Daman and Diu', GA: 'Goa', GJ: 'Gujarat', HP: 'Himachal Pradesh', HR: 'Haryana',
+  JH: 'Jharkhand', JK: 'Jammu and Kashmir', KA: 'Karnataka', KL: 'Kerala', LD: 'Lakshadweep', MH: 'Maharashtra',
+  ML: 'Meghalaya', MN: 'Manipur', MP: 'Madhya Pradesh', MZ: 'Mizoram', NL: 'Nagaland', OR: 'Odisha', OD: 'Odisha',
+  PB: 'Punjab', PY: 'Puducherry', RJ: 'Rajasthan', SK: 'Sikkim', TG: 'Telangana', TS: 'Telangana', TN: 'Tamil Nadu',
+  TR: 'Tripura', UP: 'Uttar Pradesh', UK: 'Uttarakhand', UR: 'Uttarakhand', WB: 'West Bengal', LA: 'Ladakh',
+}
+
+// Maps a state name read off a document ("Karnataka", "KARNATAKA ") onto the
+// exact option text this form's state dropdowns use.
+function matchIndianState(name) {
+  if (!name) return null
+  const n = String(name).toLowerCase().trim()
+  return INDIAN_STATES.find(s => s.toLowerCase() === n)
+    || INDIAN_STATES.find(s => s.toLowerCase().includes(n) || n.includes(s.toLowerCase().split(' ')[0])) || null
+}
+
+// What a document upload managed (or failed) to read — shown right under the
+// upload so nobody has to guess whether auto-fill worked. `read` / `missing`
+// are human labels; `where` says which section to fill in by hand.
+function DocNote({ note, where }) {
+  if (!note) return null
+  const { read, missing } = note
+  const box = (tone, children) => (
+    <div style={{
+      fontSize: '11px', lineHeight: 1.5, marginTop: '-10px', marginBottom: '14px', padding: '7px 10px',
+      borderRadius: 'var(--radius-sm)', fontWeight: 600,
+      color: `var(--${tone}-text)`, background: `var(--${tone}-bg)`, border: `1px solid var(--${tone}-border)`,
+    }}>{children}</div>
+  )
+  if (read.length === 0) {
+    return box('gold', <>⚠ We couldn't read this document automatically (the photo may be unclear or cropped). Please enter {missing.join(', ')} manually {where}, or re-upload a clearer copy.</>)
+  }
+  if (missing.length === 0) {
+    return box('moss', <>✓ Read from this document: {read.join(', ')}. Please double-check {read.length === 1 ? 'it' : 'them'} {where}.</>)
+  }
+  return box('gold', <>✓ Read: {read.join(', ')}. ⚠ Couldn't read: {missing.join(', ')} — please enter {missing.length === 1 ? 'it' : 'them'} manually {where}.</>)
+}
+
 // ─── main component ─────────────────────────────────────────────────────────────
 export default function VendorForm({ user, existingVendor = null, onSaved, onBack, hideBack = false, isGuestSubmission = false }) {
   const isEdit = !!existingVendor && existingVendor.status !== 'draft'
@@ -402,6 +491,12 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
   // which always overwrites from whichever cheque was uploaded last instead,
   // since the cheque is the sole source for those fields.
   const [gstExtracted, setGstExtracted] = useState(null) // string | null
+  // Per-document result of the auto-read: { read: [labels], missing: [labels] }
+  const [docNotes, setDocNotes] = useState({})
+  const setDocNote = (key, read, missing) => setDocNotes(p => ({ ...p, [key]: { read, missing } }))
+  const clearDocNote = key => setDocNotes(p => { const n = { ...p }; delete n[key]; return n })
+  const [regCertOcrLoading, setRegCertOcrLoading] = useState(false)
+  const [regNoExtracted, setRegNoExtracted] = useState(null) // registration number read off the certificate
   const [msmeExtracted, setMsmeExtracted] = useState(null) // {registration_number, category} | null
   // '+91' for a mobile number, '' for a landline/other number entered as-is
   // (with STD code). Not persisted separately — derived from the stored
@@ -434,6 +529,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
   // once every validation/duplicate check already passes; the real insert
   // fires from its own "Confirm & Submit" button, not from the form's Submit.
   const [showReviewModal, setShowReviewModal] = useState(false)
+  const tour = useFormTour('vendor')
 
   // Guards against re-alerting Finance on every repeated Submit click while
   // the form is stuck in the "not linked" state — resets once the answer changes.
@@ -507,6 +603,8 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
   const msmeMismatch = !!(msmeExtracted?.registration_number && f.msme_details.trim()
     && !f.msme_details.toUpperCase().includes(msmeExtracted.registration_number.toUpperCase()))
   const isIndividual = AADHAAR_REQUIRED_ORG_TYPES.includes(f.org_type)
+  const norm = v => String(v || '').toUpperCase().replace(/\s+/g, '')
+  const regNoMismatch = !!(regNoExtracted && f.org_registration_number.trim() && norm(f.org_registration_number) !== norm(regNoExtracted))
 
   // Individuals don't have a company registration number — show "0" instead
   // of asking them to type one. Switching back to a non-individual type
@@ -626,6 +724,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
   // receipts. Never overrides a field the user already filled in.
   async function handleChequeFile(file) {
     setChequeFile(file)
+    clearDocNote('cheque')
     if (!file) return
     setChequeOcrLoading(true)
     try {
@@ -660,6 +759,9 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           pincode: prev.pincode || extracted.pincode || prev.pincode,
         }))
         setChequeOcrLoading(false)
+        const chequeRead = [extracted.beneficiary_name && 'beneficiary name', extracted.account_number && 'account number', extracted.ifsc_code && 'IFSC code'].filter(Boolean)
+        const chequeMissing = [!extracted.beneficiary_name && 'beneficiary name', !extracted.account_number && 'account number', !extracted.ifsc_code && 'IFSC code'].filter(Boolean)
+        setDocNote('cheque', chequeRead, chequeMissing)
         // Canonicalize/lock the bank name + branch against the authoritative
         // IFSC directory in the background on every (re-)upload, same reason
         // as above — the new cheque's IFSC is what should win.
@@ -669,6 +771,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
     } catch (err) {
       console.error('Cheque OCR failed:', err)
     }
+    setDocNote('cheque', [], ['beneficiary name', 'account number', 'IFSC code'])
     setChequeOcrLoading(false)
   }
 
@@ -678,6 +781,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
   async function handlePanFile(file) {
     setPanFile(file)
     setPanExtracted(null)
+    clearDocNote('pan')
     if (!file) return
     setPanOcrLoading(true)
     try {
@@ -686,18 +790,87 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         : await imageFileToJpegBase64(file)
       const extracted = await extractPanCardDetails(base64)
       const extractedPan = extracted?.pan_number?.toUpperCase().trim()
+      const panRead = []
       if (extractedPan && PAN_RE.test(extractedPan)) {
         setPanExtracted(extractedPan)
+        panRead.push('PAN number')
         if (!f.pan_number.trim()) {
           setF(prev => ({ ...prev, pan_number: extractedPan }))
           setPanDupAcknowledged(false)
           checkPanDuplicates(extractedPan)
         }
       }
+      // The card also carries the holder's name and a date (date of birth, or
+      // of incorporation for an organisation) — fill those only if still blank.
+      const panName = extracted?.name?.trim()
+      const panDate = toInputDate(extracted?.date?.trim())
+      if (panName) panRead.push('name')
+      if (panDate) panRead.push('date of incorporation / birth')
+      if (panName || panDate) {
+        setF(prev => ({
+          ...prev,
+          org_name: prev.org_name.trim() ? prev.org_name : (panName || prev.org_name),
+          date_of_incorporation: prev.date_of_incorporation || panDate || prev.date_of_incorporation,
+        }))
+      }
+      setDocNote('pan', panRead, panRead.includes('PAN number') ? [] : ['PAN number'])
+      setPanOcrLoading(false)
+      return
     } catch (err) {
       console.error('PAN OCR failed:', err)
     }
+    setDocNote('pan', [], ['PAN number'])
     setPanOcrLoading(false)
+  }
+
+  // OCR the incorporation/registration document to fill the registration
+  // number (and whatever else it shows: state, date of incorporation,
+  // organisation name, registered address) — only into blanks, so anything
+  // already typed is never overwritten. A different registration number than
+  // the one typed is surfaced as a mismatch instead of silently replaced.
+  async function handleRegCertFile(file) {
+    setRegCertFile(file)
+    setRegNoExtracted(null)
+    clearDocNote('reg_cert')
+    if (!file) return
+    setRegCertOcrLoading(true)
+    try {
+      const { base64 } = file.type === 'application/pdf'
+        ? await pdfPageToBase64(file)
+        : await imageFileToJpegBase64(file)
+      const extracted = await extractRegistrationCertDetails(base64)
+      if (extracted) {
+        const regNo = extracted.registration_number?.toUpperCase().replace(/\s+/g, '').trim() || null
+        const cinState = regNo && /^[LU]\d{5}[A-Z]{2}\d{4}/.test(regNo) ? CIN_STATE_CODES[regNo.slice(6, 8)] : null
+        const regState = matchIndianState(extracted.state) || matchIndianState(cinState)
+        const incDate = toInputDate(extracted.date_of_incorporation?.trim())
+        const orgName = extracted.organisation_name?.trim() || null
+        const pin = /^\d{6}$/.test(extracted.pincode || '') ? extracted.pincode : null
+        const read = [
+          regNo && 'registration number', regState && 'registration state', incDate && 'date of incorporation',
+          orgName && 'organisation name', (extracted.address_line1 || extracted.city || pin) && 'registered address',
+        ].filter(Boolean)
+        const missing = [!regNo && 'registration number', !regState && 'registration state', !incDate && 'date of incorporation'].filter(Boolean)
+        if (regNo) setRegNoExtracted(regNo)
+        setF(prev => ({
+          ...prev,
+          org_registration_number: prev.org_registration_number.trim() ? prev.org_registration_number : (regNo || prev.org_registration_number),
+          org_registration_state: prev.org_registration_state || regState || prev.org_registration_state,
+          date_of_incorporation: prev.date_of_incorporation || incDate || prev.date_of_incorporation,
+          org_name: prev.org_name.trim() ? prev.org_name : (orgName || prev.org_name),
+          address_line1: prev.address_line1 || extracted.address_line1 || prev.address_line1,
+          city: prev.city || extracted.city || prev.city,
+          pincode: prev.pincode || pin || prev.pincode,
+        }))
+        setDocNote('reg_cert', read, missing)
+        setRegCertOcrLoading(false)
+        return
+      }
+    } catch (err) {
+      console.error('Registration certificate OCR failed:', err)
+    }
+    setDocNote('reg_cert', [], ['registration number', 'registration state', 'date of incorporation'])
+    setRegCertOcrLoading(false)
   }
 
   // OCR the GST Registration Certificate to auto-fill GSTIN when it's still
@@ -714,8 +887,8 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
   async function handleGstCertFile(file) {
     setGstCertFile(file)
     setGstExtracted(null)
+    clearDocNote('gst')
     if (!file) return
-    if (!gstinEnabled) return
     setGstCertOcrLoading(true)
     try {
       const { base64 } = file.type === 'application/pdf'
@@ -723,21 +896,42 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         : await imageFileToJpegBase64(file)
       const extracted = await extractGstCertDetails(base64)
       const extractedGstin = extracted?.gstin?.toUpperCase().trim()
+      const gstRead = []
       if (extractedGstin && GSTIN_RE.test(extractedGstin)) {
         setGstExtracted(extractedGstin)
+        gstRead.push('GSTIN')
         const panUpper = f.pan_number.toUpperCase().trim()
-        const embeddedPanMatches = parseGSTIN(extractedGstin)?.embeddedPan === panUpper
+        const embeddedPan = parseGSTIN(extractedGstin)?.embeddedPan
+        const embeddedPanMatches = embeddedPan === panUpper
         setF(prev => {
           const typed = prev.gstin.toUpperCase().trim()
-          if (!typed || (typed !== extractedGstin && embeddedPanMatches)) {
-            return { ...prev, gstin: extractedGstin }
-          }
-          return prev
+          const next = { ...prev }
+          if (!typed || (typed !== extractedGstin && embeddedPanMatches)) next.gstin = extractedGstin
+          // A GSTIN embeds the holder's PAN — fill it if PAN is still blank.
+          if (!prev.pan_number.trim() && embeddedPan) next.pan_number = embeddedPan
+          return next
         })
       }
+      // Legal name / principal-place-of-business address, only into blanks.
+      const gstState = matchIndianState(extracted?.state)
+      const gstName = extracted?.legal_name?.trim()
+      if (gstName) gstRead.push('legal name')
+      if (extracted?.address_line1 || extracted?.city || extracted?.pincode || gstState) gstRead.push('address')
+      setF(prev => ({
+        ...prev,
+        org_name: prev.org_name.trim() ? prev.org_name : (gstName || prev.org_name),
+        address_line1: prev.address_line1 || extracted?.address_line1 || prev.address_line1,
+        city: prev.city || extracted?.city || prev.city,
+        state: prev.state || gstState || prev.state,
+        pincode: prev.pincode || (/^\d{6}$/.test(extracted?.pincode || '') ? extracted.pincode : prev.pincode),
+      }))
+      setDocNote('gst', gstRead, gstRead.includes('GSTIN') ? [] : ['GSTIN'])
+      setGstCertOcrLoading(false)
+      return
     } catch (err) {
       console.error('GST certificate OCR failed:', err)
     }
+    setDocNote('gst', [], ['GSTIN'])
     setGstCertOcrLoading(false)
   }
 
@@ -750,6 +944,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
   async function handleMsmeCertFile(file) {
     setMsmeCertFile(file)
     setMsmeExtracted(null)
+    clearDocNote('msme')
     if (!file) return
     setMsmeCertOcrLoading(true)
     try {
@@ -759,8 +954,11 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
       const extracted = await extractMsmeCertDetails(base64)
       const regNo = extracted?.registration_number?.trim() || null
       const category = extracted?.category?.trim() || null
+      const msmeRead = []
       if (regNo || category) {
         setMsmeExtracted({ registration_number: regNo, category })
+        if (regNo) msmeRead.push('registration number')
+        if (category) msmeRead.push('category')
         if (!f.msme_details.trim()) {
           const lines = []
           if (regNo) lines.push(`Udyam Registration Number: ${regNo}`)
@@ -768,9 +966,25 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           setF(prev => (prev.msme_details.trim() ? prev : { ...prev, msme_details: lines.join('\n') }))
         }
       }
+      // Udyam certificates also print the enterprise's mobile and email.
+      const msmeEmail = extracted?.email?.trim()
+      const msmePhone = String(extracted?.phone || '').replace(/\D/g, '').slice(-10)
+      const phoneUsable = phonePrefix === '+91' && msmePhone.length === 10
+      if (msmeEmail?.includes('@')) msmeRead.push('email')
+      if (phoneUsable) msmeRead.push('mobile number')
+      setF(prev => ({
+        ...prev,
+        org_name: prev.org_name.trim() ? prev.org_name : (extracted?.enterprise_name?.trim() || prev.org_name),
+        email: prev.email.trim() ? prev.email : (msmeEmail?.includes('@') ? msmeEmail : prev.email),
+        phone: prev.phone.trim() ? prev.phone : (phoneUsable ? msmePhone : prev.phone),
+      }))
+      setDocNote('msme', msmeRead, (regNo ? [] : ['registration number']).concat(category ? [] : ['category']))
+      setMsmeCertOcrLoading(false)
+      return
     } catch (err) {
       console.error('MSME certificate OCR failed:', err)
     }
+    setDocNote('msme', [], ['registration number', 'category'])
     setMsmeCertOcrLoading(false)
   }
 
@@ -1162,6 +1376,16 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
   // `errors` state (only ever touched by per-field onBlur checks).
   const liveErrors = attemptedMode ? validate(attemptedMode) : errors
 
+  const docsChecklist = [
+    { key: 'cheque', label: 'Cancelled cheque or bank statement / passbook', fills: 'beneficiary name, account number, IFSC, bank & branch, address', have: !!(chequePath || chequeFile), applies: true },
+    { key: 'pan', label: 'PAN card copy', fills: 'PAN number, name, date of incorporation', have: !!(panPath || panFile), applies: true },
+    isIndividual
+      ? { key: 'aadhaar', label: 'Aadhaar copy' + (f.aadhaar_pan_linked === true ? ' and proof of Aadhaar-PAN link' : ''), fills: 'proof of identity (Aadhaar number is typed in by you)', have: !!((aadhaarPath || aadhaarFile) && (f.aadhaar_pan_linked !== true || aadhaarProofPath || aadhaarProofFile)), applies: true }
+      : { key: 'reg', label: f.org_type ? incorporationDocLabel(f.org_type) : 'Registration / incorporation certificate', fills: 'registration number, state, date of incorporation, organisation name, address', have: !!(regCertPath || regCertFile), applies: !!f.org_type, when: 'the exact document depends on the Type of Organisation you pick in section 1' },
+    { key: 'gst', label: 'GST registration certificate', fills: 'GSTIN, legal name, address', have: !!(gstCertPath || gstCertFile), applies: f.is_gstin_registered, when: 'only if the vendor is GST-registered' },
+    { key: 'msme', label: 'MSME / Udyam certificate', fills: 'Udyam number, category, email, mobile', have: !!(msmeCertPath || msmeCertFile), applies: f.is_msme, when: 'only if the vendor is MSME-registered' },
+  ]
+
   return (
     <div style={{ maxWidth: '720px', margin: '0 auto', padding: '24px 20px 80px' }}>
 
@@ -1178,6 +1402,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--ink)', margin: 0 }}>
           {isEdit ? 'Edit Vendor' : existingVendor?.status === 'draft' ? 'Continue Vendor Draft' : 'Vendor Registration'}
         </h2>
+        <TourButton onClick={tour.start} style={{ marginLeft: 'auto' }} />
       </div>
 
       {/* Vendor ID badge */}
@@ -1200,7 +1425,9 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           Organisation is known before Attachments, which tailors exactly
           which documents it asks for based on that selection)
       ══════════════════════════════════════ */}
-      <div style={card}>
+      <DocsChecklist items={docsChecklist} />
+
+      <div style={card} data-tour-anchor="vendor-org">
         <SectionHeader number="1" title="Organisation Details" subtitle="Legal identity and registered address" />
 
         <div style={grid2}>
@@ -1370,7 +1597,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           SECTION 2 — Attachments (tailored per Type of Organisation, per
           Finance's Vendor Document Requirements sheet)
       ══════════════════════════════════════ */}
-      <div style={card}>
+      <div style={card} data-tour-anchor="vendor-attachments">
         <SectionHeader
           number="2"
           title="Attachments"
@@ -1393,6 +1620,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                 Reading document — auto-filling bank and address details…
               </div>
             )}
+            {!chequeOcrLoading && <DocNote note={docNotes.cheque} where="in Bank Account Details (section 4)" />}
           </div>
           <div style={full}>
             <FileUpload id="pan_copy"
@@ -1413,6 +1641,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                 ✓ PAN copy matches the PAN Number entered above
               </div>
             )}
+            {!panOcrLoading && <DocNote note={docNotes.pan} where="in Organisation Details" />}
             {!panOcrLoading && panMatchStatus === 'mismatch' && (
               <div style={{ fontSize: '11px', color: 'var(--clay-text)', fontWeight: 600, marginTop: '-10px', marginBottom: '14px' }}>
                 ✗ This document shows {panExtracted} but PAN Number above is {f.pan_number.toUpperCase().trim()} — please check attachment again
@@ -1427,8 +1656,14 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                 error={liveErrors.reg_cert}
                 existing={regCertPath}
                 file={regCertFile}
-                onChange={setRegCertFile}
+                onChange={handleRegCertFile}
               />
+              {regCertOcrLoading && (
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '-10px', marginBottom: '14px' }}>
+                  Reading document — filling in registration number, state and incorporation details…
+                </div>
+              )}
+              {!regCertOcrLoading && <DocNote note={docNotes.reg_cert} where="in Organisation Details and Contact & Registration" />}
             </div>
           )}
         </div>
@@ -1447,8 +1682,15 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
       {/* ══════════════════════════════════════
           SECTION 3 — Contact & Registration
       ══════════════════════════════════════ */}
-      <div style={card}>
+      <div style={card} data-tour-anchor="vendor-contact">
         <SectionHeader number="3" title="Contact & Registration" subtitle="Point of contact and legal registration" />
+        {!isIndividual && (
+          <div style={{ fontSize: '12px', lineHeight: 1.55, color: 'var(--action)', background: 'var(--action-bg)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', marginBottom: '16px' }}>
+            📎 <strong>Attach the {incorporationDocLabel(f.org_type)} in section 2 first</strong> — the registration number, state and date of incorporation then fill in here automatically
+            {(f.is_msme || f.is_gstin_registered) ? ', and the MSME / GST certificates fill in their own details below' : ''}.
+            If anything can&apos;t be read from a document, you&apos;ll be told exactly what to type in yourself.
+          </div>
+        )}
         <div style={grid2}>
           <div style={full}>
             <Field id="contact_person" label="Contact Person" required error={liveErrors.contact_person} hint="Letters and spaces only">
@@ -1503,6 +1745,16 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           <Field id="org_registration_number" label="Organisation Registration Number" required error={liveErrors.org_registration_number}
             hint={isIndividual ? 'Individual vendors do not have a registration number' : undefined}>
             <Inp field="org_registration_number" f={f} setF={setF} placeholder="e.g. U74999KA2020PTC…" err={!!liveErrors.org_registration_number} mono disabled={isIndividual} />
+            {regNoMismatch && (
+              <div style={{ fontSize: '11px', color: 'var(--clay-text)', fontWeight: 600, marginTop: '4px' }}>
+                ✗ The attached document shows {regNoExtracted}, but the number above is {f.org_registration_number.trim()} — please check
+              </div>
+            )}
+            {!isIndividual && docNotes.reg_cert && docNotes.reg_cert.missing.includes('registration number') && !f.org_registration_number.trim() && (
+              <div style={{ fontSize: '11px', color: 'var(--gold-text)', fontWeight: 600, marginTop: '4px' }}>
+                ⚠ We couldn&apos;t read the registration number from the document — please type it in here.
+              </div>
+            )}
           </Field>
           <Field label="Organisation Registration State"
             hint="Fill this to unlock the GSTIN field">
@@ -1555,6 +1807,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                 Reading document — filling in registration number and category…
               </div>
             )}
+            {!msmeCertOcrLoading && <DocNote note={docNotes.msme} where="in the MSME details above" />}
             {!msmeCertOcrLoading && msmeMismatch && (
               <div style={{ fontSize: '11px', color: 'var(--clay-text)', fontWeight: 600, marginTop: '-10px' }}>
                 ✗ This document shows registration number {msmeExtracted.registration_number}, which doesn't appear in the details above — please check attachment again
@@ -1643,6 +1896,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                 Reading document — auto-filling GSTIN…
               </div>
             )}
+            {!gstCertOcrLoading && <DocNote note={docNotes.gst} where="in the GST details above" />}
             {!gstCertOcrLoading && gstCertMatchStatus === 'match' && (
               <div style={{ fontSize: '11px', color: 'var(--moss-text)', fontWeight: 600, marginTop: '-10px' }}>
                 ✓ Certificate matches the GSTIN entered above
@@ -1698,7 +1952,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
       {/* ══════════════════════════════════════
           SECTION 4 — Bank Account Details
       ══════════════════════════════════════ */}
-      <div style={card}>
+      <div style={card} data-tour-anchor="vendor-bank">
         <SectionHeader number="4" title="Bank Account Details" subtitle="Beneficiary details for payment processing" />
         <div style={grid2}>
           <div style={full}>
@@ -1806,7 +2060,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
       )}
 
       {/* Actions */}
-      <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+      <div data-tour-anchor="vendor-submit" style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
         <button
           onClick={handleSubmit}
           disabled={saving || savingDraft}
@@ -1841,6 +2095,8 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           </button>
         )}
       </div>
+
+      <GuidedTour steps={VENDOR_TOUR} open={tour.open} onClose={tour.close} tourKey="vendor" />
 
       {showPanDupModal && (
         <PanDuplicateModal

@@ -10,12 +10,20 @@ import { imageFileToJpegBase64, pdfPageToBase64 } from '../../lib/receiptImage'
 // receipt file in hand. Fields Groq isn't confident about come back null
 // (see extractReceiptData's prompt) and are just left blank for the person
 // to fill in on the next screen.
-export default function QuickAddDropzone({ onReady }) {
+export default function QuickAddDropzone({ onReady, multiple = false }) {
   const inputRef = useRef(null)
   const [dragOver, setDragOver] = useState(false)
   const [busy, setBusy] = useState(false)
   const [busyText, setBusyText] = useState('')
   const [error, setError] = useState(null)
+
+  // `multiple` (the report workspace) lets several receipts be dropped at
+  // once — each is read and handed to onReady in turn.
+  async function handleFiles(fileList) {
+    const files = Array.from(fileList || [])
+    if (!files.length) return
+    for (const f of multiple ? files : files.slice(0, 1)) await handleFile(f)
+  }
 
   async function handleFile(file) {
     if (!file) return
@@ -48,7 +56,7 @@ export default function QuickAddDropzone({ onReady }) {
         status: 'captured',
       }).select('id').single()
 
-      onReady({
+      await onReady({
         amount: extracted?.amount ?? null,
         vendor: extracted?.vendor ?? null,
         date: extracted?.date ?? null,
@@ -74,7 +82,7 @@ export default function QuickAddDropzone({ onReady }) {
       onDragLeave={() => setDragOver(false)}
       onDrop={e => {
         e.preventDefault(); setDragOver(false)
-        handleFile(e.dataTransfer.files?.[0])
+        handleFiles(e.dataTransfer.files)
       }}
       style={{
         border: `1.5px dashed ${dragOver ? 'var(--action)' : 'var(--taupe-400)'}`,
@@ -88,8 +96,9 @@ export default function QuickAddDropzone({ onReady }) {
         ref={inputRef}
         type="file"
         accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf"
+        multiple={multiple}
         style={{ display: 'none' }}
-        onChange={e => handleFile(e.target.files?.[0])}
+        onChange={e => { handleFiles(e.target.files); e.target.value = '' }}
       />
 
       {busy ? (

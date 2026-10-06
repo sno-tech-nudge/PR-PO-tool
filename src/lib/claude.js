@@ -206,22 +206,25 @@ Use null for any field not visible. Do not guess.`,
 
 export async function extractPanCardDetails(base64Image, mimeType) {
   return await callGemini(base64Image,
-    `You are extracting the PAN (Permanent Account Number) from an Indian PAN card, or a scanned/photographed copy of one.
-The PAN is a 10-character code printed on the card, format: 5 uppercase letters, then 4 digits, then 1 uppercase letter (e.g. ABCDE1234F).
+    `You are extracting details from an Indian PAN card, or a scanned/photographed copy of one.
+The pan_number is a 10-character code printed on the card, format: 5 uppercase letters, then 4 digits, then 1 uppercase letter (e.g. ABCDE1234F).
+The name is the holder's name printed on the card (for a company/firm/trust this is the organisation's name).
+The date is the date printed on the card — a date of birth for an individual, or the date of incorporation/formation for an organisation. Convert it to DD/MM/YYYY.
 Reply with raw JSON only — no markdown, no backticks, no explanation:
-{"pan_number":string}
-Use null if not clearly visible. Do not guess.`,
+{"pan_number":string,"name":string,"date":string}
+Use null for any field not clearly visible. Do not guess.`,
     mimeType
   )
 }
 
 export async function extractGstCertDetails(base64Image, mimeType) {
   return await callGemini(base64Image,
-    `You are extracting the GSTIN from an Indian GST Registration Certificate (Form GST REG-06), or a scanned/photographed copy of one.
+    `You are extracting details from an Indian GST Registration Certificate (Form GST REG-06), or a scanned/photographed copy of one.
 The GSTIN is a 15-character code, usually printed near the top under "Registration Number" or "GSTIN", format: 2 digits (state code) + 5 uppercase letters + 4 digits + 1 uppercase letter + 1 digit-or-letter + "Z" + 1 alphanumeric (e.g. 29ABCDE1234F1Z5).
+legal_name is the "Legal Name" on the certificate. address_line1 is the street/building part of the "Address of Principal Place of Business", city is the city/district, state is the state name, pincode is the 6-digit PIN code.
 Reply with raw JSON only — no markdown, no backticks, no explanation:
-{"gstin":string}
-Use null if not clearly visible. Do not guess.`,
+{"gstin":string,"legal_name":string,"address_line1":string,"city":string,"state":string,"pincode":string}
+Use null for any field not clearly visible. Do not guess.`,
     mimeType
   )
 }
@@ -231,8 +234,24 @@ export async function extractMsmeCertDetails(base64Image, mimeType) {
     `You are extracting details from an Indian MSME/Udyam Registration Certificate, or a scanned/photographed copy of one.
 The registration_number (also called "Udyam Registration Number" or "UDYAM No.") is printed near the top, format like UDYAM-KA-03-1234567 (older Udyog Aadhaar certificates instead have a 12-character alphanumeric UAN — extract whichever is present).
 The category is the enterprise classification, printed as one of: Micro, Small, or Medium.
+enterprise_name is the name of the enterprise. If a mobile number or email address of the enterprise is printed, extract it as phone (digits only, no +91) and email.
 Reply with raw JSON only — no markdown, no backticks, no explanation:
-{"registration_number":string,"category":string}
+{"registration_number":string,"category":string,"enterprise_name":string,"phone":string,"email":string}
+Use null for any field not clearly visible. Do not guess.`,
+    mimeType
+  )
+}
+
+// Incorporation / registration certificate — Certificate of Incorporation
+// (MCA), LLP certificate, partnership/trust/HUF deed, society registration.
+export async function extractRegistrationCertDetails(base64Image, mimeType) {
+  return await callGemini(base64Image,
+    `You are extracting details from an Indian organisation registration document: a Certificate of Incorporation (MCA), an LLP incorporation certificate, a partnership deed, trust deed, HUF deed, or a society/co-operative registration certificate — or a scan/photo of one.
+registration_number is the organisation's registration identifier: the CIN (21 characters, e.g. U74999KA2020PTC123456) for a company, the LLPIN (e.g. AAB-1234) for an LLP, otherwise the registration number printed on the certificate/deed. Extract exactly what is printed.
+organisation_name is the registered name. date_of_incorporation is the date of incorporation/registration/execution, converted to DD/MM/YYYY.
+state is the Indian state of the registered office or of the registering authority (e.g. "Karnataka" — the "State" in "Registrar of Companies, Karnataka"). address_line1, city and pincode (6 digits) come from the registered office address if one is printed.
+Reply with raw JSON only — no markdown, no backticks, no explanation:
+{"registration_number":string,"organisation_name":string,"date_of_incorporation":string,"state":string,"address_line1":string,"city":string,"pincode":string}
 Use null for any field not clearly visible. Do not guess.`,
     mimeType
   )

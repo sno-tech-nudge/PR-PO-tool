@@ -49,3 +49,12 @@ export function buildQuickSaveExpensePayload(data) {
     itemized_lines: null,
   }
 }
+
+// Mirrors the required-field rules in ExpenseDetails' getErrors() for an
+// existing expense — an expense that fails this still needs its details
+// filled in (quick-saved receipts always do) before it can go into a report.
+export function isExpenseComplete(e) {
+  if (!e) return false
+  return !!(e.amount && e.vendor && e.date && e.category && e.payment_method && e.entity && e.description
+    && (e.payment_method !== 'Company Card' || e.card_no))
+}

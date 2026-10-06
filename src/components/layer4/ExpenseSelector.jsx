@@ -2,7 +2,11 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import ExpenseDetails from '../layer2/ExpenseDetails'
 import QuickAddDropzone from '../capture/QuickAddDropzone'
+import { insertExpenseDetails, buildQuickSaveExpensePayload, isExpenseComplete } from '../../lib/expenseDetailsSave'
 import { useIsMobile } from '../../hooks/useIsMobile'
+import { useFormTour } from '../../hooks/useFormTour'
+import GuidedTour, { TourButton } from '../shared/GuidedTour'
+import { REPORT_TOUR } from '../../lib/tours'
 
 export default function ExpenseSelector({ expenses: initialExpenses, results: initialResults, user, reportMeta, onPreview, onBack, standalone, onRaiseReport }) {
   const isMobile = useIsMobile()
@@ -14,6 +18,8 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
   // Closed until someone clicks "+ Add expense" — an always-open drop box in
   // the middle of the page made people unsure whether they had to use it.
   const [showAddPanel, setShowAddPanel] = useState(false)
+  // The expense-report tour only makes sense inside a report's own workspace.
+  const tour = useFormTour('report', { enabled: !!reportMeta })
   const [newLayer1Data, setNewLayer1Data] = useState(null)
   const [addingNew, setAddingNew] = useState(false)
   const [thumbnails, setThumbnails] = useState({}) // expense id -> signed image url
@@ -84,6 +90,19 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
     loadThumbnails()
   }, [expenses])
 
+  // A receipt dropped inside a report is saved straight away as an expense in
+  // this report (details still to come) — it shows up ticked in the list below
+  // and its details are filled in on the next screen.
+  async function quickAddReceipt(data) {
+    const { error } = await insertExpenseDetails({
+      payload: { ...buildQuickSaveExpensePayload(data), report_id: reportMeta.id },
+      captureId: data.capture_id,
+      userEmail: user?.email,
+    })
+    if (error) throw error
+    await refetch()
+  }
+
   function handleExpenseSaved() {
     setEditingExpense(null)
     setAddingNew(false)
@@ -105,7 +124,10 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
   // A "Save expense, finish details later" quick-save row has no entity
   // set yet — it can't be validly included in a report until someone opens
   // it and fills in the rest, so it's shown but not selectable.
-  const incompleteIds = new Set(expenses.filter(e => e.entity == null).map(e => e.id))
+  // Inside a report's own workspace those rows are selectable though — the
+  // details get filled in on the next screen, next to the receipts.
+  const inReport = !!reportMeta
+  const incompleteIds = new Set(inReport ? [] : expenses.filter(e => e.entity == null).map(e => e.id))
 
   function getViolationMessage(expId) {
     const idx = expenses.findIndex(e => e.id === expId)
@@ -183,8 +205,15 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
     const isIncomplete = incompleteIds.has(exp.id)
     const hasViolation = violatedIds.has(exp.id)
     const isSelected = selected.has(exp.id)
-    const badge = isIncomplete ? { label: 'Needs details', color: 'var(--action)', bg: 'var(--action-bg)' } : getPolicyBadge(exp, i)
-    const violationMsg = (isBlocked || hasViolation) ? getViolationMessage(exp.id) : null
+    // Policy flags are deliberately not shown while choosing expenses for a
+    // report — they surface on the final preview instead.
+    const needsDetails = inReport && !isExpenseComplete(exp)
+    const badge = (isIncomplete || needsDetails)
+      ? { label: 'Needs details', color: 'var(--action)', bg: 'var(--action-bg)' }
+      : inReport
+        ? (isBlocked ? { label: 'Blocked', color: 'var(--clay-text)', bg: 'var(--clay-bg)' } : null)
+        : getPolicyBadge(exp, i)
+    const violationMsg = (!inReport && (isBlocked || hasViolation)) ? getViolationMessage(exp.id) : null
     const thumb = thumbnails[exp.id]
 
     return (
@@ -248,13 +277,15 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
                 {[exp.category, exp.date].filter(Boolean).join(' · ')}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, marginLeft: '8px' }}>
-                <div style={{
-                  fontSize: '11px', fontWeight: 500,
-                  padding: '2px 8px', borderRadius: 'var(--radius-xs)',
-                  background: badge.bg, color: badge.color,
-                }}>
-                  {badge.label}
-                </div>
+                {badge && (
+                  <div style={{
+                    fontSize: '11px', fontWeight: 500,
+                    padding: '2px 8px', borderRadius: 'var(--radius-xs)',
+                    background: badge.bg, color: badge.color,
+                  }}>
+                    {badge.label}
+                  </div>
+                )}
                 {!isIncomplete && (
                   <span
                     onClick={e => { e.stopPropagation(); setEditingExpense(exp) }}
@@ -342,15 +373,17 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
 
       {/* Header */}
       <div style={{ padding: '20px 20px 0' }}>
-        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>
-          {reportMeta ? 'Add expenses to this report' : standalone ? 'My Expenses' : 'Create Report'}
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>{reportMeta ? 'Add expenses to this report' : standalone ? 'My Expenses' : 'Create Report'}</span>
+          {reportMeta && <TourButton onClick={tour.start} />}
+          {reportMeta && <GuidedTour steps={REPORT_TOUR} open={tour.open} onClose={tour.close} tourKey="report" />}
         </div>
         <div style={{ fontSize: '20px', fontWeight: 500, color: 'var(--text)', marginBottom: '8px' }}>
           {reportMeta ? 'Pick from your saved expenses, or add a new one' : standalone ? 'Browse and select your saved expenses' : 'Select expenses to include'}
         </div>
         <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: '1.5' }}>
           {reportMeta
-            ? "Tick the expenses to include. To add a new one, click + Add expense — drop in a receipt (it's auto-read and added straight into this report) or enter the details manually."
+            ? "Tick the expenses to include in this report. Saved a receipt without filing it? Tick it here. Have a new one? Click + Add expense and drop in the receipts. You'll fill in any missing details on the next screen."
             : standalone
               ? 'Everything you’ve saved but not yet included in a report. Select one or more to raise a report, or just browse.'
               : 'Choose which expenses to include in this report. You can create multiple reports from your saved expenses.'}
@@ -364,6 +397,7 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
           </span>
           <button
             type="button"
+            data-tour-anchor="er-add"
             onClick={() => setShowAddPanel(s => !s)}
             style={{
               marginLeft: 'auto', height: '32px', padding: '0 14px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
@@ -377,7 +411,7 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
 
         {showAddPanel && (
           <div style={{ marginBottom: '16px' }}>
-            <QuickAddDropzone onReady={data => { setNewLayer1Data(data); setAddingNew(true) }} />
+            <QuickAddDropzone multiple onReady={quickAddReceipt} />
             <div
               onClick={() => { setNewLayer1Data(null); setAddingNew(true) }}
               style={{ textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)', textDecoration: 'underline', cursor: 'pointer', marginTop: '10px' }}
@@ -389,7 +423,7 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
       </div>
 
       {/* Expense list */}
-      <div style={{ borderTop: '1px solid var(--taupe-200)', borderBottom: '1px solid var(--taupe-200)' }}>
+      <div data-tour-anchor="er-list" style={{ borderTop: '1px solid var(--taupe-200)', borderBottom: '1px solid var(--taupe-200)' }}>
         {!grouped && expenses.map((exp, i) => renderRow(exp, i))}
         {grouped && Object.entries(groupedData).map(([group, exps]) => (
           <div key={group}>
@@ -452,6 +486,7 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
           </div>
           <button
             type="button"
+            data-tour-anchor="er-preview"
             onClick={handlePreview}
             disabled={selected.size === 0}
             style={{
@@ -462,7 +497,7 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
               cursor: selected.size > 0 ? 'pointer' : 'default',
             }}
           >
-            {onPreview ? 'Preview report →' : 'Raise report →'}
+            {onPreview ? 'Continue to report →' : 'Raise report →'}
           </button>
         </div>
       </div>
