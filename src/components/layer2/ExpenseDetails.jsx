@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 import { suggestCategory } from '../../lib/claude'
 import { ENTITIES, EXPENSE_NATURES, getPrograms, getDonorsForProgram } from '../../lib/donorData'
@@ -132,7 +132,7 @@ function AttendeeMultiSelect({ selected, onChange, directoryEntries }) {
 // inside a report whose PO answer is already known (given when the report was
 // started) — the PO question is then not asked again here; it's inherited, and
 // the final report preview is the one place it can be revisited.
-export default function ExpenseDetails({ layer1Data, existingExpense = null, defaultReportId = '', reportPO = null, user, onSaved, onBack, embedded = false }) {
+export default function ExpenseDetails({ layer1Data, existingExpense = null, defaultReportId = '', reportPO = null, user, onSaved, onBack, embedded = false, onStatus, trackSave }) {
   const isMobile = useIsMobile()
   const isEdit = !!existingExpense
   const [reportId, setReportId] = useState(existingExpense?.report_id || defaultReportId || '')
@@ -165,6 +165,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
   const [note, setNote] = useState(existingExpense?.description ?? '')
   const [reimbursable, setReimbursable] = useState(existingExpense?.reimbursable ?? true)
   const [paymentMode, setPaymentMode] = useState(existingExpense?.payment_method || layer1Data?.payment_method || PAYMENT_MODES[0])
+  const isCompanyCard = paymentMode === 'Company Card'
   const [suggestedCategory, setSuggestedCategory] = useState(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -412,13 +413,53 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
   const errorText = { fontSize: '11px', color: 'var(--clay-text)', marginTop: '5px' }
   const errBorder = (key) => (errors[key] ? '1px solid var(--clay-text)' : undefined)
 
-  async function handleSave() {
-    setSubmitAttempted(true)
-    const fieldErrors = getErrors()
-    if (Object.keys(fieldErrors).length > 0) return
-    setSaving(true)
-    setError(null)
-    const payload = {
+  // Embedded in the report workspace there is no Save button: the expense is
+  // saved to the draft in the background as it is edited, and the workspace
+  // is told which mandatory fields are still missing.
+  const MISSING_LABELS = { date: 'Expense date', vendor: 'Merchant', category: 'Category', amount: 'Amount', paymentMode: 'Payment mode', cardNo: 'Card no.', entity: 'Entity', description: 'Description' }
+  const missingList = Object.keys(getErrors()).map(k => MISSING_LABELS[k]).filter(Boolean)
+  const missingKey = missingList.join('|')
+  const payloadJson = embedded ? JSON.stringify(buildPayload()) : ''
+  const savedJsonRef = useRef(payloadJson)
+  const latestJsonRef = useRef(payloadJson)
+  const expenseId = existingExpense?.id
+  useEffect(() => { latestJsonRef.current = payloadJson }, [payloadJson])
+
+  const flush = useCallback(async () => {
+    if (!embedded || !expenseId) return
+    const json = latestJsonRef.current
+    if (!json || json === savedJsonRef.current) return
+    savedJsonRef.current = json
+    const p = supabase.from('expense_details').update(JSON.parse(json)).eq('id', expenseId)
+    trackSave?.(p)
+    const { error: err } = await p
+    if (err) {
+      savedJsonRef.current = ''
+      setError(`Could not save automatically: ${err.message}`)
+    } else {
+      setError(null)
+    }
+  }, [embedded, expenseId, trackSave])
+
+  const flushRef = useRef(flush)
+  useEffect(() => { flushRef.current = flush }, [flush])
+
+  useEffect(() => {
+    if (!embedded) return
+    const t = setTimeout(() => flush(), 700)
+    return () => clearTimeout(t)
+  }, [payloadJson, embedded, flush])
+
+  // Leaving the page or collapsing the card never loses what was typed.
+  useEffect(() => () => { flushRef.current?.() }, [])
+
+  useEffect(() => {
+    if (embedded && expenseId) onStatus?.(expenseId, missingList, { vendor, amount: effectiveAmount, category, date })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [embedded, expenseId, missingKey, vendor, effectiveAmount, category, date])
+
+  function buildPayload() {
+    return {
       report_id: reportId || null,
       amount: effectiveAmount || null,
       vendor: vendor || null,
@@ -432,7 +473,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
       invoice_number: invoiceNumber || null,
       gstin: gstin || null,
       description: note || null,
-      reimbursable,
+      reimbursable: isCompanyCard ? false : reimbursable,
       payment_method: paymentMode || null,
       entity: entity || null,
       program: program || null,
@@ -447,6 +488,15 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
       vr_pdf_link: vrPdfLink || null,
       itemized_lines: itemized ? itemLines.filter(l => l.category || l.amount) : null,
     }
+  }
+
+  async function handleSave() {
+    setSubmitAttempted(true)
+    const fieldErrors = getErrors()
+    if (Object.keys(fieldErrors).length > 0) return
+    setSaving(true)
+    setError(null)
+    const payload = buildPayload()
 
     const { error: err } = isEdit
       ? await supabase.from('expense_details').update(payload).eq('id', existingExpense.id)
@@ -684,7 +734,14 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
         <label style={labelStyle}>Payment Mode{required}</label>
         <select
           value={paymentMode}
-          onChange={e => { setPaymentMode(e.target.value); if (e.target.value !== 'Company Card') setCardNo('') }}
+          onChange={e => {
+            const mode = e.target.value
+            setPaymentMode(mode)
+            if (mode !== 'Company Card') setCardNo('')
+            // Company-card spend is paid by the company, never reimbursed. Leaving
+            // Company Card brings the box back in its default (ticked) state.
+            setReimbursable(mode !== 'Company Card')
+          }}
           style={{ ...inputStyle, paddingLeft: '10px', border: errBorder('paymentMode') }}
         >
           {PAYMENT_MODES.map(m => <option key={m} value={m}>{m}</option>)}
@@ -832,7 +889,8 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
         </select>
       </div>
 
-      {/* Claim reimbursement */}
+      {/* Claim reimbursement — only for out-of-pocket spend */}
+      {!isCompanyCard && (
       <div style={{ ...fieldWrap, display: 'flex', alignItems: 'center', gap: '8px' }}>
         <input
           type="checkbox"
@@ -844,8 +902,9 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
         <label htmlFor="claim-reimbursement" style={{ fontSize: '13px', color: 'var(--text)', cursor: 'pointer' }}>
           Claim reimbursement
         </label>
-        <InfoTip text="Check this if you paid out of your own pocket and need this amount paid back to you. Leave it unchecked if the company already paid — for example, if you picked Company Card as the Payment Mode above, this expense usually isn't something you need reimbursed for." />
+        <InfoTip text="Check this if you paid out of your own pocket and need this amount paid back to you. Leave it unchecked if the company already paid." />
       </div>
+      )}
 
       {programs.length > 0 && (
         <div style={fieldWrap}>
@@ -989,22 +1048,6 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
 
       {error && (
         <div style={{ fontSize: '13px', color: 'var(--clay-text)', marginBottom: '8px' }}>{error}</div>
-      )}
-
-      {embedded && (
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          style={{
-            width: '100%', height: '44px',
-            background: saving ? 'var(--text-muted)' : 'var(--text)',
-            color: 'var(--surface-card)', border: 'none',
-            fontSize: '14px', fontWeight: 500,
-            cursor: saving ? 'default' : 'pointer', borderRadius: 'var(--radius-sm)',
-          }}
-        >
-          {saving ? 'Saving…' : 'Save details'}
-        </button>
       )}
 
       {/* Fixed bottom */}

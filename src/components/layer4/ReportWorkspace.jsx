@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 import { runAllChecks } from '../../lib/policyEngine'
 import { isExpenseComplete } from '../../lib/expenseDetailsSave'
@@ -77,6 +77,23 @@ export default function ReportWorkspace({ reportMeta, expenses: initialRows, use
   const [step, setStep] = useState('report')
   const [openId, setOpenId] = useState(() => initialRows.find(e => !isExpenseComplete(e))?.id || null)
   const [showReceipts, setShowReceipts] = useState(false)
+  // Live state reported by each open expense form: which mandatory fields are
+  // still empty, and the headline values for its collapsed card. Rows whose
+  // form isn't open fall back to what is saved.
+  const [liveById, setLiveById] = useState({}) // id -> { missing: [], vendor, amount, category, date }
+  const pendingSaves = useRef(new Set())
+  const trackSave = useCallback(p => {
+    const tracked = Promise.resolve(p).catch(() => {})
+    pendingSaves.current.add(tracked)
+    tracked.finally(() => pendingSaves.current.delete(tracked))
+  }, [])
+  const handleStatus = useCallback((id, missing, live) => {
+    setLiveById(prev => {
+      const cur = prev[id]
+      if (cur && cur.missing.join('|') === missing.join('|') && cur.vendor === live.vendor && cur.amount === live.amount && cur.category === live.category && cur.date === live.date) return prev
+      return { ...prev, [id]: { missing, ...live } }
+    })
+  }, [])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
 
@@ -118,34 +135,50 @@ export default function ReportWorkspace({ reportMeta, expenses: initialRows, use
     }
   }
 
-  async function handleExpenseSaved(id) {
-    const { data } = await supabase.from('expense_details').select('*').eq('id', id).single()
-    if (!data) return
-    const nextRows = rows.map(e => (e.id === id ? data : e))
-    setRows(nextRows)
-    const nextIncomplete = nextRows.find(e => !isExpenseComplete(e))
-    setOpenId(nextIncomplete?.id || null)
-    if (nextIncomplete) setTimeout(() => document.getElementById(`rcpt-${nextIncomplete.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+  // Mandatory fields still empty for one expense: live from its open form,
+  // otherwise from what is saved.
+  function missingFor(e) {
+    if (liveById[e.id]) return liveById[e.id].missing
+    return isExpenseComplete(e) ? [] : ['Details']
   }
-
-  const incomplete = rows.filter(e => !isExpenseComplete(e))
-  const total = rows.reduce((s, e) => s + (Number(e.amount) || 0), 0)
+  const incomplete = rows.filter(e => missingFor(e).length > 0)
+  const total = rows.reduce((s, e) => s + (Number(liveById[e.id]?.amount ?? e.amount) || 0), 0)
   const detailsMissing = !durStart || !durEnd
   const canContinue = !detailsMissing
-  const canPreview = incomplete.length === 0 && !detailsMissing && !busy
+  const allReady = incomplete.length === 0 && !detailsMissing
+
+  // What is still missing, spelled out per expense. Shown on hover or tap of
+  // the Preview button while it is not ready.
+  const missingSummary = [
+    ...(detailsMissing ? ['Report duration'] : []),
+    ...incomplete.map(e => `${liveById[e.id]?.vendor || e.vendor || 'Expense'}: ${missingFor(e).join(', ')}`),
+  ].join(' · ')
 
   async function handlePreview() {
-    if (!canPreview) return
+    if (busy) return
+    if (!allReady) { setError(`Still to fill in: ${missingSummary}`); return }
     setBusy(true)
     setError(null)
+    // Make sure every background save has landed, then check what is actually
+    // stored one last time before opening the preview.
+    await Promise.all([...pendingSaves.current])
+    const { data: fresh } = await supabase.from('expense_details').select('*').in('id', rows.map(e => e.id))
+    const freshRows = rows.map(e => (fresh || []).find(f => f.id === e.id) || e)
+    const stillIncomplete = freshRows.filter(e => !isExpenseComplete(e))
+    if (stillIncomplete.length > 0) {
+      setError(`Still to fill in: ${stillIncomplete.map(e => e.vendor || 'Expense').join(', ')}`)
+      setBusy(false)
+      return
+    }
+    setRows(freshRows)
     const { error: err } = await supabase.from('expense_reports')
       .update({ business_purpose: purpose || null, duration_start: durStart, duration_end: durEnd })
       .eq('id', reportMeta.id)
     if (err) { setError(`Could not save report details: ${err.message}`); setBusy(false); return }
-    const results = await Promise.all(rows.map(exp => runAllChecks(exp, rows)))
-      .catch(() => rows.map(() => ({ violations: [], flags: [] })))
+    const results = await Promise.all(freshRows.map(exp => runAllChecks(exp, freshRows)))
+      .catch(() => freshRows.map(() => ({ violations: [], flags: [] })))
     setBusy(false)
-    onPreview(rows, results, { ...reportMeta, business_purpose: purpose || null, duration_start: durStart, duration_end: durEnd, _durationConfirmed: true })
+    onPreview(freshRows, results, { ...reportMeta, business_purpose: purpose || null, duration_start: durStart, duration_end: durEnd, _durationConfirmed: true })
   }
 
   const inputStyle = {
@@ -230,24 +263,25 @@ export default function ReportWorkspace({ reportMeta, expenses: initialRows, use
           </div>
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
             {incomplete.length > 0
-              ? `${incomplete.length} still need${incomplete.length === 1 ? 's' : ''} details. Open each one, check the details against its receipt and save.`
+              ? `${incomplete.length} still need${incomplete.length === 1 ? 's' : ''} details. Open each one and fill in the fields marked *. Everything saves automatically.`
               : 'All expenses are ready. You can still open any of them to check or edit.'}
           </div>
 
           <div data-tour-anchor="er-forms">
             {rows.map((e, i) => {
-              const ready = isExpenseComplete(e)
+              const ready = missingFor(e).length === 0
+              const live = liveById[e.id] || {}
               const open = openId === e.id
               return (
                 <div key={e.id} style={{ border: `1px solid ${open ? 'var(--text)' : 'var(--taupe-200)'}`, marginBottom: '10px', background: 'var(--surface-card)' }}>
                   <div onClick={() => toggleOpen(e.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', cursor: 'pointer' }}>
                     <div style={{ fontSize: '12px', color: 'var(--text-muted)', width: '16px', flexShrink: 0 }}>{i + 1}.</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.vendor || 'Unknown vendor'}</div>
-                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{[e.category, e.date].filter(Boolean).join(' · ') || 'Details not filled in yet'}</div>
+                      <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{live.vendor || e.vendor || 'Unknown vendor'}</div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{[live.category ?? e.category, live.date ?? e.date].filter(Boolean).join(' · ') || 'Details not filled in yet'}</div>
                     </div>
                     <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text)', flexShrink: 0 }}>
-                      {e.amount ? `₹${Number(e.amount).toLocaleString('en-IN')}` : '—'}
+                      {(live.amount ?? e.amount) ? `₹${Number(live.amount ?? e.amount).toLocaleString('en-IN')}` : '—'}
                     </div>
                     <div style={{
                       fontSize: '11px', fontWeight: 500, padding: '2px 8px', borderRadius: 'var(--radius-xs)', flexShrink: 0,
@@ -259,7 +293,7 @@ export default function ReportWorkspace({ reportMeta, expenses: initialRows, use
                   </div>
                   {open && (
                     <div style={{ padding: '4px 14px 16px', borderTop: '1px solid var(--taupe-200)', paddingTop: '16px' }}>
-                      <ExpenseDetails embedded existingExpense={e} user={user} onSaved={() => handleExpenseSaved(e.id)} onBack={() => setOpenId(null)} />
+                      <ExpenseDetails embedded existingExpense={e} user={user} onStatus={handleStatus} trackSave={trackSave} onSaved={() => {}} onBack={() => setOpenId(null)} />
                     </div>
                   )}
                 </div>
@@ -291,9 +325,9 @@ export default function ReportWorkspace({ reportMeta, expenses: initialRows, use
             {step === 'report' && detailsMissing && (
               <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginTop: '2px' }}>Fill in the report duration to continue.</div>
             )}
-            {step === 'expenses' && (error || incomplete.length > 0) && (
+            {step === 'expenses' && (error || !allReady) && (
               <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginTop: '2px' }}>
-                {error || `${incomplete.length} expense${incomplete.length === 1 ? '' : 's'} still need${incomplete.length === 1 ? 's' : ''} details.`}
+                {error || `Still to fill in: ${missingSummary}`}
               </div>
             )}
           </div>
@@ -317,13 +351,14 @@ export default function ReportWorkspace({ reportMeta, expenses: initialRows, use
               type="button"
               data-tour-anchor="er-preview"
               onClick={handlePreview}
-              disabled={!canPreview}
+              aria-disabled={!allReady}
+              title={allReady ? '' : `Still to fill in: ${missingSummary}`}
               style={{
                 height: '44px', padding: '0 24px', border: 'none', borderRadius: 'var(--radius-sm)',
                 fontSize: '14px', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0,
-                background: canPreview ? 'var(--action)' : 'var(--taupe-200)',
-                color: canPreview ? 'var(--surface-card)' : 'var(--text-muted)',
-                cursor: canPreview ? 'pointer' : 'default',
+                background: allReady ? 'var(--action)' : 'var(--taupe-200)',
+                color: allReady ? 'var(--surface-card)' : 'var(--text-muted)',
+                cursor: allReady ? 'pointer' : 'help',
               }}
             >
               {busy ? 'Checking…' : 'Preview report →'}
