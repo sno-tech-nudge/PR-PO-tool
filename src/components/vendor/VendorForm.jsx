@@ -1737,21 +1737,6 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         <TourButton onClick={tour.start} style={{ marginLeft: 'auto' }} />
       </div>
 
-      {/* Vendor ID badge */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'space-between',
-        background: 'var(--action-bg)', border: '1px solid var(--taupe-300)', borderRadius: 'var(--radius-md)',
-        padding: '12px 18px', marginBottom: '24px',
-      }}>
-        <div>
-          <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Vendor ID</div>
-          <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--action)', fontFamily: 'monospace', marginTop: '2px' }}>
-            {vendorId || 'Will be assigned on submission'}
-          </div>
-        </div>
-        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Auto-assigned</div>
-      </div>
-
       {/* ══════════════════════════════════════
           SECTION 1 — Organisation Details (comes first so Type of
           Organisation is known before Attachments, which tailors exactly
@@ -2243,6 +2228,21 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           </ul>
         </div>
       )}
+
+      {/* Vendor ID badge */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'space-between',
+        background: 'var(--action-bg)', border: '1px solid var(--taupe-300)', borderRadius: 'var(--radius-md)',
+        padding: '12px 18px', marginBottom: '16px',
+      }}>
+        <div>
+          <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Vendor ID</div>
+          <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--action)', fontFamily: 'monospace', marginTop: '2px' }}>
+            {vendorId || 'Will be assigned on submission'}
+          </div>
+        </div>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Auto-assigned</div>
+      </div>
 
       {/* Actions */}
       <div data-tour-anchor="vendor-submit" style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
