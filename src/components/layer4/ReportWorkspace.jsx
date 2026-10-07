@@ -137,6 +137,15 @@ export default function ReportWorkspace({ reportMeta, expenses: initialRows, use
     setTimeout(() => document.getElementById(`rcpt-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
   }
 
+  // An expense deleted from its form: take it out of the report. With none
+  // left there is nothing to fill in, so go back to choosing expenses.
+  function handleExpenseDeleted(exp) {
+    const left = rows.filter(e => e.id !== exp.id)
+    setRows(left)
+    setLiveById(prev => { const next = { ...prev }; delete next[exp.id]; return next })
+    if (left.length === 0) onBack()
+  }
+
   // Mandatory fields still empty for one expense: live from its open form,
   // otherwise from what is saved.
   function missingFor(e) {
@@ -299,7 +308,7 @@ export default function ReportWorkspace({ reportMeta, expenses: initialRows, use
                     </div>
                   </div>
                   <div style={{ padding: '16px 14px', borderTop: '1px solid var(--taupe-200)' }}>
-                    <ExpenseDetails embedded existingExpense={e} user={user} onStatus={handleStatus} trackSave={trackSave} onSaved={() => {}} onBack={() => {}} />
+                    <ExpenseDetails embedded existingExpense={e} user={user} onStatus={handleStatus} trackSave={trackSave} onSaved={() => {}} onDeleted={handleExpenseDeleted} onBack={() => {}} />
                   </div>
                 </div>
               )

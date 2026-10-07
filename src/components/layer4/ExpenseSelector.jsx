@@ -8,6 +8,7 @@ import { useFormTour } from '../../hooks/useFormTour'
 import GuidedTour, { TourButton } from '../shared/GuidedTour'
 import { REPORT_TOUR } from '../../lib/tours'
 import RejectionBanner from './RejectionBanner'
+import DeleteExpenseButton from '../shared/DeleteExpenseButton'
 
 export default function ExpenseSelector({ expenses: initialExpenses, results: initialResults, user, reportMeta, onPreview, onBack, standalone, onRaiseReport }) {
   const isMobile = useIsMobile()
@@ -102,6 +103,15 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
     })
     if (error) throw error
     await refetch()
+  }
+
+  // An expense deleted from the list (or from its edit form): drop it from
+  // the selection and reload what is left.
+  function handleExpenseDeleted(exp) {
+    setSelected(prev => { const next = new Set(prev); next.delete(exp.id); return next })
+    setExpenses(prev => prev.filter(e => e.id !== exp.id))
+    setEditingExpense(null)
+    refetch()
   }
 
   function handleExpenseSaved() {
@@ -295,6 +305,7 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
                     Edit
                   </span>
                 )}
+                <DeleteExpenseButton expense={exp} user={user} onDeleted={handleExpenseDeleted} />
               </div>
             </div>
           </div>
@@ -515,6 +526,7 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
               existingExpense={editingExpense}
               user={user}
               onSaved={handleExpenseSaved}
+              onDeleted={handleExpenseDeleted}
               onBack={() => setEditingExpense(null)}
             />
           </div>

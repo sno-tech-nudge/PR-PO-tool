@@ -8,6 +8,7 @@ import { GSTIN_FORMAT_RE } from '../../lib/formCalc'
 import { toInputDate, fromInputDate } from '../../lib/dateFormat'
 import { insertExpenseDetails } from '../../lib/expenseDetailsSave'
 import { PAYMENT_MODES, CARD_NUMBERS, toPaymentMode } from '../../lib/paymentModes'
+import DeleteExpenseButton from '../shared/DeleteExpenseButton'
 import AmountInput from '../shared/AmountInput'
 import InfoTip from '../shared/InfoTip'
 import VoiceInputButton from '../shared/VoiceInputButton'
@@ -117,7 +118,7 @@ function AttendeeMultiSelect({ selected, onChange, directoryEntries }) {
 // inside a report whose PO answer is already known (given when the report was
 // started) — the PO question is then not asked again here; it's inherited, and
 // the final report preview is the one place it can be revisited.
-export default function ExpenseDetails({ layer1Data, existingExpense = null, defaultReportId = '', reportPO = null, user, onSaved, onBack, embedded = false, onStatus, trackSave }) {
+export default function ExpenseDetails({ layer1Data, existingExpense = null, defaultReportId = '', reportPO = null, user, onSaved, onBack, embedded = false, onStatus, trackSave, onDeleted }) {
   const isMobile = useIsMobile()
   const isEdit = !!existingExpense
   const [reportId, setReportId] = useState(existingExpense?.report_id || defaultReportId || '')
@@ -1039,6 +1040,13 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
 
       {error && (
         <div style={{ fontSize: '13px', color: 'var(--clay-text)', marginBottom: '8px' }}>{error}</div>
+      )}
+
+      {/* Delete — removes the expense, its receipt and the stored file */}
+      {isEdit && onDeleted && existingExpense && (
+        <div style={{ marginTop: '8px', marginBottom: embedded ? 0 : '16px' }}>
+          <DeleteExpenseButton expense={existingExpense} user={user} onDeleted={onDeleted} variant="button" label="Delete expense" />
+        </div>
       )}
 
       {/* Fixed bottom */}
