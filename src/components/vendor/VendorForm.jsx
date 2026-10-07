@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, createContext, useContext } from 'react'
 import { supabase } from '../../lib/supabase'
 import { getFiscalYearPrefix, PAN_FORMAT_RE, GSTIN_FORMAT_RE } from '../../lib/formCalc'
 import { NATURE_OF_BUSINESS_OPTIONS } from '../../lib/vendorData'
@@ -113,13 +113,26 @@ function scrollToField(key) {
 // Organisation next to Nature of Business) must have their inputs line up
 // regardless of which one happens to carry a hint, and a hint wrapping to
 // two lines used to shove that field's input down past its neighbour's.
+// Which document (if any) filled a field in — the label renders a small
+// "from PAN card" tag next to it, for as long as the value is still the one
+// the document supplied (editing it by hand removes the tag).
+const AutoFillContext = createContext(null)
+
 function Field({ id, label, error, required, hint, info, children }) {
+  const autoFrom = useContext(AutoFillContext)?.(id)
   return (
     <div id={id} style={{ marginBottom: '18px', scrollMarginTop: '80px' }}>
-      <label style={{ display: 'flex', alignItems: 'center', fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: '5px' }}>
-        {label}{required && <span style={{ color: 'var(--clay-text)', marginLeft: '2px' }}>*</span>}
+      {label && (
+      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: '5px' }}>
+        <span>{label}{required && <span style={{ color: 'var(--clay-text)', marginLeft: '2px' }}>*</span>}</span>
         {info && <InfoTip text={info} />}
+        {autoFrom && (
+          <span style={{ marginLeft: 'auto', fontSize: '10px', fontWeight: 600, color: 'var(--moss-text)', background: 'var(--moss-bg)', border: '1px solid var(--moss-border)', borderRadius: 'var(--radius-sm)', padding: '1px 6px', whiteSpace: 'nowrap' }}>
+            ✓ from {autoFrom}
+          </span>
+        )}
       </label>
+      )}
       {children}
       {hint && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>{hint}</div>}
       {error && <div style={{ fontSize: '11px', color: 'var(--clay-text)', marginTop: '4px' }}>{error}</div>}
@@ -371,41 +384,125 @@ async function generateVendorId() {
 // nobody gets halfway through and then discovers a missing document. Items
 // tick off as each one is attached; conditional ones (GST / MSME) only count
 // once the vendor says they have that registration.
-function DocsChecklist({ items }) {
+function DocsChecklist({ items, open, onToggle }) {
+  const needed = items.filter(it => it.applies)
+  const got = needed.filter(it => it.have).length
   return (
     <div data-tour-anchor="vendor-docs" style={{
       background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)',
-      padding: '20px 24px', marginBottom: '16px',
+      padding: open ? '18px 22px' : '12px 22px', marginBottom: '16px',
     }}>
-      <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--ink)' }}>Documents you&apos;ll need</div>
-      <div style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 14px', lineHeight: 1.5 }}>
-        Keep these ready. Attach them in section 2 and we&apos;ll read each one and fill in the form for you. If something can&apos;t be read,
-        you&apos;ll be told exactly which detail to type in yourself.
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        {items.map(it => (
-          <div key={it.key} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', opacity: it.have || it.applies ? 1 : 0.65 }}>
-            <span style={{
-              width: '20px', height: '20px', flexShrink: 0, marginTop: '1px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '11px', fontWeight: 700, borderRadius: 'var(--radius-sm)',
-              background: it.have ? 'var(--moss-bg)' : 'var(--taupe-50)', color: it.have ? 'var(--moss-text)' : 'var(--taupe-400)',
-              border: `1px solid ${it.have ? 'var(--moss-border)' : 'var(--taupe-200)'}`,
-            }}>{it.have ? '✓' : ''}</span>
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)' }}>
-                {it.label}
-                {!it.applies && <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}> — {it.when}</span>}
-              </div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px' }}>Fills in: {it.fills}</div>
-            </div>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}
+      >
+        <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--ink)' }}>Documents you&apos;ll need</span>
+        <span style={{ fontSize: '12px', color: got === needed.length && needed.length ? 'var(--moss-text)' : 'var(--text-muted)' }}>
+          {got} of {needed.length} attached
+        </span>
+        <span style={{ marginLeft: 'auto', fontSize: '12px', color: 'var(--text-muted)' }}>{open ? 'Hide ▴' : 'Show ▾'}</span>
+      </button>
+      {open && (
+        <>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '8px 0 14px', lineHeight: 1.5 }}>
+            Keep these ready. Attach them in the Documents panel and we&apos;ll read each one and fill in the form for you. If something can&apos;t be read,
+            you&apos;ll be told exactly which detail to type in yourself.
           </div>
-        ))}
-      </div>
-      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '14px' }}>
-        Accepted formats: PDF, JPG, PNG, JPEG · Max 10 MB per file · You can also drag &amp; drop a file onto any upload box.
-      </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {items.map(it => (
+              <div key={it.key} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', opacity: it.have || it.applies ? 1 : 0.65 }}>
+                <span style={{
+                  width: '20px', height: '20px', flexShrink: 0, marginTop: '1px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '11px', fontWeight: 700, borderRadius: 'var(--radius-sm)',
+                  background: it.have ? 'var(--moss-bg)' : 'var(--taupe-50)', color: it.have ? 'var(--moss-text)' : 'var(--taupe-400)',
+                  border: `1px solid ${it.have ? 'var(--moss-border)' : 'var(--taupe-200)'}`,
+                }}>{it.have ? '✓' : ''}</span>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)' }}>
+                    {it.label}
+                    {!it.applies && <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}> — {it.when}</span>}
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px' }}>Fills in: {it.fills}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '14px' }}>
+            Accepted formats: PDF, JPG, PNG, JPEG · Max 10 MB per file · You can also drag &amp; drop a file onto any upload box.
+          </div>
+        </>
+      )}
     </div>
   )
+}
+
+// One document in the Documents panel: its upload, what it filled in (or
+// couldn't), and a shortcut to the part of the form it feeds.
+const SLOT_CHIP = {
+  empty:    { label: 'Not attached',      bg: 'var(--taupe-100)', color: 'var(--text-muted)' },
+  reading:  { label: 'Reading…',          bg: 'var(--action-bg)', color: 'var(--action)' },
+  attached: { label: 'Attached',          bg: 'var(--moss-bg)',   color: 'var(--moss-text)' },
+  read:     { label: 'Read ✓',            bg: 'var(--moss-bg)',   color: 'var(--moss-text)' },
+  partial:  { label: 'Check ⚠',           bg: 'var(--gold-bg)',   color: 'var(--gold-text)' },
+  manual:   { label: 'Enter manually ⚠',  bg: 'var(--gold-bg)',   color: 'var(--gold-text)' },
+}
+
+function slotStatus(have, loading, note) {
+  if (loading) return 'reading'
+  if (!have) return 'empty'
+  if (!note) return 'attached'
+  if (note.missing.length === 0) return 'read'
+  return note.read.length === 0 ? 'manual' : 'partial'
+}
+
+function DocSlot({ title, required, fills, status, onGoTo, goLabel = 'Show in form', children }) {
+  const chip = SLOT_CHIP[status]
+  return (
+    <div style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '12px 14px', marginBottom: '12px', background: 'var(--surface-card)' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '2px' }}>
+        <div style={{ flex: 1, minWidth: 0, fontSize: '13px', fontWeight: 700, color: 'var(--ink)', lineHeight: 1.35 }}>
+          {title}{required && <span style={{ color: 'var(--clay-text)', marginLeft: '2px' }}>*</span>}
+        </div>
+        <span style={{ flexShrink: 0, fontSize: '10px', fontWeight: 700, padding: '2px 7px', borderRadius: 'var(--radius-sm)', background: chip.bg, color: chip.color, whiteSpace: 'nowrap' }}>
+          {chip.label}
+        </span>
+      </div>
+      {fills && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px' }}>Fills in: {fills}</div>}
+      {children}
+      {status !== 'empty' && status !== 'reading' && onGoTo && (
+        <button
+          type="button"
+          onClick={onGoTo}
+          style={{ background: 'none', border: 'none', padding: 0, fontSize: '12px', fontWeight: 600, color: 'var(--action)', cursor: 'pointer', textDecoration: 'underline' }}
+        >
+          {goLabel} →
+        </button>
+      )}
+    </div>
+  )
+}
+
+function MutedSlot({ title, text }) {
+  return (
+    <div style={{ border: '1px dashed var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '10px 14px', marginBottom: '12px' }}>
+      <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>{title}</div>
+      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{text}</div>
+    </div>
+  )
+}
+
+// Scrolls a form section or field into view and flashes it briefly, so it is
+// obvious where a document's details landed.
+function jumpTo(id) {
+  const el = document.getElementById(id)
+  if (!el) return
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  const prev = el.style.boxShadow
+  el.style.transition = 'box-shadow 0.3s'
+  el.style.boxShadow = '0 0 0 3px var(--action)'
+  setTimeout(() => { el.style.boxShadow = prev }, 1600)
 }
 
 // A company's CIN carries its state of registration as two letters at
@@ -530,6 +627,32 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
   // fires from its own "Confirm & Submit" button, not from the form's Submit.
   const [showReviewModal, setShowReviewModal] = useState(false)
   const tour = useFormTour('vendor')
+  // The "Documents you'll need" list is collapsed unless the guided tour is on
+  // it; the Documents panel (attachments + what each one filled in) can be
+  // collapsed too.
+  const [docsOpen, setDocsOpen] = useState(false)
+  const [panelOpen, setPanelOpen] = useState(true)
+  const panelSlotRef = useRef(null)
+  const [panelLeft, setPanelLeft] = useState(0)
+  const wideNeeded = isGuestSubmission ? 1100 : 1340
+  const [wide, setWide] = useState(() => window.innerWidth >= wideNeeded)
+  useEffect(() => {
+    const onResize = () => setWide(window.innerWidth >= wideNeeded)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [wideNeeded])
+  // Where the fixed Documents panel sits horizontally: the left edge of its
+  // spacer in the layout.
+  useLayoutEffect(() => {
+    if (!wide) return
+    const measure = () => {
+      const r = panelSlotRef.current?.getBoundingClientRect()
+      if (r) setPanelLeft(r.left)
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [wide, panelOpen])
 
   // Guards against re-alerting Finance on every repeated Submit click while
   // the form is stuck in the "not linked" state — resets once the answer changes.
@@ -719,6 +842,30 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
     setIfscLooking(false)
   }
 
+  // Which document filled which field: each OCR handler snapshots the form
+  // just before applying what it read, and a moment later every field whose
+  // value changed is credited to that document. The tag next to the field
+  // lasts only while the value is unchanged.
+  const fRef = useRef(f)
+  useLayoutEffect(() => { fRef.current = f })
+  const [autoFilled, setAutoFilled] = useState({}) // field -> { doc, value }
+  function trackFill(docLabel, before, delays = [150]) {
+    delays.forEach(ms => setTimeout(() => {
+      const after = fRef.current
+      setAutoFilled(prev => {
+        const next = { ...prev }
+        for (const k of Object.keys(after)) {
+          if (after[k] !== before[k] && typeof after[k] === 'string' && after[k].trim()) next[k] = { doc: docLabel, value: after[k] }
+        }
+        return next
+      })
+    }, ms))
+  }
+  const autoTag = key => {
+    const a = autoFilled[key]
+    return a && f[key] === a.value ? a.doc : null
+  }
+
   // OCR the cancelled cheque / bank statement to auto-fill the bank section —
   // same "fill once from a document" pattern already used for expense
   // receipts. Never overrides a field the user already filled in.
@@ -733,6 +880,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         : await imageFileToJpegBase64(file)
       const extracted = await extractChequeDetails(base64)
       if (extracted) {
+        const before = fRef.current
         const matchedState = extracted.state
           ? INDIAN_STATES.find(s =>
               s.toLowerCase() === extracted.state.toLowerCase() ||
@@ -748,6 +896,9 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         // convenience fill only (fill if blank, freely editable after).
         setF(prev => ({
           ...prev,
+          // The account holder is usually the organisation itself, so it also
+          // fills the organisation name when that is still blank.
+          org_name: prev.org_name.trim() ? prev.org_name : (extracted.beneficiary_name?.trim() || prev.org_name),
           beneficiary_name: extracted.beneficiary_name || prev.beneficiary_name,
           account_number: extracted.account_number || prev.account_number,
           ifsc_code: extracted.ifsc_code || prev.ifsc_code,
@@ -762,6 +913,8 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         const chequeRead = [extracted.beneficiary_name && 'beneficiary name', extracted.account_number && 'account number', extracted.ifsc_code && 'IFSC code'].filter(Boolean)
         const chequeMissing = [!extracted.beneficiary_name && 'beneficiary name', !extracted.account_number && 'account number', !extracted.ifsc_code && 'IFSC code'].filter(Boolean)
         setDocNote('cheque', chequeRead, chequeMissing)
+        // The IFSC lookup below fills bank name and branch a moment later.
+        trackFill('cheque', before, [150, 2500])
         // Canonicalize/lock the bank name + branch against the authoritative
         // IFSC directory in the background on every (re-)upload, same reason
         // as above — the new cheque's IFSC is what should win.
@@ -789,6 +942,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         ? await pdfPageToBase64(file)
         : await imageFileToJpegBase64(file)
       const extracted = await extractPanCardDetails(base64)
+      const before = fRef.current
       const extractedPan = extracted?.pan_number?.toUpperCase().trim()
       const panRead = []
       if (extractedPan && PAN_RE.test(extractedPan)) {
@@ -814,6 +968,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         }))
       }
       setDocNote('pan', panRead, panRead.includes('PAN number') ? [] : ['PAN number'])
+      trackFill('PAN card', before)
       setPanOcrLoading(false)
       return
     } catch (err) {
@@ -845,15 +1000,20 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         const regState = matchIndianState(extracted.state) || matchIndianState(cinState)
         const incDate = toInputDate(extracted.date_of_incorporation?.trim())
         const orgName = extracted.organisation_name?.trim() || null
+        const before = fRef.current
+        // Which kind of organisation this is, when the certificate says —
+        // only filled if the type hasn't been chosen yet.
+        const orgType = ORG_TYPES.find(t => t.toLowerCase() === String(extracted.organisation_type || '').trim().toLowerCase()) || null
         const pin = /^\d{6}$/.test(extracted.pincode || '') ? extracted.pincode : null
         const read = [
           regNo && 'registration number', regState && 'registration state', incDate && 'date of incorporation',
-          orgName && 'organisation name', (extracted.address_line1 || extracted.city || pin) && 'registered address',
+          orgName && 'organisation name', orgType && !fRef.current.org_type && 'organisation type', (extracted.address_line1 || extracted.city || pin) && 'registered address',
         ].filter(Boolean)
         const missing = [!regNo && 'registration number', !regState && 'registration state', !incDate && 'date of incorporation'].filter(Boolean)
         if (regNo) setRegNoExtracted(regNo)
         setF(prev => ({
           ...prev,
+          org_type: prev.org_type || orgType || prev.org_type,
           org_registration_number: prev.org_registration_number.trim() ? prev.org_registration_number : (regNo || prev.org_registration_number),
           org_registration_state: prev.org_registration_state || regState || prev.org_registration_state,
           date_of_incorporation: prev.date_of_incorporation || incDate || prev.date_of_incorporation,
@@ -863,6 +1023,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           pincode: prev.pincode || pin || prev.pincode,
         }))
         setDocNote('reg_cert', read, missing)
+        trackFill('registration certificate', before)
         setRegCertOcrLoading(false)
         return
       }
@@ -895,6 +1056,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         ? await pdfPageToBase64(file)
         : await imageFileToJpegBase64(file)
       const extracted = await extractGstCertDetails(base64)
+      const before = fRef.current
       const extractedGstin = extracted?.gstin?.toUpperCase().trim()
       const gstRead = []
       if (extractedGstin && GSTIN_RE.test(extractedGstin)) {
@@ -917,8 +1079,15 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
       const gstName = extracted?.legal_name?.trim()
       if (gstName) gstRead.push('legal name')
       if (extracted?.address_line1 || extracted?.city || extracted?.pincode || gstState) gstRead.push('address')
+      const gstEmail = extracted?.email?.trim()
+      const gstPhone = String(extracted?.phone || '').replace(/\D/g, '').slice(-10)
+      const gstPhoneUsable = phonePrefix === '+91' && gstPhone.length === 10
+      if (gstEmail?.includes('@')) gstRead.push('email')
+      if (gstPhoneUsable) gstRead.push('mobile number')
       setF(prev => ({
         ...prev,
+        email: prev.email.trim() ? prev.email : (gstEmail?.includes('@') ? gstEmail : prev.email),
+        phone: prev.phone.trim() ? prev.phone : (gstPhoneUsable ? gstPhone : prev.phone),
         org_name: prev.org_name.trim() ? prev.org_name : (gstName || prev.org_name),
         address_line1: prev.address_line1 || extracted?.address_line1 || prev.address_line1,
         city: prev.city || extracted?.city || prev.city,
@@ -926,6 +1095,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         pincode: prev.pincode || (/^\d{6}$/.test(extracted?.pincode || '') ? extracted.pincode : prev.pincode),
       }))
       setDocNote('gst', gstRead, gstRead.includes('GSTIN') ? [] : ['GSTIN'])
+      trackFill('GST certificate', before)
       setGstCertOcrLoading(false)
       return
     } catch (err) {
@@ -952,6 +1122,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         ? await pdfPageToBase64(file)
         : await imageFileToJpegBase64(file)
       const extracted = await extractMsmeCertDetails(base64)
+      const before = fRef.current
       const regNo = extracted?.registration_number?.trim() || null
       const category = extracted?.category?.trim() || null
       const msmeRead = []
@@ -972,13 +1143,20 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
       const phoneUsable = phonePrefix === '+91' && msmePhone.length === 10
       if (msmeEmail?.includes('@')) msmeRead.push('email')
       if (phoneUsable) msmeRead.push('mobile number')
+      // Services vs manufacturing/trading gives a sensible nature of business
+      // when that is still blank.
+      const activity = String(extracted?.activity || '').toLowerCase()
+      const nature = activity.includes('service') ? 'Service Provider' : (activity.includes('manufactur') || activity.includes('trad')) ? 'Goods Supplier' : null
+      if (nature && !fRef.current.nature_of_business) msmeRead.push('nature of business')
       setF(prev => ({
         ...prev,
+        nature_of_business: prev.nature_of_business || nature || prev.nature_of_business,
         org_name: prev.org_name.trim() ? prev.org_name : (extracted?.enterprise_name?.trim() || prev.org_name),
         email: prev.email.trim() ? prev.email : (msmeEmail?.includes('@') ? msmeEmail : prev.email),
         phone: prev.phone.trim() ? prev.phone : (phoneUsable ? msmePhone : prev.phone),
       }))
       setDocNote('msme', msmeRead, (regNo ? [] : ['registration number']).concat(category ? [] : ['category']))
+      trackFill('MSME certificate', before)
       setMsmeCertOcrLoading(false)
       return
     } catch (err) {
@@ -1386,8 +1564,175 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
     { key: 'msme', label: 'MSME / Udyam certificate', fills: 'Udyam number, category, email, mobile', have: !!(msmeCertPath || msmeCertFile), applies: f.is_msme, when: 'only if the vendor is MSME-registered' },
   ]
 
+  // ── Documents panel ─────────────────────────────────────────────────────
+  const reading = chequeOcrLoading || panOcrLoading || regCertOcrLoading || gstCertOcrLoading || msmeCertOcrLoading
+  const neededDocs = docsChecklist.filter(d => d.applies)
+  const gotDocs = neededDocs.filter(d => d.have).length
+
+  const documentsPanel = (
+    <aside
+      data-tour-anchor="vendor-attachments"
+      id="docs-panel"
+      className="no-scrollbar"
+      style={wide
+        ? { position: 'fixed', top: '24px', left: panelLeft, width: panelOpen ? '360px' : '56px', maxHeight: 'calc(100vh - 48px)', overflowY: 'auto', boxSizing: 'border-box' }
+        : { width: '100%', marginBottom: '16px', boxSizing: 'border-box' }}
+    >
+      <div style={{ background: 'var(--taupe-50)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: panelOpen ? '16px' : '12px 8px', boxSizing: 'border-box' }}>
+        <button
+          type="button"
+          onClick={() => setPanelOpen(o => !o)}
+          aria-expanded={panelOpen}
+          title={panelOpen ? 'Collapse the Documents panel' : 'Open the Documents panel'}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left',
+            flexDirection: panelOpen || !wide ? 'row' : 'column',
+          }}
+        >
+          {panelOpen || !wide ? (
+            <>
+              <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--ink)' }}>Documents</span>
+              <span style={{ fontSize: '12px', color: gotDocs === neededDocs.length && neededDocs.length ? 'var(--moss-text)' : 'var(--text-muted)' }}>
+                {reading ? 'Reading…' : `${gotDocs} of ${neededDocs.length} attached`}
+              </span>
+              <span style={{ marginLeft: 'auto', fontSize: '12px', color: 'var(--text-muted)' }}>{wide ? '«' : (panelOpen ? 'Hide ▴' : 'Show ▾')}</span>
+            </>
+          ) : (
+            <>
+              <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>»</span>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--ink)', writingMode: 'vertical-rl', margin: '8px 0' }}>Documents</span>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: gotDocs === neededDocs.length && neededDocs.length ? 'var(--moss-text)' : 'var(--text-muted)' }}>{gotDocs}/{neededDocs.length}</span>
+            </>
+          )}
+        </button>
+
+        {panelOpen && (
+          <div style={{ marginTop: '12px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: '14px' }}>
+              Attach your documents here. Each one is read and its details are filled into the form
+              {wide ? ' on the right' : ' below'} — fields filled this way carry a green tag. Anything that can&apos;t be read is listed so you can type it in yourself.
+            </div>
+
+            <DocSlot title="Cancelled cheque or bank statement / passbook" required={!isEdit} fills="beneficiary, account number, IFSC, bank, branch"
+              status={slotStatus(chequePath || chequeFile, chequeOcrLoading, docNotes.cheque)} onGoTo={() => jumpTo('sec-bank')}>
+              <FileUpload id="cheque" required={!isEdit} error={liveErrors.cheque} existing={chequePath} file={chequeFile} onChange={handleChequeFile} />
+              {chequeOcrLoading && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '-10px', marginBottom: '10px' }}>Reading document — filling in bank and address details…</div>}
+              {!chequeOcrLoading && <DocNote note={docNotes.cheque} where="in Bank Account Details" />}
+            </DocSlot>
+
+            <DocSlot title="PAN card copy" required={!isEdit} fills="PAN number, name, date of incorporation"
+              status={slotStatus(panPath || panFile, panOcrLoading, docNotes.pan)} onGoTo={() => jumpTo('sec-org')}>
+              <FileUpload id="pan_copy" required={!isEdit} error={liveErrors.pan_copy} existing={panPath} file={panFile} onChange={handlePanFile} />
+              {panOcrLoading && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '-10px', marginBottom: '10px' }}>Reading document — checking PAN number…</div>}
+              {!panOcrLoading && panMatchStatus === 'match' && (
+                <div style={{ fontSize: '11px', color: 'var(--moss-text)', fontWeight: 600, marginTop: '-10px', marginBottom: '10px' }}>✓ PAN copy matches the PAN Number in the form</div>
+              )}
+              {!panOcrLoading && <DocNote note={docNotes.pan} where="in Organisation Details" />}
+              {!panOcrLoading && panMatchStatus === 'mismatch' && (
+                <div style={{ fontSize: '11px', color: 'var(--clay-text)', fontWeight: 600, marginTop: '-10px', marginBottom: '10px' }}>
+                  ✗ This document shows {panExtracted} but the PAN Number in the form is {f.pan_number.toUpperCase().trim()} — please check the attachment again
+                </div>
+              )}
+            </DocSlot>
+
+            {!isIndividual ? (
+              <DocSlot title={incorporationDocLabel(f.org_type)} required={!isEdit}
+                fills={f.org_type ? 'registration number, state, date of incorporation, name, address' : 'organisation type, registration number, state, date, name, address'}
+                status={slotStatus(regCertPath || regCertFile, regCertOcrLoading, docNotes.reg_cert)} onGoTo={() => jumpTo('sec-contact')}>
+                <FileUpload id="reg_cert" required={!isEdit} error={liveErrors.reg_cert} existing={regCertPath} file={regCertFile} onChange={handleRegCertFile} />
+                {regCertOcrLoading && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '-10px', marginBottom: '10px' }}>Reading document — filling in registration and incorporation details…</div>}
+                {!regCertOcrLoading && <DocNote note={docNotes.reg_cert} where="in Organisation Details and Contact & Registration" />}
+              </DocSlot>
+            ) : (
+              <>
+                <DocSlot title="Aadhaar copy" required fills="proof of identity (the Aadhaar number is typed in by you)"
+                  status={slotStatus(aadhaarPath || aadhaarFile, false, null)} onGoTo={() => jumpTo('aadhaar_number')}>
+                  <FileUpload id="aadhaar_copy" required error={liveErrors.aadhaar_copy} existing={aadhaarPath} file={aadhaarFile} onChange={setAadhaarFile} />
+                </DocSlot>
+                {f.aadhaar_pan_linked === true && (
+                  <DocSlot title="Proof of Aadhaar-PAN link" required fills="confirms the Aadhaar and PAN are linked"
+                    status={slotStatus(aadhaarProofPath || aadhaarProofFile, false, null)}>
+                    <FileUpload id="aadhaar_pan_proof" required error={liveErrors.aadhaar_pan_proof} existing={aadhaarProofPath} file={aadhaarProofFile} onChange={setAadhaarProofFile} />
+                  </DocSlot>
+                )}
+              </>
+            )}
+
+            {f.is_gstin_registered ? (
+              <DocSlot title="GST registration certificate" required fills="GSTIN, legal name, address, contact"
+                status={slotStatus(gstCertPath || gstCertFile, gstCertOcrLoading, docNotes.gst)} onGoTo={() => jumpTo('gstin')}>
+                <FileUpload id="gst_cert" required error={liveErrors.gst_cert} existing={gstCertPath} file={gstCertFile} onChange={handleGstCertFile} />
+                {gstCertOcrLoading && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '-10px', marginBottom: '10px' }}>Reading document — filling in GSTIN and address…</div>}
+                {!gstCertOcrLoading && <DocNote note={docNotes.gst} where="in the GST details" />}
+                {!gstCertOcrLoading && gstCertMatchStatus === 'match' && (
+                  <div style={{ fontSize: '11px', color: 'var(--moss-text)', fontWeight: 600, marginTop: '-10px', marginBottom: '10px' }}>✓ Certificate matches the GSTIN in the form</div>
+                )}
+                {!gstCertOcrLoading && gstCertMatchStatus === 'mismatch' && (
+                  <div style={{ fontSize: '11px', color: 'var(--clay-text)', fontWeight: 600, marginTop: '-10px', marginBottom: '10px' }}>
+                    ✗ This document shows {gstExtracted} but the GSTIN in the form is {f.gstin.toUpperCase().trim()} — please check the attachment again
+                  </div>
+                )}
+              </DocSlot>
+            ) : (
+              <MutedSlot title="GST registration certificate" text="Only needed if the vendor is GST-registered. Switch on “GSTIN Registration Present?” in the form and it appears here." />
+            )}
+
+            {f.is_msme ? (
+              <DocSlot title="MSME / Udyam certificate" required fills="Udyam number, category, name, contact, nature of business"
+                status={slotStatus(msmeCertPath || msmeCertFile, msmeCertOcrLoading, docNotes.msme)} onGoTo={() => jumpTo('msme_details')}>
+                <FileUpload id="msme_cert" required error={liveErrors.msme_cert} existing={msmeCertPath} file={msmeCertFile} onChange={handleMsmeCertFile} />
+                {msmeCertOcrLoading && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '-10px', marginBottom: '10px' }}>Reading document — filling in registration number and category…</div>}
+                {!msmeCertOcrLoading && <DocNote note={docNotes.msme} where="in the MSME details" />}
+                {!msmeCertOcrLoading && msmeMismatch && (
+                  <div style={{ fontSize: '11px', color: 'var(--clay-text)', fontWeight: 600, marginTop: '-10px', marginBottom: '10px' }}>
+                    ✗ This document shows registration number {msmeExtracted.registration_number}, which doesn&apos;t appear in the MSME details — please check the attachment again
+                  </div>
+                )}
+              </DocSlot>
+            ) : (
+              <MutedSlot title="MSME / Udyam certificate" text="Only needed if the vendor is MSME-registered. Switch on “MSME Registration Present?” in the form and it appears here." />
+            )}
+
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+              PDF, JPG, PNG · max 10 MB per file · drag &amp; drop works on any upload box.
+            </div>
+
+            <div style={{ marginTop: '16px', paddingTop: '14px', borderTop: '1px solid var(--taupe-200)' }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Before you submit</div>
+              {checklist.map(c => (
+                <div key={c.label} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', marginBottom: '6px', color: c.done ? 'var(--moss-text)' : 'var(--text-muted)' }}>
+                  <span>{c.done ? '✓' : '○'}</span>
+                  <span>{c.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </aside>
+  )
+
+  // Opens the right place for a form error that points at an upload.
+  const FILE_ERROR_KEYS = ['cheque', 'pan_copy', 'reg_cert', 'aadhaar_copy', 'aadhaar_pan_proof', 'gst_cert', 'msme_cert']
+  function goToError(key) {
+    if (FILE_ERROR_KEYS.includes(key)) setPanelOpen(true)
+    setTimeout(() => scrollToField(key), 80)
+  }
+
   return (
-    <div style={{ maxWidth: '720px', margin: '0 auto', padding: '24px 20px 80px' }}>
+    <AutoFillContext.Provider value={autoTag}>
+    <div style={{ maxWidth: wide ? '1180px' : '720px', margin: '0 auto', padding: '24px 20px 80px' }}>
+    <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start' }}>
+    {/* The page's own wrapper has overflow set, which stops `sticky` from
+        working — so on wide screens the panel is fixed to the viewport (always
+        in view while the form scrolls), held in place by a spacer of the same
+        width that keeps the form where it belongs. */}
+    {wide && (
+      <div ref={panelSlotRef} style={{ flex: panelOpen ? '0 0 360px' : '0 0 56px', width: panelOpen ? '360px' : '56px' }}>
+        {documentsPanel}
+      </div>
+    )}
+    <div style={{ flex: '1 1 0', minWidth: 0, maxWidth: wide ? '720px' : 'none' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
@@ -1425,9 +1770,11 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           Organisation is known before Attachments, which tailors exactly
           which documents it asks for based on that selection)
       ══════════════════════════════════════ */}
-      <DocsChecklist items={docsChecklist} />
+      <DocsChecklist items={docsChecklist} open={docsOpen} onToggle={() => setDocsOpen(o => !o)} />
 
-      <div style={card} data-tour-anchor="vendor-org">
+      {!wide && documentsPanel}
+
+      <div style={card} id="sec-org" data-tour-anchor="vendor-org">
         <SectionHeader number="1" title="Organisation Details" subtitle="Legal identity and registered address" />
 
         <div style={grid2}>
@@ -1554,14 +1901,9 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                 style={inputStyle(!!liveErrors.aadhaar_number, { fontFamily: 'monospace', letterSpacing: '0.08em' })}
               />
             </Field>
-            <FileUpload id="aadhaar_copy"
-              label="Aadhaar Copy"
-              required
-              error={liveErrors.aadhaar_copy}
-              existing={aadhaarPath}
-              file={aadhaarFile}
-              onChange={setAadhaarFile}
-            />
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '14px' }}>
+              Attach the Aadhaar copy in the Documents panel{wide ? ' on the left' : ' above'}.
+            </div>
             <div style={{ marginTop: '4px' }}>
               <Field
                 id="aadhaar_pan_linked"
@@ -1577,15 +1919,8 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
               </Field>
             </div>
             {f.aadhaar_pan_linked === true && (
-              <div style={{ marginTop: '14px' }}>
-                <FileUpload id="aadhaar_pan_proof"
-                  label="Proof of Aadhaar-PAN Link"
-                  required
-                  error={liveErrors.aadhaar_pan_proof}
-                  existing={aadhaarProofPath}
-                  file={aadhaarProofFile}
-                  onChange={setAadhaarProofFile}
-                />
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '10px' }}>
+                Attach the proof of Aadhaar-PAN link in the Documents panel too.
               </div>
             )}
           </div>
@@ -1594,99 +1929,13 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
       </div>
 
       {/* ══════════════════════════════════════
-          SECTION 2 — Attachments (tailored per Type of Organisation, per
-          Finance's Vendor Document Requirements sheet)
+          SECTION 2 — Contact & Registration
       ══════════════════════════════════════ */}
-      <div style={card} data-tour-anchor="vendor-attachments">
-        <SectionHeader
-          number="2"
-          title="Attachments"
-          subtitle={f.org_type ? `Documents required for ${f.org_type}` : 'Select Type of Organisation above to see exactly what’s needed'}
-          info="Which document is required here changes based on the Type of Organisation you selected above — for example a Private Limited company needs its Certificate of Incorporation, while an Individual/Freelancer needs an Aadhaar copy instead. Pick the org type first if you haven't already."
-        />
-
-        <div style={grid2}>
-          <div style={full}>
-            <FileUpload id="cheque"
-              label="Cancelled Cheque or Bank Statement / Passbook"
-              required={!isEdit}
-              error={liveErrors.cheque}
-              existing={chequePath}
-              file={chequeFile}
-              onChange={handleChequeFile}
-            />
-            {chequeOcrLoading && (
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '-10px', marginBottom: '14px' }}>
-                Reading document — auto-filling bank and address details…
-              </div>
-            )}
-            {!chequeOcrLoading && <DocNote note={docNotes.cheque} where="in Bank Account Details (section 4)" />}
-          </div>
-          <div style={full}>
-            <FileUpload id="pan_copy"
-              label="PAN Copy"
-              required={!isEdit}
-              error={liveErrors.pan_copy}
-              existing={panPath}
-              file={panFile}
-              onChange={handlePanFile}
-            />
-            {panOcrLoading && (
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '-10px', marginBottom: '14px' }}>
-                Reading document — checking PAN number…
-              </div>
-            )}
-            {!panOcrLoading && panMatchStatus === 'match' && (
-              <div style={{ fontSize: '11px', color: 'var(--moss-text)', fontWeight: 600, marginTop: '-10px', marginBottom: '14px' }}>
-                ✓ PAN copy matches the PAN Number entered above
-              </div>
-            )}
-            {!panOcrLoading && <DocNote note={docNotes.pan} where="in Organisation Details" />}
-            {!panOcrLoading && panMatchStatus === 'mismatch' && (
-              <div style={{ fontSize: '11px', color: 'var(--clay-text)', fontWeight: 600, marginTop: '-10px', marginBottom: '14px' }}>
-                ✗ This document shows {panExtracted} but PAN Number above is {f.pan_number.toUpperCase().trim()} — please check attachment again
-              </div>
-            )}
-          </div>
-          {!isIndividual && (
-            <div style={full}>
-              <FileUpload id="reg_cert"
-                label={incorporationDocLabel(f.org_type)}
-                required={!isEdit}
-                error={liveErrors.reg_cert}
-                existing={regCertPath}
-                file={regCertFile}
-                onChange={handleRegCertFile}
-              />
-              {regCertOcrLoading && (
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '-10px', marginBottom: '14px' }}>
-                  Reading document — filling in registration number, state and incorporation details…
-                </div>
-              )}
-              {!regCertOcrLoading && <DocNote note={docNotes.reg_cert} where="in Organisation Details and Contact & Registration" />}
-            </div>
-          )}
-        </div>
-
-        {isIndividual && (
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)', background: 'var(--taupe-100)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', marginBottom: '4px' }}>
-            No separate registration document is needed for {f.org_type} — the Aadhaar copy above (in Organisation Details) covers this per Finance's requirements.
-          </div>
-        )}
-
-        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-          Accepted formats: PDF, JPG, PNG, JPEG · Max 10 MB per file
-        </div>
-      </div>
-
-      {/* ══════════════════════════════════════
-          SECTION 3 — Contact & Registration
-      ══════════════════════════════════════ */}
-      <div style={card} data-tour-anchor="vendor-contact">
-        <SectionHeader number="3" title="Contact & Registration" subtitle="Point of contact and legal registration" />
+      <div style={card} id="sec-contact" data-tour-anchor="vendor-contact">
+        <SectionHeader number="2" title="Contact & Registration" subtitle="Point of contact and legal registration" />
         {!isIndividual && (
           <div style={{ fontSize: '12px', lineHeight: 1.55, color: 'var(--action)', background: 'var(--action-bg)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', marginBottom: '16px' }}>
-            📎 <strong>Attach the {incorporationDocLabel(f.org_type)} in section 2 first</strong> — the registration number, state and date of incorporation then fill in here automatically
+            📎 <strong>Attach the {incorporationDocLabel(f.org_type)} in the Documents panel first</strong> — the registration number, state and date of incorporation then fill in here automatically
             {(f.is_msme || f.is_gstin_registered) ? ', and the MSME / GST certificates fill in their own details below' : ''}.
             If anything can&apos;t be read from a document, you&apos;ll be told exactly what to type in yourself.
           </div>
@@ -1794,25 +2043,9 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                 <VoiceInputButton value={f.msme_details} onChange={v => setF(p => ({ ...p, msme_details: v }))} />
               </div>
             </Field>
-            <FileUpload id="msme_cert"
-              label="MSME Registration Certificate"
-              required
-              error={liveErrors.msme_cert}
-              existing={msmeCertPath}
-              file={msmeCertFile}
-              onChange={handleMsmeCertFile}
-            />
-            {msmeCertOcrLoading && (
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '-10px' }}>
-                Reading document — filling in registration number and category…
-              </div>
-            )}
-            {!msmeCertOcrLoading && <DocNote note={docNotes.msme} where="in the MSME details above" />}
-            {!msmeCertOcrLoading && msmeMismatch && (
-              <div style={{ fontSize: '11px', color: 'var(--clay-text)', fontWeight: 600, marginTop: '-10px' }}>
-                ✗ This document shows registration number {msmeExtracted.registration_number}, which doesn't appear in the details above — please check attachment again
-              </div>
-            )}
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+              Attach the MSME certificate in the Documents panel{wide ? ' on the left' : ' above'} — it fills in the details above.
+            </div>
           </div>
         )}
 
@@ -1883,30 +2116,9 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                 </div>
               )}
             </Field>
-            <FileUpload id="gst_cert"
-              label="GST Registration Certificate"
-              required
-              error={liveErrors.gst_cert}
-              existing={gstCertPath}
-              file={gstCertFile}
-              onChange={handleGstCertFile}
-            />
-            {gstCertOcrLoading && (
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '-10px' }}>
-                Reading document — auto-filling GSTIN…
-              </div>
-            )}
-            {!gstCertOcrLoading && <DocNote note={docNotes.gst} where="in the GST details above" />}
-            {!gstCertOcrLoading && gstCertMatchStatus === 'match' && (
-              <div style={{ fontSize: '11px', color: 'var(--moss-text)', fontWeight: 600, marginTop: '-10px' }}>
-                ✓ Certificate matches the GSTIN entered above
-              </div>
-            )}
-            {!gstCertOcrLoading && gstCertMatchStatus === 'mismatch' && (
-              <div style={{ fontSize: '11px', color: 'var(--clay-text)', fontWeight: 600, marginTop: '-10px' }}>
-                ✗ This document shows {gstExtracted} but GSTIN above is {f.gstin.toUpperCase().trim()} — please check attachment again
-              </div>
-            )}
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+              Attach the GST certificate in the Documents panel{wide ? ' on the left' : ' above'} — it fills in the GSTIN above.
+            </div>
           </div>
         )}
 
@@ -1950,10 +2162,10 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
       </div>
 
       {/* ══════════════════════════════════════
-          SECTION 4 — Bank Account Details
+          SECTION 3 — Bank Account Details
       ══════════════════════════════════════ */}
-      <div style={card} data-tour-anchor="vendor-bank">
-        <SectionHeader number="4" title="Bank Account Details" subtitle="Beneficiary details for payment processing" />
+      <div style={card} id="sec-bank" data-tour-anchor="vendor-bank">
+        <SectionHeader number="3" title="Bank Account Details" subtitle="Beneficiary details for payment processing" />
         <div style={grid2}>
           <div style={full}>
             <Field id="beneficiary_name" label="Beneficiary Name" required error={liveErrors.beneficiary_name}>
@@ -2049,7 +2261,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
             {Object.entries(liveErrors).filter(([, v]) => typeof v === 'string').map(([key, msg]) => (
               <li
                 key={key}
-                onClick={() => scrollToField(key)}
+                onClick={() => goToError(key)}
                 style={{ fontSize: '12px', color: 'var(--clay-text)', marginBottom: '2px', cursor: 'pointer', textDecoration: 'underline' }}
               >
                 {msg}
@@ -2096,7 +2308,14 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         )}
       </div>
 
-      <GuidedTour steps={VENDOR_TOUR} open={tour.open} onClose={tour.close} tourKey="vendor" />
+      <GuidedTour
+        steps={VENDOR_TOUR} open={tour.open} tourKey="vendor"
+        onClose={() => { tour.close(); setDocsOpen(false) }}
+        onStepChange={step => {
+          setDocsOpen(step?.anchor === 'vendor-docs')
+          if (step?.anchor === 'vendor-attachments') setPanelOpen(true)
+        }}
+      />
 
       {showPanDupModal && (
         <PanDuplicateModal
@@ -2137,22 +2356,10 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         />
       )}
 
-      {/* Live checklist — lets the submitter see what's still missing before they hit Submit */}
-      <div style={{
-        position: 'fixed', bottom: '24px', right: '24px', zIndex: 40,
-        background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)',
-        padding: '14px 16px', boxShadow: '0 4px 16px rgba(54, 32, 26,0.12)', minWidth: '190px',
-      }}>
-        <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
-          Before you submit
-        </div>
-        {checklist.map(c => (
-          <div key={c.label} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', marginBottom: '6px', color: c.done ? 'var(--moss-text)' : 'var(--text-muted)' }}>
-            <span>{c.done ? '✓' : '○'}</span>
-            <span>{c.label}</span>
-          </div>
-        ))}
-      </div>
     </div>
+    </div>
+
+    </div>
+    </AutoFillContext.Provider>
   )
 }

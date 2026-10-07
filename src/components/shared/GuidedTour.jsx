@@ -23,7 +23,7 @@ function place(rect) {
   return { bottom: 20, left: Math.max(16, vw - w - 24), width: w }
 }
 
-export default function GuidedTour({ steps, open, onClose, tourKey }) {
+export default function GuidedTour({ steps, open, onClose, tourKey, onStepChange }) {
   const [step, setStep] = useState(0)
   const [rect, setRect] = useState(null)
 
@@ -43,6 +43,13 @@ export default function GuidedTour({ steps, open, onClose, tourKey }) {
     if (open) document.addEventListener('keydown', handleKey)
     return () => document.removeEventListener('keydown', handleKey)
   }, [open, tourKey, onClose])
+
+  // Lets a form react to the step being shown (e.g. open a collapsed section
+  // the step is about) before the spotlight measures it.
+  useEffect(() => {
+    if (open) onStepChange?.(steps[step])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, step])
 
   const anchorId = steps[step]?.anchor
 

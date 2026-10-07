@@ -193,6 +193,7 @@ export default function ReportWorkspace({ reportMeta, expenses: initialRows, use
   const receiptsPanel = (
     <aside
       data-tour-anchor="er-receipts"
+      className="no-scrollbar"
       style={{
         flex: '1 1 0', minWidth: 0,
         ...(isMobile ? {} : { position: 'sticky', top: '20px', alignSelf: 'flex-start', maxHeight: 'calc(100vh - 40px)', overflowY: 'auto' }),

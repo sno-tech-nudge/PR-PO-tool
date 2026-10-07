@@ -10,10 +10,10 @@ export const HOME_TOUR = [
 ]
 
 export const VENDOR_TOUR = [
-  { anchor: 'vendor-docs', text: 'Keep these documents ready before you start. The list shows exactly what your type of organisation needs, and ticks each one off as you attach it.' },
-  { anchor: 'vendor-org', text: 'Start with the organisation’s name, address and PAN. The Type of Organisation you choose decides which documents are asked for.' },
-  { anchor: 'vendor-attachments', text: 'Attach your documents here. We read each one and fill in the details for you — PAN, registration number, GSTIN, bank details and more. A note under each upload tells you what was read.' },
-  { anchor: 'vendor-contact', text: 'Contact person, phone, email and registration details. The registration number, state and incorporation date fill in from the registration certificate. If you see a ⚠, we couldn’t read that detail — please type it in yourself.' },
+  { anchor: 'vendor-docs', text: 'This list shows which documents you need, based on your type of organisation, and ticks each one as you attach it. It folds away when you don’t need it. Open it any time.' },
+  { anchor: 'vendor-attachments', text: 'Attach your documents in this panel. We read each one and fill in the form for you, and fields filled this way carry a green tag. Under each document you’ll see what was read and what you need to type in yourself. Use “Show in form” to jump to it, and fold the panel away if you need the space.' },
+  { anchor: 'vendor-org', text: 'Start with the organisation’s name, address and PAN. The Type of Organisation you choose decides which documents are asked for. Anything a document fills in here is tagged.' },
+  { anchor: 'vendor-contact', text: 'Contact person, phone, email and registration details. The registration number, state and incorporation date fill in from the registration certificate. Whatever couldn’t be read, please type in yourself.' },
   { anchor: 'vendor-bank', text: 'Bank details come from the cancelled cheque or statement. Type the IFSC code and the bank name and branch fill in automatically.' },
   { anchor: 'vendor-submit', text: 'When everything is filled in, Submit for Approval — you’ll get a final review first. Not ready? Save as Draft and finish later.' },
 ]

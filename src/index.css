@@ -72,3 +72,13 @@ body {
 .tab-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(196, 130, 111, 0.55);
 }
+
+/* Scrolls normally but never draws a scrollbar — for side panels where the
+   bar only adds visual noise. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
