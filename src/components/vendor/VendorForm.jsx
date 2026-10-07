@@ -632,27 +632,15 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
   // collapsed too.
   const [docsOpen, setDocsOpen] = useState(false)
   const [panelOpen, setPanelOpen] = useState(true)
-  const panelSlotRef = useRef(null)
-  const [panelLeft, setPanelLeft] = useState(0)
-  const wideNeeded = isGuestSubmission ? 1100 : 1340
+  // Viewport width from which the panel sits beside the form: panel + form
+  // + the 220px sidebar (not present on the public vendor link).
+  const wideNeeded = isGuestSubmission ? 960 : 1180
   const [wide, setWide] = useState(() => window.innerWidth >= wideNeeded)
   useEffect(() => {
     const onResize = () => setWide(window.innerWidth >= wideNeeded)
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [wideNeeded])
-  // Where the fixed Documents panel sits horizontally: the left edge of its
-  // spacer in the layout.
-  useLayoutEffect(() => {
-    if (!wide) return
-    const measure = () => {
-      const r = panelSlotRef.current?.getBoundingClientRect()
-      if (r) setPanelLeft(r.left)
-    }
-    measure()
-    window.addEventListener('resize', measure)
-    return () => window.removeEventListener('resize', measure)
-  }, [wide, panelOpen])
 
   // Guards against re-alerting Finance on every repeated Submit click while
   // the form is stuck in the "not linked" state — resets once the answer changes.
@@ -1575,7 +1563,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
       id="docs-panel"
       className="no-scrollbar"
       style={wide
-        ? { position: 'fixed', top: '24px', left: panelLeft, width: panelOpen ? '360px' : '56px', maxHeight: 'calc(100vh - 48px)', overflowY: 'auto', boxSizing: 'border-box' }
+        ? { position: 'fixed', top: '24px', width: panelOpen ? '330px' : '56px', maxHeight: 'calc(100vh - 48px)', overflowY: 'auto', boxSizing: 'border-box' }
         : { width: '100%', marginBottom: '16px', boxSizing: 'border-box' }}
     >
       <div style={{ background: 'var(--taupe-50)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: panelOpen ? '16px' : '12px 8px', boxSizing: 'border-box' }}>
@@ -1725,10 +1713,11 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
     <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start' }}>
     {/* The page's own wrapper has overflow set, which stops `sticky` from
         working — so on wide screens the panel is fixed to the viewport (always
-        in view while the form scrolls), held in place by a spacer of the same
-        width that keeps the form where it belongs. */}
+        in view while the form scrolls). A fixed element with no `left` stays at
+        its natural horizontal spot, and this spacer of the same width keeps
+        the form where it belongs. */}
     {wide && (
-      <div ref={panelSlotRef} style={{ flex: panelOpen ? '0 0 360px' : '0 0 56px', width: panelOpen ? '360px' : '56px' }}>
+      <div style={{ flex: panelOpen ? '0 0 330px' : '0 0 56px', width: panelOpen ? '330px' : '56px' }}>
         {documentsPanel}
       </div>
     )}
