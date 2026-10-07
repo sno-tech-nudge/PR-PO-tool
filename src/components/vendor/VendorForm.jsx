@@ -451,6 +451,26 @@ function DocsChecklist({ items, open, onToggle }) {
   )
 }
 
+// Broad panel-toggle icon (a window with a side panel and an arrow) for
+// folding the Documents panel; up/down chevron when it stacks above the form.
+function PanelToggleIcon({ open, stacked }) {
+  const common = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' }
+  if (stacked) {
+    return (
+      <svg width="26" height="16" viewBox="0 0 26 16" aria-hidden="true">
+        <path {...common} d={open ? 'M6 11 L13 4 L20 11' : 'M6 5 L13 12 L20 5'} />
+      </svg>
+    )
+  }
+  return (
+    <svg width="30" height="20" viewBox="0 0 30 20" aria-hidden="true">
+      <rect {...common} x="1.5" y="1.5" width="27" height="17" rx="3" />
+      <line {...common} x1="11" y1="1.5" x2="11" y2="18.5" />
+      <path {...common} d={open ? 'M20 6.5 L16 10 L20 13.5' : 'M16 6.5 L20 10 L16 13.5'} />
+    </svg>
+  )
+}
+
 // One document in the Documents panel: its upload, what it filled in (or
 // couldn't), and a shortcut to the part of the form it feeds.
 const SLOT_CHIP = {
@@ -1596,13 +1616,15 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
               <span style={{ fontSize: '12px', color: gotDocs === neededDocs.length && neededDocs.length ? 'var(--moss-text)' : 'var(--text-muted)' }}>
                 {reading ? 'Reading…' : `${gotDocs} of ${neededDocs.length} attached`}
               </span>
-              <span style={{ marginLeft: 'auto', flexShrink: 0, fontSize: '12px', fontWeight: 600, color: 'var(--action)', background: 'var(--surface-card)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', padding: '3px 10px', whiteSpace: 'nowrap' }}>
-                {wide ? '« Hide' : (panelOpen ? 'Hide ▴' : 'Show ▾')}
+              <span style={{ marginLeft: 'auto', flexShrink: 0, color: 'var(--action)', background: 'var(--surface-card)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', padding: '4px 12px', display: 'inline-flex', alignItems: 'center' }}>
+                <PanelToggleIcon open={panelOpen} stacked={!wide} />
               </span>
             </>
           ) : (
             <>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--action)', background: 'var(--surface-card)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', padding: '3px 9px' }}>» Show</span>
+              <span style={{ color: 'var(--action)', background: 'var(--surface-card)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', padding: '4px 8px', display: 'inline-flex', alignItems: 'center' }}>
+                <PanelToggleIcon open={false} />
+              </span>
               <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--ink)', writingMode: 'vertical-rl', margin: '8px 0' }}>Documents</span>
               <span style={{ fontSize: '11px', fontWeight: 700, color: gotDocs === neededDocs.length && neededDocs.length ? 'var(--moss-text)' : 'var(--text-muted)' }}>{gotDocs}/{neededDocs.length}</span>
             </>
