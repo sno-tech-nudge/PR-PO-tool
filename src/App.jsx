@@ -96,7 +96,7 @@ function NavIcon({ name, size = 18, fallback }) {
 function SidebarToggleIcon({ collapsed }) {
   const c = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' }
   return (
-    <svg width="30" height="20" viewBox="0 0 30 20" aria-hidden="true">
+    <svg width="22" height="15" viewBox="0 0 30 20" aria-hidden="true">
       <rect {...c} x="1.5" y="1.5" width="27" height="17" rx="3" />
       <line {...c} x1="11" y1="1.5" x2="11" y2="18.5" />
       <path {...c} d={collapsed ? 'M16 6.5 L20 10 L16 13.5' : 'M20 6.5 L16 10 L20 13.5'} />
@@ -545,9 +545,10 @@ export default function App() {
               aria-label={rail ? 'Expand the sidebar' : 'Collapse the sidebar'}
               title={rail ? 'Expand the sidebar' : 'Collapse the sidebar'}
               style={{
-                flexShrink: 0, height: '30px', padding: '0 8px', background: 'transparent', cursor: 'pointer',
-                border: '1px solid rgba(196,130,111,0.35)', borderRadius: 'var(--radius-md)',
+                flexShrink: 0, padding: '4px', background: 'transparent', cursor: 'pointer',
+                border: 'none', borderRadius: 'var(--radius-sm)', outlineOffset: '2px',
                 color: 'var(--text-on-dark-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                opacity: 0.85,
               }}
             >
               <SidebarToggleIcon collapsed={rail} />
