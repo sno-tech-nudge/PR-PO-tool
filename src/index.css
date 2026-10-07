@@ -82,3 +82,8 @@ body {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Sidebar rows and buttons: a soft wash on hover */
+.sidebar-item { transition: background 0.12s; }
+.sidebar-item:hover { background: rgba(255, 255, 255, 0.06); }
+.sidebar-menu-item:hover { background: var(--taupe-50); }

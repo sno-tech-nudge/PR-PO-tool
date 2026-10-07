@@ -10,7 +10,7 @@ import NewExpense from './components/capture/NewExpense'
 import QuickAddDropzone from './components/capture/QuickAddDropzone'
 import FeedbackWidget from './components/shared/FeedbackWidget'
 import FirstTimeWalkthrough from './components/shared/FirstTimeWalkthrough'
-import LanguageToggle from './components/shared/LanguageToggle'
+import SidebarUserMenu from './components/shared/SidebarUserMenu'
 import { hasSeenWalkthrough } from './lib/walkthrough'
 import NotificationBell from './components/shared/NotificationBell'
 import SettingsView from './components/settings/SettingsView'
@@ -525,39 +525,43 @@ export default function App() {
         transition: 'transform 0.2s ease, width 0.2s ease',
         overflowX: 'hidden',
       }}>
-        {/* Logo + fold/unfold */}
+        {/* Wordmark, notifications, fold/unfold */}
         <div style={{
-          padding: rail ? '16px 0' : '22px 14px 18px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)',
-          display: 'flex', alignItems: 'center', justifyContent: rail ? 'center' : 'space-between', gap: '8px',
+          padding: rail ? '14px 0 6px' : '18px 12px 8px 20px',
+          display: 'flex', flexDirection: rail ? 'column' : 'row', alignItems: 'center',
+          justifyContent: rail ? 'center' : 'space-between', gap: rail ? '6px' : '8px',
         }}>
-          {!rail && (
-            <div style={{ minWidth: 0 }}>
-              <img src={wordmarkLogo} alt="The/Nudge" style={{ height: '20px', width: 'auto', display: 'block' }} />
-              <div style={{ fontSize: '10px', color: 'var(--text-on-dark-muted)', marginTop: '8px', letterSpacing: '0.3px', textTransform: 'uppercase' }}>
-                Expense Tracker
-              </div>
-            </div>
-          )}
-          {!isMobile && (
-            <button
-              type="button"
-              onClick={toggleCollapsed}
-              aria-label={rail ? 'Expand the sidebar' : 'Collapse the sidebar'}
-              title={rail ? 'Expand the sidebar' : 'Collapse the sidebar'}
-              style={{
-                flexShrink: 0, padding: '4px', background: 'transparent', cursor: 'pointer',
-                border: 'none', borderRadius: 'var(--radius-sm)', outlineOffset: '2px',
-                color: 'var(--text-on-dark-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                opacity: 0.85,
-              }}
-            >
-              <SidebarToggleIcon collapsed={rail} />
-            </button>
-          )}
+          {!rail && <img src={wordmarkLogo} alt="The/Nudge" style={{ height: '19px', width: 'auto', display: 'block' }} />}
+          <div style={{ display: 'flex', flexDirection: rail ? 'column' : 'row', alignItems: 'center', gap: '2px' }}>
+            <NotificationBell
+              user={user}
+              iconOnly
+              onOpenReport={handleViewReport}
+              onOpenPR={(id) => { setAppScreen('pr-list'); openPRDetail(id) }}
+              onOpenVendor={(id) => { setAppScreen('vendors'); openVendorDetail(id) }}
+              onOpenPO={(id) => { setAppScreen('po-list'); openPODetail(id) }}
+            />
+            {!isMobile && (
+              <button
+                type="button"
+                onClick={toggleCollapsed}
+                aria-label={rail ? 'Expand the sidebar' : 'Collapse the sidebar'}
+                title={rail ? 'Expand the sidebar' : 'Collapse the sidebar'}
+                className="sidebar-item"
+                style={{
+                  width: '30px', height: '30px', padding: 0, background: 'transparent', cursor: 'pointer',
+                  border: 'none', borderRadius: 'var(--radius-md)', color: 'var(--text-on-dark-muted)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <SidebarToggleIcon collapsed={rail} />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Nav */}
-        <nav className="sidebar-nav" style={{ flex: 1, padding: '10px 0', overflowY: 'auto' }}>
+        <nav className="sidebar-nav" style={{ flex: 1, padding: '6px 0', overflowY: 'auto' }}>
           {navItems.map(({ key, label, icon }) => {
             const active = activeNav === key
             return (
@@ -566,20 +570,20 @@ export default function App() {
                 data-tour-anchor={key === 'pr-list' ? 'pr-nav' : undefined}
                 onClick={() => handleNavClick(key)}
                 title={rail ? label : undefined}
+                className="sidebar-item"
                 style={{
-                  display: 'flex', alignItems: 'center', gap: '10px',
+                  display: 'flex', alignItems: 'center', gap: '12px',
                   justifyContent: rail ? 'center' : 'flex-start',
-                  padding: rail ? '12px 0' : '10px 16px 10px 17px',
+                  height: rail ? '40px' : '36px', margin: rail ? '2px 10px' : '1px 10px',
+                  padding: rail ? 0 : '0 12px', borderRadius: 'var(--radius-md)',
                   cursor: 'pointer',
-                  borderLeft: active ? '3px solid #E8A090' : '3px solid transparent',
-                  background: active ? 'rgba(140,50,37,0.25)' : 'transparent',
+                  background: active ? 'rgba(255,255,255,0.10)' : undefined,
                   color: active ? 'var(--surface-card)' : 'var(--text-on-dark-muted)',
-                  fontSize: '13px', fontWeight: active ? 600 : 400,
-                  transition: 'all 0.1s',
+                  fontSize: '13px', fontWeight: active ? 500 : 400,
                   userSelect: 'none',
                 }}
               >
-                <span style={{ minWidth: '20px', display: 'flex', justifyContent: 'center', opacity: active ? 1 : 0.75 }}>
+                <span style={{ minWidth: '20px', display: 'flex', justifyContent: 'center', color: active ? '#F0B3A3' : undefined, opacity: active ? 1 : 0.8 }}>
                   <NavIcon name={key} size={rail ? 20 : 18} fallback={icon} />
                 </span>
                 {!rail && label}
@@ -589,17 +593,18 @@ export default function App() {
 
           {user.role !== 'employee' && (
             <>
-              <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '10px 0' }} />
+              <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', margin: '8px 20px' }} />
 
               <div
                 onClick={() => { handleAddAnother(); if (isMobile) setSidebarOpen(false) }}
                 title={rail ? 'New Expense' : undefined}
+                className="sidebar-item"
                 style={{
-                  display: 'flex', alignItems: 'center', gap: '10px',
+                  display: 'flex', alignItems: 'center', gap: '12px',
                   justifyContent: rail ? 'center' : 'flex-start',
-                  padding: rail ? '12px 0' : '9px 16px 9px 17px', cursor: 'pointer',
-                  color: '#E8A090', fontSize: '13px', fontWeight: 600,
-                  userSelect: 'none',
+                  height: rail ? '40px' : '36px', margin: rail ? '2px 10px' : '1px 10px',
+                  padding: rail ? 0 : '0 12px', borderRadius: 'var(--radius-md)', cursor: 'pointer',
+                  color: '#E8A090', fontSize: '13px', fontWeight: 500, userSelect: 'none',
                 }}
               >
                 <span style={{ minWidth: '20px', display: 'flex', justifyContent: 'center' }}>
@@ -610,15 +615,16 @@ export default function App() {
               <div
                 onClick={() => { handleNewReport(); if (isMobile) setSidebarOpen(false) }}
                 title={rail ? 'New Report' : undefined}
+                className="sidebar-item"
                 style={{
-                  display: 'flex', alignItems: 'center', gap: '10px',
+                  display: 'flex', alignItems: 'center', gap: '12px',
                   justifyContent: rail ? 'center' : 'flex-start',
-                  padding: rail ? '12px 0' : '9px 16px 9px 17px', cursor: 'pointer',
-                  color: 'var(--text-on-dark-muted)', fontSize: '13px',
-                  userSelect: 'none',
+                  height: rail ? '40px' : '36px', margin: rail ? '2px 10px' : '1px 10px',
+                  padding: rail ? 0 : '0 12px', borderRadius: 'var(--radius-md)', cursor: 'pointer',
+                  color: 'var(--text-on-dark-muted)', fontSize: '13px', userSelect: 'none',
                 }}
               >
-                <span style={{ minWidth: '20px', display: 'flex', justifyContent: 'center', opacity: 0.75 }}>
+                <span style={{ minWidth: '20px', display: 'flex', justifyContent: 'center', opacity: 0.8 }}>
                   <NavIcon name="new-report" size={rail ? 20 : 18} />
                 </span>
                 {!rail && 'New Report'}
@@ -627,92 +633,36 @@ export default function App() {
           )}
         </nav>
 
-        {/* User info + sign out */}
-        <div style={{ padding: rail ? '12px 0' : '14px 16px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-          <NotificationBell
-            user={user}
-            compact={rail}
-            onOpenReport={handleViewReport}
-            onOpenPR={(id) => { setAppScreen('pr-list'); openPRDetail(id) }}
-            onOpenVendor={(id) => { setAppScreen('vendors'); openVendorDetail(id) }}
-            onOpenPO={(id) => { setAppScreen('po-list'); openPODetail(id) }}
-          />
+        {/* Account — one row (Help and Language in its menu), then Sign out as before */}
+        <div style={{ padding: rail ? '10px 8px 12px' : '10px 10px 12px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+          <SidebarUserMenu user={user} rail={rail} onHelp={handleReplayWalkthrough} />
           {rail ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-              <button
-                onClick={handleReplayWalkthrough}
-                aria-label="Help"
-                title="Help — replay the guided tour"
-                style={{
-                  width: '34px', height: '28px', flexShrink: 0, padding: 0,
-                  background: 'transparent', border: '1px solid rgba(196,130,111,0.35)',
-                  color: 'var(--text-on-dark-muted)', borderRadius: 'var(--radius-md)',
-                  fontSize: '13px', fontWeight: 700, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}
-              >
-                ?
-              </button>
-              <LanguageToggle tone="dark" style={{ minWidth: '34px', width: '34px', height: '28px', padding: 0, fontSize: '11px', flexShrink: 0 }} />
-              <button
-                onClick={handleSignOut}
-                aria-label="Sign out"
-                title={`Sign out (${user.name})`}
-                style={{
-                  width: '34px', height: '28px', padding: 0,
-                  background: 'transparent', border: '1px solid rgba(196,130,111,0.35)',
-                  color: 'var(--text-on-dark-muted)', borderRadius: 'var(--radius-md)',
-                  fontSize: '14px', cursor: 'pointer',
-                }}
-              >
-                ⎋
-              </button>
-            </div>
+            <button
+              onClick={handleSignOut}
+              aria-label="Sign out"
+              title={`Sign out (${user.name})`}
+              style={{
+                width: '34px', height: '28px', padding: 0, margin: '8px auto 0', display: 'block',
+                background: 'transparent', border: '1px solid rgba(196,130,111,0.35)',
+                color: 'var(--text-on-dark-muted)', borderRadius: 'var(--radius-md)',
+                fontSize: '14px', cursor: 'pointer',
+              }}
+            >
+              ⎋
+            </button>
           ) : (
-            <>
-              {/* Name + role on the left; Help and language as small icon buttons
-                  on the same line, so the footer stays just this row + Sign out. */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{
-                    fontSize: '12px', fontWeight: 600, color: 'var(--surface-card)',
-                    marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  }}>
-                    {user.name}
-                  </div>
-                  <div style={{ fontSize: '10px', color: 'var(--text-on-dark-muted)' }}>
-                    {user.roleLabel}
-                  </div>
-                </div>
-                <button
-                  onClick={handleReplayWalkthrough}
-                  aria-label="Help"
-                  title="Help — replay the guided tour"
-                  style={{
-                    width: '28px', height: '28px', flexShrink: 0, padding: 0,
-                    background: 'transparent', border: '1px solid rgba(196,130,111,0.35)',
-                    color: 'var(--text-on-dark-muted)', borderRadius: 'var(--radius-md)',
-                    fontSize: '13px', fontWeight: 700, cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}
-                >
-                  ?
-                </button>
-                <LanguageToggle tone="dark" style={{ minWidth: '34px', width: '34px', height: '28px', padding: 0, fontSize: '11px', flexShrink: 0 }} />
-              </div>
-              <button
-                onClick={handleSignOut}
-                style={{
-                  width: '100%', padding: '6px 0',
-                  background: 'transparent',
-                  border: '1px solid rgba(196,130,111,0.35)',
-                  color: 'var(--text-on-dark-muted)', borderRadius: 'var(--radius-md)',
-                  fontSize: '11px', cursor: 'pointer',
-                }}
-              >
-                Sign out
-              </button>
-            </>
+            <button
+              onClick={handleSignOut}
+              style={{
+                width: '100%', padding: '6px 0', marginTop: '8px',
+                background: 'transparent',
+                border: '1px solid rgba(196,130,111,0.35)',
+                color: 'var(--text-on-dark-muted)', borderRadius: 'var(--radius-md)',
+                fontSize: '11px', cursor: 'pointer',
+              }}
+            >
+              Sign out
+            </button>
           )}
         </div>
       </div>

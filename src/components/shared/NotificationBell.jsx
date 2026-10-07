@@ -23,7 +23,7 @@ const TYPE_COLOR = {
 // every approve/reject action already writes to, but that nothing in the UI
 // used to read). Polls rather than subscribing in realtime, matching this
 // app's existing async-job-queue polling convention elsewhere.
-export default function NotificationBell({ user, onOpenReport, onOpenPR, onOpenVendor, onOpenPO, compact = false }) {
+export default function NotificationBell({ user, onOpenReport, onOpenPR, onOpenVendor, onOpenPO, compact = false, iconOnly = false }) {
   // Someone with two linked logins (e.g. thenudge.org + thedelta.org.in) sees
   // notifications addressed to either one, whichever they signed in with.
   const ownEmails = user.ownEmails?.length ? user.ownEmails : [user.email]
@@ -89,7 +89,29 @@ export default function NotificationBell({ user, onOpenReport, onOpenPR, onOpenV
   }
 
   return (
-    <div ref={containerRef} style={{ position: 'relative', marginBottom: '10px' }}>
+    <div ref={containerRef} style={{ position: 'relative', marginBottom: iconOnly ? 0 : '10px' }}>
+      {iconOnly ? (
+        <button
+          type="button"
+          onClick={() => setOpen(o => !o)}
+          aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
+          title="Notifications"
+          className="sidebar-item"
+          style={{
+            position: 'relative', width: '30px', height: '30px', padding: 0, border: 'none', cursor: 'pointer',
+            borderRadius: 'var(--radius-md)', background: open ? 'rgba(255,255,255,0.10)' : 'transparent',
+            color: 'var(--text-on-dark-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+          </svg>
+          {unreadCount > 0 && (
+            <span style={{ position: 'absolute', top: '4px', right: '5px', width: '8px', height: '8px', borderRadius: '50%', background: '#E8A090' }} />
+          )}
+        </button>
+      ) : (
       <div
         onClick={() => setOpen(o => !o)}
         title={compact ? 'Notifications' : undefined}
@@ -116,6 +138,7 @@ export default function NotificationBell({ user, onOpenReport, onOpenPR, onOpenV
           </span>
         )}
       </div>
+      )}
 
       {open && (
         <div style={{
