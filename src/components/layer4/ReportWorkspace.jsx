@@ -76,7 +76,7 @@ export default function ReportWorkspace({ reportMeta, expenses: initialRows, use
   const [durEnd, setDurEnd] = useState(keepSaved ? (reportMeta.duration_end || '') : (derivedDates[derivedDates.length - 1] || ''))
   // 'report' = purpose and duration; 'expenses' = the per-expense forms.
   const [step, setStep] = useState('report')
-  const [openId, setOpenId] = useState(() => initialRows.find(e => !isExpenseComplete(e))?.id || null)
+  const lastReceiptShown = useRef(null)
   const [showReceipts, setShowReceipts] = useState(false)
   // Live state reported by each open expense form: which mandatory fields are
   // still empty, and the headline values for its collapsed card. Rows whose
@@ -127,13 +127,14 @@ export default function ReportWorkspace({ reportMeta, expenses: initialRows, use
     return () => { cancelled = true }
   }, [rows.map(e => e.capture_id).join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  function toggleOpen(id) {
-    const next = openId === id ? null : id
-    setOpenId(next)
-    if (next) {
-      setShowReceipts(true)
-      setTimeout(() => document.getElementById(`rcpt-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
-    }
+  // Every expense's form is always open. Clicking a card's heading, or
+  // starting to fill in one of its fields, brings that expense's receipt into
+  // view in the receipts panel.
+  function showReceiptFor(id) {
+    if (lastReceiptShown.current === id) return
+    lastReceiptShown.current = id
+    setShowReceipts(true)
+    setTimeout(() => document.getElementById(`rcpt-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
   }
 
   // Mandatory fields still empty for one expense: live from its open form,
@@ -267,18 +268,21 @@ export default function ReportWorkspace({ reportMeta, expenses: initialRows, use
           </div>
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
             {incomplete.length > 0
-              ? `${incomplete.length} still need${incomplete.length === 1 ? 's' : ''} details. Open each one and fill in the fields marked *. Anything read from your receipt is pre-filled, so check it against the receipt. Everything saves automatically.`
-              : 'All expenses are ready. Anything read from your receipts is pre-filled, so open one to check it against the receipt.'}
+              ? `${incomplete.length} still need${incomplete.length === 1 ? 's' : ''} details. Fill in the fields marked * for each one below. Anything read from your receipt is pre-filled, so check it against the receipt. Everything saves automatically.`
+              : 'All expenses are ready. Anything read from your receipts is pre-filled, so check it against the receipt before you continue.'}
           </div>
 
           <div data-tour-anchor="er-forms">
             {rows.map((e, i) => {
               const ready = missingFor(e).length === 0
               const live = liveById[e.id] || {}
-              const open = openId === e.id
               return (
-                <div key={e.id} style={{ border: `1px solid ${open ? 'var(--text)' : 'var(--taupe-200)'}`, marginBottom: '10px', background: 'var(--surface-card)' }}>
-                  <div onClick={() => toggleOpen(e.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', cursor: 'pointer' }}>
+                <div
+                  key={e.id}
+                  onFocusCapture={() => showReceiptFor(e.id)}
+                  style={{ border: '1px solid var(--taupe-200)', marginBottom: '14px', background: 'var(--surface-card)' }}
+                >
+                  <div onClick={() => showReceiptFor(e.id)} title="Show this receipt" style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px' }}>
                     <div style={{ fontSize: '12px', color: 'var(--text-muted)', width: '16px', flexShrink: 0 }}>{i + 1}.</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{live.vendor || e.vendor || 'Unknown vendor'}</div>
@@ -293,13 +297,10 @@ export default function ReportWorkspace({ reportMeta, expenses: initialRows, use
                     }}>
                       {ready ? 'Ready' : 'Needs details'}
                     </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{open ? '▴' : '▾'}</div>
                   </div>
-                  {open && (
-                    <div style={{ padding: '4px 14px 16px', borderTop: '1px solid var(--taupe-200)', paddingTop: '16px' }}>
-                      <ExpenseDetails embedded existingExpense={e} user={user} onStatus={handleStatus} trackSave={trackSave} onSaved={() => {}} onBack={() => setOpenId(null)} />
-                    </div>
-                  )}
+                  <div style={{ padding: '16px 14px', borderTop: '1px solid var(--taupe-200)' }}>
+                    <ExpenseDetails embedded existingExpense={e} user={user} onStatus={handleStatus} trackSave={trackSave} onSaved={() => {}} onBack={() => {}} />
+                  </div>
                 </div>
               )
             })}
