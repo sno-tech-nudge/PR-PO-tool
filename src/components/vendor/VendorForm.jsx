@@ -1596,9 +1596,9 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
 
         {panelOpen && (
           <div style={{ marginTop: '12px' }}>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: '14px' }}>
-              Attach your documents here. Each one is read and its details are filled into the form
-              {wide ? ' on the right' : ' below'} — fields filled this way carry a green tag. Anything that can&apos;t be read is listed so you can type it in yourself.
+            <div style={{ display: 'flex', alignItems: 'center', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+              Attach each document below
+              <InfoTip side="bottom" text={`Each document is read and its details are filled into the form${wide ? ' on the right' : ' below'}. Fields filled this way carry a green tag, so you can see what came from where. Anything that can't be read is listed under that document, so you know exactly what to type in yourself.`} />
             </div>
 
             <DocSlot title="Cancelled cheque or bank statement / passbook" required={!isEdit} fills="beneficiary, account number, IFSC, bank, branch"
@@ -1880,7 +1880,10 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
             requirements sheet, both share the same document requirements) */}
         {isIndividual && (
           <div style={{ background: 'var(--gold-bg)', border: '1px solid var(--gold-border)', borderRadius: 'var(--radius-md)', padding: '16px', marginBottom: '14px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gold-text)', marginBottom: '12px' }}>Aadhaar Details (Individual Vendor)</div>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gold-text)', marginBottom: '12px', display: 'flex', alignItems: 'center' }}>
+              Aadhaar Details (Individual Vendor)
+              <InfoTip text="Type the Aadhaar number here. Attach the Aadhaar copy (and, if your Aadhaar and PAN are linked, the proof of the link) in the Documents panel." />
+            </div>
             <Field id="aadhaar_number" label="Aadhaar Number" required error={liveErrors.aadhaar_number}>
               <input
                 type="text"
@@ -1890,9 +1893,6 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                 style={inputStyle(!!liveErrors.aadhaar_number, { fontFamily: 'monospace', letterSpacing: '0.08em' })}
               />
             </Field>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '14px' }}>
-              Attach the Aadhaar copy in the Documents panel{wide ? ' on the left' : ' above'}.
-            </div>
             <div style={{ marginTop: '4px' }}>
               <Field
                 id="aadhaar_pan_linked"
@@ -1907,11 +1907,6 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                 />
               </Field>
             </div>
-            {f.aadhaar_pan_linked === true && (
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '10px' }}>
-                Attach the proof of Aadhaar-PAN link in the Documents panel too.
-              </div>
-            )}
           </div>
         )}
 
@@ -1921,14 +1916,10 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           SECTION 2 — Contact & Registration
       ══════════════════════════════════════ */}
       <div style={card} id="sec-contact" data-tour-anchor="vendor-contact">
-        <SectionHeader number="2" title="Contact & Registration" subtitle="Point of contact and legal registration" />
-        {!isIndividual && (
-          <div style={{ fontSize: '12px', lineHeight: 1.55, color: 'var(--action)', background: 'var(--action-bg)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', marginBottom: '16px' }}>
-            📎 <strong>Attach the {incorporationDocLabel(f.org_type)} in the Documents panel first</strong> — the registration number, state and date of incorporation then fill in here automatically
-            {(f.is_msme || f.is_gstin_registered) ? ', and the MSME / GST certificates fill in their own details below' : ''}.
-            If anything can&apos;t be read from a document, you&apos;ll be told exactly what to type in yourself.
-          </div>
-        )}
+        <SectionHeader
+          number="2" title="Contact & Registration" subtitle="Point of contact and legal registration"
+          info={isIndividual ? undefined : `Attach the ${incorporationDocLabel(f.org_type)} in the Documents panel first. The registration number, state and date of incorporation then fill in here automatically${(f.is_msme || f.is_gstin_registered) ? ', and the MSME / GST certificates fill in their own details below' : ''}. If anything can't be read from a document, you'll be told exactly what to type in yourself.`}
+        />
         <div style={grid2}>
           <div style={full}>
             <Field id="contact_person" label="Contact Person" required error={liveErrors.contact_person} hint="Letters and spaces only">
@@ -2013,7 +2004,10 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         </div>
         {f.is_msme && (
           <div style={{ background: 'var(--gold-bg)', border: '1px solid var(--gold-border)', borderRadius: 'var(--radius-md)', padding: '16px', marginBottom: '14px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gold-text)', marginBottom: '12px' }}>MSME Registration Details</div>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gold-text)', marginBottom: '12px', display: 'flex', alignItems: 'center' }}>
+              MSME Registration Details
+              <InfoTip text="Attach the MSME certificate in the Documents panel. It fills in the registration number, category and contact details here." />
+            </div>
             <Field id="msme_details" label="MSME Registration Details" required error={liveErrors.msme_details}
               hint="If MSME is yes, please provide the registration details">
               <div style={{ position: 'relative' }}>
@@ -2032,9 +2026,6 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                 <VoiceInputButton value={f.msme_details} onChange={v => setF(p => ({ ...p, msme_details: v }))} />
               </div>
             </Field>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              Attach the MSME certificate in the Documents panel{wide ? ' on the left' : ' above'} — it fills in the details above.
-            </div>
           </div>
         )}
 
@@ -2049,12 +2040,10 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         </div>
         {f.is_gstin_registered && (
           <div style={{ background: '#EFF6FF', border: '1px solid var(--action-bg)', borderRadius: 'var(--radius-md)', padding: '16px', marginBottom: '14px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--action)', marginBottom: '12px' }}>GST Registration Detail</div>
-            {!gstinEnabled && (
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', background: 'var(--taupe-100)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', marginBottom: '12px' }}>
-                ℹ In order to fill GST Registration Detail, first fill <strong>Organisation Registration State</strong> and a valid <strong>PAN Number</strong> above.
-              </div>
-            )}
+            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--action)', marginBottom: '12px', display: 'flex', alignItems: 'center' }}>
+              GST Registration Detail
+              <InfoTip text={`Attach the GST certificate in the Documents panel. It fills in the GSTIN here.${gstinEnabled ? '' : ' To fill this section, first fill the Organisation Registration State and a valid PAN Number above.'}`} />
+            </div>
             <Field id="gstin" label="GSTIN / UIN" required error={liveErrors.gstin}>
               <input
                 type="text"
@@ -2105,9 +2094,6 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
                 </div>
               )}
             </Field>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              Attach the GST certificate in the Documents panel{wide ? ' on the left' : ' above'} — it fills in the GSTIN above.
-            </div>
           </div>
         )}
 
