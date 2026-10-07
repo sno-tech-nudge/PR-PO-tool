@@ -3,7 +3,7 @@
 // anchors show as a centred card.
 
 export const HOME_TOUR = [
-  { anchor: 'quick-add', text: 'Snap or upload a receipt here and we’ll read the amount, vendor, and date for you — no retyping needed.' },
+  { anchor: 'quick-add', text: 'Start here: register a vendor, add a new expense with a receipt (we’ll read the amount, vendor and date for you), or start a report.' },
   { anchor: 'pr-nav', text: 'Need to buy something first? Start a Purchase Request here.' },
   { anchor: null, text: 'When you raise a Purchase Request, look for the ⓘ icon next to Allocation — it explains what % to charge each donor/programme.' },
   { anchor: null, text: 'Before submitting any form, you can preview an attached document first — look for the ↗ Preview link next to any upload.' },

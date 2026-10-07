@@ -7,7 +7,6 @@ import { useIsMobile } from './hooks/useIsMobile'
 import LoginScreen from './components/auth/LoginScreen'
 import OfflineBanner from './components/capture/OfflineBanner'
 import NewExpense from './components/capture/NewExpense'
-import QuickAddDropzone from './components/capture/QuickAddDropzone'
 import FeedbackWidget from './components/shared/FeedbackWidget'
 import FirstTimeWalkthrough from './components/shared/FirstTimeWalkthrough'
 import SidebarUserMenu from './components/shared/SidebarUserMenu'
@@ -211,6 +210,9 @@ export default function App() {
   // onViewVendor below), so VendorDetail's back button returns to that PR
   // instead of always resetting to the vendor list. null = normal vendor flow.
   const [vendorBackScreen, setVendorBackScreen] = useState(null)
+  // True when the vendor form was opened straight from Home's Quick Add, so
+  // Back returns to Home rather than the vendor search screen.
+  const [vendorFromHome, setVendorFromHome] = useState(false)
   const [financeResetKey, setFinanceResetKey] = useState(0)
   const [approvingVendor, setApprovingVendor] = useState(null)
   const [bankChangeVendor, setBankChangeVendor] = useState(null)
@@ -271,7 +273,6 @@ export default function App() {
   function handleContinueToDetails(data) { setLayer1Data(data); setAppScreen('details') }
   function handleSaved()                 { setAppScreen('list') }
   function handleAddAnother()            { setLayer1Data(null); setAppScreen('capture') }
-  function handleQuickReceipt(data)      { setLayer1Data(data); setAppScreen('details') }
 
   // New-report flow: pick expenses (selector) -> receipts on the left and the
   // details form on the right (workspace) -> preview/submit. Policy flags are
@@ -390,6 +391,9 @@ export default function App() {
   function handleSignOut() { signOut(); setUser(null); setAppScreen('list') }
 
   function openVendorCreate()        { setEditingVendor(null); setVendorSubScreen('search') }
+  // Quick Add on Home: straight into the registration form (duplicate checks
+  // run inside the form itself).
+  function quickAddVendor()          { setVendorFromHome(true); setEditingVendor(null); setVendorSubScreen('form'); setAppScreen('vendors') }
   function openVendorForm()          { setVendorSubScreen('form') }
   function openVendorDetail(id)      { setViewingVendorId(id); setVendorSubScreen('detail') }
   async function openDraftEdit(id) {
@@ -399,6 +403,7 @@ export default function App() {
   function openVendorApproval(v)     { setApprovingVendor(v); setVendorSubScreen('approval') }
   function openBankChange(v)         { setBankChangeVendor(v); setVendorSubScreen('bank-change') }
   function openVendorList() {
+    setVendorFromHome(false)
     setVendorSubScreen('list')
     setEditingVendor(null); setViewingVendorId(null)
     setApprovingVendor(null); setBankChangeVendor(null)
@@ -728,8 +733,25 @@ export default function App() {
 
             <div data-tour-anchor="quick-add" style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '20px', marginBottom: '28px' }}>
               <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--ink)', marginBottom: '16px' }}>Quick Add</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '14px' }}>
-                <QuickAddDropzone onReady={handleQuickReceipt} />
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '14px' }}>
+                <div
+                  onClick={quickAddVendor}
+                  role="button"
+                  style={{
+                    border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '28px 12px',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', minHeight: '148px', boxSizing: 'border-box', textAlign: 'center',
+                  }}
+                >
+                  <div style={{
+                    width: '40px', height: '40px', borderRadius: '50%', background: 'var(--action-bg)',
+                    color: 'var(--action)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px',
+                  }}>
+                    <NavIcon name="vendors" size={20} />
+                  </div>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink)' }}>Add Vendor</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Register a new vendor</div>
+                </div>
 
                 <div
                   onClick={handleAddAnother}
@@ -991,7 +1013,10 @@ export default function App() {
               showToast(wasResubmit ? 'Vendor resubmitted for approval.' : 'Vendor submitted for approval.', 'info')
               openVendorList()
             }}
-            onBack={() => setVendorSubScreen(!editingVendor ? 'search' : editingVendor.status === 'draft' ? 'list' : 'detail')}
+            onBack={() => {
+              if (vendorFromHome && !editingVendor) { setVendorFromHome(false); setVendorSubScreen('list'); setAppScreen('list'); return }
+              setVendorSubScreen(!editingVendor ? 'search' : editingVendor.status === 'draft' ? 'list' : 'detail')
+            }}
           />
         )}
         {appScreen === 'vendors' && vendorSubScreen === 'detail' && (
