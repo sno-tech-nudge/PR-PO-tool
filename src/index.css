@@ -87,3 +87,25 @@ body {
 .sidebar-item { transition: background 0.12s; }
 .sidebar-item:hover { background: rgba(255, 255, 255, 0.06); }
 .sidebar-menu-item:hover { background: var(--taupe-50); }
+
+/* Bell: a quick wiggle (and pulsing dot) when a new notification arrives */
+@keyframes bell-ring {
+  0%, 100% { transform: rotate(0deg); }
+  10% { transform: rotate(16deg); }
+  20% { transform: rotate(-14deg); }
+  30% { transform: rotate(12deg); }
+  40% { transform: rotate(-10deg); }
+  50% { transform: rotate(7deg); }
+  60% { transform: rotate(-5deg); }
+  70% { transform: rotate(3deg); }
+  80% { transform: rotate(-1deg); }
+}
+@keyframes bell-dot-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.8); }
+}
+.bell-ring svg { transform-origin: 50% 12%; animation: bell-ring 1.1s ease-in-out 2; }
+.bell-ring .bell-dot { animation: bell-dot-pulse 0.6s ease-in-out 3; }
+@media (prefers-reduced-motion: reduce) {
+  .bell-ring svg, .bell-ring .bell-dot { animation: none; }
+}

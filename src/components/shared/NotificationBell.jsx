@@ -30,6 +30,22 @@ export default function NotificationBell({ user, onOpenReport, onOpenPR, onOpenV
   const [notifications, setNotifications] = useState([])
   const [open, setOpen] = useState(false)
   const containerRef = useRef(null)
+  const bellRef = useRef(null)
+  // Where the dropdown sits: level with the bell, just beside the sidebar.
+  const [anchor, setAnchor] = useState({ top: 16, left: 230 })
+  // Unread count at the last poll — null until the first load, so signing in
+  // with notifications already waiting doesn't ring; only an increase does.
+  const lastUnread = useRef(null)
+  const [ringing, setRinging] = useState(false)
+
+  function toggleOpen() {
+    if (!open && bellRef.current) {
+      const r = bellRef.current.getBoundingClientRect()
+      const sidebar = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-w'), 10) || 0
+      setAnchor({ top: Math.max(8, r.top), left: sidebar > 0 ? sidebar + 10 : Math.max(8, r.left) })
+    }
+    setOpen(o => !o)
+  }
 
   useEffect(() => {
     load()
@@ -57,6 +73,12 @@ export default function NotificationBell({ user, onOpenReport, onOpenPR, onOpenV
       .order('created_at', { ascending: false })
       .limit(30)
     setNotifications(data || [])
+    const unread = (data || []).filter(n => !n.is_read).length
+    if (lastUnread.current !== null && unread > lastUnread.current) {
+      setRinging(true)
+      setTimeout(() => setRinging(false), 2400)
+    }
+    lastUnread.current = unread
   }
 
   const unreadCount = notifications.filter(n => !n.is_read).length
@@ -92,11 +114,12 @@ export default function NotificationBell({ user, onOpenReport, onOpenPR, onOpenV
     <div ref={containerRef} style={{ position: 'relative', marginBottom: iconOnly ? 0 : '10px' }}>
       {iconOnly ? (
         <button
+          ref={bellRef}
           type="button"
-          onClick={() => setOpen(o => !o)}
+          onClick={toggleOpen}
           aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
           title="Notifications"
-          className="sidebar-item"
+          className={`sidebar-item${ringing ? ' bell-ring' : ''}`}
           style={{
             position: 'relative', width: '30px', height: '30px', padding: 0, border: 'none', cursor: 'pointer',
             borderRadius: 'var(--radius-md)', background: open ? 'rgba(255,255,255,0.10)' : 'transparent',
@@ -108,12 +131,14 @@ export default function NotificationBell({ user, onOpenReport, onOpenPR, onOpenV
             <path d="M13.73 21a2 2 0 0 1-3.46 0" />
           </svg>
           {unreadCount > 0 && (
-            <span style={{ position: 'absolute', top: '4px', right: '5px', width: '8px', height: '8px', borderRadius: '50%', background: '#E8A090' }} />
+            <span className="bell-dot" style={{ position: 'absolute', top: '4px', right: '5px', width: '8px', height: '8px', borderRadius: '50%', background: '#E8A090' }} />
           )}
         </button>
       ) : (
       <div
-        onClick={() => setOpen(o => !o)}
+        ref={bellRef}
+        onClick={toggleOpen}
+        className={ringing ? 'bell-ring' : undefined}
         title={compact ? 'Notifications' : undefined}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: compact ? 'center' : 'space-between',
@@ -142,7 +167,7 @@ export default function NotificationBell({ user, onOpenReport, onOpenPR, onOpenV
 
       {open && (
         <div style={{
-          position: 'fixed', left: 'calc(var(--sidebar-w, 220px) + 10px)', bottom: '16px', width: '340px', maxHeight: '70vh',
+          position: 'fixed', left: anchor.left, top: anchor.top, width: '340px', maxHeight: `calc(100vh - ${anchor.top}px - 16px)`,
           background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)',
           boxShadow: '0 8px 28px rgba(54, 32, 26,0.25)', zIndex: 300, overflow: 'hidden',
           display: 'flex', flexDirection: 'column',
