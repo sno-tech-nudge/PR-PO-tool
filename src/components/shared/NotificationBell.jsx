@@ -23,7 +23,7 @@ const TYPE_COLOR = {
 // every approve/reject action already writes to, but that nothing in the UI
 // used to read). Polls rather than subscribing in realtime, matching this
 // app's existing async-job-queue polling convention elsewhere.
-export default function NotificationBell({ user, onOpenReport, onOpenPR, onOpenVendor, onOpenPO }) {
+export default function NotificationBell({ user, onOpenReport, onOpenPR, onOpenVendor, onOpenPO, compact = false }) {
   // Someone with two linked logins (e.g. thenudge.org + thedelta.org.in) sees
   // notifications addressed to either one, whichever they signed in with.
   const ownEmails = user.ownEmails?.length ? user.ownEmails : [user.email]
@@ -92,10 +92,11 @@ export default function NotificationBell({ user, onOpenReport, onOpenPR, onOpenV
     <div ref={containerRef} style={{ position: 'relative', marginBottom: '10px' }}>
       <div
         onClick={() => setOpen(o => !o)}
+        title={compact ? 'Notifications' : undefined}
         style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '7px 10px', borderRadius: 'var(--radius-md)', cursor: 'pointer',
-          background: open ? 'rgba(255,255,255,0.08)' : 'transparent',
+          display: 'flex', alignItems: 'center', justifyContent: compact ? 'center' : 'space-between',
+          padding: compact ? '8px 0' : '7px 10px', borderRadius: 'var(--radius-md)', cursor: 'pointer',
+          background: open ? 'rgba(255,255,255,0.08)' : 'transparent', position: 'relative',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -103,10 +104,11 @@ export default function NotificationBell({ user, onOpenReport, onOpenPR, onOpenV
             <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
             <path d="M13.73 21a2 2 0 0 1-3.46 0" />
           </svg>
-          <span style={{ fontSize: '12px', color: 'var(--surface-card)' }}>Notifications</span>
+          {!compact && <span style={{ fontSize: '12px', color: 'var(--surface-card)' }}>Notifications</span>}
         </div>
         {unreadCount > 0 && (
           <span style={{
+            ...(compact ? { position: 'absolute', top: '2px', right: '12px' } : {}),
             fontSize: '10px', fontWeight: 700, background: 'var(--clay-text)', color: 'var(--surface-card)',
             borderRadius: 'var(--radius-lg)', padding: '1px 6px', minWidth: '16px', textAlign: 'center', lineHeight: '14px',
           }}>
@@ -117,7 +119,7 @@ export default function NotificationBell({ user, onOpenReport, onOpenPR, onOpenV
 
       {open && (
         <div style={{
-          position: 'fixed', left: '230px', bottom: '16px', width: '340px', maxHeight: '70vh',
+          position: 'fixed', left: 'calc(var(--sidebar-w, 220px) + 10px)', bottom: '16px', width: '340px', maxHeight: '70vh',
           background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)',
           boxShadow: '0 8px 28px rgba(54, 32, 26,0.25)', zIndex: 300, overflow: 'hidden',
           display: 'flex', flexDirection: 'column',

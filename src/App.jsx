@@ -60,6 +60,20 @@ import AuditTrail from './components/audit/AuditTrail'
 import ActivityLog from './components/audit/ActivityLog'
 
 const SIDEBAR_W = 220
+const SIDEBAR_RAIL_W = 68
+
+// Broad icon for folding / unfolding the sidebar: a window with a side panel
+// and an arrow that points the way the sidebar will move.
+function SidebarToggleIcon({ collapsed }) {
+  const c = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' }
+  return (
+    <svg width="30" height="20" viewBox="0 0 30 20" aria-hidden="true">
+      <rect {...c} x="1.5" y="1.5" width="27" height="17" rx="3" />
+      <line {...c} x1="11" y1="1.5" x2="11" y2="18.5" />
+      <path {...c} d={collapsed ? 'M16 6.5 L20 10 L16 13.5' : 'M20 6.5 L16 10 L20 13.5'} />
+    </svg>
+  )
+}
 
 // Sub-screens map to their parent nav key for sidebar highlight
 const SCREEN_PARENT = {
@@ -84,6 +98,27 @@ export default function App() {
   // it doesn't eat most of a phone-width screen.
   const isMobile = useIsMobile()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  // Desktop only: the sidebar can fold down to an icon rail so forms and
+  // tables get the room. The choice is remembered on this device.
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem('nudge_sidebar_collapsed') === '1' } catch { return false }
+  })
+  function toggleCollapsed() {
+    setCollapsed(c => {
+      const next = !c
+      try { localStorage.setItem('nudge_sidebar_collapsed', next ? '1' : '0') } catch { /* storage unavailable */ }
+      return next
+    })
+  }
+  const rail = !isMobile && collapsed
+  const sbW = isMobile ? SIDEBAR_W : (rail ? SIDEBAR_RAIL_W : SIDEBAR_W)
+  // Other screens (fixed bottom bars, wide layouts) read the current sidebar
+  // width from this variable instead of assuming 220px.
+  useEffect(() => {
+    document.documentElement.style.setProperty('--sidebar-w', `${isMobile ? 0 : sbW}px`)
+    window.dispatchEvent(new Event('nudge-sidebar-change'))
+  }, [isMobile, sbW])
+
   // Auto-shows once per browser on a first visit to Home; the sidebar's
   // "? Help" button can also reopen it any time afterward regardless of the
   // stored flag (see handleReplayWalkthrough below).
@@ -448,7 +483,7 @@ export default function App() {
 
       {/* ── Left sidebar — a slide-out drawer on mobile, always visible on desktop ── */}
       <div style={{
-        width: SIDEBAR_W,
+        width: sbW,
         minHeight: '100vh',
         background: 'var(--surface-hot)',
         position: 'fixed',
@@ -458,14 +493,37 @@ export default function App() {
         zIndex: 50,
         boxShadow: '2px 0 12px rgba(140,50,37,0.25)',
         transform: isMobile ? (sidebarOpen ? 'translateX(0)' : 'translateX(-100%)') : 'none',
-        transition: 'transform 0.2s ease',
+        transition: 'transform 0.2s ease, width 0.2s ease',
+        overflowX: 'hidden',
       }}>
-        {/* Logo */}
-        <div style={{ padding: '22px 20px 18px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-          <img src={wordmarkLogo} alt="The/Nudge" style={{ height: '20px', width: 'auto', display: 'block' }} />
-          <div style={{ fontSize: '10px', color: 'var(--text-on-dark-muted)', marginTop: '8px', letterSpacing: '0.3px', textTransform: 'uppercase' }}>
-            Expense Tracker
-          </div>
+        {/* Logo + fold/unfold */}
+        <div style={{
+          padding: rail ? '16px 0' : '22px 14px 18px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)',
+          display: 'flex', alignItems: 'center', justifyContent: rail ? 'center' : 'space-between', gap: '8px',
+        }}>
+          {!rail && (
+            <div style={{ minWidth: 0 }}>
+              <img src={wordmarkLogo} alt="The/Nudge" style={{ height: '20px', width: 'auto', display: 'block' }} />
+              <div style={{ fontSize: '10px', color: 'var(--text-on-dark-muted)', marginTop: '8px', letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+                Expense Tracker
+              </div>
+            </div>
+          )}
+          {!isMobile && (
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              aria-label={rail ? 'Expand the sidebar' : 'Collapse the sidebar'}
+              title={rail ? 'Expand the sidebar' : 'Collapse the sidebar'}
+              style={{
+                flexShrink: 0, height: '30px', padding: '0 8px', background: 'transparent', cursor: 'pointer',
+                border: '1px solid rgba(196,130,111,0.35)', borderRadius: 'var(--radius-md)',
+                color: 'var(--text-on-dark-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <SidebarToggleIcon collapsed={rail} />
+            </button>
+          )}
         </div>
 
         {/* Nav */}
@@ -477,9 +535,11 @@ export default function App() {
                 key={key}
                 data-tour-anchor={key === 'pr-list' ? 'pr-nav' : undefined}
                 onClick={() => handleNavClick(key)}
+                title={rail ? label : undefined}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
-                  padding: '10px 16px 10px 17px',
+                  justifyContent: rail ? 'center' : 'flex-start',
+                  padding: rail ? '12px 0' : '10px 16px 10px 17px',
                   cursor: 'pointer',
                   borderLeft: active ? '3px solid #E8A090' : '3px solid transparent',
                   background: active ? 'rgba(140,50,37,0.25)' : 'transparent',
@@ -489,10 +549,10 @@ export default function App() {
                   userSelect: 'none',
                 }}
               >
-                <span style={{ fontSize: '13px', minWidth: '16px', textAlign: 'center', opacity: active ? 1 : 0.7 }}>
+                <span style={{ fontSize: rail ? '16px' : '13px', minWidth: '16px', textAlign: 'center', opacity: active ? 1 : 0.7 }}>
                   {icon}
                 </span>
-                {label}
+                {!rail && label}
               </div>
             )
           })}
@@ -503,90 +563,130 @@ export default function App() {
 
               <div
                 onClick={() => { handleAddAnother(); if (isMobile) setSidebarOpen(false) }}
+                title={rail ? 'New Expense' : undefined}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
-                  padding: '9px 16px 9px 17px', cursor: 'pointer',
+                  justifyContent: rail ? 'center' : 'flex-start',
+                  padding: rail ? '12px 0' : '9px 16px 9px 17px', cursor: 'pointer',
                   color: '#E8A090', fontSize: '13px', fontWeight: 600,
                   userSelect: 'none',
                 }}
               >
                 <span style={{ fontSize: '16px', minWidth: '16px', textAlign: 'center' }}>+</span>
-                New Expense
+                {!rail && 'New Expense'}
               </div>
               <div
                 onClick={() => { handleNewReport(); if (isMobile) setSidebarOpen(false) }}
+                title={rail ? 'New Report' : undefined}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
-                  padding: '9px 16px 9px 17px', cursor: 'pointer',
+                  justifyContent: rail ? 'center' : 'flex-start',
+                  padding: rail ? '12px 0' : '9px 16px 9px 17px', cursor: 'pointer',
                   color: 'var(--text-on-dark-muted)', fontSize: '13px',
                   userSelect: 'none',
                 }}
               >
-                <span style={{ fontSize: '13px', minWidth: '16px', textAlign: 'center', opacity: 0.7 }}>◷</span>
-                New Report
+                <span style={{ fontSize: rail ? '16px' : '13px', minWidth: '16px', textAlign: 'center', opacity: 0.7 }}>◷</span>
+                {!rail && 'New Report'}
               </div>
             </>
           )}
         </nav>
 
         {/* User info + sign out */}
-        <div style={{ padding: '14px 16px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ padding: rail ? '12px 0' : '14px 16px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
           <NotificationBell
             user={user}
+            compact={rail}
             onOpenReport={handleViewReport}
             onOpenPR={(id) => { setAppScreen('pr-list'); openPRDetail(id) }}
             onOpenVendor={(id) => { setAppScreen('vendors'); openVendorDetail(id) }}
             onOpenPO={(id) => { setAppScreen('po-list'); openPODetail(id) }}
           />
-          {/* Name + role on the left; Help and language as small icon buttons
-              on the same line, so the footer stays just this row + Sign out. */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{
-                fontSize: '12px', fontWeight: 600, color: 'var(--surface-card)',
-                marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              }}>
-                {user.name}
-              </div>
-              <div style={{ fontSize: '10px', color: 'var(--text-on-dark-muted)' }}>
-                {user.roleLabel}
-              </div>
+          {rail ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+              <button
+                onClick={handleReplayWalkthrough}
+                aria-label="Help"
+                title="Help — replay the guided tour"
+                style={{
+                  width: '34px', height: '28px', flexShrink: 0, padding: 0,
+                  background: 'transparent', border: '1px solid rgba(196,130,111,0.35)',
+                  color: 'var(--text-on-dark-muted)', borderRadius: 'var(--radius-md)',
+                  fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                ?
+              </button>
+              <LanguageToggle tone="dark" style={{ minWidth: '34px', width: '34px', height: '28px', padding: 0, fontSize: '11px', flexShrink: 0 }} />
+              <button
+                onClick={handleSignOut}
+                aria-label="Sign out"
+                title={`Sign out (${user.name})`}
+                style={{
+                  width: '34px', height: '28px', padding: 0,
+                  background: 'transparent', border: '1px solid rgba(196,130,111,0.35)',
+                  color: 'var(--text-on-dark-muted)', borderRadius: 'var(--radius-md)',
+                  fontSize: '14px', cursor: 'pointer',
+                }}
+              >
+                ⎋
+              </button>
             </div>
-            <button
-              onClick={handleReplayWalkthrough}
-              aria-label="Help"
-              title="Help — replay the guided tour"
-              style={{
-                width: '28px', height: '28px', flexShrink: 0, padding: 0,
-                background: 'transparent', border: '1px solid rgba(196,130,111,0.35)',
-                color: 'var(--text-on-dark-muted)', borderRadius: 'var(--radius-md)',
-                fontSize: '13px', fontWeight: 700, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}
-            >
-              ?
-            </button>
-            <LanguageToggle tone="dark" style={{ minWidth: '34px', width: '34px', height: '28px', padding: 0, fontSize: '11px', flexShrink: 0 }} />
-          </div>
-          <button
-            onClick={handleSignOut}
-            style={{
-              width: '100%', padding: '6px 0',
-              background: 'transparent',
-              border: '1px solid rgba(196,130,111,0.35)',
-              color: 'var(--text-on-dark-muted)', borderRadius: 'var(--radius-md)',
-              fontSize: '11px', cursor: 'pointer',
-            }}
-          >
-            Sign out
-          </button>
+          ) : (
+            <>
+              {/* Name + role on the left; Help and language as small icon buttons
+                  on the same line, so the footer stays just this row + Sign out. */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontSize: '12px', fontWeight: 600, color: 'var(--surface-card)',
+                    marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>
+                    {user.name}
+                  </div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-on-dark-muted)' }}>
+                    {user.roleLabel}
+                  </div>
+                </div>
+                <button
+                  onClick={handleReplayWalkthrough}
+                  aria-label="Help"
+                  title="Help — replay the guided tour"
+                  style={{
+                    width: '28px', height: '28px', flexShrink: 0, padding: 0,
+                    background: 'transparent', border: '1px solid rgba(196,130,111,0.35)',
+                    color: 'var(--text-on-dark-muted)', borderRadius: 'var(--radius-md)',
+                    fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                >
+                  ?
+                </button>
+                <LanguageToggle tone="dark" style={{ minWidth: '34px', width: '34px', height: '28px', padding: 0, fontSize: '11px', flexShrink: 0 }} />
+              </div>
+              <button
+                onClick={handleSignOut}
+                style={{
+                  width: '100%', padding: '6px 0',
+                  background: 'transparent',
+                  border: '1px solid rgba(196,130,111,0.35)',
+                  color: 'var(--text-on-dark-muted)', borderRadius: 'var(--radius-md)',
+                  fontSize: '11px', cursor: 'pointer',
+                }}
+              >
+                Sign out
+              </button>
+            </>
+          )}
         </div>
       </div>
 
       <FirstTimeWalkthrough open={walkthroughOpen} onClose={() => setWalkthroughOpen(false)} />
 
       {/* ── Main content ── */}
-      <div style={{ marginLeft: isMobile ? 0 : SIDEBAR_W, flex: 1, minHeight: '100vh', overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}>
+      <div style={{ marginLeft: isMobile ? 0 : sbW, transition: 'margin-left 0.2s ease', flex: 1, minHeight: '100vh', overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}>
         {isMobile && (
           <div style={{
             position: 'sticky', top: 0, zIndex: 30,

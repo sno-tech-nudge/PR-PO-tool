@@ -474,7 +474,7 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
 
       {/* Fixed bottom bar */}
       <div style={{
-        position: 'fixed', bottom: 0, left: isMobile ? 0 : '220px', right: 0,
+        position: 'fixed', bottom: 0, left: isMobile ? 0 : 'var(--sidebar-w, 220px)', right: 0,
         zIndex: 10,
       }}>
         <div style={{

@@ -320,7 +320,7 @@ export default function ReportWorkspace({ reportMeta, expenses: initialRows, use
       </div>
 
       {/* Fixed bottom bar */}
-      <div style={{ position: 'fixed', bottom: 0, left: isMobile ? 0 : '220px', right: 0, zIndex: 10 }}>
+      <div style={{ position: 'fixed', bottom: 0, left: isMobile ? 0 : 'var(--sidebar-w, 220px)', right: 0, zIndex: 10 }}>
         <div style={{ maxWidth: '1180px', margin: '0 auto', background: 'var(--surface-card)', borderTop: '1px solid var(--taupe-200)', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', boxSizing: 'border-box' }}>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>

@@ -178,11 +178,17 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
   // both; narrower ones keep the single centred column as before.
   const receiptCaptureId = existingExpense?.capture_id ?? layer1Data?.capture_id ?? null
   const [receiptShown, setReceiptShown] = useState(false)
-  const [wideEnough, setWideEnough] = useState(() => window.innerWidth - 220 >= 980)
+  // Room left of the app sidebar, which can be folded (see --sidebar-w in App.jsx).
+  const roomForPanel = () => window.innerWidth - (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-w'), 10) || 220) >= 980
+  const [wideEnough, setWideEnough] = useState(roomForPanel)
   useEffect(() => {
-    const onResize = () => setWideEnough(window.innerWidth - 220 >= 980)
+    const onResize = () => setWideEnough(roomForPanel())
     window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
+    window.addEventListener('nudge-sidebar-change', onResize)
+    return () => {
+      window.removeEventListener('resize', onResize)
+      window.removeEventListener('nudge-sidebar-change', onResize)
+    }
   }, [])
   const showPanel = !embedded && !isMobile && wideEnough && !!receiptCaptureId
   const panelOpen = showPanel && receiptShown
@@ -1037,7 +1043,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
 
       {/* Fixed bottom */}
       {!embedded && (
-      <div style={{ position: 'fixed', bottom: 0, left: isMobile ? 0 : '220px', right: 0, zIndex: 10 }}>
+      <div style={{ position: 'fixed', bottom: 0, left: isMobile ? 0 : 'var(--sidebar-w, 220px)', right: 0, zIndex: 10 }}>
         <div style={{
           maxWidth: panelOpen ? '1000px' : '480px', margin: '0 auto',
           background: 'var(--surface-card)', borderTop: '1px solid var(--taupe-200)', padding: '16px 20px',

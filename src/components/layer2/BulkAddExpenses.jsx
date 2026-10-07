@@ -317,7 +317,7 @@ export default function BulkAddExpenses({ user, onSaved, onBack }) {
         <div style={{ fontSize: '13px', color: 'var(--clay-text)', marginTop: '16px' }}>{error}</div>
       )}
 
-      <div style={{ position: 'fixed', bottom: 0, left: isMobile ? 0 : '220px', right: 0, zIndex: 10 }}>
+      <div style={{ position: 'fixed', bottom: 0, left: isMobile ? 0 : 'var(--sidebar-w, 220px)', right: 0, zIndex: 10 }}>
         <div style={{ background: 'var(--surface-card)', borderTop: '1px solid var(--taupe-200)', padding: '16px 20px', display: 'flex', gap: '10px', maxWidth: '960px', margin: '0 auto' }}>
           <button
             onClick={handleSave}

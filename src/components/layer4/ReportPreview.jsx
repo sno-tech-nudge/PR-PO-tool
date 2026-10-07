@@ -427,7 +427,7 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
       </div>
 
       {/* Fixed bottom bar */}
-      <div style={{ position: 'fixed', bottom: 0, left: isMobile ? 0 : '220px', right: 0, zIndex: 10 }}>
+      <div style={{ position: 'fixed', bottom: 0, left: isMobile ? 0 : 'var(--sidebar-w, 220px)', right: 0, zIndex: 10 }}>
         <div style={{
           maxWidth: '480px', margin: '0 auto',
           background: 'var(--surface-card)', borderTop: '1px solid var(--taupe-200)', padding: '16px',

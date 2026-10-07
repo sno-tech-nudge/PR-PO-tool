@@ -451,26 +451,6 @@ function DocsChecklist({ items, open, onToggle }) {
   )
 }
 
-// Broad panel-toggle icon (a window with a side panel and an arrow) for
-// folding the Documents panel; up/down chevron when it stacks above the form.
-function PanelToggleIcon({ open, stacked }) {
-  const common = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' }
-  if (stacked) {
-    return (
-      <svg width="26" height="16" viewBox="0 0 26 16" aria-hidden="true">
-        <path {...common} d={open ? 'M6 11 L13 4 L20 11' : 'M6 5 L13 12 L20 5'} />
-      </svg>
-    )
-  }
-  return (
-    <svg width="30" height="20" viewBox="0 0 30 20" aria-hidden="true">
-      <rect {...common} x="1.5" y="1.5" width="27" height="17" rx="3" />
-      <line {...common} x1="11" y1="1.5" x2="11" y2="18.5" />
-      <path {...common} d={open ? 'M20 6.5 L16 10 L20 13.5' : 'M16 6.5 L20 10 L16 13.5'} />
-    </svg>
-  )
-}
-
 // One document in the Documents panel: its upload, what it filled in (or
 // couldn't), and a shortcut to the part of the form it feeds.
 const SLOT_CHIP = {
@@ -664,16 +644,23 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
   // it; the Documents panel (attachments + what each one filled in) can be
   // collapsed too.
   const [docsOpen, setDocsOpen] = useState(false)
-  const [panelOpen, setPanelOpen] = useState(true)
   // Viewport width from which the panel sits beside the form: panel + form
   // + the 220px sidebar (not present on the public vendor link).
-  const wideNeeded = isGuestSubmission ? 960 : 1180
-  const [wide, setWide] = useState(() => window.innerWidth >= wideNeeded)
+  const isWide = () => {
+    const sidebar = isGuestSubmission ? 0 : (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-w'), 10) || 220)
+    return window.innerWidth >= 960 + sidebar
+  }
+  const [wide, setWide] = useState(isWide)
   useEffect(() => {
-    const onResize = () => setWide(window.innerWidth >= wideNeeded)
+    const onResize = () => setWide(isWide())
     window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [wideNeeded])
+    window.addEventListener('nudge-sidebar-change', onResize)
+    return () => {
+      window.removeEventListener('resize', onResize)
+      window.removeEventListener('nudge-sidebar-change', onResize)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isGuestSubmission])
 
   // Guards against re-alerting Finance on every repeated Submit click while
   // the form is stuck in the "not linked" state — resets once the answer changes.
@@ -1596,42 +1583,18 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
       id="docs-panel"
       className="no-scrollbar"
       style={wide
-        ? { position: 'fixed', top: '24px', width: panelOpen ? '330px' : '72px', maxHeight: 'calc(100vh - 48px)', overflowY: 'auto', boxSizing: 'border-box' }
+        ? { position: 'fixed', top: '24px', width: '330px', maxHeight: 'calc(100vh - 48px)', overflowY: 'auto', boxSizing: 'border-box' }
         : { width: '100%', marginBottom: '16px', boxSizing: 'border-box' }}
     >
-      <div style={{ background: 'var(--taupe-50)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: panelOpen ? '14px' : '12px 8px', boxSizing: 'border-box' }}>
-        <button
-          type="button"
-          onClick={() => setPanelOpen(o => !o)}
-          aria-expanded={panelOpen}
-          title={panelOpen ? 'Collapse the Documents panel' : 'Open the Documents panel'}
-          style={{
-            width: '100%', display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left',
-            flexDirection: panelOpen || !wide ? 'row' : 'column',
-          }}
-        >
-          {panelOpen || !wide ? (
-            <>
-              <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--ink)' }}>Documents</span>
-              <span style={{ fontSize: '12px', color: gotDocs === neededDocs.length && neededDocs.length ? 'var(--moss-text)' : 'var(--text-muted)' }}>
-                {reading ? 'Reading…' : `${gotDocs} of ${neededDocs.length} attached`}
-              </span>
-              <span style={{ marginLeft: 'auto', flexShrink: 0, color: 'var(--action)', background: 'var(--surface-card)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', padding: '4px 12px', display: 'inline-flex', alignItems: 'center' }}>
-                <PanelToggleIcon open={panelOpen} stacked={!wide} />
-              </span>
-            </>
-          ) : (
-            <>
-              <span style={{ color: 'var(--action)', background: 'var(--surface-card)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', padding: '4px 8px', display: 'inline-flex', alignItems: 'center' }}>
-                <PanelToggleIcon open={false} />
-              </span>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--ink)', writingMode: 'vertical-rl', margin: '8px 0' }}>Documents</span>
-              <span style={{ fontSize: '11px', fontWeight: 700, color: gotDocs === neededDocs.length && neededDocs.length ? 'var(--moss-text)' : 'var(--text-muted)' }}>{gotDocs}/{neededDocs.length}</span>
-            </>
-          )}
-        </button>
+      <div style={{ background: 'var(--taupe-50)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '14px', boxSizing: 'border-box' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+          <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--ink)' }}>Documents</span>
+          <span style={{ fontSize: '12px', color: gotDocs === neededDocs.length && neededDocs.length ? 'var(--moss-text)' : 'var(--text-muted)' }}>
+            {reading ? 'Reading…' : `${gotDocs} of ${neededDocs.length} attached`}
+          </span>
+        </div>
 
-        {panelOpen && (
+        <div>
           <div style={{ marginTop: '10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
               Attach each document below
@@ -1732,21 +1695,19 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
               ))}
             </div>
           </div>
-        )}
+        </div>
       </div>
     </aside>
   )
 
-  // Opens the right place for a form error that points at an upload.
-  const FILE_ERROR_KEYS = ['cheque', 'pan_copy', 'reg_cert', 'aadhaar_copy', 'aadhaar_pan_proof', 'gst_cert', 'msme_cert']
+  // Scrolls to the field a form error points at (uploads live in the Documents panel).
   function goToError(key) {
-    if (FILE_ERROR_KEYS.includes(key)) setPanelOpen(true)
     setTimeout(() => scrollToField(key), 80)
   }
 
   return (
     <AutoFillContext.Provider value={autoTag}>
-    <div style={{ maxWidth: wide ? (panelOpen ? '1180px' : '1000px') : '720px', margin: '0 auto', padding: '24px 20px 80px' }}>
+    <div style={{ maxWidth: wide ? '1180px' : '720px', margin: '0 auto', padding: '24px 20px 80px' }}>
     <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start' }}>
     {/* The page's own wrapper has overflow set, which stops `sticky` from
         working — so on wide screens the panel is fixed to the viewport (always
@@ -1754,11 +1715,11 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         its natural horizontal spot, and this spacer of the same width keeps
         the form where it belongs. */}
     {wide && (
-      <div style={{ flex: panelOpen ? '0 0 330px' : '0 0 72px', width: panelOpen ? '330px' : '72px' }}>
+      <div style={{ flex: '0 0 330px', width: '330px' }}>
         {documentsPanel}
       </div>
     )}
-    <div style={{ flex: '1 1 0', minWidth: 0, maxWidth: wide && panelOpen ? '720px' : 'none' }}>
+    <div style={{ flex: '1 1 0', minWidth: 0, maxWidth: wide ? '720px' : 'none' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
@@ -2325,7 +2286,6 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         onClose={() => { tour.close(); setDocsOpen(false) }}
         onStepChange={step => {
           setDocsOpen(step?.anchor === 'vendor-docs')
-          if (step?.anchor === 'vendor-attachments') setPanelOpen(true)
         }}
       />
 
