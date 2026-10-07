@@ -1576,7 +1576,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
       id="docs-panel"
       className="no-scrollbar"
       style={wide
-        ? { position: 'fixed', top: '24px', width: panelOpen ? '330px' : '56px', maxHeight: 'calc(100vh - 48px)', overflowY: 'auto', boxSizing: 'border-box' }
+        ? { position: 'fixed', top: '24px', width: panelOpen ? '330px' : '72px', maxHeight: 'calc(100vh - 48px)', overflowY: 'auto', boxSizing: 'border-box' }
         : { width: '100%', marginBottom: '16px', boxSizing: 'border-box' }}
     >
       <div style={{ background: 'var(--taupe-50)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: panelOpen ? '14px' : '12px 8px', boxSizing: 'border-box' }}>
@@ -1596,11 +1596,13 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
               <span style={{ fontSize: '12px', color: gotDocs === neededDocs.length && neededDocs.length ? 'var(--moss-text)' : 'var(--text-muted)' }}>
                 {reading ? 'Reading…' : `${gotDocs} of ${neededDocs.length} attached`}
               </span>
-              <span style={{ marginLeft: 'auto', fontSize: '12px', color: 'var(--text-muted)' }}>{wide ? '«' : (panelOpen ? 'Hide ▴' : 'Show ▾')}</span>
+              <span style={{ marginLeft: 'auto', flexShrink: 0, fontSize: '12px', fontWeight: 600, color: 'var(--action)', background: 'var(--surface-card)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', padding: '3px 10px', whiteSpace: 'nowrap' }}>
+                {wide ? '« Hide' : (panelOpen ? 'Hide ▴' : 'Show ▾')}
+              </span>
             </>
           ) : (
             <>
-              <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>»</span>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--action)', background: 'var(--surface-card)', border: '1px solid var(--taupe-400)', borderRadius: 'var(--radius-sm)', padding: '3px 9px' }}>» Show</span>
               <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--ink)', writingMode: 'vertical-rl', margin: '8px 0' }}>Documents</span>
               <span style={{ fontSize: '11px', fontWeight: 700, color: gotDocs === neededDocs.length && neededDocs.length ? 'var(--moss-text)' : 'var(--text-muted)' }}>{gotDocs}/{neededDocs.length}</span>
             </>
@@ -1730,7 +1732,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         its natural horizontal spot, and this spacer of the same width keeps
         the form where it belongs. */}
     {wide && (
-      <div style={{ flex: panelOpen ? '0 0 330px' : '0 0 56px', width: panelOpen ? '330px' : '56px' }}>
+      <div style={{ flex: panelOpen ? '0 0 330px' : '0 0 72px', width: panelOpen ? '330px' : '72px' }}>
         {documentsPanel}
       </div>
     )}
