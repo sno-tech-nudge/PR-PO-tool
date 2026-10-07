@@ -62,6 +62,35 @@ import ActivityLog from './components/audit/ActivityLog'
 const SIDEBAR_W = 220
 const SIDEBAR_RAIL_W = 68
 
+// Sidebar icons: one consistent set of thin line icons (24px grid, 1.7px
+// stroke, round caps) drawn in the current text colour, so active / muted
+// states and the folded rail all tint them automatically.
+const NAV_ICON_PATHS = {
+  list: ['M3 11.5 12 4l9 7.5', 'M5.5 10v9.5a.5.5 0 0 0 .5.5h12a.5.5 0 0 0 .5-.5V10', 'M10 20v-5.5h4V20'],
+  history: ['M3.5 12a8.5 8.5 0 1 0 2.6-6.1', 'M3.5 4v4.5H8', 'M12 8v4.5l3 1.8'],
+  'my-expenses': ['M6 3.5h12v17l-2.5-1.7-1.75 1.7-1.75-1.7-1.75 1.7-1.75-1.7L6 20.5z', 'M9.5 8.5h5', 'M9.5 12h5'],
+  approvals: ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', 'm8.3 12.2 2.6 2.6 4.8-5.2'],
+  finance: ['M3 7.5h18v10H3z', 'M12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z', 'M6.5 10.5v.01', 'M17.5 11.5v.01'],
+  advances: ['M7 3.5h10', 'M7 20.5h10', 'M8 3.5c0 3 1.5 4.5 4 8.5-2.5 4-4 5.5-4 8.5', 'M16 3.5c0 3-1.5 4.5-4 8.5 2.5 4 4 5.5 4 8.5'],
+  'pr-list': ['M7 4.5h10a1.5 1.5 0 0 1 1.5 1.5v13.5a1.5 1.5 0 0 1-1.5 1.5H7a1.5 1.5 0 0 1-1.5-1.5V6A1.5 1.5 0 0 1 7 4.5z', 'M9.5 3h5v3h-5z', 'M9 11.5h6', 'M9 15.5h4'],
+  'po-list': ['M20.5 7.8 12 3 3.5 7.8v8.4L12 21l8.5-4.8z', 'm3.5 7.8 8.5 4.8 8.5-4.8', 'M12 12.6V21'],
+  vendors: ['M4 20.5h16', 'M6 20.5V6.5l6-3 6 3v14', 'M9.5 10h1', 'M13.5 10h1', 'M9.5 14h1', 'M13.5 14h1'],
+  'activity-log': ['M3 12h4l2.5-7 5 14 2.5-7H21'],
+  settings: ['M4 7h9', 'M17 7h3', 'M4 12h3', 'M11 12h9', 'M4 17h11', 'M19 17h1', 'M15 7m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0', 'M9 12m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0', 'M17 17m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0'],
+  'new-expense': ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', 'M12 8v8', 'M8 12h8'],
+  'new-report': ['M14 3.5H7a1.5 1.5 0 0 0-1.5 1.5v14A1.5 1.5 0 0 0 7 20.5h10a1.5 1.5 0 0 0 1.5-1.5V8z', 'M14 3.5V8h4.5', 'M12 11.5v6', 'M9 14.5h6'],
+}
+
+function NavIcon({ name, size = 18, fallback }) {
+  const paths = NAV_ICON_PATHS[name]
+  if (!paths) return <span>{fallback}</span>
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ display: 'block' }}>
+      {paths.map((d, i) => <path key={i} d={d} />)}
+    </svg>
+  )
+}
+
 // Broad icon for folding / unfolding the sidebar: a window with a side panel
 // and an arrow that points the way the sidebar will move.
 function SidebarToggleIcon({ collapsed }) {
@@ -549,8 +578,8 @@ export default function App() {
                   userSelect: 'none',
                 }}
               >
-                <span style={{ fontSize: rail ? '16px' : '13px', minWidth: '16px', textAlign: 'center', opacity: active ? 1 : 0.7 }}>
-                  {icon}
+                <span style={{ minWidth: '20px', display: 'flex', justifyContent: 'center', opacity: active ? 1 : 0.75 }}>
+                  <NavIcon name={key} size={rail ? 20 : 18} fallback={icon} />
                 </span>
                 {!rail && label}
               </div>
@@ -572,7 +601,9 @@ export default function App() {
                   userSelect: 'none',
                 }}
               >
-                <span style={{ fontSize: '16px', minWidth: '16px', textAlign: 'center' }}>+</span>
+                <span style={{ minWidth: '20px', display: 'flex', justifyContent: 'center' }}>
+                  <NavIcon name="new-expense" size={rail ? 20 : 18} />
+                </span>
                 {!rail && 'New Expense'}
               </div>
               <div
@@ -586,7 +617,9 @@ export default function App() {
                   userSelect: 'none',
                 }}
               >
-                <span style={{ fontSize: rail ? '16px' : '13px', minWidth: '16px', textAlign: 'center', opacity: 0.7 }}>◷</span>
+                <span style={{ minWidth: '20px', display: 'flex', justifyContent: 'center', opacity: 0.75 }}>
+                  <NavIcon name="new-report" size={rail ? 20 : 18} />
+                </span>
                 {!rail && 'New Report'}
               </div>
             </>
