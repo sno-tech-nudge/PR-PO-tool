@@ -118,10 +118,10 @@ function scrollToField(key) {
 // the document supplied (editing it by hand removes the tag).
 const AutoFillContext = createContext(null)
 
-function Field({ id, label, error, required, hint, info, children }) {
+function Field({ id, label, error, required, hint, info, children, tight }) {
   const autoFrom = useContext(AutoFillContext)?.(id)
   return (
-    <div id={id} style={{ marginBottom: '18px', scrollMarginTop: '80px' }}>
+    <div id={id} style={{ marginBottom: tight ? '6px' : '18px', scrollMarginTop: '80px' }}>
       {label && (
       <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, color: 'var(--ink)', marginBottom: '5px' }}>
         <span>{label}{required && <span style={{ color: 'var(--clay-text)', marginLeft: '2px' }}>*</span>}</span>
@@ -263,18 +263,31 @@ function SectionHeader({ number, title, subtitle, info }) {
   )
 }
 
-function FileUpload({ id, label, required, error, existing, file, onChange, accept = 'image/*,.pdf' }) {
+function FileUpload({ id, label, required, error, existing, file, onChange, accept = 'image/*,.pdf', compact }) {
   const { dragging, dropProps } = useFileDrop({ accept, onFiles: files => onChange(files[0] || null) })
+  const hasFile = !!file
+  const status = dragging
+    ? 'Drop the file here'
+    : file ? `✓ ${file.name}`
+    : existing ? '✓ File on record' + (compact ? '' : ' — click to replace or drag & drop')
+    : compact ? 'Drag & drop or' : 'Click to select file (PDF or image) or drag & drop'
   return (
-    <Field id={id} label={label} required={required} error={error}>
+    <Field id={id} label={label} required={required} error={error} tight={compact}>
       <div {...dropProps} style={{
-        border: `2px dashed ${dragging ? 'var(--action)' : error ? 'var(--clay-text)' : file ? 'var(--moss-text)' : 'var(--taupe-400)'}`,
-        borderRadius: 'var(--radius-md)', padding: '16px', background: dragging ? 'var(--action-bg)' : file ? 'var(--moss-bg)' : 'var(--taupe-50)',
+        border: `${compact ? 1.5 : 2}px dashed ${dragging ? 'var(--action)' : error ? 'var(--clay-text)' : file ? 'var(--moss-text)' : 'var(--taupe-400)'}`,
+        borderRadius: 'var(--radius-md)', padding: compact ? '9px 12px' : '16px', background: dragging ? 'var(--action-bg)' : file ? 'var(--moss-bg)' : 'var(--taupe-50)',
         cursor: 'pointer', transition: '0.15s',
       }}>
-        <label style={{ cursor: 'pointer', display: 'block' }}>
-          <div style={{ fontSize: '12px', color: file ? 'var(--moss-text)' : 'var(--text-muted)', textAlign: 'center', marginBottom: '6px' }}>
-            {dragging ? 'Drop the file here' : file ? `✓ ${file.name}` : existing ? '✓ File already uploaded — click to replace or drag & drop' : 'Click to select file (PDF or image) or drag & drop'}
+        <label style={compact
+          ? { cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }
+          : { cursor: 'pointer', display: 'block' }}>
+          <div style={{
+            fontSize: compact ? '12px' : '12px', color: file ? 'var(--moss-text)' : 'var(--text-muted)',
+            ...(compact
+              ? { flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
+              : { textAlign: 'center', marginBottom: '6px' }),
+          }}>
+            {status}
           </div>
           <input
             type="file"
@@ -282,20 +295,20 @@ function FileUpload({ id, label, required, error, existing, file, onChange, acce
             onChange={e => onChange(e.target.files?.[0] || null)}
             style={{ display: 'none' }}
           />
-          {!file && (
-            <div style={{ textAlign: 'center' }}>
+          {(!hasFile || compact) && (
+            <div style={compact ? { flexShrink: 0 } : { textAlign: 'center' }}>
               <span style={{
-                display: 'inline-block', padding: '5px 14px',
+                display: 'inline-block', padding: compact ? '4px 12px' : '5px 14px',
                 background: 'var(--surface-card)', border: '1px solid var(--taupe-400)',
                 borderRadius: 'var(--radius-sm)', fontSize: '12px', color: 'var(--ink)', fontWeight: 500,
               }}>
-                Select File
+                {hasFile || existing ? 'Replace' : 'Select file'}
               </span>
             </div>
           )}
         </label>
       </div>
-      {existing && !file && (
+      {existing && !file && !compact && (
         <div style={{ fontSize: '11px', color: 'var(--moss-text)', marginTop: '4px' }}>File on record — re-upload to replace.</div>
       )}
     </Field>
@@ -460,7 +473,7 @@ function slotStatus(have, loading, note) {
 function DocSlot({ title, required, fills, status, onGoTo, goLabel = 'Show in form', children }) {
   const chip = SLOT_CHIP[status]
   return (
-    <div style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '12px 14px', marginBottom: '12px', background: 'var(--surface-card)' }}>
+    <div style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '11px 12px', marginBottom: '10px', background: 'var(--surface-card)' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '2px' }}>
         <div style={{ flex: 1, minWidth: 0, fontSize: '13px', fontWeight: 700, color: 'var(--ink)', lineHeight: 1.35 }}>
           {title}{required && <span style={{ color: 'var(--clay-text)', marginLeft: '2px' }}>*</span>}
@@ -469,7 +482,7 @@ function DocSlot({ title, required, fills, status, onGoTo, goLabel = 'Show in fo
           {chip.label}
         </span>
       </div>
-      {fills && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px' }}>Fills in: {fills}</div>}
+      {fills && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', lineHeight: 1.4 }}>Fills in: {fills}</div>}
       {children}
       {status !== 'empty' && status !== 'reading' && onGoTo && (
         <button
@@ -486,7 +499,7 @@ function DocSlot({ title, required, fills, status, onGoTo, goLabel = 'Show in fo
 
 function MutedSlot({ title, text }) {
   return (
-    <div style={{ border: '1px dashed var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '10px 14px', marginBottom: '12px' }}>
+    <div style={{ border: '1px dashed var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '9px 12px', marginBottom: '10px' }}>
       <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>{title}</div>
       <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{text}</div>
     </div>
@@ -535,7 +548,7 @@ function DocNote({ note, where }) {
   const { read, missing } = note
   const box = (tone, children) => (
     <div style={{
-      fontSize: '11px', lineHeight: 1.5, marginTop: '-10px', marginBottom: '14px', padding: '7px 10px',
+      fontSize: '11px', lineHeight: 1.5, marginTop: '4px', marginBottom: '8px', padding: '7px 10px',
       borderRadius: 'var(--radius-sm)', fontWeight: 600,
       color: `var(--${tone}-text)`, background: `var(--${tone}-bg)`, border: `1px solid var(--${tone}-border)`,
     }}>{children}</div>
@@ -1566,7 +1579,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         ? { position: 'fixed', top: '24px', width: panelOpen ? '330px' : '56px', maxHeight: 'calc(100vh - 48px)', overflowY: 'auto', boxSizing: 'border-box' }
         : { width: '100%', marginBottom: '16px', boxSizing: 'border-box' }}
     >
-      <div style={{ background: 'var(--taupe-50)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: panelOpen ? '16px' : '12px 8px', boxSizing: 'border-box' }}>
+      <div style={{ background: 'var(--taupe-50)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: panelOpen ? '14px' : '12px 8px', boxSizing: 'border-box' }}>
         <button
           type="button"
           onClick={() => setPanelOpen(o => !o)}
@@ -1595,7 +1608,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         </button>
 
         {panelOpen && (
-          <div style={{ marginTop: '12px' }}>
+          <div style={{ marginTop: '10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
               Attach each document below
               <InfoTip side="bottom" text={`Each document is read and its details are filled into the form${wide ? ' on the right' : ' below'}. Fields filled this way carry a green tag, so you can see what came from where. Anything that can't be read is listed under that document, so you know exactly what to type in yourself.`} />
@@ -1603,21 +1616,21 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
 
             <DocSlot title="Cancelled cheque or bank statement / passbook" required={!isEdit} fills="beneficiary, account number, IFSC, bank, branch"
               status={slotStatus(chequePath || chequeFile, chequeOcrLoading, docNotes.cheque)} onGoTo={() => jumpTo('sec-bank')}>
-              <FileUpload id="cheque" required={!isEdit} error={liveErrors.cheque} existing={chequePath} file={chequeFile} onChange={handleChequeFile} />
-              {chequeOcrLoading && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '-10px', marginBottom: '10px' }}>Reading document — filling in bank and address details…</div>}
+              <FileUpload compact id="cheque" required={!isEdit} error={liveErrors.cheque} existing={chequePath} file={chequeFile} onChange={handleChequeFile} />
+              {chequeOcrLoading && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', marginBottom: '8px' }}>Reading document — filling in bank and address details…</div>}
               {!chequeOcrLoading && <DocNote note={docNotes.cheque} where="in Bank Account Details" />}
             </DocSlot>
 
             <DocSlot title="PAN card copy" required={!isEdit} fills="PAN number, name, date of incorporation"
               status={slotStatus(panPath || panFile, panOcrLoading, docNotes.pan)} onGoTo={() => jumpTo('sec-org')}>
-              <FileUpload id="pan_copy" required={!isEdit} error={liveErrors.pan_copy} existing={panPath} file={panFile} onChange={handlePanFile} />
-              {panOcrLoading && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '-10px', marginBottom: '10px' }}>Reading document — checking PAN number…</div>}
+              <FileUpload compact id="pan_copy" required={!isEdit} error={liveErrors.pan_copy} existing={panPath} file={panFile} onChange={handlePanFile} />
+              {panOcrLoading && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', marginBottom: '8px' }}>Reading document — checking PAN number…</div>}
               {!panOcrLoading && panMatchStatus === 'match' && (
-                <div style={{ fontSize: '11px', color: 'var(--moss-text)', fontWeight: 600, marginTop: '-10px', marginBottom: '10px' }}>✓ PAN copy matches the PAN Number in the form</div>
+                <div style={{ fontSize: '11px', color: 'var(--moss-text)', fontWeight: 600, marginTop: '4px', marginBottom: '8px' }}>✓ PAN copy matches the PAN Number in the form</div>
               )}
               {!panOcrLoading && <DocNote note={docNotes.pan} where="in Organisation Details" />}
               {!panOcrLoading && panMatchStatus === 'mismatch' && (
-                <div style={{ fontSize: '11px', color: 'var(--clay-text)', fontWeight: 600, marginTop: '-10px', marginBottom: '10px' }}>
+                <div style={{ fontSize: '11px', color: 'var(--clay-text)', fontWeight: 600, marginTop: '4px', marginBottom: '8px' }}>
                   ✗ This document shows {panExtracted} but the PAN Number in the form is {f.pan_number.toUpperCase().trim()} — please check the attachment again
                 </div>
               )}
@@ -1627,20 +1640,20 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
               <DocSlot title={incorporationDocLabel(f.org_type)} required={!isEdit}
                 fills={f.org_type ? 'registration number, state, date of incorporation, name, address' : 'organisation type, registration number, state, date, name, address'}
                 status={slotStatus(regCertPath || regCertFile, regCertOcrLoading, docNotes.reg_cert)} onGoTo={() => jumpTo('sec-contact')}>
-                <FileUpload id="reg_cert" required={!isEdit} error={liveErrors.reg_cert} existing={regCertPath} file={regCertFile} onChange={handleRegCertFile} />
-                {regCertOcrLoading && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '-10px', marginBottom: '10px' }}>Reading document — filling in registration and incorporation details…</div>}
+                <FileUpload compact id="reg_cert" required={!isEdit} error={liveErrors.reg_cert} existing={regCertPath} file={regCertFile} onChange={handleRegCertFile} />
+                {regCertOcrLoading && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', marginBottom: '8px' }}>Reading document — filling in registration and incorporation details…</div>}
                 {!regCertOcrLoading && <DocNote note={docNotes.reg_cert} where="in Organisation Details and Contact & Registration" />}
               </DocSlot>
             ) : (
               <>
                 <DocSlot title="Aadhaar copy" required fills="proof of identity (the Aadhaar number is typed in by you)"
                   status={slotStatus(aadhaarPath || aadhaarFile, false, null)} onGoTo={() => jumpTo('aadhaar_number')}>
-                  <FileUpload id="aadhaar_copy" required error={liveErrors.aadhaar_copy} existing={aadhaarPath} file={aadhaarFile} onChange={setAadhaarFile} />
+                  <FileUpload compact id="aadhaar_copy" required error={liveErrors.aadhaar_copy} existing={aadhaarPath} file={aadhaarFile} onChange={setAadhaarFile} />
                 </DocSlot>
                 {f.aadhaar_pan_linked === true && (
                   <DocSlot title="Proof of Aadhaar-PAN link" required fills="confirms the Aadhaar and PAN are linked"
                     status={slotStatus(aadhaarProofPath || aadhaarProofFile, false, null)}>
-                    <FileUpload id="aadhaar_pan_proof" required error={liveErrors.aadhaar_pan_proof} existing={aadhaarProofPath} file={aadhaarProofFile} onChange={setAadhaarProofFile} />
+                    <FileUpload compact id="aadhaar_pan_proof" required error={liveErrors.aadhaar_pan_proof} existing={aadhaarProofPath} file={aadhaarProofFile} onChange={setAadhaarProofFile} />
                   </DocSlot>
                 )}
               </>
@@ -1649,14 +1662,14 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
             {f.is_gstin_registered ? (
               <DocSlot title="GST registration certificate" required fills="GSTIN, legal name, address, contact"
                 status={slotStatus(gstCertPath || gstCertFile, gstCertOcrLoading, docNotes.gst)} onGoTo={() => jumpTo('gstin')}>
-                <FileUpload id="gst_cert" required error={liveErrors.gst_cert} existing={gstCertPath} file={gstCertFile} onChange={handleGstCertFile} />
-                {gstCertOcrLoading && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '-10px', marginBottom: '10px' }}>Reading document — filling in GSTIN and address…</div>}
+                <FileUpload compact id="gst_cert" required error={liveErrors.gst_cert} existing={gstCertPath} file={gstCertFile} onChange={handleGstCertFile} />
+                {gstCertOcrLoading && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', marginBottom: '8px' }}>Reading document — filling in GSTIN and address…</div>}
                 {!gstCertOcrLoading && <DocNote note={docNotes.gst} where="in the GST details" />}
                 {!gstCertOcrLoading && gstCertMatchStatus === 'match' && (
-                  <div style={{ fontSize: '11px', color: 'var(--moss-text)', fontWeight: 600, marginTop: '-10px', marginBottom: '10px' }}>✓ Certificate matches the GSTIN in the form</div>
+                  <div style={{ fontSize: '11px', color: 'var(--moss-text)', fontWeight: 600, marginTop: '4px', marginBottom: '8px' }}>✓ Certificate matches the GSTIN in the form</div>
                 )}
                 {!gstCertOcrLoading && gstCertMatchStatus === 'mismatch' && (
-                  <div style={{ fontSize: '11px', color: 'var(--clay-text)', fontWeight: 600, marginTop: '-10px', marginBottom: '10px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--clay-text)', fontWeight: 600, marginTop: '4px', marginBottom: '8px' }}>
                     ✗ This document shows {gstExtracted} but the GSTIN in the form is {f.gstin.toUpperCase().trim()} — please check the attachment again
                   </div>
                 )}
@@ -1668,11 +1681,11 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
             {f.is_msme ? (
               <DocSlot title="MSME / Udyam certificate" required fills="Udyam number, category, name, contact, nature of business"
                 status={slotStatus(msmeCertPath || msmeCertFile, msmeCertOcrLoading, docNotes.msme)} onGoTo={() => jumpTo('msme_details')}>
-                <FileUpload id="msme_cert" required error={liveErrors.msme_cert} existing={msmeCertPath} file={msmeCertFile} onChange={handleMsmeCertFile} />
-                {msmeCertOcrLoading && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '-10px', marginBottom: '10px' }}>Reading document — filling in registration number and category…</div>}
+                <FileUpload compact id="msme_cert" required error={liveErrors.msme_cert} existing={msmeCertPath} file={msmeCertFile} onChange={handleMsmeCertFile} />
+                {msmeCertOcrLoading && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', marginBottom: '8px' }}>Reading document — filling in registration number and category…</div>}
                 {!msmeCertOcrLoading && <DocNote note={docNotes.msme} where="in the MSME details" />}
                 {!msmeCertOcrLoading && msmeMismatch && (
-                  <div style={{ fontSize: '11px', color: 'var(--clay-text)', fontWeight: 600, marginTop: '-10px', marginBottom: '10px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--clay-text)', fontWeight: 600, marginTop: '4px', marginBottom: '8px' }}>
                     ✗ This document shows registration number {msmeExtracted.registration_number}, which doesn&apos;t appear in the MSME details — please check the attachment again
                   </div>
                 )}
@@ -1709,7 +1722,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
 
   return (
     <AutoFillContext.Provider value={autoTag}>
-    <div style={{ maxWidth: wide ? '1180px' : '720px', margin: '0 auto', padding: '24px 20px 80px' }}>
+    <div style={{ maxWidth: wide ? (panelOpen ? '1180px' : '1000px') : '720px', margin: '0 auto', padding: '24px 20px 80px' }}>
     <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start' }}>
     {/* The page's own wrapper has overflow set, which stops `sticky` from
         working — so on wide screens the panel is fixed to the viewport (always
@@ -1721,7 +1734,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
         {documentsPanel}
       </div>
     )}
-    <div style={{ flex: '1 1 0', minWidth: 0, maxWidth: wide ? '720px' : 'none' }}>
+    <div style={{ flex: '1 1 0', minWidth: 0, maxWidth: wide && panelOpen ? '720px' : 'none' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
