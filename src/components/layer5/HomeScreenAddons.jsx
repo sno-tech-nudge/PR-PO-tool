@@ -129,9 +129,9 @@ export default function HomeScreenAddons({
         .order('created_at', { ascending: false })
         .limit(5),
       supabase.from('vendors')
-        .select('id, org_name, vendor_id')
+        .select('id, org_name, vendor_id, status')
         .in('submitted_by', emails)
-        .eq('status', 'draft')
+        .in('status', ['draft', 'pending_review'])
         .order('created_at', { ascending: false })
         .limit(5),
       canApprove
@@ -176,7 +176,7 @@ export default function HomeScreenAddons({
         ? supabase.from('purchase_requests').select('id', { count: 'exact', head: true }).in('requested_by', emails).not('status', 'eq', 'draft')
         : Promise.resolve({ count: 0 }),
       showPersonalMini
-        ? supabase.from('vendors').select('id', { count: 'exact', head: true }).in('submitted_by', emails).not('status', 'eq', 'draft')
+        ? supabase.from('vendors').select('id', { count: 'exact', head: true }).in('submitted_by', emails).not('status', 'in', '(draft,pending_review)')
         : Promise.resolve({ count: 0 }),
       showPersonalMini
         ? supabase.from('expense_reports').select('id', { count: 'exact', head: true }).in('employee_email', emails).not('status', 'eq', 'saved')
@@ -309,9 +309,9 @@ export default function HomeScreenAddons({
               <TaskRow
                 key={`vendor-draft-${v.id}`}
                 title={v.org_name || 'Vendor draft'}
-                subtitle={v.vendor_id || 'Not yet submitted'}
-                badge="Draft"
-                badgeColor="var(--text-muted)" badgeBg="var(--taupe-100)"
+                subtitle={v.status === 'pending_review' ? 'Submitted by the vendor. Review and confirm.' : (v.vendor_id || 'Not yet submitted')}
+                badge={v.status === 'pending_review' ? 'Review needed' : 'Draft'}
+                badgeColor={v.status === 'pending_review' ? 'var(--action)' : 'var(--text-muted)'} badgeBg={v.status === 'pending_review' ? 'var(--action-bg)' : 'var(--taupe-100)'}
                 last={i === arr.length - 1 && tasks.pendingExpenseReports === 0 && tasks.pendingPRs === 0 && tasks.pendingPOs === 0}
                 onClick={() => onResumeVendorDraft?.(v.id)}
               />

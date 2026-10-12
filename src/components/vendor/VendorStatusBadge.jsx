@@ -1,5 +1,6 @@
 const CONFIGS = {
   draft:    { label: 'Draft',            color: 'var(--text-muted)', bg: 'var(--taupe-100)', border: 'var(--taupe-200)' },
+  pending_review: { label: 'Awaiting your review', color: 'var(--action)', bg: 'var(--action-bg)', border: 'var(--taupe-300)' },
   pending:  { label: 'Pending Approval', color: 'var(--gold-text)', bg: 'var(--gold-bg)', border: 'var(--gold-border)' },
   approved: { label: 'Approved',         color: 'var(--moss-text)', bg: 'var(--moss-bg)', border: 'var(--moss-border)' },
   rejected: { label: 'Rejected',         color: 'var(--clay-text)', bg: 'var(--clay-bg)', border: 'var(--clay-border)' },

@@ -9,7 +9,7 @@ import PanDuplicateModal from './PanDuplicateModal'
 import { sendVendorEmail } from '../../lib/vendorEmail'
 import { getFinanceEmails } from '../../lib/auth'
 import { logActivity } from '../../lib/activityLog'
-import { notifyVendorSubmitted } from '../../lib/vendorNotifications'
+import { notifyVendorSubmitted, notifyVendorNeedsReview } from '../../lib/vendorNotifications'
 import { useFileDrop } from '../../hooks/useFileDrop'
 import { useFormTour } from '../../hooks/useFormTour'
 import GuidedTour, { TourButton } from '../shared/GuidedTour'
@@ -320,7 +320,7 @@ function FileUpload({ id, label, required, error, existing, file, onChange, acce
 // recap before the real insert fires (from "Confirm & Submit" only). Same
 // hand-rolled modal-shell recipe as PanDuplicateModal (translucent fixed
 // backdrop + a centered card, closed by clicking outside or the back link).
-function VendorReviewModal({ f, attachmentCount, onConfirm, onClose }) {
+function VendorReviewModal({ f, attachmentCount, onConfirm, onClose, accountability }) {
   const maskedAccount = f.account_number
     ? `••••${f.account_number.slice(-4)}`
     : '—'
@@ -356,6 +356,11 @@ function VendorReviewModal({ f, attachmentCount, onConfirm, onClose }) {
               <span style={{ fontSize: '13px', color: 'var(--ink)', fontWeight: 600, textAlign: 'right' }}>{val}</span>
             </div>
           ))}
+          {accountability && (
+            <div style={{ marginTop: '12px', fontSize: '12px', color: 'var(--gold-text)', background: 'var(--gold-bg)', border: '1px solid var(--gold-border)', borderRadius: 'var(--radius-sm)', padding: '9px 12px', lineHeight: 1.5 }}>
+              You are accountable for vendors registered through links you share. By confirming, you are saying you have checked these details and the attachments.
+            </div>
+          )}
         </div>
 
         <div style={{ display: 'flex', gap: '10px', padding: '16px 20px', borderTop: '1px solid var(--taupe-200)' }}>
@@ -564,9 +569,14 @@ function DocNote({ note, where }) {
 
 // ─── main component ─────────────────────────────────────────────────────────────
 export default function VendorForm({ user, existingVendor = null, onSaved, onBack, hideBack = false, isGuestSubmission = false }) {
-  const isEdit = !!existingVendor && existingVendor.status !== 'draft'
+  // A vendor who registered through an invite link lands here as
+  // 'pending_review': the employee who sent the link checks (and can change)
+  // everything, then confirms, and only then does it go to Finance. It is
+  // handled like a draft — same form, same existing attachments.
+  const isReviewing = !isGuestSubmission && existingVendor?.status === 'pending_review'
+  const isEdit = !!existingVendor && existingVendor.status !== 'draft' && !isReviewing
 
-  const [vendorId, setVendorId]     = useState(existingVendor?.status === 'draft' ? '' : (existingVendor?.vendor_id || ''))
+  const [vendorId, setVendorId]     = useState((existingVendor?.status === 'draft' || existingVendor?.status === 'pending_review') ? '' : (existingVendor?.vendor_id || ''))
   const [draftId, setDraftId]       = useState(existingVendor?.id || null)
   const [errors, setErrors]         = useState({})
   // null before any Save/Submit attempt (gates the error-summary banner so
@@ -1414,7 +1424,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
     setAttemptedMode(null)
     setSavingDraft(true); setSaveError(null)
     try {
-      const payload = await buildPayload({ status: 'draft', vendor_id: null })
+      const payload = await buildPayload({ status: isReviewing ? 'pending_review' : 'draft', vendor_id: null })
       let result
       if (draftId) {
         result = await supabase.from('vendors').update(payload).eq('id', draftId).select().single()
@@ -1508,9 +1518,12 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
     setShowReviewModal(false)
     setSaving(true); setSaveError(null)
     try {
-      const vid = vendorId || await generateVendorId()
-      if (!vendorId) setVendorId(vid)
-      const payload = await buildPayload({ status: 'pending', vendor_id: vid })
+      // A vendor's own submission (invite link) waits for the employee who
+      // sent the link; its Vendor ID is only issued when that employee
+      // confirms and it goes on to Finance.
+      const vid = isGuestSubmission ? null : (vendorId || await generateVendorId())
+      if (vid && !vendorId) setVendorId(vid)
+      const payload = await buildPayload({ status: isGuestSubmission ? 'pending_review' : 'pending', vendor_id: vid })
       payload.submitted_at = new Date().toISOString()
 
       let result
@@ -1524,14 +1537,24 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
       if (result.error) throw result.error
       logActivity({
         entityType: 'vendor', entityId: result.data.id, entityRef: result.data.vendor_id || result.data.org_name,
-        action: isEdit ? 'resubmitted' : 'submitted', fromValue: existingVendor?.status || (draftId ? 'draft' : null), toValue: 'pending', actor: user,
-        note: isGuestSubmission ? 'Submitted by the vendor via invite link' : null,
+        action: isGuestSubmission ? 'submitted_for_review' : isEdit ? 'resubmitted' : isReviewing ? 'confirmed_after_review' : 'submitted',
+        fromValue: existingVendor?.status || (draftId ? 'draft' : null), toValue: isGuestSubmission ? 'pending_review' : 'pending', actor: user,
+        note: isGuestSubmission ? 'Submitted by the vendor via invite link; waiting for the inviting employee to review and confirm'
+          : isReviewing ? "Employee reviewed the vendor's own submission and confirmed it" : null,
       })
-      notifyVendorSubmitted({ vendor: result.data, submitter: user, viaInviteLink: isGuestSubmission, resubmitted: isEdit })
-      sendVendorEmail({
-        type: 'submitted', vendorOrgName: result.data.org_name, vendorId: result.data.vendor_id,
-        recipientEmail: result.data.submitted_by,
-      })
+      if (isGuestSubmission) {
+        notifyVendorNeedsReview({ vendor: result.data, inviter: user })
+        sendVendorEmail({
+          type: 'review_needed', vendorOrgName: result.data.org_name, vendorId: result.data.id,
+          recipientEmail: result.data.submitted_by,
+        })
+      } else {
+        notifyVendorSubmitted({ vendor: result.data, submitter: user, viaInviteLink: false, resubmitted: isEdit })
+        sendVendorEmail({
+          type: 'submitted', vendorOrgName: result.data.org_name, vendorId: result.data.vendor_id,
+          recipientEmail: result.data.submitted_by,
+        })
+      }
       onSaved(result.data)
     } catch (err) {
       setSaveError(err.message || 'Save failed. Please try again.')
@@ -1732,10 +1755,24 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           </>
         )}
         <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--ink)', margin: 0 }}>
-          {isEdit ? 'Edit Vendor' : existingVendor?.status === 'draft' ? 'Continue Vendor Draft' : 'Vendor Registration'}
+          {isEdit ? 'Edit Vendor' : isReviewing ? 'Review Vendor Registration' : existingVendor?.status === 'draft' ? 'Continue Vendor Draft' : 'Vendor Registration'}
         </h2>
         <TourButton onClick={tour.start} style={{ marginLeft: 'auto' }} />
       </div>
+
+      {/* Shown only to the employee reviewing a vendor's own submission —
+          never on the vendor's public form. */}
+      {isReviewing && (
+        <div style={{ background: 'var(--gold-bg)', border: '1px solid var(--gold-border)', borderRadius: 'var(--radius-md)', padding: '14px 18px', marginBottom: '16px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--gold-text)', marginBottom: '4px' }}>
+            Submitted by the vendor through your link — review before it goes for approval
+          </div>
+          <div style={{ fontSize: '12px', color: 'var(--ink)', lineHeight: 1.6 }}>
+            Check every detail and attachment, and edit anything that needs correcting. You are accountable for vendors registered
+            through links you share. Nothing reaches Finance until you confirm the submission.
+          </div>
+        </div>
+      )}
 
       {/* ══════════════════════════════════════
           SECTION 1 — Organisation Details (comes first so Type of
@@ -2256,7 +2293,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
             fontSize: '14px', fontWeight: 700, cursor: saving ? 'default' : 'pointer',
           }}
         >
-          {saving ? 'Submitting…' : isEdit ? 'Resubmit for Approval' : 'Submit for Approval'}
+          {saving ? 'Submitting…' : isEdit ? 'Resubmit for Approval' : isReviewing ? 'Confirm submission' : 'Submit for Approval'}
         </button>
         {(!isEdit) && (
           <button
@@ -2268,7 +2305,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
               fontSize: '14px', fontWeight: 600, cursor: savingDraft ? 'default' : 'pointer',
             }}
           >
-            {savingDraft ? 'Saving…' : 'Save as Draft'}
+            {savingDraft ? 'Saving…' : isReviewing ? 'Save changes' : 'Save as Draft'}
           </button>
         )}
         {!hideBack && (
@@ -2325,6 +2362,7 @@ export default function VendorForm({ user, existingVendor = null, onSaved, onBac
           attachmentCount={[chequePath || chequeFile, panPath || panFile, regCertPath || regCertFile, (!f.is_msme || msmeCertPath || msmeCertFile), (!f.is_gstin_registered || gstCertPath || gstCertFile), (!isIndividual || aadhaarPath || aadhaarFile), (!isIndividual || aadhaarProofPath || aadhaarProofFile)].filter(Boolean).length}
           onConfirm={performSubmit}
           onClose={() => setShowReviewModal(false)}
+          accountability={isReviewing}
         />
       )}
 

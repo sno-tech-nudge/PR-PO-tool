@@ -400,6 +400,16 @@ export default function App() {
     const { data } = await supabase.from('vendors').select('*').eq('id', id).single()
     if (data) { setEditingVendor(data); setVendorSubScreen('form') }
   }
+  // Opening a vendor from a notification or the Home list: a vendor who
+  // registered through MY invite link and is waiting on me goes straight to
+  // the review form; everything else opens its detail page as before.
+  async function openVendorSmart(id) {
+    setAppScreen('vendors')
+    const { data } = await supabase.from('vendors').select('id, status, submitted_by').eq('id', id).maybeSingle()
+    const mine = (user?.ownEmails || [user?.email]).map(e => String(e || '').toLowerCase())
+    if (data?.status === 'pending_review' && mine.includes(String(data.submitted_by || '').toLowerCase())) openDraftEdit(id)
+    else openVendorDetail(id)
+  }
   function openVendorApproval(v)     { setApprovingVendor(v); setVendorSubScreen('approval') }
   function openBankChange(v)         { setBankChangeVendor(v); setVendorSubScreen('bank-change') }
   function openVendorList() {
@@ -543,7 +553,7 @@ export default function App() {
               iconOnly
               onOpenReport={handleViewReport}
               onOpenPR={(id) => { setAppScreen('pr-list'); openPRDetail(id) }}
-              onOpenVendor={(id) => { setAppScreen('vendors'); openVendorDetail(id) }}
+              onOpenVendor={openVendorSmart}
               onOpenPO={(id) => { setAppScreen('po-list'); openPODetail(id) }}
             />
             {!isMobile && (
@@ -800,7 +810,7 @@ export default function App() {
               onOpenPRApprovals={() => { setApprovalsTab('prs'); setAppScreen('approvals') }}
               onOpenFinance={() => setAppScreen('finance')}
               onViewPR={(id) => { setAppScreen('pr-list'); openPRDetail(id) }}
-              onViewVendor={(id) => { setAppScreen('vendors'); openVendorDetail(id) }}
+              onViewVendor={openVendorSmart}
               onOpenReportApproval={(id) => { setApprovalReportId(id); setAppScreen('approval-view') }}
             />
           </div>
@@ -1009,13 +1019,13 @@ export default function App() {
             user={user}
             existingVendor={editingVendor}
             onSaved={() => {
-              const wasResubmit = editingVendor && editingVendor.status !== 'draft'
+              const wasResubmit = editingVendor && !['draft', 'pending_review'].includes(editingVendor.status)
               showToast(wasResubmit ? 'Vendor resubmitted for approval.' : 'Vendor submitted for approval.', 'info')
               openVendorList()
             }}
             onBack={() => {
               if (vendorFromHome && !editingVendor) { setVendorFromHome(false); setVendorSubScreen('list'); setAppScreen('list'); return }
-              setVendorSubScreen(!editingVendor ? 'search' : editingVendor.status === 'draft' ? 'list' : 'detail')
+              setVendorSubScreen(!editingVendor ? 'search' : ['draft', 'pending_review'].includes(editingVendor.status) ? 'list' : 'detail')
             }}
           />
         )}

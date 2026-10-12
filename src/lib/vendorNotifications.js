@@ -50,3 +50,20 @@ export async function notifyVendorSubmitted({ vendor, submitter, viaInviteLink =
     console.error('Vendor submission notification failed (non-blocking):', err)
   }
 }
+
+
+// An invite-link vendor finished the form. It does NOT go to Finance yet: the
+// employee who sent the link gets an in-app notice to check it and confirm.
+// Best-effort: never throws, never blocks the submission.
+export async function notifyVendorNeedsReview({ vendor, inviter }) {
+  try {
+    if (!inviter?.email) return
+    await notifyEmails([inviter.email], {
+      type: 'vendor_review',
+      message: `"${vendor.org_name}" finished registering through your invite link. Review the details and confirm the submission so it can go for approval. You are accountable for vendors registered through your links.`,
+      relatedType: 'vendor', relatedId: vendor.id,
+    })
+  } catch (err) {
+    console.error('Vendor review notification failed (non-blocking):', err)
+  }
+}

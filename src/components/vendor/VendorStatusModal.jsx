@@ -27,7 +27,8 @@ function fmtTimeLine(d) {
 // draft is the same moment it lands in Finance's review queue, there's no
 // separate manual "accept" action in this app today.
 function buildSteps(vendor) {
-  const isDraft    = vendor.status === 'draft'
+  const isReview   = vendor.status === 'pending_review'
+  const isDraft    = vendor.status === 'draft' || isReview
   const isPending  = vendor.status === 'pending'
   const isApproved = vendor.status === 'approved'
   const isRejected = vendor.status === 'rejected'
@@ -38,7 +39,7 @@ function buildSteps(vendor) {
 
   return [
     {
-      key: 'draft', label: 'Draft',
+      key: 'draft', label: isReview ? 'Vendor submitted, awaiting employee review' : 'Draft',
       state: isDraft ? 'current' : 'done',
       date: vendor.created_at, actor: getDisplayName(vendor.submitted_by), role: 'Submitter',
     },
@@ -189,7 +190,7 @@ function VerticalTimeline({ vendor, steps }) {
 export default function VendorStatusModal({ vendor, onClose, onDelete, deleting }) {
   if (!vendor) return null
   const steps = buildSteps(vendor)
-  const isDraft = vendor.status === 'draft'
+  const isDraft = vendor.status === 'draft' // only a true draft can be deleted here
 
   return (
     <div

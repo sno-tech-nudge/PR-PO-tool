@@ -100,7 +100,7 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
       // work — a draft only shows up here if Finance is the one who saved it
       // (under either of their linked emails, if they have one).
       const ownList = user.ownEmails.join(',')
-      q = q.or(`status.neq.draft,and(status.eq.draft,submitted_by.in.(${ownList}))`)
+      q = q.or(`status.not.in.(draft,pending_review),and(status.in.(draft,pending_review),submitted_by.in.(${ownList}))`)
     }
     q = q.order('created_at', { ascending: false })
     const { data } = await q
@@ -159,9 +159,10 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
     approved: vendors.filter(v => v.status === 'approved').length,
     rejected: vendors.filter(v => v.status === 'rejected').length,
     draft: vendors.filter(v => v.status === 'draft').length,
+    pending_review: vendors.filter(v => v.status === 'pending_review').length,
   }
 
-  const tabs = [['all','All'],['pending','Pending'],['approved','Approved'],['rejected','Rejected'],['draft','Draft']]
+  const tabs = [['all','All'],...(counts.pending_review > 0 ? [['pending_review','Needs your review']] : []),['pending','Pending'],['approved','Approved'],['rejected','Rejected'],['draft','Draft']]
 
   const columnsToShow = ALL_COLUMNS.filter(c => visibleColumns.includes(c.key))
 
@@ -285,7 +286,7 @@ export default function VendorList({ user, onViewVendor, onCreateVendor, onResum
                 </thead>
                 <tbody>
                   {filtered.map((v, i) => {
-                    const isDraft = v.status === 'draft'
+                    const isDraft = v.status === 'draft' || v.status === 'pending_review'
                     const dupCount = v.pan_number ? (panCounts[v.pan_number] || 0) - 1 : 0
                     return (
                       <tr

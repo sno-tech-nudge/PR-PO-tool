@@ -79,6 +79,7 @@ const VENDOR_STATUS_BADGE = {
 export function buildVendorEmail({ type, vendorOrgName, vendorId, actorName, reason, comment, panNumber, submitterEmail }) {
   const isApproved = type === 'approved'
   const isBlockedKyc = type === 'aadhaar_pan_not_linked'
+  const isReviewNeeded = type === 'review_needed'
   const vendorLabel = vendorId ? `${vendorOrgName} (${vendorId})` : vendorOrgName
 
   let subject, headline, headlineColor, bodyLine, noteLabel, noteValue, badge
@@ -89,6 +90,13 @@ export function buildVendorEmail({ type, vendorOrgName, vendorId, actorName, rea
     bodyLine = `${escapeHtml(submitterEmail || 'A user')} tried to register vendor <strong>${escapeHtml(vendorOrgName)}</strong>` +
       `${panNumber ? ` (PAN ${escapeHtml(panNumber)})` : ''} and disclosed that their Aadhaar and PAN are <strong>not linked</strong>. ` +
       `The submission was blocked and no vendor record was created. Flagging for Finance's awareness in case follow-up is needed.`
+  } else if (isReviewNeeded) {
+    subject = `Please review: ${vendorLabel} registered through your invite link`
+    headline = 'Vendor Ready for Your Review'
+    headlineColor = '#B45309'
+    bodyLine = `<strong>${escapeHtml(vendorLabel)}</strong> finished registering through the invite link you shared. ` +
+      `Open the Expense Tracker, check every detail and attachment, edit anything that needs correcting, and confirm the submission. ` +
+      `It goes to Finance for approval only after you confirm. You are accountable for vendors registered through links you share.`
   } else if (type === 'submitted') {
     subject = `Vendor Submitted: ${vendorLabel}`
     headline = 'Vendor Submitted'
@@ -126,8 +134,8 @@ export function buildVendorEmail({ type, vendorOrgName, vendorId, actorName, rea
 
 async function handleVendor(req, res, apiKey) {
   const { type, vendorOrgName, vendorId, recipientEmail, actorName, reason, comment, panNumber, submitterEmail } = req.body || {}
-  if (!['submitted', 'approved', 'rejected', 'aadhaar_pan_not_linked'].includes(type)) {
-    res.status(400).json({ error: 'type must be "submitted", "approved", "rejected" or "aadhaar_pan_not_linked"' })
+  if (!['submitted', 'approved', 'rejected', 'aadhaar_pan_not_linked', 'review_needed'].includes(type)) {
+    res.status(400).json({ error: 'type must be "submitted", "approved", "rejected", "review_needed" or "aadhaar_pan_not_linked"' })
     return
   }
   const recipients = Array.isArray(recipientEmail) ? recipientEmail.filter(Boolean) : [recipientEmail].filter(Boolean)

@@ -171,11 +171,11 @@ export default function FinanceDashboard({ user, showToast, onBack }) {
           user={user}
           existingVendor={editingVendor}
           onSaved={() => {
-            const wasResubmit = editingVendor && editingVendor.status !== 'draft'
+            const wasResubmit = editingVendor && !['draft', 'pending_review'].includes(editingVendor.status)
             showToast?.(wasResubmit ? 'Vendor resubmitted for approval.' : 'Vendor submitted for approval.', 'info')
             openVendorList()
           }}
-          onBack={() => setVendorSubScreen(!editingVendor ? 'search' : editingVendor.status === 'draft' ? 'list' : 'detail')}
+          onBack={() => setVendorSubScreen(!editingVendor ? 'search' : ['draft', 'pending_review'].includes(editingVendor.status) ? 'list' : 'detail')}
         />
       </div>
     )
