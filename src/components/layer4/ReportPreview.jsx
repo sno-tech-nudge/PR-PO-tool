@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { determineApprovalRoute, checkLargeClaimDonorMention, flagEntityContext } from '../../lib/policyEngine'
+import { determineApprovalRoute, checkLargeClaimDonorMention, flagEntityContext, runAllChecks } from '../../lib/policyEngine'
 import { getApprovalRules } from '../../lib/approvalEngine'
 import { generateExpenseReportPDF, downloadPDF, uploadPDFToSupabase } from '../../lib/pdfGenerator'
 import { generateReportReference } from '../../lib/reportReference'
@@ -13,6 +13,7 @@ import GeneratingPDF from './GeneratingPDF'
 import PolicyViolation from '../layer3/PolicyViolation'
 import PolicyFlag from '../layer3/PolicyFlag'
 import RejectionBanner from './RejectionBanner'
+import HeadcountAsk from './HeadcountAsk'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import { logActivity } from '../../lib/activityLog'
 
@@ -52,8 +53,20 @@ function mostCommonEntity(expenses) {
   return entries.reduce((best, cur) => (cur[1] > best[1] ? cur : best))[0]
 }
 
-export default function ReportPreview({ expenses, results, reportDetails, user, onSubmitted, onBack }) {
+export default function ReportPreview({ expenses: expensesProp, results: resultsProp, reportDetails, user, onSubmitted, onBack }) {
   const isMobile = useIsMobile()
+  // Local copies: answering "was this for more than one person?" on a food or
+  // hotel flag updates that expense and re-runs its policy checks right here.
+  const [expenses, setExpenses] = useState(expensesProp)
+  const [results, setResults] = useState(resultsProp)
+  const [solo, setSolo] = useState(() => new Set()) // expense ids confirmed as just one person
+
+  async function handleHeadcountApplied(updated) {
+    const nextExpenses = expenses.map(e => (e.id === updated.id ? updated : e))
+    setExpenses(nextExpenses)
+    const fresh = await runAllChecks(updated, nextExpenses).catch(() => null)
+    if (fresh) setResults(prev => (prev || []).map((r, i) => (expenses[i]?.id === updated.id ? fresh : r)))
+  }
   // Defensive only — NewReportModal already generates and saves the real
   // report_reference before this screen is ever reached, so this almost
   // never actually gets used. Kept correctly prefixed anyway: vendor if the
@@ -61,7 +74,7 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
   // themselves tied to a PO or a registered vendor.
   const [fallbackReference] = useState(() => generateReportReference(
     reportDetails?.po_related === true || reportDetails?.po_id != null
-      || expenses.some(e => e.po_number || e.vendor_id)
+      || expensesProp.some(e => e.po_number || e.vendor_id)
   ))
   const reference = reportDetails?.report_reference || fallbackReference
   const reportId = reportDetails?.report_id || null
@@ -407,7 +420,16 @@ export default function ReportPreview({ expenses, results, reportDetails, user, 
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '10px', lineHeight: 1.5 }}>
               These are advisory. You can still submit, and your approver will see them.
             </div>
-            {allViolations.map((v, i) => <PolicyViolation key={`v${i}`} violation={v} expense={v.expense} />)}
+            {allViolations.map((v, i) => (
+              <PolicyViolation
+                key={`v${i}`} violation={v} expense={v.expense}
+                footer={v.askPeople && v.expense ? (
+                  solo.has(v.expense.id)
+                    ? <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>Noted: this was for one person.</div>
+                    : <HeadcountAsk expense={v.expense} onApplied={handleHeadcountApplied} onSolo={() => setSolo(prev => new Set(prev).add(v.expense.id))} />
+                ) : null}
+              />
+            ))}
             {allFlags.map((f, i) => <PolicyFlag key={`f${i}`} flag={f} expense={f.expense} />)}
           </div>
         )}

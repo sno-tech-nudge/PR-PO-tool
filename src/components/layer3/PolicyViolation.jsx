@@ -20,7 +20,7 @@ const RULE_LABELS = {
   non_reimbursable: 'Non-reimbursable item',
 }
 
-export default function PolicyViolation({ violation, expense }) {
+export default function PolicyViolation({ violation, expense, footer }) {
   const label = RULE_LABELS[violation.rule] || 'Policy violation'
   const fix = FIX_INSTRUCTIONS[violation.rule] || 'Please review the policy and correct this expense.'
 
@@ -59,6 +59,7 @@ export default function PolicyViolation({ violation, expense }) {
           }}>
             <span style={{ fontWeight: 600 }}>How to fix: </span>{fix}
           </div>
+          {footer}
         </div>
       </div>
     </div>

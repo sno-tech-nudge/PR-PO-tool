@@ -53,16 +53,26 @@ export function checkSubmissionTiming(expense) {
   } catch { return passed('submission_timing') }
 }
 
+// People a bill is shared between: only counted once the filer has said it
+// was a group expense with a head count; otherwise one person.
+function headcount(expense) {
+  const n = Number(expense.attendee_count)
+  return expense.expense_type === 'my_team' && n > 1 ? n : 1
+}
+
 export function checkHotelLimit(expense) {
   try {
     if (expense.category !== 'Lodging and Boarding') return passed('hotel_limit')
     const text = `${expense.description || ''} ${expense.trip_name || ''}`.toLowerCase()
     const isMetro = METRO_CITIES.some(c => text.includes(c))
     const limit = isMetro ? 4000 : 3250
-    const baseAmount = expense.amount / 1.18
+    const people = headcount(expense)
+    const baseAmount = expense.amount / 1.18 / people
     if (baseAmount > limit) {
       return failed('hotel_limit',
-        `Hotel amount of ₹${Number(expense.amount).toLocaleString('en-IN')} exceeds the ₹${limit} per night limit for ${isMetro ? 'metro' : 'non-metro'} cities. The limit is ₹${limit} + GST per night.`)
+        `Hotel amount of ₹${Number(expense.amount).toLocaleString('en-IN')}${people > 1 ? ` for ${people} people` : ''} exceeds the ₹${limit} per person per night limit for ${isMetro ? 'metro' : 'non-metro'} cities. The limit is ₹${limit} + GST per night.`,
+        // The answer would matter only if nobody has said it was shared yet.
+        { askPeople: people === 1 })
     }
     return passed('hotel_limit')
   } catch { return passed('hotel_limit') }
@@ -71,10 +81,14 @@ export function checkHotelLimit(expense) {
 export function checkFoodLimit(expense) {
   try {
     if (expense.category !== 'Food') return passed('food_limit')
-    const perDay = expense.amount
-    if (perDay > 750) {
+    const people = headcount(expense)
+    const perPerson = expense.amount / people
+    if (perPerson > 750) {
       return failed('food_limit',
-        `Food expense of ₹${Number(perDay).toLocaleString('en-IN')} per day exceeds the ₹750 per day limit. Total claimed: ₹${Number(expense.amount).toLocaleString('en-IN')}.`)
+        people > 1
+          ? `Food expense of ₹${Number(expense.amount).toLocaleString('en-IN')} for ${people} people (₹${Math.round(perPerson).toLocaleString('en-IN')} per person) exceeds the ₹750 per person per day limit.`
+          : `Food expense of ₹${Number(expense.amount).toLocaleString('en-IN')} exceeds the ₹750 per person per day limit.`,
+        { askPeople: people === 1 })
     }
     return passed('food_limit')
   } catch { return passed('food_limit') }
