@@ -1,10 +1,13 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
-import { formatDateTime } from '../../lib/approvalEngine'
 import NotificationToast from './NotificationToast'
 import ReportChat from '../shared/ReportChat'
 import Confetti from '../shared/Confetti'
 import ExpenseDetailModal from '../layer2/ExpenseDetailModal'
+import ReportJourney, { ReportStatusPill } from './ReportJourney'
+import PDFTemplate from '../layer4/PDFTemplate'
+import { generateExpenseReportPDF, downloadPDF } from '../../lib/pdfGenerator'
+import { getDisplayName } from '../../lib/directory'
 
 const STATUS_BADGE = {
   draft: { bg: 'var(--taupe-100)', color: 'var(--text-muted)', label: 'Draft', icon: '●' },
@@ -14,21 +17,6 @@ const STATUS_BADGE = {
   rejected: { bg: 'var(--clay-bg)', color: 'var(--clay-text)', label: 'Rejected', icon: '✕' },
   processing: { bg: 'var(--gold-bg)', color: 'var(--gold-text)', label: 'Processing', icon: '◷' },
   reimbursed: { bg: 'var(--moss-bg)', color: 'var(--moss)', label: 'Reimbursed', icon: '✓' },
-}
-
-function ActivityItem({ text, timestamp }) {
-  return (
-    <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
-      <div style={{
-        width: '6px', height: '6px', borderRadius: '50%',
-        background: 'var(--taupe-200)', flexShrink: 0, marginTop: '5px',
-      }} />
-      <div>
-        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{text}</div>
-        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{timestamp}</div>
-      </div>
-    </div>
-  )
 }
 
 export default function ReportStatus({ reportId, onBack, onEditRejected, onViewPO }) {
@@ -42,6 +30,8 @@ export default function ReportStatus({ reportId, onBack, onEditRejected, onViewP
   const [toast, setToast] = useState(null)
   const [celebrate, setCelebrate] = useState(false)
   const [selectedExpense, setSelectedExpense] = useState(null)
+  const [downloading, setDownloading] = useState(false)
+  const [downloadError, setDownloadError] = useState(null)
   const subRef = useRef(null)
   const celebratedRef = useRef(false)
 
@@ -64,40 +54,31 @@ export default function ReportStatus({ reportId, onBack, onEditRejected, onViewP
     setCelebrate(true)
   }
 
-  // Load report and expenses
+  // Report, its expenses and its approval levels in one go. Called on load, on
+  // any realtime change and every 15 seconds, so the timeline moves as soon as
+  // someone approves or returns the report.
+  const loadAll = useCallback(async () => {
+    if (!reportId) return
+    const { data: rep } = await supabase.from('expense_reports').select('*').eq('id', reportId).single()
+    if (rep) setReport(rep)
+    if (rep?.status === 'reimbursed') celebrateOnce(rep.id)
+    if (rep?.po_id) {
+      const { data: po } = await supabase.from('purchase_orders').select('id, po_number, status').eq('id', rep.po_id).single()
+      setLinkedPO(po)
+    }
+    const { data: re } = await supabase.from('report_expenses').select('expense_details(*)').eq('report_id', reportId)
+    setExpenses(re?.map(r => r.expense_details).filter(Boolean) || [])
+    const { data: appr } = await supabase.from('report_approvals').select('*').eq('report_id', reportId).order('created_at', { ascending: true })
+    setApprovals(appr || [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reportId])
+
+  useEffect(() => { loadAll() }, [loadAll])
   useEffect(() => {
     if (!reportId) return
-
-    async function load() {
-      const { data: rep } = await supabase
-        .from('expense_reports')
-        .select('*')
-        .eq('id', reportId)
-        .single()
-
-      if (rep) setReport(rep)
-      if (rep?.status === 'reimbursed') celebrateOnce(rep.id)
-      if (rep?.po_id) {
-        const { data: po } = await supabase.from('purchase_orders').select('id, po_number, status').eq('id', rep.po_id).single()
-        setLinkedPO(po)
-      }
-
-      const { data: re } = await supabase
-        .from('report_expenses')
-        .select('expense_details(*)')
-        .eq('report_id', reportId)
-      setExpenses(re?.map(r => r.expense_details).filter(Boolean) || [])
-
-      const { data: appr } = await supabase
-        .from('report_approvals')
-        .select('*')
-        .eq('report_id', reportId)
-        .order('created_at', { ascending: true })
-      setApprovals(appr || [])
-    }
-
-    load()
-  }, [reportId])
+    const t = setInterval(loadAll, 15000)
+    return () => clearInterval(t)
+  }, [reportId, loadAll])
 
   // Realtime subscription
   useEffect(() => {
@@ -110,10 +91,16 @@ export default function ReportStatus({ reportId, onBack, onEditRejected, onViewP
         { event: 'UPDATE', schema: 'public', table: 'expense_reports', filter: `id=eq.${reportId}` },
         (payload) => {
           setReport(prev => ({ ...prev, ...payload.new }))
+          loadAll()
           const badge = STATUS_BADGE[payload.new.status]
           if (badge) showToast(`Report status updated: ${badge.label}`, payload.new.status === 'rejected' ? 'rejected' : payload.new.status === 'approved' || payload.new.status === 'reimbursed' ? 'approved' : 'info')
           if (payload.new.status === 'reimbursed') celebrateOnce(payload.new.id || reportId)
         }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'report_approvals', filter: `report_id=eq.${reportId}` },
+        () => loadAll()
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') setRealtimeConnected(true)
@@ -137,6 +124,35 @@ export default function ReportStatus({ reportId, onBack, onEditRejected, onViewP
     return () => clearInterval(interval)
   }, [polling, reportId])
 
+  // The report PDF is built here from the report's own data, so it is always
+  // available once the report is approved (nothing depends on a stored file).
+  async function handleDownload() {
+    setDownloadError(null)
+    setDownloading(true)
+    try {
+      const pdf = await generateExpenseReportPDF()
+      if (!pdf) throw new Error('no pdf')
+      downloadPDF(pdf, `expense-report-${report.report_reference || 'report'}.pdf`)
+    } catch {
+      setDownloadError('Could not prepare the PDF. Please try again.')
+    }
+    setDownloading(false)
+  }
+
+  const fmtDay = d => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+  const pdfReportData = report ? {
+    reference: report.report_reference,
+    entity: report.brand,
+    employeeName: report.employee_email ? getDisplayName(report.employee_email) : undefined,
+    period: report.duration_start
+      ? [report.duration_start, report.duration_end].filter(Boolean).map(fmtDay).join(' to ')
+      : (expenses[0]?.date || '—'),
+    generatedAt: new Date().toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+    approvalRoute: { label: approvals.map(a => a.approver_name).filter(Boolean).join(' › ') || 'Reporting Manager' },
+    results: [],
+    reportDetails: { business_purpose: report.business_purpose, duration_start: report.duration_start, duration_end: report.duration_end },
+  } : null
+
   if (!report && !reportId) {
     return (
       <div style={{ maxWidth: '480px', margin: '0 auto', padding: '40px 20px', textAlign: 'center' }}>
@@ -159,18 +175,6 @@ export default function ReportStatus({ reportId, onBack, onEditRejected, onViewP
   const status = report?.status || 'submitted'
   const isRejected = status === 'rejected'
 
-  // Activity log from report + approval records
-  const activities = []
-  if (report?.created_at) activities.push({ text: 'Report submitted', timestamp: formatDateTime(report.created_at) })
-  approvals.forEach(a => {
-    activities.push({ text: `${a.approver_name} notified`, timestamp: formatDateTime(a.created_at) })
-    if (a.actioned_at && a.status === 'approved') activities.push({ text: `Approved by ${a.approver_name}`, timestamp: formatDateTime(a.actioned_at) })
-    if (a.actioned_at && a.status === 'rejected') activities.push({ text: `Returned by ${a.approver_name}`, timestamp: formatDateTime(a.actioned_at) })
-  })
-  if (report?.approved_at && !approvals.some(a => a.status === 'approved')) {
-    activities.push({ text: 'Approved — sent to Finance', timestamp: formatDateTime(report.approved_at) })
-  }
-
   const displayedExpenses = showAll ? expenses : expenses.slice(0, 3)
 
   return (
@@ -190,6 +194,10 @@ export default function ReportStatus({ reportId, onBack, onEditRejected, onViewP
         <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
           {report?.report_reference || '—'} · {report?.created_at ? new Date(report.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
         </div>
+      </div>
+
+      <div style={{ marginBottom: '16px' }}>
+        <ReportStatusPill report={report} approvals={approvals} />
       </div>
 
       {linkedPO && (
@@ -285,12 +293,25 @@ export default function ReportStatus({ reportId, onBack, onEditRejected, onViewP
         </div>
       )}
 
-      {/* Activity log */}
-      {activities.length > 0 && (
+      {/* Where the report is: every step with its date and time */}
+      {report && <ReportJourney report={report} approvals={approvals} />}
+
+      {/* Download — once the report is approved */}
+      {['approved', 'processing', 'reimbursed'].includes(status) && (
         <div style={{ marginBottom: '20px' }}>
-          {[...activities].reverse().map((a, i) => (
-            <ActivityItem key={i} text={a.text} timestamp={a.timestamp} />
-          ))}
+          <button
+            onClick={handleDownload}
+            disabled={downloading}
+            style={{
+              width: '100%', height: '46px', background: 'var(--surface-card)', color: 'var(--text)',
+              border: '1px solid var(--text)', borderRadius: 'var(--radius-sm)', fontSize: '14px', fontWeight: 500,
+              cursor: downloading ? 'default' : 'pointer',
+            }}
+          >
+            {downloading ? 'Preparing…' : 'Download expense report (PDF)'}
+          </button>
+          {downloadError && <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginTop: '6px' }}>{downloadError}</div>}
+          {pdfReportData && expenses.length > 0 && <PDFTemplate expenses={expenses} reportData={pdfReportData} />}
         </div>
       )}
 

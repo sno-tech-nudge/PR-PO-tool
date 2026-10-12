@@ -1,4 +1,5 @@
 import { callGroq } from './groq.js'
+import { FL_THRESHOLD, FL_THRESHOLD_LABEL } from './approvalThreshold.js'
 
 const METRO_CITIES = [
   'ahmedabad', 'bangalore', 'bengaluru', 'chennai',
@@ -287,10 +288,12 @@ function joinLabels(labels) {
 // created at submission. `rules` empty/undefined falls back to the same
 // ₹50k/₹2L default this function always used before rules were configurable.
 export function determineApprovalRoute(expenses, rules) {
-  const highest = Math.max(...expenses.map(e => e.amount || 0))
+  // The route is decided on the report's total, the same figure the approval
+  // records are created from, so the preview can never disagree with them.
+  const highest = expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0)
   const fallback = () => {
-    if (highest > 50000) {
-      return { levelLabels: ['Reporting Manager', 'Functional Lead', 'Finance Team'], message: 'This report goes to your manager, then your Functional Lead (the expense is above ₹50,000), then the Finance team.' }
+    if (highest > FL_THRESHOLD) {
+      return { levelLabels: ['Reporting Manager', 'Functional Lead', 'Finance Team'], message: `This report goes to your manager, then your Functional Lead (the report total is above ${FL_THRESHOLD_LABEL}), then the Finance team.` }
     }
     return { levelLabels: ['Reporting Manager', 'Finance Team'], message: 'This report goes to your manager, then the Finance team.' }
   }

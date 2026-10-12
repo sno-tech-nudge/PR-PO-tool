@@ -1,4 +1,5 @@
 import { sendReportEmail } from './reportEmail'
+import { FL_THRESHOLD } from './approvalThreshold'
 import { logActivity } from './activityLog'
 import { getApproverEmailsForLevel, getEmailsByRole } from './auth'
 
@@ -31,9 +32,6 @@ export function getAdvanceFlags(advancePercent) {
     requiresFLEmail: pct >= 100,
   }
 }
-
-// Reports above this total also need the Functional Lead's approval.
-export const FL_THRESHOLD = 50000
 
 // Fallback used only when no active rule matches (nothing seeded yet, or the
 // fetch hasn't resolved) — kept byte-identical to what this function always
