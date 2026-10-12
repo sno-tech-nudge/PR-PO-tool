@@ -32,25 +32,20 @@ export function getAdvanceFlags(advancePercent) {
   }
 }
 
+// Reports above this total also need the Functional Lead's approval.
+export const FL_THRESHOLD = 50000
+
 // Fallback used only when no active rule matches (nothing seeded yet, or the
 // fetch hasn't resolved) — kept byte-identical to what this function always
 // did before rules became configurable, so a missing/empty rules table never
 // changes real behavior.
 function fallbackLevels(totalAmount) {
-  if (totalAmount <= 50000) {
-    return [{ level: 1, role: 'level_1', label: 'Reporting Manager', requiredRole: null }]
-  }
-  if (totalAmount <= 200000) {
-    return [
-      { level: 1, role: 'level_1', label: 'Reporting Manager', requiredRole: null },
-      { level: 2, role: 'level_2', label: 'Functional Lead', requiredRole: 'fl' },
-    ]
-  }
-  return [
-    { level: 1, role: 'level_1', label: 'Reporting Manager', requiredRole: null },
-    { level: 2, role: 'level_2', label: 'Functional Lead', requiredRole: 'fl' },
-    { level: 3, role: 'level_3', label: 'COO', requiredRole: 'coo' },
-  ]
+  // Reporting Manager -> Functional Lead (only above the policy threshold) ->
+  // Finance team -> approved.
+  const levels = [{ level: 1, role: 'level_1', label: 'Reporting Manager', requiredRole: null }]
+  if (totalAmount > FL_THRESHOLD) levels.push({ level: levels.length + 1, role: `level_${levels.length + 1}`, label: 'Functional Lead', requiredRole: 'fl' })
+  levels.push({ level: levels.length + 1, role: `level_${levels.length + 1}`, label: 'Finance Team', requiredRole: 'finance' })
+  return levels
 }
 
 // Admin/finance-configurable approval rules — Settings > Custom Approval,

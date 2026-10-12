@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { processApproval, createNotification } from '../../lib/approvalEngine'
-import { canAccessApprovals } from '../../lib/auth'
+import { canAccessApprovals, canAccessFinance } from '../../lib/auth'
 import { getActiveDelegationsForDelegate, delegationCovers } from '../../lib/delegation'
 import { generateManagerSummary } from '../../lib/claude'
 import { runAllChecks } from '../../lib/policyEngine'
 import ExpenseApprovalCard from './ExpenseApprovalCard'
+import AIVouchCard from './AIVouchCard'
 import RejectionModal from './RejectionModal'
 import NotificationToast from './NotificationToast'
 import { useIsMobile } from '../../hooks/useIsMobile'
@@ -26,6 +27,8 @@ const ROUTE_LABEL = {
   reporting_manager: 'Reporting Manager',
   manager_and_fl: 'Reporting Manager and Functional Lead',
   manager_fl_coo: 'Reporting Manager, Functional Lead and COO',
+  reporting_manager_finance_team: 'Reporting Manager and Finance Team',
+  reporting_manager_functional_lead_finance_team: 'Reporting Manager, Functional Lead and Finance Team',
 }
 
 function SummaryRow({ label, value, alt }) {
@@ -322,6 +325,12 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
         <SummaryRow label="Approval route" value={ROUTE_LABEL[report.approval_route] || (report.approval_route || '—').replace(/_/g, ' ')} alt={true} />
         <SummaryRow label="Status" value={report.status?.replace('_', ' ') || '—'} alt={false} />
       </div>
+
+      {/* AI vouching: only on the Finance team's step of the route, for the
+          Finance team (and admin) reviewing it. */}
+      {pendingApproval?.required_role === 'finance' && canAccessFinance(user.role) && expenses.length > 0 && (
+        <AIVouchCard report={report} expenses={expenses} />
+      )}
 
       {/* Expenses */}
       <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)', marginBottom: '12px' }}>Expenses</div>

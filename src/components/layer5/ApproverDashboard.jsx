@@ -13,6 +13,8 @@ const ROUTE_LABEL = {
   reporting_manager: 'Reporting Manager',
   manager_and_fl: 'Mgr + FL',
   manager_fl_coo: 'Mgr + FL + COO',
+  reporting_manager_finance_team: 'Mgr + Finance',
+  reporting_manager_functional_lead_finance_team: 'Mgr + FL + Finance',
 }
 
 function ReportCard({ report, onClick, showSLA = true }) {

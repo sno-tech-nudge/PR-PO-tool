@@ -289,13 +289,10 @@ function joinLabels(labels) {
 export function determineApprovalRoute(expenses, rules) {
   const highest = Math.max(...expenses.map(e => e.amount || 0))
   const fallback = () => {
-    if (highest > 200000) {
-      return { levelLabels: ['Reporting Manager', 'Functional Lead', 'COO'], message: 'This report requires approval from your manager, Functional Lead, and COO due to an expense above ₹2,00,000.' }
-    }
     if (highest > 50000) {
-      return { levelLabels: ['Reporting Manager', 'Functional Lead'], message: 'This report requires approval from your manager and Functional Lead due to an expense above ₹50,000.' }
+      return { levelLabels: ['Reporting Manager', 'Functional Lead', 'Finance Team'], message: 'This report goes to your manager, then your Functional Lead (the expense is above ₹50,000), then the Finance team.' }
     }
-    return { levelLabels: ['Reporting Manager'], message: 'Your manager will review and approve this report.' }
+    return { levelLabels: ['Reporting Manager', 'Finance Team'], message: 'This report goes to your manager, then the Finance team.' }
   }
 
   const rule = (rules || []).find(r =>

@@ -164,7 +164,7 @@ export async function runAIVouchCheck(report, expenses) {
       exp.invoice_number ? `Invoice=${exp.invoice_number}` : 'Invoice=MISSING',
       exp.gstin ? `GSTIN=${exp.gstin}` : 'GSTIN=none',
       exp.description ? `Note="${exp.description}"` : null,
-      `ExpenseType=${exp.expense_type === 'multiple_people' ? 'Team' : 'Personal'}`,
+      `ExpenseType=${exp.expense_type === 'my_team' ? `Team (attendees=${exp.attendee_count || 'missing'})` : 'Personal'}`,
       exp.policy_status ? `SystemFlag=${exp.policy_status}` : null,
     ].filter(Boolean).join(', ')
   }).join('\n')
