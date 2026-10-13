@@ -5,6 +5,7 @@ import ReportChat from '../shared/ReportChat'
 import Confetti from '../shared/Confetti'
 import ExpenseDetailModal from '../layer2/ExpenseDetailModal'
 import ReportJourney, { ReportStatusPill } from './ReportJourney'
+import VouchQueries from './VouchQueries'
 import PDFTemplate from '../layer4/PDFTemplate'
 import { generateExpenseReportPDF, downloadPDF } from '../../lib/pdfGenerator'
 import { getDisplayName } from '../../lib/directory'
@@ -19,7 +20,7 @@ const STATUS_BADGE = {
   reimbursed: { bg: 'var(--moss-bg)', color: 'var(--moss)', label: 'Reimbursed', icon: '✓' },
 }
 
-export default function ReportStatus({ reportId, onBack, onEditRejected, onViewPO }) {
+export default function ReportStatus({ reportId, user, onBack, onEditRejected, onViewPO }) {
   const [report, setReport] = useState(null)
   const [expenses, setExpenses] = useState([])
   const [approvals, setApprovals] = useState([])
@@ -295,6 +296,9 @@ export default function ReportStatus({ reportId, onBack, onEditRejected, onViewP
 
       {/* Where the report is: every step with its date and time */}
       {report && <ReportJourney report={report} approvals={approvals} />}
+
+      {/* Questions Finance has asked about individual expenses */}
+      {report && user && expenses.length > 0 && <VouchQueries report={report} expenses={expenses} user={user} />}
 
       {/* Download — once the report is approved */}
       {['approved', 'processing', 'reimbursed'].includes(status) && (

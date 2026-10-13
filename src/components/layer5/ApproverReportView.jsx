@@ -7,6 +7,7 @@ import { generateManagerSummary } from '../../lib/claude'
 import { runAllChecks } from '../../lib/policyEngine'
 import ExpenseApprovalCard from './ExpenseApprovalCard'
 import AIVouchCard from './AIVouchCard'
+import VouchChecklist from './VouchChecklist'
 import RejectionModal from './RejectionModal'
 import NotificationToast from './NotificationToast'
 import { useIsMobile } from '../../hooks/useIsMobile'
@@ -61,6 +62,8 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
   const [linkedPO, setLinkedPO] = useState(null)
   const [policyResults, setPolicyResults] = useState({}) // expenseId -> { violations, flags }
   const [delegations, setDelegations] = useState([]) // out-of-office delegations where this viewer is the delegate
+  const [waitingLines, setWaitingLines] = useState(0) // lines Finance has asked the employee about
+  const [classicView, setClassicView] = useState(false)
 
   useEffect(() => {
     if (!reportId) return
@@ -216,9 +219,13 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
     ? delegationCovers(delegations, { requiredRole: pendingApproval.required_role })
     : null
   const roleMatches = ownRoleMatches || !!delegationUsed
+  // Finance's step gets the line-by-line vouching view (wider, receipt beside the numbers).
+  const vouching = pendingApproval?.required_role === 'finance' && canAccessFinance(user.role) && expenses.length > 0
+  const showChecklist = vouching && !classicView
+  const pageWidth = showChecklist && !isMobile ? '920px' : '480px'
 
   return (
-    <div style={{ maxWidth: '480px', margin: '0 auto', padding: '20px', width: '100%', paddingBottom: '140px' }}>
+    <div style={{ maxWidth: pageWidth, margin: '0 auto', padding: '20px', width: '100%', paddingBottom: '140px' }}>
       {toast && (
         <NotificationToast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />
       )}
@@ -333,8 +340,17 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
       )}
 
       {/* Expenses */}
-      <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)', marginBottom: '12px' }}>Expenses</div>
-      {expenses.map(exp => (
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '12px' }}>
+        <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>Expenses</div>
+        {vouching && (
+          <div onClick={() => setClassicView(v => !v)} style={{ fontSize: '11px', color: 'var(--text-muted)', cursor: 'pointer', textDecoration: 'underline' }}>
+            {classicView ? 'Back to line-by-line vouching' : 'Switch to the simple list'}
+          </div>
+        )}
+      </div>
+      {showChecklist ? (
+        <VouchChecklist report={report} expenses={expenses} user={user} policyResults={policyResults} onWaitingChange={setWaitingLines} />
+      ) : expenses.map(exp => (
         <ExpenseApprovalCard
           key={exp.id}
           expense={exp}
@@ -355,12 +371,18 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
       {!isAlreadyReviewed && roleMatches && (
         <div style={{ position: 'fixed', bottom: 0, left: isMobile ? 0 : 'var(--sidebar-w, 220px)', right: 0, zIndex: 10 }}>
           <div style={{
-            maxWidth: '480px', margin: '0 auto',
+            maxWidth: pageWidth, margin: '0 auto',
             background: 'var(--surface-card)', borderTop: '1px solid var(--taupe-200)', padding: '16px',
           }}>
             <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)', marginBottom: '10px' }}>
               {expenses.length} expense{expenses.length !== 1 ? 's' : ''} · ₹{Number(total).toLocaleString('en-IN')}
             </div>
+
+            {showChecklist && waitingLines > 0 && (
+              <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginBottom: '8px' }}>
+                {waitingLines} line{waitingLines === 1 ? ' is' : 's are'} waiting on the employee. Approve once they reply.
+              </div>
+            )}
 
             {approveStatus === 'confirming' && (
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
@@ -371,10 +393,10 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <button
                 onClick={handleApprove}
-                disabled={approving || approveStatus === 'done'}
+                disabled={approving || approveStatus === 'done' || (showChecklist && waitingLines > 0)}
                 style={{
                   width: '100%', height: '48px',
-                  background: approving ? 'var(--text-muted)' : 'var(--moss)',
+                  background: approving || (showChecklist && waitingLines > 0) ? 'var(--text-muted)' : 'var(--moss)',
                   color: 'var(--surface-card)', border: 'none',
                   fontSize: '14px', fontWeight: 500,
                   cursor: approving ? 'default' : 'pointer', borderRadius: 'var(--radius-sm)',

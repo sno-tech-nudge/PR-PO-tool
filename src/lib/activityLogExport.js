@@ -4,8 +4,16 @@ const ENTITY_LABEL = {
 }
 export const entityLabel = t => ENTITY_LABEL[t] || t
 
+const ACTION_LABELS = {
+  vouch_clear: 'Vouched line',
+  vouch_flag: 'Flagged line',
+  vouch_query: 'Asked employee',
+  vouch_reply: 'Employee replied',
+  vouch_reopen: 'Took back vouch',
+}
+
 export function actionLabel(a) {
-  return String(a || '').replace(/_/g, ' ').replace(/^./, c => c.toUpperCase())
+  return ACTION_LABELS[a] || String(a || '').replace(/_/g, ' ').replace(/^./, c => c.toUpperCase())
 }
 
 function fmtDateTime(d) {

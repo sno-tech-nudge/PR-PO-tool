@@ -1,3 +1,4 @@
+import { hashBlob } from '../../lib/receiptHash'
 import { useState, useEffect, useRef } from 'react'
 import Step1Receipt from './Step1Receipt'
 import Step2Payment from './Step2Payment'
@@ -150,12 +151,14 @@ export default function NewExpense({ user, onContinueToDetails, onBack }) {
       const ts = Date.now()
       let receiptPath = null
       let paymentPath = null
+      let receiptHash = null
 
       if (receiptData?.base64) {
         receiptPath = `captures/${ts}-receipt.jpg`
         const blob = base64ToBlob(receiptData.base64, 'image/jpeg')
         const { error } = await supabase.storage.from('expense-documents').upload(receiptPath, blob)
         if (error) throw error
+        receiptHash = await hashBlob(blob)
       }
 
       if (pData?.base64) {
@@ -167,6 +170,7 @@ export default function NewExpense({ user, onContinueToDetails, onBack }) {
 
       const { data: captureRow } = await supabase.from('expense_captures').insert({
         receipt_storage_path: receiptPath,
+        receipt_hash: receiptHash,
         payment_storage_path: paymentPath,
         receipt_extracted_amount: receiptData?.extracted?.amount ?? null,
         receipt_extracted_vendor: receiptData?.extracted?.vendor ?? null,

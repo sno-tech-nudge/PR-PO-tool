@@ -1,3 +1,4 @@
+import { hashBlob } from '../../lib/receiptHash'
 import { useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { extractReceiptData } from '../../lib/claude'
@@ -60,6 +61,7 @@ export default function QuickAddDropzone({ onReady, multiple = false }) {
 
       const { data: captureRow } = await supabase.from('expense_captures').insert({
         receipt_storage_path: path,
+        receipt_hash: await hashBlob(blob),
         receipt_extracted_amount: extracted?.amount ?? null,
         receipt_extracted_vendor: extracted?.vendor ?? null,
         receipt_extracted_date: extracted?.date ?? null,
