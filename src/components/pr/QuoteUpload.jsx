@@ -3,6 +3,8 @@ import { extractVendorQuote } from '../../lib/claude'
 import { supabase } from '../../lib/supabase'
 import { imageFileToJpegBase64, pdfPageToBase64 } from '../../lib/receiptImage'
 import AttachmentDropzone from '../shared/AttachmentDropzone'
+import ReadabilityNotice from '../shared/ReadabilityNotice'
+import { describeUnreadableImage } from '../../lib/imageQuality'
 
 // Route through the same JPEG-normalizing, downscaling converters the
 // receipt-capture flow uses — a raw FileReader dataURL used to send whatever
@@ -24,6 +26,7 @@ export default function QuoteUpload({ onExtracted, onFileUploaded, skipExtractio
   // separate from `error` (a real failure, e.g. the upload itself failing)
   // so it doesn't render like something blocking the submission.
   const [notice, setNotice]         = useState(null)
+  const [quoteIssue, setQuoteIssue]   = useState(null)
   const [error, setError]           = useState(null)
   const [uploading, setUploading]   = useState(false)
   const [uploaded, setUploaded]     = useState(false)
@@ -33,6 +36,7 @@ export default function QuoteUpload({ onExtracted, onFileUploaded, skipExtractio
     setFile(f)
     setExtracted(null)
     setNotice(null)
+    setQuoteIssue(null)
     setError(null)
     // Comparative statements etc. aren't single-vendor quotes — skip the AI extraction call.
     if (skipExtraction) return
@@ -61,6 +65,7 @@ export default function QuoteUpload({ onExtracted, onFileUploaded, skipExtractio
         setExtracted(result)
         onExtracted(result)
       } else {
+        setQuoteIssue(await describeUnreadableImage(b64))
         setNotice(cannotReadNotice)
       }
     } catch (err) {
@@ -105,9 +110,11 @@ export default function QuoteUpload({ onExtracted, onFileUploaded, skipExtractio
       )}
 
       {notice && (
-        <div style={{ background: 'var(--taupe-50)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
-          {notice}
-        </div>
+        <ReadabilityNotice
+          name={file?.name}
+          issue={quoteIssue}
+          extra="No problem: fill in the vendor name and amount yourself and upload it below. That still counts as your attached quote."
+        />
       )}
 
       {error && (

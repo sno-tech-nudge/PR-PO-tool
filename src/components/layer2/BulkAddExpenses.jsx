@@ -1,6 +1,8 @@
 import { useState, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { extractReceiptData } from '../../lib/claude'
+import { describeUnreadableImage } from '../../lib/imageQuality'
+import ReadabilityNotice from '../shared/ReadabilityNotice'
 import { imageFileToJpegBase64, pdfPageToBase64 } from '../../lib/receiptImage'
 import { toInputDate, fromInputDate } from '../../lib/dateFormat'
 import AmountInput from '../shared/AmountInput'
@@ -48,6 +50,7 @@ export default function BulkAddExpenses({ user, onSaved, onBack }) {
   const [processing, setProcessing] = useState(false)
   const [processingText, setProcessingText] = useState('')
   const [uploadError, setUploadError] = useState(null)
+  const [unreadable, setUnreadable] = useState([]) // { id, name, issue }
   const cameraRef = useRef(null)
   const galleryRef = useRef(null)
   const { dragging, dropProps } = useFileDrop({
@@ -121,6 +124,10 @@ export default function BulkAddExpenses({ user, onSaved, onBack }) {
         }).select('id').single()
 
         const qualityFlag = !extracted?.amount && !extracted?.vendor
+        if (!extracted || (!extracted.amount && !extracted.vendor && !extracted.date)) {
+          const issue = await describeUnreadableImage(base64)
+          setUnreadable(prev => [...prev, { id: `${Date.now()}-${i}`, name: file.name, issue }])
+        }
         setRows(prev => [{
           date: toInputDate(extracted?.date) || '',
           vendor: extracted?.vendor || '',
@@ -243,6 +250,15 @@ export default function BulkAddExpenses({ user, onSaved, onBack }) {
         </span>
       </div>
 
+      {unreadable.map(u => (
+        <div key={u.id} style={{ marginBottom: '8px' }}>
+          <ReadabilityNotice
+            name={u.name} issue={u.issue}
+            extra="It was still added as a row. Fill the row in yourself, or remove it and add a clearer photo."
+            onDismiss={() => setUnreadable(prev => prev.filter(x => x.id !== u.id))}
+          />
+        </div>
+      ))}
       {uploadError && (
         <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginBottom: '16px' }}>{uploadError}</div>
       )}

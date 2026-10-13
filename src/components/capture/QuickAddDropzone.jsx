@@ -3,6 +3,8 @@ import { supabase } from '../../lib/supabase'
 import { extractReceiptData } from '../../lib/claude'
 import { imageFileToJpegBase64, pdfPageToBase64 } from '../../lib/receiptImage'
 import { paymentFromReceipt } from '../../lib/paymentModes'
+import { describeUnreadableImage, foundAnything } from '../../lib/imageQuality'
+import ReadabilityNotice from '../shared/ReadabilityNotice'
 
 // "Quick Add" home-screen dropzone — drop or pick a receipt, it gets OCR'd
 // and uploaded immediately, then hands straight to ExpenseDetails prefilled.
@@ -17,6 +19,7 @@ export default function QuickAddDropzone({ onReady, multiple = false }) {
   const [busy, setBusy] = useState(false)
   const [busyText, setBusyText] = useState('')
   const [error, setError] = useState(null)
+  const [unreadable, setUnreadable] = useState([]) // { id, name, issue }
 
   // `multiple` (the report workspace) lets several receipts be dropped at
   // once — each is read and handed to onReady in turn.
@@ -41,6 +44,13 @@ export default function QuickAddDropzone({ onReady, multiple = false }) {
         : await imageFileToJpegBase64(file)
 
       const extracted = await extractReceiptData(base64).catch(() => null)
+
+      // Loose guardrail: only when nothing at all could be read do we say so.
+      // The expense is still added so nothing is lost.
+      if (!foundAnything(extracted, ['amount', 'vendor', 'date'])) {
+        const issue = await describeUnreadableImage(base64)
+        setUnreadable(prev => [...prev, { id: `${Date.now()}-${prev.length}`, name: file.name, issue }])
+      }
 
       setBusyText('Uploading…')
       const path = `captures/${Date.now()}-receipt.jpg`
@@ -76,7 +86,18 @@ export default function QuickAddDropzone({ onReady, multiple = false }) {
     setBusy(false)
   }
 
+  const notices = unreadable.map(u => (
+    <ReadabilityNotice
+      key={u.id}
+      name={u.name}
+      issue={u.issue}
+      extra="The expense was still added. Fill in its details, or delete it and add a clearer photo."
+      onDismiss={() => setUnreadable(prev => prev.filter(x => x.id !== u.id))}
+    />
+  ))
+
   return (
+    <div>
     <div
       onClick={() => !busy && inputRef.current?.click()}
       onDragOver={e => { e.preventDefault(); setDragOver(true) }}
@@ -128,6 +149,8 @@ export default function QuickAddDropzone({ onReady, multiple = false }) {
       {error && (
         <div style={{ fontSize: '11px', color: 'var(--clay-text)', marginTop: '10px' }}>{error}</div>
       )}
+    </div>
+    {notices}
     </div>
   )
 }
