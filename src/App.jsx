@@ -22,6 +22,7 @@ import NewReportModal from './components/layer4/NewReportModal'
 import SubmissionConfirmation from './components/layer5/SubmissionConfirmation'
 import ReportStatus from './components/layer5/ReportStatus'
 import ApproverDashboard from './components/layer5/ApproverDashboard'
+import VendorApprovalsList from './components/vendor/VendorApprovalsList'
 import ApproverReportView from './components/layer5/ApproverReportView'
 import HomeScreenAddons from './components/layer5/HomeScreenAddons'
 import NotificationToast from './components/layer5/NotificationToast'
@@ -76,6 +77,7 @@ const NAV_ICON_PATHS = {
   vendors: ['M4 20.5h16', 'M6 20.5V6.5l6-3 6 3v14', 'M9.5 10h1', 'M13.5 10h1', 'M9.5 14h1', 'M13.5 14h1'],
   'activity-log': ['M3 12h4l2.5-7 5 14 2.5-7H21'],
   settings: ['M4 7h9', 'M17 7h3', 'M4 12h3', 'M11 12h9', 'M4 17h11', 'M19 17h1', 'M15 7m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0', 'M9 12m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0', 'M17 17m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0'],
+  vouch: ['M12 3 19 6v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z', 'm9 12 2 2 4-4'],
   'new-expense': ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', 'M12 8v8', 'M8 12h8'],
   'new-report': ['M14 3.5H7a1.5 1.5 0 0 0-1.5 1.5v14A1.5 1.5 0 0 0 7 20.5h10a1.5 1.5 0 0 0 1.5-1.5V8z', 'M14 3.5V8h4.5', 'M12 11.5v6', 'M9 14.5h6'],
 }
@@ -214,6 +216,7 @@ export default function App() {
   // Back returns to Home rather than the vendor search screen.
   const [vendorFromHome, setVendorFromHome] = useState(false)
   const [financeResetKey, setFinanceResetKey] = useState(0)
+  const [financeInitialTab, setFinanceInitialTab] = useState(null)
   const [approvingVendor, setApprovingVendor] = useState(null)
   const [bankChangeVendor, setBankChangeVendor] = useState(null)
 
@@ -743,6 +746,64 @@ export default function App() {
 
             <div data-tour-anchor="quick-add" style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '20px', marginBottom: '28px' }}>
               <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--ink)', marginBottom: '16px' }}>Quick Add</div>
+              {user.role === 'finance' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '14px' }}>
+                <div
+                  onClick={() => { setFinanceInitialTab('reports'); setFinanceResetKey(k => k + 1); setAppScreen('finance') }}
+                  role="button"
+                  style={{
+                    border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '28px 12px',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', minHeight: '148px', boxSizing: 'border-box', textAlign: 'center',
+                  }}
+                >
+                  <div style={{
+                    width: '40px', height: '40px', borderRadius: '50%', background: 'var(--action-bg)',
+                    color: 'var(--action)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px',
+                  }}>
+                    <NavIcon name="vouch" size={20} />
+                  </div>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink)' }}>Vouch</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Open a report and vouch</div>
+                </div>
+                <div
+                  onClick={() => { setApprovalsTab('expenses'); setAppScreen('approvals') }}
+                  role="button"
+                  style={{
+                    border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '28px 12px',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', minHeight: '148px', boxSizing: 'border-box', textAlign: 'center',
+                  }}
+                >
+                  <div style={{
+                    width: '40px', height: '40px', borderRadius: '50%', background: 'var(--action-bg)',
+                    color: 'var(--action)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px',
+                  }}>
+                    <NavIcon name="approvals" size={20} />
+                  </div>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink)' }}>Approve</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Reports, requests and vendors</div>
+                </div>
+                <div
+                  onClick={() => { setApprovalsTab('advances'); setAppScreen('approvals') }}
+                  role="button"
+                  style={{
+                    border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', padding: '28px 12px',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', minHeight: '148px', boxSizing: 'border-box', textAlign: 'center',
+                  }}
+                >
+                  <div style={{
+                    width: '40px', height: '40px', borderRadius: '50%', background: 'var(--action-bg)',
+                    color: 'var(--action)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px',
+                  }}>
+                    <NavIcon name="advances" size={20} />
+                  </div>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink)' }}>Advances</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Approve advance requests</div>
+                </div>
+              </div>
+              ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '14px' }}>
                 <div
                   onClick={quickAddVendor}
@@ -799,6 +860,7 @@ export default function App() {
                   <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink)' }}>New Report</div>
                 </div>
               </div>
+              )}
             </div>
 
             <HomeScreenAddons
@@ -884,7 +946,7 @@ export default function App() {
               display: 'flex', padding: '0 24px',
               background: 'var(--surface-card)', borderBottom: '1px solid var(--taupe-200)',
             }}>
-              {[['expenses', 'Expense Reports'], ['prs', 'Purchase Requests'], ['advances', 'Advances']].map(([key, label]) => (
+              {[['expenses', 'Expense Reports'], ['prs', 'Purchase Requests'], ['vendors', 'Vendors'], ['advances', 'Advances']].map(([key, label]) => (
                 <div
                   key={key}
                   onClick={() => setApprovalsTab(key)}
@@ -913,6 +975,9 @@ export default function App() {
                 onViewPR={(id) => { setApprovingPRId(id); setAppScreen('pr-approval-view') }}
                 onBack={() => setAppScreen('list')}
               />
+            )}
+            {approvalsTab === 'vendors' && (
+              <VendorApprovalsList onViewVendor={(id) => { setAppScreen('vendors'); openVendorDetail(id) }} />
             )}
             {approvalsTab === 'advances' && (
               <AdvanceApproverDashboard
@@ -957,7 +1022,7 @@ export default function App() {
         )}
 
         {appScreen === 'finance' && (
-          <FinanceDashboard key={financeResetKey} user={user} showToast={showToast} onBack={() => setAppScreen('list')} />
+          <FinanceDashboard key={financeResetKey} user={user} showToast={showToast} initialTab={financeInitialTab} onBack={() => setAppScreen('list')} />
         )}
 
         {appScreen === 'settings' && (

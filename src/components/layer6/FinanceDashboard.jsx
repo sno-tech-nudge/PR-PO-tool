@@ -32,8 +32,8 @@ const TABS = [
 const shellStyle = { background: 'var(--taupe-50)', minHeight: '100vh' }
 const shellInnerStyle = { maxWidth: '960px', margin: '0 auto', padding: '24px 20px' }
 
-export default function FinanceDashboard({ user, showToast, onBack }) {
-  const [tab, setTab] = useState('overview')
+export default function FinanceDashboard({ user, showToast, onBack, initialTab }) {
+  const [tab, setTab] = useState(initialTab || 'overview')
   const [detailReportId, setDetailReportId] = useState(null)
   const [pendingReports, setPendingReports] = useState([])
   const [pendingLoading, setPendingLoading] = useState(false)
