@@ -6,6 +6,8 @@ import Confetti from '../shared/Confetti'
 import ExpenseDetailModal from '../layer2/ExpenseDetailModal'
 import ReportJourney, { ReportStatusPill } from './ReportJourney'
 import VouchQueries from './VouchQueries'
+import AdvanceSummary from '../shared/AdvanceSummary'
+import { ReceiptDocuments } from '../shared/ExpenseAttachments'
 import PDFTemplate from '../layer4/PDFTemplate'
 import { generateExpenseReportPDF, downloadPDF } from '../../lib/pdfGenerator'
 import { getDisplayName } from '../../lib/directory'
@@ -201,6 +203,14 @@ export default function ReportStatus({ reportId, user, onBack, onEditRejected, o
         <ReportStatusPill report={report} approvals={approvals} />
       </div>
 
+      {report && <AdvanceSummary report={report} compact />}
+
+      {report?.net_payable != null && Number(report.net_payable) !== Number(report.total_amount) && (
+        <div style={{ fontSize: '13px', color: 'var(--ink)', marginBottom: '16px', lineHeight: 1.5 }}>
+          You claimed ₹{Number(report.total_amount || 0).toLocaleString('en-IN')}. After Finance&apos;s deductions you will be paid <strong>₹{Number(report.net_payable).toLocaleString('en-IN')}</strong>.
+        </div>
+      )}
+
       {linkedPO && (
         <div style={{ border: '1px solid var(--taupe-200)', marginBottom: '16px', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
@@ -370,6 +380,14 @@ export default function ReportStatus({ reportId, user, onBack, onEditRejected, o
                     {exp.policy_status === 'blocked' ? 'Issue' : exp.policy_status === 'flagged' ? 'Flagged' : 'Passed'}
                   </div>
                 </div>
+                {exp.capture_id && (
+                  <div onClick={e => e.stopPropagation()} style={{ marginTop: '8px' }}><ReceiptDocuments captureId={exp.capture_id} /></div>
+                )}
+                {Number(exp.deduction_amount) > 0 && (
+                  <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginTop: '6px', lineHeight: 1.5 }}>
+                    Finance deducted ₹{Number(exp.deduction_amount).toLocaleString('en-IN')}: {exp.deduction_reason || 'Other'}{exp.deduction_note ? `. ${exp.deduction_note}` : ''}
+                  </div>
+                )}
               </div>
             ))}
           </div>

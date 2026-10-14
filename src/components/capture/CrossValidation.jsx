@@ -50,31 +50,43 @@ export default function CrossValidation({ receiptExtracted, paymentData, onConfi
   }
 
   if (phase === 'mismatch') {
+    const lower = Math.min(receiptAmount, paymentAmount)
+    const higher = Math.max(receiptAmount, paymentAmount)
+    const lowerSource = receiptAmount <= paymentAmount ? 'receipt' : 'payment proof'
+    const fmt = n => `₹${Number(n).toLocaleString('en-IN')}`
     return (
       <div>
-        <div style={{ fontSize: '20px', fontWeight: 500, color: 'var(--text)', marginBottom: '6px' }}>Amount mismatch</div>
-        <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>
-          Your receipt shows {receiptAmount} but your payment proof shows {paymentAmount}. Please check your documents.
+        <div style={{ fontSize: '20px', fontWeight: 500, color: 'var(--text)', marginBottom: '6px' }}>The amounts differ</div>
+        <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '6px', lineHeight: 1.5 }}>
+          Your receipt shows {fmt(receiptAmount)} and your payment proof shows {fmt(paymentAmount)}.
+          We will use the lower one, {fmt(lower)} (from the {lowerSource}), since that is what you actually paid.
+        </div>
+        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px' }}>
+          Paying a vendor? A difference can be tax deducted at source. Accounts will check it.
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <button
-            onClick={onRetakeReceipt}
-            style={{
-              width: '100%', height: '44px', border: '1px solid var(--taupe-200)', background: 'var(--surface-card)',
-              color: 'var(--text)', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: 'var(--radius-sm)',
-            }}
-          >
-            Retake receipt
-          </button>
-          <button
-            onClick={onRetakePayment}
+            onClick={() => onConfirm({ matchedAmount: lower, amountsMatch: false, amountChoice: 'lower' })}
             style={{
               width: '100%', height: '44px', background: 'var(--action)', color: 'var(--surface-card)',
               border: 'none', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: 'var(--radius-sm)',
             }}
           >
-            Retake payment proof
+            Use {fmt(lower)}
           </button>
+          <button
+            onClick={() => onConfirm({ matchedAmount: higher, amountsMatch: false, amountChoice: 'higher' })}
+            style={{
+              width: '100%', height: '44px', border: '1px solid var(--taupe-200)', background: 'var(--surface-card)',
+              color: 'var(--text)', fontSize: '14px', fontWeight: 500, cursor: 'pointer', borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            Use {fmt(higher)} instead
+          </button>
+          <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', marginTop: '4px' }}>
+            <span role="button" onClick={onRetakeReceipt} style={{ fontSize: '12px', color: 'var(--text-muted)', cursor: 'pointer', textDecoration: 'underline' }}>Retake receipt</span>
+            <span role="button" onClick={onRetakePayment} style={{ fontSize: '12px', color: 'var(--text-muted)', cursor: 'pointer', textDecoration: 'underline' }}>Retake payment proof</span>
+          </div>
         </div>
       </div>
     )

@@ -10,6 +10,7 @@ import POTemplate from '../pr/POTemplate'
 import SubmitPOExpense from './SubmitPOExpense'
 import PRAttachmentsModal from '../pr/PRAttachmentsModal'
 import PRRequestDetailsCard from '../pr/PRRequestDetailsCard'
+import PoAdvanceTds from './PoAdvanceTds'
 import VoiceInputButton from '../shared/VoiceInputButton'
 
 function fmtDate(d) {
@@ -302,6 +303,7 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail, onRaise
           payment terms, donor allocation, single-source justification if
           any) without having to go find the PR's own detail page. */}
       {pr && <PRRequestDetailsCard pr={pr} />}
+      {pr && po?.status === 'issued' && canAccessFinance(user.role) && <PoAdvanceTds po={po} pr={pr} vendor={vendor} />}
 
       {/* Vendor card */}
       {vendor && (

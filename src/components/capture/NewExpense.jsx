@@ -1,4 +1,5 @@
 import { hashBlob } from '../../lib/receiptHash'
+import { aiContentFlag } from '../../lib/aiContent'
 import { useState, useEffect, useRef } from 'react'
 import Step1Receipt from './Step1Receipt'
 import Step2Payment from './Step2Payment'
@@ -31,6 +32,7 @@ export default function NewExpense({ user, onContinueToDetails, onBack }) {
   const [quickSaving, setQuickSaving] = useState(false)
   const [quickSaveError, setQuickSaveError] = useState(null)
   const captureIdRef = useRef(null)
+  const [aiFlag, setAiFlag] = useState(null)
   const { isOnline } = useNetworkStatus()
 
   useEffect(() => {
@@ -124,9 +126,9 @@ export default function NewExpense({ user, onContinueToDetails, onBack }) {
     setStep(STEPS.CROSS_VALIDATION)
   }
 
-  async function handleValidationConfirm({ matchedAmount: amt, amountsMatch }) {
+  async function handleValidationConfirm({ matchedAmount: amt, amountsMatch, amountChoice }) {
     setMatchedAmount(amt)
-    await saveOrUpload(paymentData, { matchedAmount: amt, amountsMatch }, false)
+    await saveOrUpload(paymentData, { matchedAmount: amt, amountsMatch, amountChoice }, false)
     setStep(STEPS.CONFIRMATION)
   }
 
@@ -152,6 +154,8 @@ export default function NewExpense({ user, onContinueToDetails, onBack }) {
       let receiptPath = null
       let paymentPath = null
       let receiptHash = null
+      const flag = await aiContentFlag(receiptData?.file, receiptData?.extracted)
+      setAiFlag(flag)
 
       if (receiptData?.base64) {
         receiptPath = `captures/${ts}-receipt.jpg`
@@ -171,6 +175,7 @@ export default function NewExpense({ user, onContinueToDetails, onBack }) {
       const { data: captureRow } = await supabase.from('expense_captures').insert({
         receipt_storage_path: receiptPath,
         receipt_hash: receiptHash,
+        ai_content_flag: flag,
         payment_storage_path: paymentPath,
         receipt_extracted_amount: receiptData?.extracted?.amount ?? null,
         receipt_extracted_vendor: receiptData?.extracted?.vendor ?? null,
@@ -180,6 +185,7 @@ export default function NewExpense({ user, onContinueToDetails, onBack }) {
         payment_is_upi: pData?.upiData?.is_upi ?? false,
         payment_app: pData?.upiData?.payment_app ?? null,
         amounts_match: validationResult?.amountsMatch ?? null,
+        amount_choice: validationResult?.amountChoice ?? null,
         quality_override: receiptData?.qualityOverride ?? false,
         captured_offline: false,
         single_document: isSingle,
@@ -225,6 +231,7 @@ export default function NewExpense({ user, onContinueToDetails, onBack }) {
     setSingleDocument(false)
     setCapturedOffline(false)
     captureIdRef.current = null
+    setAiFlag(null)
     setStep(STEPS.STEP1)
   }
 
@@ -341,6 +348,7 @@ export default function NewExpense({ user, onContinueToDetails, onBack }) {
           quickSaving={quickSaving}
           quickSaveError={quickSaveError}
           onRetake={handleRetake}
+          aiContent={!!aiFlag}
         />
       )}
     </div>

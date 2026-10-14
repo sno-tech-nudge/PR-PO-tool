@@ -8,6 +8,7 @@ import { runAllChecks } from '../../lib/policyEngine'
 import ExpenseApprovalCard from './ExpenseApprovalCard'
 import AIVouchCard from './AIVouchCard'
 import VouchChecklist from './VouchChecklist'
+import AdvanceSummary from '../shared/AdvanceSummary'
 import RejectionModal from './RejectionModal'
 import NotificationToast from './NotificationToast'
 import { useIsMobile } from '../../hooks/useIsMobile'
@@ -332,6 +333,9 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
         <SummaryRow label="Approval route" value={ROUTE_LABEL[report.approval_route] || (report.approval_route || '—').replace(/_/g, ' ')} alt={true} />
         <SummaryRow label="Status" value={report.status?.replace('_', ' ') || '—'} alt={false} />
       </div>
+
+      {/* The employee's advance answer and the balance left: shown to the manager and to Finance */}
+      <AdvanceSummary report={report} />
 
       {/* AI vouching: only on the Finance team's step of the route, for the
           Finance team (and admin) reviewing it. */}

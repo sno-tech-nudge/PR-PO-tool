@@ -5,6 +5,7 @@ import { FUNCTIONS } from '../../lib/functionRouting'
 import MyProfile from './MyProfile'
 import ApprovalRulesView from './ApprovalRulesView'
 import Delegations from './Delegations'
+import TdsRules from './TdsRules'
 
 const EMPTY_FORM = { name: '', email: '', role: 'employee', can_approve_vendors: false, function: '' }
 
@@ -132,7 +133,7 @@ export default function SettingsView({ user }) {
           <div className="tab-scroll" style={{ display: 'flex', gap: '4px' }}>
             {[
               ['profile', 'My Profile'],
-              ...(isAdmin ? [['team', 'Team & Roles'], ['delegations', 'Delegations']] : []),
+              ...(isAdmin ? [['team', 'Team & Roles'], ['delegations', 'Delegations'], ['tds', 'TDS Rules']] : []),
               ['approvals', 'Custom Approval'],
             ].map(([key, label]) => (
               <div
@@ -162,6 +163,14 @@ export default function SettingsView({ user }) {
               <MyProfile user={user} members={members} />
             </div>
           )}
+        </div>
+      )}
+
+      {tab === 'tds' && isAdmin && (
+        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 28px' }}>
+          <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '28px' }}>
+            <TdsRules user={user} />
+          </div>
         </div>
       )}
 

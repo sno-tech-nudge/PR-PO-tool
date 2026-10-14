@@ -1,4 +1,6 @@
 import { hashBlob } from '../../lib/receiptHash'
+import { aiContentFlag } from '../../lib/aiContent'
+import { AiContentNote } from '../shared/AiContentBadge'
 import { useState, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { extractReceiptData } from '../../lib/claude'
@@ -52,6 +54,7 @@ export default function BulkAddExpenses({ user, onSaved, onBack }) {
   const [processingText, setProcessingText] = useState('')
   const [uploadError, setUploadError] = useState(null)
   const [unreadable, setUnreadable] = useState([]) // { id, name, issue }
+  const [aiNotes, setAiNotes] = useState([]) // { id, name } for images marked AI content
   const cameraRef = useRef(null)
   const galleryRef = useRef(null)
   const { dragging, dropProps } = useFileDrop({
@@ -110,6 +113,8 @@ export default function BulkAddExpenses({ user, onSaved, onBack }) {
 
         const extracted = await extractReceiptData(base64).catch(() => null)
 
+        const aiFlag = await aiContentFlag(file, extracted)
+        if (aiFlag) setAiNotes(prev => [...prev, { id: `${Date.now()}-${i}`, name: file.name }])
         const path = `captures/${Date.now()}-receipt-${i}.jpg`
         const blob = await (await fetch(`data:image/jpeg;base64,${base64}`)).blob()
         const { error: uploadErr } = await supabase.storage.from('expense-documents').upload(path, blob)
@@ -118,6 +123,7 @@ export default function BulkAddExpenses({ user, onSaved, onBack }) {
         const { data: captureRow } = await supabase.from('expense_captures').insert({
           receipt_storage_path: path,
           receipt_hash: await hashBlob(blob),
+          ai_content_flag: aiFlag,
           receipt_extracted_amount: extracted?.amount ?? null,
           receipt_extracted_vendor: extracted?.vendor ?? null,
           receipt_extracted_date: extracted?.date ?? null,
@@ -252,6 +258,11 @@ export default function BulkAddExpenses({ user, onSaved, onBack }) {
         </span>
       </div>
 
+      {aiNotes.map(n => (
+        <div key={n.id} onClick={() => setAiNotes(prev => prev.filter(x => x.id !== n.id))} title="Click to dismiss" style={{ marginBottom: '8px', cursor: 'pointer' }}>
+          <AiContentNote name={n.name} />
+        </div>
+      ))}
       {unreadable.map(u => (
         <div key={u.id} style={{ marginBottom: '8px' }}>
           <ReadabilityNotice

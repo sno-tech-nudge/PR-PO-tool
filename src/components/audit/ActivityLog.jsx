@@ -5,7 +5,7 @@ import { activityToRows, downloadActivityLogPDF, entityLabel, actionLabel, chang
 
 const PAGE = 100
 const EXPORT_LIMIT = 5000
-const ENTITY_TYPES = ['pr', 'po', 'report', 'vendor', 'delegation']
+const ENTITY_TYPES = ['pr', 'po', 'report', 'vendor', 'delegation', 'settings']
 
 function fmtDateTime(d) {
   return new Date(d).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })

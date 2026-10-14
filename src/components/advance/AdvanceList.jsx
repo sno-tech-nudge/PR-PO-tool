@@ -4,6 +4,8 @@ import { canAccessFinance } from '../../lib/auth'
 import { getDisplayName } from '../../lib/directory'
 import { sendAdvanceEmail } from '../../lib/advanceEmail'
 import AdvanceStatusModal from './AdvanceStatusModal'
+import AdvanceLedger from './AdvanceLedger'
+import { withBalances, money } from '../../lib/advanceBalance'
 
 function fmtDate(d) {
   if (!d) return '—'
@@ -44,7 +46,10 @@ export default function AdvanceList({ user, onCreateAdvance }) {
     if (!isFinance) q = q.in('requested_by', user.ownEmails)
     q = q.order('created_at', { ascending: false })
     const { data } = await q
-    setAdvances(data || [])
+    const rows = data || []
+    const withLeft = await withBalances(rows.filter(a => a.status === 'recorded'))
+    const leftById = Object.fromEntries(withLeft.map(a => [a.id, a]))
+    setAdvances(rows.map(a => (leftById[a.id] ? { ...a, used: leftById[a.id].used, remaining: leftById[a.id].remaining } : a)))
     setLoading(false)
   }
 
@@ -77,7 +82,7 @@ export default function AdvanceList({ user, onCreateAdvance }) {
     rejected: advances.filter(a => a.status === 'rejected' || a.status === 'auto_rejected').length,
   }
 
-  const tabs = [['all', 'All'], ['pending_approval', 'Pending'], ['approved', 'Approved'], ['recorded', 'Recorded'], ['rejected', 'Rejected']]
+  const tabs = [['all', 'All'], ['pending_approval', 'Pending'], ['approved', 'Approved'], ['recorded', 'Recorded'], ['rejected', 'Rejected'], ['ledger', isFinance ? 'Ledger' : 'My ledger']]
 
   return (
     <div style={{ background: 'var(--taupe-50)', minHeight: '100vh' }}>
@@ -117,7 +122,13 @@ export default function AdvanceList({ user, onCreateAdvance }) {
         </div>
       </div>
 
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 28px' }}>
+      {filter === 'ledger' && (
+        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 28px' }}>
+          <AdvanceLedger user={user} />
+        </div>
+      )}
+
+      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 28px', display: filter === 'ledger' ? 'none' : undefined }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '12px' }}>
           <input
             type="text"
@@ -160,7 +171,7 @@ export default function AdvanceList({ user, onCreateAdvance }) {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ background: 'var(--taupe-50)', borderBottom: '1px solid var(--taupe-200)' }}>
-                    {(isFinance ? ['Employee'] : []).concat(['Description', 'Entity', 'Program', 'Expected Usage', 'Amount', 'Status']).map(h => (
+                    {(isFinance ? ['Employee'] : []).concat(['Description', 'Entity', 'Program', 'Expected Usage', 'Amount', 'Left', 'Status']).map(h => (
                       <th key={h} style={{ padding: '10px 14px', fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
                         {h}
                       </th>
@@ -184,6 +195,11 @@ export default function AdvanceList({ user, onCreateAdvance }) {
                       <td style={{ padding: '11px 14px', fontSize: '12px', color: 'var(--ink)' }}>{a.program}</td>
                       <td style={{ padding: '11px 14px', fontSize: '12px', color: 'var(--ink)', whiteSpace: 'nowrap' }}>{fmtDate(a.expected_usage_date)}</td>
                       <td style={{ padding: '11px 14px', fontSize: '13px', fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap' }}>₹{Number(a.amount).toLocaleString('en-IN')}</td>
+                      <td style={{ padding: '11px 14px', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                        {a.status === 'recorded'
+                          ? <><strong style={{ color: a.remaining > 0 ? 'var(--moss-text)' : 'var(--text-muted)' }}>{money(a.remaining)}</strong><div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{money(a.used)} used</div></>
+                          : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                      </td>
                       <td style={{ padding: '11px 14px' }}><StatusBadge status={a.status} /></td>
                       <td style={{ padding: '11px 14px', display: 'flex', gap: '8px' }}>
                         <button

@@ -297,6 +297,8 @@ export default function App() {
       duration_end: meta?.duration_end || null,
       po_related: meta?.po_related ?? null,
       linked_po_id: meta?.po_related ? meta?.po_id : null,
+      advance_related: meta?.advance_related ?? null,
+      advance_id: meta?.advance_id ?? null,
       status: meta?.status || null,
       rejection_reason: meta?.rejection_reason || null,
       rejected_at: meta?.rejected_at || null,

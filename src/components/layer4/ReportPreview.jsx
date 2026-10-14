@@ -16,6 +16,8 @@ import RejectionBanner from './RejectionBanner'
 import HeadcountAsk from './HeadcountAsk'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import { logActivity } from '../../lib/activityLog'
+import { loadAdvanceBalances, allocateToAdvances, saveReportAdvances, money } from '../../lib/advanceBalance'
+import AdvanceDeductionPrompt from './AdvanceDeductionPrompt'
 
 function parseExpenseDate(dateStr) {
   if (!dateStr) return null
@@ -88,6 +90,22 @@ export default function ReportPreview({ expenses: expensesProp, results: results
   const [submitting, setSubmitting] = useState(false)
   const [rules, setRules] = useState([])
 
+  // Advances: balances the person has open, and their answer to "deduct this
+  // report from your advance?" (asked only when it applies, see askAdvance).
+  const [advBalances, setAdvBalances] = useState(null)
+  const [advChoice, setAdvChoice] = useState(null) // 'deduct' | 'no'
+  const [advSelected, setAdvSelected] = useState([])
+  const [advReason, setAdvReason] = useState('')
+  useEffect(() => {
+    let cancelled = false
+    loadAdvanceBalances(user?.ownEmails?.length ? user.ownEmails : [user?.email], { excludeReportId: reportId }).then(b => {
+      if (cancelled) return
+      setAdvBalances(b)
+      setAdvSelected(b.filter(x => x.remaining > 0).map(x => x.id))
+    })
+    return () => { cancelled = true }
+  }, [reportId, user?.email, user?.ownEmails])
+
   // Purchase Order relation — answered once when the report was created
   // (NewReportModal) and never asked again here; a PO-linked report still gets
   // its pending-balance check below before it can be submitted.
@@ -138,6 +156,27 @@ export default function ReportPreview({ expenses: expensesProp, results: results
   }
 
   const total = expenses.reduce((sum, e) => sum + (e.amount || 0), 0)
+
+  // What this report draws from advances, and whether to ask about it. The
+  // question appears only when there is an advance with money left, the report
+  // is not a PO payment and not already tied to an advance, no line says it was
+  // settled from an advance, and some of the spend was the person's own money.
+  const settleLines = expenses.filter(e => e.payment_method === 'Advance Adjustment')
+  const lineAdvanceIds = [...new Set(settleLines.flatMap(e => e.settle_advance_ids || []))]
+  const reportAdvanceId = reportDetails?.advance_related === true ? reportDetails.advance_id : null
+  const ownSpend = expenses.filter(e => e.payment_method !== 'Company Card' && e.payment_method !== 'Advance Adjustment').reduce((s, e) => s + (Number(e.amount) || 0), 0)
+  const hasOpenAdvance = !!advBalances?.some(a => a.remaining > 0)
+  const askAdvance = !poRelated && !reportAdvanceId && lineAdvanceIds.length === 0 && hasOpenAdvance && ownSpend > 0
+  const advanceAnswered = !askAdvance || (advChoice !== null && (advChoice !== 'deduct' || advSelected.length > 0))
+  // The advances this report will settle against, and how much of the spend goes to them.
+  const advancePlan = (() => {
+    if (!advBalances) return null
+    if (reportAdvanceId) return { ids: [reportAdvanceId], base: total }
+    if (askAdvance && advChoice === 'deduct') return { ids: advSelected, base: ownSpend }
+    if (lineAdvanceIds.length) return { ids: lineAdvanceIds, base: settleLines.reduce((s, e) => s + (Number(e.amount) || 0), 0) }
+    return null
+  })()
+  const advanceAllocation = advancePlan ? allocateToAdvances(advancePlan.base, advBalances.filter(b => advancePlan.ids.includes(b.id))) : []
   const poSectionValid = !poRelated || (!!selectedPOId && !!poPending && total <= poPending.pending)
   const period = getPeriod(expenses)
   const approvalRoute = determineApprovalRoute(expenses, rules)
@@ -226,6 +265,10 @@ export default function ReportPreview({ expenses: expensesProp, results: results
   }
 
   async function handleSubmit() {
+    if (!advanceAnswered) {
+      setSubmitError('Please say whether to deduct this report from your advance.')
+      return
+    }
     if (!poSectionValid) {
       setSubmitError(
         !selectedPOId
@@ -268,6 +311,11 @@ export default function ReportPreview({ expenses: expensesProp, results: results
       selected_expense_ids: expenses.map(e => e.id),
       employee_email: user?.email ?? null,
       po_related: poRelated,
+      advance_choice: askAdvance ? advChoice : null,
+      advance_choice_reason: askAdvance && advChoice === 'no' ? (advReason || null) : null,
+      // Vendor payments are told apart from reimbursements for Accounts: a PO
+      // payment, or any expense tied to a registered vendor.
+      payment_kind: poRelated || expenses.some(e => e.vendor_id || e.po_number) ? 'vendor' : 'reimbursement',
     }
 
     try {
@@ -288,6 +336,15 @@ export default function ReportPreview({ expenses: expensesProp, results: results
       await supabase
         .from('report_expenses')
         .insert(expenses.map(e => ({ report_id: report.id, expense_id: e.id })))
+
+      // How much of this report is settled from advances (replaces any earlier
+      // figure when a returned report is sent again).
+      try {
+        const fresh = advancePlan ? await loadAdvanceBalances(user?.ownEmails?.length ? user.ownEmails : [user?.email], { excludeReportId: report.id }) : []
+        await saveReportAdvances(report.id, advancePlan ? allocateToAdvances(advancePlan.base, fresh.filter(b => advancePlan.ids.includes(b.id))) : [])
+      } catch (advErr) {
+        console.error('Saving advance settlement failed:', advErr)
+      }
 
       // Flips these out of the 'saved' pool every "available expenses" query
       // filters on (enterReportWorkspace, ExpenseSelector.refetch, the
@@ -394,6 +451,24 @@ export default function ReportPreview({ expenses: expensesProp, results: results
           durationEnd={reportDetails?.duration_end}
         />
 
+        {/* The advance question: only when it applies */}
+        {askAdvance && (
+          <AdvanceDeductionPrompt
+            advances={advBalances} spend={ownSpend}
+            choice={advChoice} onChoice={setAdvChoice}
+            selected={advSelected} onSelected={setAdvSelected}
+            reason={advReason} onReason={setAdvReason}
+          />
+        )}
+        {advancePlan && !askAdvance && advanceAllocation.length > 0 && (
+          <div style={{ border: '1px solid var(--moss-border)', background: 'var(--moss-bg)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', marginTop: '16px', fontSize: '12px', lineHeight: 1.6, color: 'var(--moss-text)' }}>
+            {advanceAllocation.map(a => {
+              const adv = advBalances.find(b => b.id === a.advance_id)
+              return <div key={a.advance_id}>{money(a.amount)} is settled from your {money(adv?.amount)} advance{adv?.description ? ` (${adv.description})` : ''}, leaving <strong>{money((adv?.remaining || 0) - a.amount)}</strong>.</div>
+            })}
+          </div>
+        )}
+
         {/* Linked Purchase Order — read-only, chosen when the report was started */}
         {poRelated && (
           <div style={{ border: '1px solid var(--moss-border)', background: 'var(--moss-bg)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', marginTop: '16px' }}>
@@ -469,6 +544,9 @@ export default function ReportPreview({ expenses: expensesProp, results: results
           {submitError && (
             <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginBottom: '8px' }}>{submitError}</div>
           )}
+          {!submitError && !advanceAnswered && (
+            <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginBottom: '8px' }}>Please answer the advance question above.</div>
+          )}
           {!submitError && !poSectionValid && (
             <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginBottom: '8px' }}>
               {!selectedPOId
@@ -493,13 +571,13 @@ export default function ReportPreview({ expenses: expensesProp, results: results
             </button>
             <button
               onClick={handleSubmit}
-              disabled={submitting || !poSectionValid}
+              disabled={submitting || !poSectionValid || !advanceAnswered}
               style={{
                 width: '100%', height: '48px',
-                background: submitting || !poSectionValid ? 'var(--text-muted)' : 'var(--text)',
+                background: submitting || !poSectionValid || !advanceAnswered ? 'var(--text-muted)' : 'var(--text)',
                 color: 'var(--surface-card)', border: 'none',
                 fontSize: '14px', fontWeight: 500,
-                cursor: submitting || !poSectionValid ? 'default' : 'pointer', borderRadius: 'var(--radius-sm)',
+                cursor: submitting || !poSectionValid || !advanceAnswered ? 'default' : 'pointer', borderRadius: 'var(--radius-sm)',
               }}
             >
               {submitting ? 'Submitting…' : reportDetails?.rejection_reason ? 'Resubmit for approval' : 'Submit for approval'}

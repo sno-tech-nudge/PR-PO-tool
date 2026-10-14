@@ -6,6 +6,7 @@ import { getDisplayName } from './directory'
 // policy engine watches). Several bills from the same vendor on the same day
 // that together cross one of them, while each stays under it, are worth a look.
 export const SPLIT_THRESHOLDS = [
+  { amount: 25000, label: '₹25,000, the PR/PO limit' },
   { amount: 50000, label: '₹50,000' },
   { amount: 200000, label: '₹2,00,000' },
 ]
@@ -18,7 +19,7 @@ function vendorKey(v) {
     .replace(/\b(pvt|private|ltd|limited|llp|inc|the|and|co|company)\b/g, ' ')
     .replace(/[^a-z0-9]/g, '')
 }
-function sameVendor(a, b) {
+export function sameVendor(a, b) {
   const x = vendorKey(a)
   const y = vendorKey(b)
   if (!x || !y) return false

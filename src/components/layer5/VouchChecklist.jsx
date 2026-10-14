@@ -1,6 +1,15 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 import { findDuplicateSignals } from '../../lib/duplicateCheck'
+import { runTaxChecks } from '../../lib/taxChecks'
+import { loadTdsRules, computeTds, vendorYtdBase } from '../../lib/tds'
+import { loadVendorRegistry, matchVendor } from '../../lib/vendorMatch'
+import { needsPoLink } from '../../lib/policyPrompt'
+import { lineNet, recomputeNetPayable, saveTds } from '../../lib/deductions'
+import { logActivity } from '../../lib/activityLog'
+import AccountsPanel from './AccountsPanel'
+import AiContentBadge from '../shared/AiContentBadge'
+import AssignmentControl from '../layer6/AssignmentControl'
 import { loadVouchEvents, addVouchEvent, clearLines, lineStatus, LINE_STATUS, receiptMismatches } from '../../lib/vouch'
 import { useIsMobile } from '../../hooks/useIsMobile'
 
@@ -64,7 +73,8 @@ function ReceiptPane({ capture }) {
     )
   }
   return (
-    <a href={url} target="_blank" rel="noopener noreferrer" style={{ display: 'block' }} title="Open full size">
+    <a href={url} target="_blank" rel="noopener noreferrer" style={{ display: 'block', position: 'relative' }} title="Open full size">
+      {capture?.ai_content_flag && <AiContentBadge style={{ position: 'absolute', top: '8px', left: '8px', zIndex: 1 }} />}
       <img src={url} alt="Receipt" style={{ width: '100%', maxHeight: '340px', objectFit: 'contain', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', background: 'var(--taupe-50)', display: 'block' }} />
     </a>
   )
@@ -119,7 +129,7 @@ function Thread({ events }) {
   )
 }
 
-function VouchLine({ expense, capture, events, signals, policy, open, onToggle, composer, onCompose, onTick, onUndo, onSend, busy, isMobile }) {
+function VouchLine({ report, user, expense, capture, events, signals, taxes: allTaxes, policy, isVendor, tdsInfo, tdsPreview, onPatch, open, onToggle, composer, onCompose, onTick, onUndo, onSend, busy, isMobile }) {
   const [text, setText] = useState('')
   const status = lineStatus(events)
   const st = LINE_STATUS[status]
@@ -132,6 +142,12 @@ function VouchLine({ expense, capture, events, signals, policy, open, onToggle, 
     .map(f => f.message).filter(Boolean)
   const splits = signals.filter(s => s.kind === 'split')
   const myComposer = composer?.expenseId === expense.id ? composer.mode : null
+  // On a vendor payment the Accounts panel decides TDS, so the plain hint is left out.
+  const taxes = isVendor ? allTaxes.filter(t => t.kind !== 'tds') : allTaxes
+  const taxProblems = taxes.filter(t => t.level === 'bad' || t.level === 'warn')
+  const tds = taxes.find(t => t.kind === 'tds')
+  const noPo = needsPoLink({ amount: expense.amount, category: expense.category, hasPo: !!expense.po_number || isVendor })
+  const deducted = Number(expense.deduction_amount) || 0
 
   function submit() {
     if (!text.trim()) return
@@ -152,7 +168,16 @@ function VouchLine({ expense, capture, events, signals, policy, open, onToggle, 
             {dupes.length > 0 && <Chip tone="clay">Possible duplicate</Chip>}
             {splits.length > 0 && <Chip tone="gold">Split bill</Chip>}
             {mismatches.length > 0 && <Chip tone="gold">Receipt differs</Chip>}
+            {capture?.ai_content_flag && <Chip tone="gold">AI content</Chip>}
             {policyMessages.length > 0 && <Chip tone="gold">Policy</Chip>}
+            {taxProblems.length > 0 && <Chip tone={taxProblems.some(t => t.level === 'bad') ? 'clay' : 'gold'}>Tax check</Chip>}
+            {isVendor && expense.tds_status
+              ? <Chip tone={expense.tds_status === 'applicable' ? 'gold' : 'taupe'}>{expense.tds_status === 'applicable' ? `TDS ₹${Math.round(Number(expense.tds_amount) || 0).toLocaleString('en-IN')}` : 'No TDS'}</Chip>
+              : isVendor && tdsPreview && tdsPreview.status !== 'not_applicable'
+                ? <Chip tone="gold">TDS to confirm</Chip>
+                : tds && !isVendor && <Chip tone="gold">TDS {tds.section}</Chip>}
+            {noPo && <Chip tone="gold">No PR/PO</Chip>}
+            {deducted > 0 && <Chip tone="clay">Deducted ₹{deducted.toLocaleString('en-IN')}</Chip>}
           </div>
         </div>
         <div style={{ display: 'flex', gap: '6px', flexShrink: 0, flexWrap: 'wrap' }}>
@@ -183,6 +208,34 @@ function VouchLine({ expense, capture, events, signals, policy, open, onToggle, 
                 ))}
               </div>
             )}
+
+            {taxes.length > 0 && (
+              <div style={{ marginBottom: '12px' }}>
+                <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Tax checks</div>
+                {taxes.map((t, i) => {
+                  const tone = t.level === 'ok' ? 'moss' : t.level === 'bad' ? 'clay' : t.level === 'warn' ? 'gold' : 'taupe'
+                  return (
+                    <div key={i} style={{ display: 'flex', gap: '8px', fontSize: '12px', lineHeight: 1.5, padding: '3px 0', color: t.level === 'info' ? 'var(--ink)' : TONE[tone].text }}>
+                      <span style={{ width: '12px', flexShrink: 0, fontWeight: 700 }}>{t.level === 'ok' ? '✓' : t.level === 'info' ? '•' : '!'}</span>
+                      <span>{t.text}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {(expense.policy_justification || (noPo && expense.no_po_reason)) && (
+              <div style={{ marginBottom: '12px', fontSize: '12px', lineHeight: 1.5, color: 'var(--ink)' }}>
+                {expense.policy_justification && <div><span style={{ color: 'var(--text-muted)' }}>Employee&apos;s reason for being over policy: </span>{expense.policy_justification}</div>}
+                {noPo && expense.no_po_reason && <div><span style={{ color: 'var(--text-muted)' }}>No PR/PO linked, employee says: </span>{expense.no_po_reason}</div>}
+              </div>
+            )}
+
+            <AccountsPanel
+              key={expense.id}
+              report={report} expense={expense} policy={policy} isVendor={isVendor}
+              tds={tdsInfo} user={user} onPatch={patch => onPatch(expense.id, patch)}
+            />
 
             <Thread events={events} />
 
@@ -227,11 +280,18 @@ export default function VouchChecklist({ report, expenses, user, policyResults, 
   const [events, setEvents] = useState({})
   const [captures, setCaptures] = useState({})
   const [checks, setChecks] = useState({ byExpense: {}, split: [] })
+  const [taxes, setTaxes] = useState({})
   const [checking, setChecking] = useState(true)
   const [openIds, setOpenIds] = useState(null) // null until the first load decides which lines start open
   const [composer, setComposer] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+  // Edits made on this screen (deductions, TDS) laid over the loaded lines.
+  const [overrides, setOverrides] = useState({})
+  const exps = useMemo(() => expenses.map(e => ({ ...e, ...(overrides[e.id] || {}) })), [expenses, overrides])
+  const [kind, setKind] = useState(report.payment_kind || 'reimbursement')
+  const isVendor = kind === 'vendor'
+  const [tdsInfo, setTdsInfo] = useState({}) // expenseId -> { rules, pan, ytd }
 
   const reload = useCallback(async () => setEvents(await loadVouchEvents(report.id)), [report.id])
 
@@ -239,17 +299,19 @@ export default function VouchChecklist({ report, expenses, user, policyResults, 
     let cancelled = false
     async function load() {
       const captureIds = expenses.map(e => e.capture_id).filter(Boolean)
-      const [ev, caps, dup] = await Promise.all([
+      const [ev, caps, dup, tax] = await Promise.all([
         loadVouchEvents(report.id),
         captureIds.length
-          ? supabase.from('expense_captures').select('id, receipt_storage_path, receipt_extracted_amount, receipt_extracted_vendor, receipt_extracted_date').in('id', captureIds)
+          ? supabase.from('expense_captures').select('id, receipt_storage_path, receipt_extracted_amount, receipt_extracted_vendor, receipt_extracted_date, ai_content_flag').in('id', captureIds)
           : { data: [] },
         findDuplicateSignals(report, expenses),
+        runTaxChecks(expenses),
       ])
       if (cancelled) return
       setEvents(ev)
       setCaptures(Object.fromEntries((caps.data || []).map(c => [c.id, c])))
       setChecks(dup)
+      setTaxes(tax)
       setChecking(false)
     }
     load()
@@ -262,8 +324,36 @@ export default function VouchChecklist({ report, expenses, user, policyResults, 
     return () => clearInterval(t)
   }, [reload])
 
+  // For vendor payments: the TDS rules, each vendor's PAN, and what the vendor
+  // has been paid earlier this financial year.
+  useEffect(() => {
+    if (!isVendor) return
+    let cancelled = false
+    async function loadTds() {
+      const [rules, registry] = await Promise.all([loadTdsRules(), loadVendorRegistry()])
+      const entries = await Promise.all(expenses.map(async e => {
+        const vendor = (e.vendor_id && registry.find(v => v.id === e.vendor_id)) || matchVendor(registry, { name: e.vendor, gstin: e.gstin })?.vendor || null
+        const ytd = await vendorYtdBase({ ...e, vendor_id: e.vendor_id || vendor?.id || null })
+        return [e.id, { rules, pan: vendor?.pan_number || null, ytd }]
+      }))
+      if (!cancelled) setTdsInfo(Object.fromEntries(entries))
+    }
+    loadTds()
+    return () => { cancelled = true }
+  }, [isVendor, expenses])
+
+  const tdsPreview = useMemo(() => {
+    const out = {}
+    if (!isVendor) return out
+    for (const e of exps) {
+      const info = tdsInfo[e.id]
+      if (info) out[e.id] = computeTds({ rules: info.rules, category: e.category, pan: info.pan, base: e.base_amount || e.amount, ytdBase: info.ytd })
+    }
+    return out
+  }, [isVendor, exps, tdsInfo])
+
   const statusOf = useCallback(e => lineStatus(events[e.id] || []), [events])
-  const waiting = expenses.filter(e => statusOf(e) === 'query').length
+  const waiting = exps.filter(e => statusOf(e) === 'query').length
   useEffect(() => { onWaitingChange?.(waiting) }, [waiting, onWaitingChange])
 
   const isClean = useCallback(e => {
@@ -271,17 +361,22 @@ export default function VouchChecklist({ report, expenses, user, policyResults, 
     const sigs = checks.byExpense[e.id] || []
     const policyIssue = (policy?.violations?.length || 0) + (policy?.flags || []).filter(f => !f.internalOnly && !(f.rule === 'duplicate' && sigs.length > 0)).length > 0
     const mism = receiptMismatches(e, captures[e.capture_id])
-    return statusOf(e) === 'none' && !policyIssue && sigs.length === 0 && mism.length === 0 && !!e.capture_id
-  }, [policyResults, checks, captures, statusOf])
+    // On a vendor payment the TDS hint is replaced by the Accounts panel's own TDS decision.
+    const taxIssue = (taxes[e.id] || []).some(t => t.level !== 'ok' && !(isVendor && t.kind === 'tds'))
+    const noPo = needsPoLink({ amount: e.amount, category: e.category, hasPo: !!e.po_number || isVendor })
+    // A vendor line is clean only once its TDS is settled, or plainly not due.
+    const tdsSettled = !isVendor || !!e.tds_status || tdsPreview[e.id]?.status === 'not_applicable'
+    return statusOf(e) === 'none' && !policyIssue && sigs.length === 0 && mism.length === 0 && !taxIssue && !noPo && tdsSettled && !captures[e.capture_id]?.ai_content_flag && !(Number(e.deduction_amount) > 0) && !!e.capture_id
+  }, [policyResults, checks, captures, taxes, statusOf, isVendor, tdsPreview])
 
-  const cleanLines = useMemo(() => (checking ? [] : expenses.filter(isClean)), [checking, expenses, isClean])
-  const vouched = expenses.filter(e => statusOf(e) === 'clear').length
+  const cleanLines = useMemo(() => (checking ? [] : exps.filter(isClean)), [checking, exps, isClean])
+  const vouched = exps.filter(e => statusOf(e) === 'clear').length
 
   // Lines with something to look at start open; clean ones stay collapsed.
   useEffect(() => {
     if (checking || openIds) return
-    setOpenIds(new Set(expenses.filter(e => !isClean(e)).map(e => e.id)))
-  }, [checking, openIds, expenses, isClean])
+    setOpenIds(new Set(exps.filter(e => !isClean(e)).map(e => e.id)))
+  }, [checking, openIds, exps, isClean])
   const open = openIds || new Set()
   const toggle = id => setOpenIds(prev => { const n = new Set(prev || []); if (n.has(id)) n.delete(id); else n.add(id); return n })
 
@@ -292,19 +387,61 @@ export default function VouchChecklist({ report, expenses, user, policyResults, 
     setBusy(false)
     return ok
   }
-  const onTick = expense => run(() => addVouchEvent({ report, expense, kind: 'clear', user, role: 'finance' }))
+  const onPatch = (id, patch) => setOverrides(prev => ({ ...prev, [id]: { ...(prev[id] || {}), ...patch } }))
+
+  // A vendor line cannot be vouched with its TDS undecided. If the rules say
+  // none is due it is saved on the spot; otherwise Accounts confirms it first.
+  async function ensureTds(expense) {
+    if (!isVendor || expense.tds_status) return true
+    const preview = tdsPreview[expense.id]
+    if (preview?.status !== 'not_applicable') return false
+    const { patch } = await saveTds({ report, expense, base: expense.base_amount || expense.amount, gst: expense.gst_amount, result: preview, amountOverride: '', user })
+    onPatch(expense.id, patch)
+    return true
+  }
+
+  const onTick = async expense => {
+    let settled
+    try { settled = await ensureTds(expense) } catch { settled = false }
+    if (!settled) {
+      setError('Confirm the TDS for this line first, then tick it.')
+      setOpenIds(prev => new Set([...(prev || []), expense.id]))
+      return false
+    }
+    return run(() => addVouchEvent({ report, expense, kind: 'clear', user, role: 'finance' }))
+  }
   const onUndo = expense => run(() => addVouchEvent({ report, expense, kind: 'reopen', user, role: 'finance' }))
   const onSend = (expense, mode, body) => run(async () => {
     await addVouchEvent({ report, expense, kind: mode, body, user, role: 'finance' })
     setComposer(null)
   })
-  const onClearAll = () => run(() => clearLines({ report, expenses: cleanLines, user }))
+  const onClearAll = () => run(async () => {
+    for (const e of cleanLines) await ensureTds(e)
+    await clearLines({ report, expenses: cleanLines, user })
+  })
+
+  // Accounts can flip a report between vendor payment and reimbursement; the
+  // net payable follows, since TDS only comes off vendor payments.
+  async function changeKind(next) {
+    if (next === kind) return
+    setKind(next)
+    await supabase.from('expense_reports').update({ payment_kind: next }).eq('id', report.id)
+    await recomputeNetPayable(report.id)
+    logActivity({ entityType: 'report', entityId: report.id, entityRef: report.report_reference, action: 'payment_kind_changed', fromValue: kind, toValue: next, actor: user })
+  }
+
+  const totals = useMemo(() => {
+    const amount = exps.reduce((s, e) => s + (Number(e.amount) || 0), 0)
+    const deductions = exps.reduce((s, e) => s + (Number(e.deduction_amount) || 0), 0)
+    const tds = isVendor ? exps.reduce((s, e) => s + (Number(e.tds_amount) || 0), 0) : 0
+    return { amount, deductions, tds, net: exps.reduce((s, e) => s + lineNet(e, kind), 0) }
+  }, [exps, kind, isVendor])
   const onCompose = (expenseId, mode) => {
     setComposer(expenseId ? { expenseId, mode } : null)
     if (expenseId) setOpenIds(prev => new Set([...(prev || []), expenseId]))
   }
 
-  const pct = expenses.length ? Math.round((vouched / expenses.length) * 100) : 0
+  const pct = exps.length ? Math.round((vouched / exps.length) * 100) : 0
 
   return (
     <div style={{ marginBottom: '20px' }}>
@@ -313,7 +450,7 @@ export default function VouchChecklist({ report, expenses, user, policyResults, 
           <div>
             <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)' }}>Vouching</div>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
-              {vouched} of {expenses.length} line{expenses.length === 1 ? '' : 's'} vouched
+              {vouched} of {exps.length} line{exps.length === 1 ? '' : 's'} vouched
               {waiting > 0 && <span style={{ color: 'var(--clay-text)', fontWeight: 600 }}> · {waiting} waiting on the employee</span>}
               {checking && ' · checking for duplicates…'}
             </div>
@@ -330,7 +467,33 @@ export default function VouchChecklist({ report, expenses, user, policyResults, 
         </div>
         {!checking && cleanLines.length > 0 && (
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
-            Clean means the receipt matches what was entered, no duplicate or split-bill match and no policy issue.
+            Clean means the receipt matches what was entered, with no duplicate, split-bill, policy, tax or PR/PO flag{isVendor ? ' and TDS settled' : ''}.
+          </div>
+        )}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--taupe-100)' }}>
+          <AssignmentControl report={report} user={user} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
+            Payment type
+            {['vendor', 'reimbursement'].map(k => (
+              <span
+                key={k} role="button" onClick={() => changeKind(k)}
+                style={{
+                  padding: '3px 10px', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: '11px', fontWeight: 600,
+                  border: `1px solid ${kind === k ? 'var(--action)' : 'var(--taupe-300)'}`,
+                  background: kind === k ? 'var(--action)' : 'var(--surface-card)', color: kind === k ? 'var(--surface-card)' : 'var(--ink)',
+                }}
+              >
+                {k === 'vendor' ? 'Vendor payment' : 'Reimbursement'}
+              </span>
+            ))}
+          </div>
+        </div>
+        {(totals.deductions > 0 || totals.tds > 0) && (
+          <div style={{ marginTop: '10px', fontSize: '12px', color: 'var(--ink)', display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
+            <span>Claimed ₹{totals.amount.toLocaleString('en-IN')}</span>
+            {totals.deductions > 0 && <span style={{ color: 'var(--clay-text)' }}>Deductions −₹{totals.deductions.toLocaleString('en-IN')}</span>}
+            {totals.tds > 0 && <span style={{ color: 'var(--gold-text)' }}>TDS −₹{Math.round(totals.tds).toLocaleString('en-IN')}</span>}
+            <strong>Net payable ₹{Math.round(totals.net).toLocaleString('en-IN')}</strong>
           </div>
         )}
       </div>
@@ -347,13 +510,20 @@ export default function VouchChecklist({ report, expenses, user, policyResults, 
 
       {error && <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginBottom: '8px' }}>{error}</div>}
 
-      {expenses.map(exp => (
+      {exps.map(exp => (
         <VouchLine
           key={exp.id}
+          report={report}
+          user={user}
+          isVendor={isVendor}
+          tdsInfo={tdsInfo[exp.id]}
+          tdsPreview={tdsPreview[exp.id]}
+          onPatch={onPatch}
           expense={exp}
           capture={captures[exp.capture_id]}
           events={events[exp.id] || []}
           signals={checks.byExpense[exp.id] || []}
+          taxes={taxes[exp.id] || []}
           policy={policyResults?.[exp.id]}
           open={open.has(exp.id)}
           onToggle={() => toggle(exp.id)}

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { downloadCSV, reportsToRows } from '../../lib/exportUtils'
 import { getDisplayName } from '../../lib/directory'
+import { netAmount } from '../../lib/deductions'
 
 const STATUS_CONFIG = {
   submitted:    { label: 'Submitted',     color: 'var(--gold-text)', bg: 'var(--gold-bg)' },
@@ -13,13 +14,15 @@ const STATUS_CONFIG = {
 }
 
 
-export default function AdminAllReports({ onViewDetail }) {
+export default function AdminAllReports({ onViewDetail, user }) {
   const [reports, setReports] = useState([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('all')
   const [entityFilter, setEntityFilter] = useState('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [vouchedFilter, setVouchedFilter] = useState('all')
+  const [kindFilter, setKindFilter] = useState('all') // all | vendor | reimbursement
+  const [ownerFilter, setOwnerFilter] = useState('all') // all | mine | unassigned
   const [policyFilter, setPolicyFilter] = useState('all')
   const [datePreset, setDatePreset] = useState('all')
   const [dateFrom, setDateFrom] = useState('')
@@ -38,6 +41,7 @@ export default function AdminAllReports({ onViewDetail }) {
         id, report_reference, status, brand, total_amount, expense_count,
         approval_route, created_at, approved_at, rejected_at, reimbursed_at,
         rejection_reason, vouched_at, vouched_by, employee_email,
+        net_payable, payment_kind, assigned_to_email, assigned_to_name,
         report_approvals (approver_level, approver_name, status, actioned_at),
         report_expenses (
           expense_details (
@@ -97,6 +101,9 @@ export default function AdminAllReports({ onViewDetail }) {
   const filtered = reports.filter(r => {
     if (statusFilter !== 'all' && r.status !== statusFilter) return false
     if (entityFilter !== 'all' && r.brand !== entityFilter) return false
+    if (kindFilter !== 'all' && (r.payment_kind || 'reimbursement') !== kindFilter) return false
+    if (ownerFilter === 'mine' && !(user?.ownEmails || [user?.email]).includes(r.assigned_to_email)) return false
+    if (ownerFilter === 'unassigned' && r.assigned_to_email) return false
     if (vouchedFilter === 'yes' && !r.vouched_at) return false
     if (vouchedFilter === 'no'  &&  r.vouched_at) return false
     if (policyFilter !== 'all') {
@@ -161,7 +168,7 @@ export default function AdminAllReports({ onViewDetail }) {
 
   const selectedTotal = filtered
     .filter(r => selected.has(r.id))
-    .reduce((s, r) => s + (r.total_amount || 0), 0)
+    .reduce((s, r) => s + netAmount(r), 0)
 
   const selectStyle = {
     height: '32px', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)',
@@ -172,11 +179,12 @@ export default function AdminAllReports({ onViewDetail }) {
   const activeFilterCount = [
     statusFilter !== 'all', entityFilter !== 'all', categoryFilter !== 'all',
     vouchedFilter !== 'all', policyFilter !== 'all', dateFrom || dateTo,
+    kindFilter !== 'all', ownerFilter !== 'all',
   ].filter(Boolean).length
 
   function clearFilters() {
     setStatusFilter('all'); setEntityFilter('all'); setCategoryFilter('all')
-    setVouchedFilter('all'); setPolicyFilter('all')
+    setVouchedFilter('all'); setPolicyFilter('all'); setKindFilter('all'); setOwnerFilter('all')
     setDatePreset('all'); setDateFrom(''); setDateTo(''); setSearch('')
   }
 
@@ -199,6 +207,16 @@ export default function AdminAllReports({ onViewDetail }) {
             {Object.entries(STATUS_CONFIG).map(([key, { label }]) =>
               statusCounts[key] > 0 ? <option key={key} value={key}>{label} ({statusCounts[key]})</option> : null
             )}
+          </select>
+          <select value={kindFilter} onChange={e => setKindFilter(e.target.value)} style={selectStyle}>
+            <option value="all">All payments</option>
+            <option value="vendor">Vendor payments</option>
+            <option value="reimbursement">Reimbursements</option>
+          </select>
+          <select value={ownerFilter} onChange={e => setOwnerFilter(e.target.value)} style={selectStyle}>
+            <option value="all">All owners</option>
+            <option value="mine">My queue</option>
+            <option value="unassigned">Unassigned</option>
           </select>
           <select value={entityFilter} onChange={e => setEntityFilter(e.target.value)} style={selectStyle}>
             <option value="all">All entities</option>
@@ -290,7 +308,7 @@ export default function AdminAllReports({ onViewDetail }) {
 
       {!loading && filtered.length > 0 && (
         <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1100px' }}>
             <thead>
               <tr style={{ background: 'var(--taupe-50)', borderBottom: '1px solid var(--taupe-200)' }}>
                 <th style={{ width: '40px', padding: '10px 14px' }}>
@@ -309,7 +327,7 @@ export default function AdminAllReports({ onViewDetail }) {
                     )}
                   </div>
                 </th>
-                {['Reference', 'Entity', 'Expenses', 'Amount (INR)', 'Submitted By', 'Approved By', 'Vouched By', 'Date', 'Status', ''].map(h => (
+                {['Reference', 'Type', 'Entity', 'Expenses', 'Amount (INR)', 'Submitted By', 'Approved By', 'Vouched By', 'Processed By', 'Date', 'Status', ''].map(h => (
                   <th key={h} style={{ padding: '10px 14px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textAlign: h === 'Amount (INR)' ? 'right' : 'left', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
                     {h}
                   </th>
@@ -357,6 +375,15 @@ export default function AdminAllReports({ onViewDetail }) {
                         <div style={{ fontSize: '10px', color: 'var(--moss-text)', marginTop: '2px' }}>Vouched</div>
                       )}
                     </td>
+                    <td style={{ padding: '11px 14px', fontSize: '11px', whiteSpace: 'nowrap' }}>
+                      <span style={{
+                        padding: '2px 8px', borderRadius: 'var(--radius-xs)', fontWeight: 600,
+                        background: report.payment_kind === 'vendor' ? 'var(--gold-bg)' : 'var(--taupe-100)',
+                        color: report.payment_kind === 'vendor' ? 'var(--gold-text)' : 'var(--ink)',
+                      }}>
+                        {report.payment_kind === 'vendor' ? 'Vendor' : 'Reimbursement'}
+                      </span>
+                    </td>
                     <td style={{ padding: '11px 14px', fontSize: '12px', color: 'var(--ink)' }}>
                       {report.brand || '—'}
                     </td>
@@ -367,7 +394,10 @@ export default function AdminAllReports({ onViewDetail }) {
                       )}
                     </td>
                     <td style={{ padding: '11px 14px', fontSize: '13px', fontWeight: 600, color: 'var(--ink)', textAlign: 'right', fontFamily: 'monospace' }}>
-                      {Number(report.total_amount || 0).toLocaleString('en-IN')}
+                      {netAmount(report).toLocaleString('en-IN')}
+                      {report.net_payable != null && Number(report.net_payable) !== Number(report.total_amount) && (
+                        <div style={{ fontSize: '10px', fontWeight: 400, color: 'var(--text-muted)', textDecoration: 'line-through' }}>{Number(report.total_amount || 0).toLocaleString('en-IN')}</div>
+                      )}
                     </td>
                     <td style={{ padding: '11px 14px', fontSize: '12px', color: 'var(--ink)' }}>
                       {report.employee_email ? getDisplayName(report.employee_email) : '—'}
@@ -384,6 +414,9 @@ export default function AdminAllReports({ onViewDetail }) {
                       {report.vouched_by
                         ? <span style={{ fontSize: '11px', color: 'var(--moss-text)', fontWeight: 500 }}>{report.vouched_by}</span>
                         : '—'}
+                    </td>
+                    <td style={{ padding: '11px 14px', fontSize: '12px', color: report.assigned_to_email ? 'var(--ink)' : 'var(--text-muted)' }}>
+                      {report.assigned_to_name || report.assigned_to_email || 'Unassigned'}
                     </td>
                     <td style={{ padding: '11px 14px', fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                       {report.created_at ? new Date(report.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}

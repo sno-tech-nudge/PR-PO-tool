@@ -152,6 +152,12 @@ export default function ReimbursedConfirmation({ reportId, reportReference, onSt
         <div style={{ border: '1px solid var(--taupe-200)', overflow: 'hidden', marginBottom: '20px' }}>
           <DateRow label="Reference" value={<span style={{ fontFamily: 'monospace' }}>{report.report_reference}</span>} alt={false} />
           <DateRow label="Total amount" value={`₹${Number(report.total_amount || 0).toLocaleString('en-IN')}`} alt={true} />
+          {report.net_payable != null && Number(report.net_payable) !== Number(report.total_amount) && (
+            <DateRow label="Net after deductions" value={`₹${Number(report.net_payable).toLocaleString('en-IN')}`} alt={false} />
+          )}
+          {Number(report.advance_applied) > 0 && (
+            <DateRow label="Settled from advance" value={`₹${Number(report.advance_applied).toLocaleString('en-IN')}`} alt={true} />
+          )}
           <DateRow label="Submitted" value={report.created_at ? formatDateTime(report.created_at) : '—'} alt={false} />
           <DateRow label="Approved" value={report.approved_at ? formatDateTime(report.approved_at) : '—'} alt={true} />
           <DateRow label="Reimbursed" value={report.reimbursed_at ? formatDateTime(report.reimbursed_at) : '—'} alt={false} />

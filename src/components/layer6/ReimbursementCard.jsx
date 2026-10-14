@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { payoutAmount } from '../../lib/advanceBalance'
 import { timeAgo } from '../../lib/approvalEngine'
 
 export default function ReimbursementCard({ report, selected, onToggle, readonly = false }) {
@@ -45,7 +46,10 @@ export default function ReimbursementCard({ report, selected, onToggle, readonly
               {report.brand || 'Team Member'}
             </div>
             <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text)' }}>
-              {report.total_amount ? `₹${Number(report.total_amount).toLocaleString('en-IN')}` : '—'}
+              {payoutAmount(report) ? `₹${payoutAmount(report).toLocaleString('en-IN')}` : '—'}
+              {payoutAmount(report) !== Number(report.total_amount) && (
+                <div style={{ fontSize: '10px', fontWeight: 400, color: 'var(--text-muted)', textAlign: 'right' }}>claimed ₹{Number(report.total_amount).toLocaleString('en-IN')}</div>
+              )}
             </div>
           </div>
 

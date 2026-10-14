@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { generateReportReference } from '../../lib/reportReference'
 import { attachPendingBalances, poOptionLabel } from '../../lib/poBalance'
+import { loadAdvanceBalances, money } from '../../lib/advanceBalance'
 
 // `fixedPO` ({ id, po_number }) is passed when the report is started straight
 // from a PO's "Submit Expense" flow: the PO answer is already known, so the PO
@@ -40,17 +41,8 @@ export default function NewReportModal({ user, onCreated, onClose, fixedPO = nul
 
   useEffect(() => {
     if (advanceRelated !== true || advanceOptions.length) return
-    // Recorded (disbursed) advances only, and one-to-one with a report — an
-    // advance already linked to any report (draft or submitted) drops out.
-    Promise.all([
-      supabase.from('advances').select('id, amount, description, expected_usage_date')
-        .in('requested_by', user?.ownEmails ?? []).eq('status', 'recorded')
-        .order('created_at', { ascending: false }),
-      supabase.from('expense_reports').select('advance_id').not('advance_id', 'is', null),
-    ]).then(([{ data: advances }, { data: linked }]) => {
-      const linkedIds = new Set((linked || []).map(r => r.advance_id))
-      setAdvanceOptions((advances || []).filter(a => !linkedIds.has(a.id)))
-    })
+    // Disbursed advances that still have money left; several reports can draw on one.
+    loadAdvanceBalances(user?.ownEmails ?? []).then(list => setAdvanceOptions(list.filter(a => a.remaining > 0)))
   }, [advanceRelated, advanceOptions.length, user?.email])
 
   async function handleContinue() {
@@ -71,6 +63,7 @@ export default function NewReportModal({ user, onCreated, onClose, fixedPO = nul
         employee_email: user?.email ?? null,
         status: 'draft',
         po_related: poRelated,
+        payment_kind: poRelated === true ? 'vendor' : 'reimbursement',
         po_id: poRelated ? selectedPOId : null,
         advance_related: poRelated ? false : advanceRelated === true,
         advance_id: (poRelated || advanceRelated !== true) ? null : selectedAdvanceId,
@@ -214,12 +207,12 @@ export default function NewReportModal({ user, onCreated, onClose, fixedPO = nul
                       >
                         <option value="">Select an advance…</option>
                         {advanceOptions.map(a => (
-                          <option key={a.id} value={a.id}>₹{Number(a.amount).toLocaleString('en-IN')} — {a.description}</option>
+                          <option key={a.id} value={a.id}>{money(a.amount)} — {a.description} · {money(a.remaining)} left</option>
                         ))}
                       </select>
                       {advanceOptions.length === 0 && (
                         <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
-                          No disbursed advances available to settle.
+                          You have no advance with money left.
                         </div>
                       )}
                     </div>

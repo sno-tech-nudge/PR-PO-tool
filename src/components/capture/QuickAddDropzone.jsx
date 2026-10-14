@@ -1,4 +1,6 @@
 import { hashBlob } from '../../lib/receiptHash'
+import { aiContentFlag } from '../../lib/aiContent'
+import { AiContentNote } from '../shared/AiContentBadge'
 import { useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { extractReceiptData } from '../../lib/claude'
@@ -21,6 +23,7 @@ export default function QuickAddDropzone({ onReady, multiple = false }) {
   const [busyText, setBusyText] = useState('')
   const [error, setError] = useState(null)
   const [unreadable, setUnreadable] = useState([]) // { id, name, issue }
+  const [aiNotes, setAiNotes] = useState([]) // { id, name } for images marked AI content
 
   // `multiple` (the report workspace) lets several receipts be dropped at
   // once — each is read and handed to onReady in turn.
@@ -53,6 +56,9 @@ export default function QuickAddDropzone({ onReady, multiple = false }) {
         setUnreadable(prev => [...prev, { id: `${Date.now()}-${prev.length}`, name: file.name, issue }])
       }
 
+      const aiFlag = await aiContentFlag(file, extracted)
+      if (aiFlag) setAiNotes(prev => [...prev, { id: `${Date.now()}-${prev.length}`, name: file.name }])
+
       setBusyText('Uploading…')
       const path = `captures/${Date.now()}-receipt.jpg`
       const blob = await (await fetch(`data:image/jpeg;base64,${base64}`)).blob()
@@ -62,6 +68,7 @@ export default function QuickAddDropzone({ onReady, multiple = false }) {
       const { data: captureRow } = await supabase.from('expense_captures').insert({
         receipt_storage_path: path,
         receipt_hash: await hashBlob(blob),
+        ai_content_flag: aiFlag,
         receipt_extracted_amount: extracted?.amount ?? null,
         receipt_extracted_vendor: extracted?.vendor ?? null,
         receipt_extracted_date: extracted?.date ?? null,
@@ -88,7 +95,7 @@ export default function QuickAddDropzone({ onReady, multiple = false }) {
     setBusy(false)
   }
 
-  const notices = unreadable.map(u => (
+  const notices = [...aiNotes.map(n => <div key={n.id} onClick={() => setAiNotes(prev => prev.filter(x => x.id !== n.id))} title="Click to dismiss" style={{ cursor: 'pointer' }}><AiContentNote name={n.name} /></div>), ...unreadable.map(u => (
     <ReadabilityNotice
       key={u.id}
       name={u.name}
@@ -96,7 +103,7 @@ export default function QuickAddDropzone({ onReady, multiple = false }) {
       extra="The expense was still added. Fill in its details, or delete it and add a clearer photo."
       onDismiss={() => setUnreadable(prev => prev.filter(x => x.id !== u.id))}
     />
-  ))
+  ))]
 
   return (
     <div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { generateExpenseAttachmentsPDF, downloadPDF } from '../../lib/expenseAttachmentsPdf'
+import AiContentBadge from './AiContentBadge'
 
 // Primary receipt/payment-proof document, linked via expense_captures.
 // Auto-loads as soon as it mounts (whoever's looking needs to see the
@@ -11,13 +12,15 @@ import { generateExpenseAttachmentsPDF, downloadPDF } from '../../lib/expenseAtt
 export function ReceiptDocuments({ captureId }) {
   const [urls, setUrls] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [aiFlagged, setAiFlagged] = useState(false)
 
   useEffect(() => {
     let cancelled = false
     async function load() {
-      const { data } = await supabase.from('expense_captures').select('receipt_storage_path, payment_storage_path').eq('id', captureId).single()
+      const { data } = await supabase.from('expense_captures').select('receipt_storage_path, payment_storage_path, ai_content_flag').eq('id', captureId).single()
       if (cancelled) return
       if (!data) { setLoading(false); return }
+      setAiFlagged(!!data.ai_content_flag)
       const links = {}
       if (data.receipt_storage_path) {
         const { data: s } = await supabase.storage.from('expense-documents').createSignedUrl(data.receipt_storage_path, 3600)
@@ -39,7 +42,8 @@ export function ReceiptDocuments({ captureId }) {
   return (
     <div style={{ display: 'flex', gap: '12px', marginBottom: '8px' }}>
       {urls.receipt && (
-        <a href={urls.receipt} target="_blank" rel="noopener noreferrer">
+        <a href={urls.receipt} target="_blank" rel="noopener noreferrer" style={{ position: 'relative', display: 'block' }}>
+          {aiFlagged && <AiContentBadge style={{ position: 'absolute', top: '6px', left: '6px', zIndex: 1 }} />}
           <img
             src={urls.receipt}
             alt="Receipt"

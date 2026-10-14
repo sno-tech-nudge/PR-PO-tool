@@ -78,8 +78,11 @@ If the receipt does not say, return null. NEVER infer it from the type of busine
 --- CARD LAST 4 ---
 If paid by card and the last 4 digits are printed (e.g. XXXX1234, ****1234, "card ending 1234"), return just those 4 digits as a string. Otherwise null.
 
+--- AI GENERATED ---
+"ai_generated": true ONLY if you are certain this image was produced by an AI image generator rather than photographed, scanned or screenshotted. Real bills of any quality are NOT AI generated: blurry, dark, crumpled, faded, handwritten, cropped, skewed, screenshots, PDFs and phone photos. If you have even slight doubt, return false. Almost every image is false.
+
 Reply with raw JSON only — no markdown, no backticks, no explanation:
-{"amount":number,"vendor":string,"date":string,"category":string,"invoice_number":string,"gstin":string,"payment_mode":string,"card_last4":string}
+{"amount":number,"vendor":string,"date":string,"category":string,"invoice_number":string,"gstin":string,"payment_mode":string,"card_last4":string,"ai_generated":boolean}
 Use null for any field genuinely not visible. Do not guess.`
   ))
 }
@@ -95,6 +98,7 @@ function tidyReceiptData(data) {
   out.gstin = gstin && GSTIN_FORMAT_RE.test(gstin) ? gstin : null
   const inv = typeof out.invoice_number === 'string' ? out.invoice_number.trim() : null
   out.invoice_number = inv || null
+  out.ai_generated = out.ai_generated === true
   const mode = typeof out.payment_mode === 'string' ? out.payment_mode.trim().toLowerCase() : null
   out.payment_mode = ['cash', 'card', 'upi', 'online'].includes(mode) ? mode : null
   const last4 = out.card_last4 != null ? String(out.card_last4).replace(/\D/g, '') : ''

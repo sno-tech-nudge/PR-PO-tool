@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
 import { suggestCategory } from '../../lib/claude'
 import { ENTITIES, EXPENSE_NATURES, getPrograms, getDonorsForProgram } from '../../lib/donorData'
@@ -15,6 +15,12 @@ import InfoTip from '../shared/InfoTip'
 import VoiceInputButton from '../shared/VoiceInputButton'
 import ReceiptSidePanel from '../shared/ReceiptSidePanel'
 import { useIsMobile } from '../../hooks/useIsMobile'
+import { loadVendorRegistry, matchVendor } from '../../lib/vendorMatch'
+import { explainablePolicyIssues, needsPoLink, suggestPO } from '../../lib/policyPrompt'
+import { PolicyReasonPrompt, PoLinkPrompt, LowerAmountNote } from '../shared/ExpensePrompts'
+import VendorInviteModal from '../vendor/VendorInviteModal'
+import AdvancePicker from '../shared/AdvancePicker'
+import { loadAdvanceBalances } from '../../lib/advanceBalance'
 
 const CATEGORIES = [
   'Travel Fare', 'Lodging and Boarding', 'Food', 'Bike Fare',
@@ -63,6 +69,11 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
   const [reimbursable, setReimbursable] = useState(existingExpense?.reimbursable ?? true)
   const [paymentMode, setPaymentMode] = useState(existingExpense?.payment_method || toPaymentMode(layer1Data?.payment_method) || PAYMENT_MODES[0])
   const isCompanyCard = paymentMode === 'Company Card'
+  // Paid out of an advance the person already holds: nothing to reimburse, and it
+  // draws down whichever advance(s) are picked.
+  const isAdvanceMode = paymentMode === 'Advance Adjustment'
+  const [settleAdvanceIds, setSettleAdvanceIds] = useState(Array.isArray(existingExpense?.settle_advance_ids) ? existingExpense.settle_advance_ids : [])
+  const [advBalances, setAdvBalances] = useState(null)
   const [suggestedCategory, setSuggestedCategory] = useState(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -119,6 +130,17 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
   const [paidTo, setPaidTo] = useState(existingExpense?.paid_to || '')
   const [vrPdfLink, setVrPdfLink] = useState(existingExpense?.vr_pdf_link || '')
   const [referenceNumber, setReferenceNumber] = useState(existingExpense?.reference_number || '')
+  // Registered vendor: matched quietly from the merchant name or GSTIN, or taken
+  // from the PO. Vendor payments must name one; reimbursements just get the tag.
+  const [registry, setRegistry] = useState(null)
+  const [poVendorId, setPoVendorId] = useState(null)
+  const [showInvite, setShowInvite] = useState(false)
+  // One-tap reasons, asked only when something is out of policy or a purchase
+  // over the limit has no PR/PO.
+  const [policyJustification, setPolicyJustification] = useState(existingExpense?.policy_justification || '')
+  const [noPoReason, setNoPoReason] = useState(existingExpense?.no_po_reason || '')
+  // What the receipt and the proof of payment said, for the "use the lower" hint.
+  const [captureAmounts, setCaptureAmounts] = useState(null)
 
   const programs = getPrograms(entity)
   const donors = getDonorsForProgram(entity, program)
@@ -131,6 +153,33 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
   const effectiveAmount = itemized ? itemTotal : (parseFloat(amount) || 0)
   const actualAttendeeCount = attendeeCount === '7+' ? (parseInt(customCount) || 7) : attendeeCount
   const perPersonAmount = actualAttendeeCount > 1 && effectiveAmount > 0 ? Math.round(effectiveAmount / actualAttendeeCount) : null
+
+  const vendorMatchInfo = useMemo(() => (registry ? matchVendor(registry, { name: vendor, gstin }) : null), [registry, vendor, gstin])
+  const vendorIdFinal = vendorMatchInfo?.vendor.id || poVendorId || (existingExpense?.vendor_id && vendor === existingExpense?.vendor ? existingExpense.vendor_id : null) || null
+  const registeredName = vendorMatchInfo?.vendor.org_name || null
+  const isVendorPayment = !!poId || (!!reportPO && reportPO.related === true) || poRelated === true
+  const needsRegisteredVendor = isVendorPayment && !!registry && !!vendor && !vendorIdFinal
+    && (embedded || !isEdit || vendor !== existingExpense?.vendor)
+
+  const policyIssues = useMemo(() => explainablePolicyIssues({
+    amount: effectiveAmount, category, description: note, date, entity,
+    expense_type: expenseType, attendee_count: actualAttendeeCount,
+    trip_name: existingExpense?.trip_name, trip_related: existingExpense?.trip_related,
+  }), [effectiveAmount, category, note, date, entity, expenseType, actualAttendeeCount, existingExpense])
+
+  const poPromptNeeded = needsPoLink({ amount: effectiveAmount, category, hasPo: !!poNumber || !!poId || isVendorPayment })
+  const poSuggestion = useMemo(() => (poPromptNeeded ? suggestPO(poOptions, vendor, effectiveAmount) : null), [poPromptNeeded, poOptions, vendor, effectiveAmount])
+
+  const lowerCap = useMemo(() => {
+    if (!captureAmounts || captureAmounts.choice === 'higher') return null
+    const options = [
+      { value: Number(captureAmounts.receipt), source: 'receipt' },
+      { value: Number(captureAmounts.payment), source: 'payment proof' },
+    ].filter(o => o.value > 0)
+    if (!options.length) return null
+    return options.reduce((a, b) => (b.value < a.value ? b : a))
+  }, [captureAmounts])
+  const showLowerNote = !!lowerCap && !itemized && effectiveAmount > lowerCap.value + 1
 
   useEffect(() => {
     const v = layer1Data?.vendor
@@ -160,6 +209,28 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
   useEffect(() => {
     preloadDirectory().then(() => setDirectoryEntries(getActiveDirectoryEntries()))
   }, [])
+
+  useEffect(() => { loadVendorRegistry().then(setRegistry) }, [])
+
+  // The advance list only matters once "Advance Adjustment" is the payment mode.
+  useEffect(() => {
+    if (!isAdvanceMode || advBalances) return
+    let cancelled = false
+    loadAdvanceBalances(user?.ownEmails?.length ? user.ownEmails : [user?.email], { excludeReportId: reportId || null }).then(b => {
+      if (cancelled) return
+      setAdvBalances(b)
+      // A single advance with money left is simply chosen.
+      const open = b.filter(x => x.remaining > 0)
+      setSettleAdvanceIds(prev => (prev.length || open.length !== 1 ? prev : [open[0].id]))
+    })
+    return () => { cancelled = true }
+  }, [isAdvanceMode, advBalances, user?.email, user?.ownEmails, reportId])
+
+  useEffect(() => {
+    if (!receiptCaptureId) return
+    supabase.from('expense_captures').select('receipt_extracted_amount, payment_extracted_amount, amount_choice').eq('id', receiptCaptureId).maybeSingle()
+      .then(({ data }) => { if (data) setCaptureAmounts({ receipt: data.receipt_extracted_amount, payment: data.payment_extracted_amount, choice: data.amount_choice }) })
+  }, [receiptCaptureId])
 
   useEffect(() => {
     async function loadPOs() {
@@ -217,6 +288,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
         setVendor(prev => prev || v.org_name || '')
         setGstin(prev => prev || v.gstin || '')
       }
+      if (po.vendor_id) setPoVendorId(po.vendor_id)
       // Same PO PDF someone downloads from PODetail.jsx's "Download PO PDF"
       // link — but that one is a short-lived (1hr) signed URL meant for an
       // immediate click, not for storing. This copy needs to still resolve
@@ -298,10 +370,12 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
     if (!isEdit && poRelated === true && !poId) e.poId = 'Please select a Purchase Order'
     if (!date) e.date = 'Required'
     if (!vendor) e.vendor = 'Required'
+    else if (needsRegisteredVendor) e.vendor = 'Pick a registered vendor from the list'
     if (!category) e.category = 'Required'
     if (!effectiveAmount) e.amount = 'Required'
     if (!paymentMode) e.paymentMode = 'Required'
     if (paymentMode === 'Company Card' && !cardNo) e.cardNo = 'Required'
+    if (isAdvanceMode && settleAdvanceIds.length === 0) e.advance = 'Pick the advance this is settled from'
     if (!entity) e.entity = 'Required'
     if (!note) e.description = 'Required'
     if (!isEdit && expenseType === 'my_team') {
@@ -318,7 +392,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
   // Embedded in the report workspace there is no Save button: the expense is
   // saved to the draft in the background as it is edited, and the workspace
   // is told which mandatory fields are still missing.
-  const MISSING_LABELS = { date: 'Expense date', vendor: 'Merchant', category: 'Category', amount: 'Amount', paymentMode: 'Payment mode', cardNo: 'Card no.', entity: 'Entity', description: 'Description' }
+  const MISSING_LABELS = { date: 'Expense date', vendor: 'Merchant', category: 'Category', amount: 'Amount', paymentMode: 'Payment mode', cardNo: 'Card no.', advance: 'Advance', entity: 'Entity', description: 'Description' }
   const missingList = Object.keys(getErrors()).map(k => MISSING_LABELS[k]).filter(Boolean)
   const missingKey = missingList.join('|')
   const payloadJson = embedded ? JSON.stringify(buildPayload()) : ''
@@ -365,6 +439,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
       report_id: reportId || null,
       amount: effectiveAmount || null,
       vendor: vendor || null,
+      vendor_id: vendorIdFinal,
       date: date || null,
       category: category || null,
       expense_type: expenseType,
@@ -375,7 +450,8 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
       invoice_number: invoiceNumber || null,
       gstin: gstin || null,
       description: note || null,
-      reimbursable: isCompanyCard ? false : reimbursable,
+      reimbursable: isCompanyCard || isAdvanceMode ? false : reimbursable,
+      settle_advance_ids: isAdvanceMode && settleAdvanceIds.length ? settleAdvanceIds : null,
       payment_method: paymentMode || null,
       entity: entity || null,
       program: program || null,
@@ -389,6 +465,8 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
       paid_to: paidTo || null,
       vr_pdf_link: vrPdfLink || null,
       itemized_lines: itemized ? itemLines.filter(l => l.category || l.amount) : null,
+      policy_justification: policyIssues.length ? (policyJustification || null) : null,
+      no_po_reason: poPromptNeeded && !poSuggestion ? (noPoReason || null) : null,
     }
   }
 
@@ -551,9 +629,18 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
           style={{ ...inputStyle, border: errBorder('vendor') }}
         />
         <datalist id="merchant-options">
-          {merchantOptions.map(m => <option key={m} value={m} />)}
+          {(isVendorPayment && registry ? registry.map(v => v.org_name) : merchantOptions).map(m => <option key={m} value={m} />)}
         </datalist>
         {errors.vendor && <div style={errorText}>{errors.vendor}</div>}
+        {!errors.vendor && vendorIdFinal && (registeredName || poVendorId) && (
+          <div style={{ fontSize: '11px', color: 'var(--moss-text)', marginTop: '5px' }}>✓ Registered vendor{registeredName ? `: ${registeredName}` : ''}</div>
+        )}
+        {needsRegisteredVendor && (
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '5px' }}>
+            Not registered yet?{' '}
+            <span role="button" onClick={() => setShowInvite(true)} style={{ color: 'var(--action)', cursor: 'pointer', textDecoration: 'underline' }}>Send the vendor a registration link</span>
+          </div>
+        )}
       </div>
 
       {/* Category */}
@@ -631,6 +718,21 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
         )}
       </div>
 
+      {showLowerNote && (
+        <LowerAmountNote
+          lower={lowerCap.value} entered={effectiveAmount} source={lowerCap.source}
+          onUse={() => setAmount(String(lowerCap.value))}
+        />
+      )}
+
+      {poPromptNeeded && (
+        <PoLinkPrompt
+          amount={effectiveAmount} suggestion={poSuggestion}
+          onLink={id => { setPoRelated(true); handlePOSelect(id) }}
+          value={noPoReason} onChange={setNoPoReason}
+        />
+      )}
+
       {/* Payment Mode */}
       <div style={fieldWrap}>
         <label style={labelStyle}>Payment Mode{required}</label>
@@ -642,7 +744,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
             if (mode !== 'Company Card') setCardNo('')
             // Company-card spend is paid by the company, never reimbursed. Leaving
             // Company Card brings the box back in its default (ticked) state.
-            setReimbursable(mode !== 'Company Card')
+            setReimbursable(mode !== 'Company Card' && mode !== 'Advance Adjustment')
           }}
           style={{ ...inputStyle, paddingLeft: '10px', border: errBorder('paymentMode') }}
         >
@@ -664,6 +766,19 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
             {CARD_NUMBERS.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
           {errors.cardNo && <div style={errorText}>{errors.cardNo}</div>}
+        </div>
+      )}
+
+      {/* Advance(s) — only when this is settled from an advance */}
+      {isAdvanceMode && (
+        <div style={fieldWrap}>
+          <label style={labelStyle}>Settle from which advance?{required}</label>
+          {!advBalances ? (
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Loading your advances…</div>
+          ) : (
+            <AdvancePicker advances={advBalances} selected={settleAdvanceIds} onChange={setSettleAdvanceIds} spend={effectiveAmount} />
+          )}
+          {errors.advance && <div style={errorText}>{errors.advance}</div>}
         </div>
       )}
 
@@ -696,6 +811,8 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
         </div>
         {errors.description && <div style={errorText}>{errors.description}</div>}
       </div>
+
+      <PolicyReasonPrompt issues={policyIssues} value={policyJustification} onChange={setPolicyJustification} />
 
       {/* Who was this for — no longer asked up front: an expense is for the
           person who filed it unless the report's policy flags show a food or
@@ -798,7 +915,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
       </div>
 
       {/* Claim reimbursement — only for out-of-pocket spend */}
-      {!isCompanyCard && (
+      {!isCompanyCard && !isAdvanceMode && (
       <div style={{ ...fieldWrap, display: 'flex', alignItems: 'center', gap: '8px' }}>
         <input
           type="checkbox"
@@ -993,6 +1110,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
       )}
     </div>
     {showPanel && <ReceiptSidePanel captureId={receiptCaptureId} onVisibleChange={setReceiptShown} />}
+    {showInvite && <VendorInviteModal user={user} onClose={() => setShowInvite(false)} />}
     </div>
   )
 }

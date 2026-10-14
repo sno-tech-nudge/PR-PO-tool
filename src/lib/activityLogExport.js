@@ -1,6 +1,6 @@
 const ENTITY_LABEL = {
   pr: 'Purchase Request', po: 'Purchase Order', report: 'Expense Report',
-  expense: 'Expense', vendor: 'Vendor', delegation: 'Delegation',
+  expense: 'Expense', vendor: 'Vendor', delegation: 'Delegation', settings: 'Settings',
 }
 export const entityLabel = t => ENTITY_LABEL[t] || t
 
@@ -10,6 +10,15 @@ const ACTION_LABELS = {
   vouch_query: 'Asked employee',
   vouch_reply: 'Employee replied',
   vouch_reopen: 'Took back vouch',
+  vouch_deduct: 'Deducted from line',
+  vouch_deduction_removed: 'Removed deduction',
+  tds_set: 'TDS decided',
+  assigned: 'Assigned',
+  unassigned: 'Unassigned',
+  payment_kind_changed: 'Payment type changed',
+  tds_rule_added: 'TDS rule added',
+  tds_rule_changed: 'TDS rule changed',
+  tds_rule_deleted: 'TDS rule deleted',
 }
 
 export function actionLabel(a) {

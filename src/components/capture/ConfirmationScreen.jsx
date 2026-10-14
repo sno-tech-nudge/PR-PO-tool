@@ -1,5 +1,6 @@
 import { useNetworkStatus } from '../../hooks/useNetworkStatus'
 import { paymentFromReceipt } from '../../lib/paymentModes'
+import { AiContentNote } from '../shared/AiContentBadge'
 
 const PAYMENT_LABELS = {
   upi: 'UPI',
@@ -8,7 +9,7 @@ const PAYMENT_LABELS = {
   cash: 'Cash',
 }
 
-export default function ConfirmationScreen({ receiptExtracted, paymentData, matchedAmount, singleDocument, capturedOffline, onContinue, onQuickSave, quickSaving, quickSaveError, onRetake }) {
+export default function ConfirmationScreen({ receiptExtracted, paymentData, matchedAmount, singleDocument, capturedOffline, onContinue, onQuickSave, quickSaving, quickSaveError, onRetake, aiContent }) {
   const { isOnline } = useNetworkStatus()
   const isOffline = capturedOffline || !isOnline
   // OCR ran (we're not offline) but came back with neither of the two most
@@ -54,6 +55,8 @@ export default function ConfirmationScreen({ receiptExtracted, paymentData, matc
       <div style={{ fontSize: '20px', fontWeight: 500, color: 'var(--text)', marginBottom: '20px' }}>
         Documents saved
       </div>
+
+      {aiContent && <div style={{ marginBottom: '16px' }}><AiContentNote /></div>}
 
       {nothingExtracted && (
         <div style={{

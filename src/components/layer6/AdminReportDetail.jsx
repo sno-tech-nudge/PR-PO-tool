@@ -6,7 +6,7 @@ import ReportChat from '../shared/ReportChat'
 import { manualLinkPRToExpense } from '../../lib/linkEngine'
 import { getDisplayName } from '../../lib/directory'
 import { generateExpenseAttachmentsPDF, downloadPDF } from '../../lib/expenseAttachmentsPdf'
-import { ExternalAttachmentLinks } from '../shared/ExpenseAttachments'
+import { ExternalAttachmentLinks, ReceiptDocuments } from '../shared/ExpenseAttachments'
 
 const STATUS_CONFIG = {
   submitted:    { label: 'Submitted',     color: 'var(--gold-text)', bg: 'var(--gold-bg)' },
@@ -65,7 +65,7 @@ export default function AdminReportDetail({ reportId, user, onBack, onViewAuditT
       supabase
         .from('expense_reports')
         .select(`
-          id, report_reference, status, brand, total_amount, expense_count,
+          id, report_reference, status, brand, total_amount, net_payable, payment_kind, assigned_to_email, assigned_to_name, expense_count,
           approval_route, created_at, approved_at, rejected_at, reimbursed_at,
           rejection_reason, vouched_at, vouched_by, finance_notes, pdf_storage_path, po_id,
           report_expenses (
@@ -244,6 +244,9 @@ export default function AdminReportDetail({ reportId, user, onBack, onViewAuditT
             <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.5px' }}>
               INR {Number(report.total_amount || 0).toLocaleString('en-IN')}
             </div>
+            {report.net_payable != null && Number(report.net_payable) !== Number(report.total_amount) && (
+              <div style={{ fontSize: '12px', color: 'var(--ink)', marginTop: '2px' }}>Net payable INR {Number(report.net_payable).toLocaleString('en-IN')}</div>
+            )}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end' }}>
             {isVouched && (
@@ -525,7 +528,8 @@ export default function AdminReportDetail({ reportId, user, onBack, onViewAuditT
 }
 
 function ExpenseTableRow({ exp, av, aiV, pc, i, total }) {
-  const [expanded, setExpanded] = useState(false)
+  // Open from the start so the receipts and attachments are always in view.
+  const [expanded, setExpanded] = useState(true)
 
   return (
     <>
@@ -580,7 +584,7 @@ function ExpenseTableRow({ exp, av, aiV, pc, i, total }) {
               {exp.invoice_number && <MiniField label="Invoice No." value={exp.invoice_number} mono />}
               {exp.description && <MiniField label="Note" value={exp.description} />}
             </div>
-            {exp.capture_id && <ReceiptLink captureId={exp.capture_id} />}
+            {exp.capture_id && <div style={{ marginTop: '8px' }}><ReceiptDocuments captureId={exp.capture_id} /></div>}
             {!exp.capture_id && !exp.po_pdf_link && !exp.vr_pdf_link && !exp.er_pdf_link && (
               <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-muted)' }}>No receipt linked</div>
             )}
@@ -721,28 +725,23 @@ function PRLinkSection({ reportId, report, onLinked }) {
 
 function SupportingAttachments({ attachments }) {
   const [urls, setUrls]       = useState(null)
-  const [loading, setLoading] = useState(false)
 
-  async function load() {
-    if (urls || loading) return
-    setLoading(true)
-    const signed = {}
-    for (const a of attachments) {
-      const { data: s } = await supabase.storage.from('expense-documents').createSignedUrl(a.path, 3600)
-      if (s?.signedUrl) signed[a.path] = s.signedUrl
+  // Loaded as soon as the row shows, so the links are always there to click.
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      const signed = {}
+      for (const a of attachments) {
+        const { data: s } = await supabase.storage.from('expense-documents').createSignedUrl(a.path, 3600)
+        if (s?.signedUrl) signed[a.path] = s.signedUrl
+      }
+      if (!cancelled) setUrls(signed)
     }
-    setUrls(signed)
-    setLoading(false)
-  }
+    load()
+    return () => { cancelled = true }
+  }, [attachments])
 
-  if (!urls && !loading) {
-    return (
-      <button onClick={load} style={{ marginTop: '8px', height: '26px', padding: '0 10px', borderRadius: 'var(--radius-xs)', border: '1px solid var(--taupe-200)', background: 'var(--surface-card)', color: 'var(--ink)', fontSize: '11px', cursor: 'pointer' }}>
-        View other attachments ({attachments.length})
-      </button>
-    )
-  }
-  if (loading) return <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-muted)' }}>Loading…</div>
+  if (!urls) return <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-muted)' }}>Loading attachments…</div>
 
   return (
     <div style={{ marginTop: '8px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
@@ -846,46 +845,3 @@ function POLinkSection({ poId, onViewPO }) {
   )
 }
 
-function ReceiptLink({ captureId }) {
-  const [urls, setUrls]       = useState(null)
-  const [loading, setLoading] = useState(false)
-
-  async function load() {
-    if (urls || loading) return
-    setLoading(true)
-    const { data } = await supabase.from('expense_captures').select('receipt_storage_path, payment_storage_path').eq('id', captureId).single()
-    if (!data) { setLoading(false); return }
-    const links = {}
-    if (data.receipt_storage_path) {
-      const { data: s } = await supabase.storage.from('expense-documents').createSignedUrl(data.receipt_storage_path, 3600)
-      if (s?.signedUrl) links.receipt = s.signedUrl
-    }
-    if (data.payment_storage_path) {
-      const { data: s } = await supabase.storage.from('expense-documents').createSignedUrl(data.payment_storage_path, 3600)
-      if (s?.signedUrl) links.payment = s.signedUrl
-    }
-    setUrls(links)
-    setLoading(false)
-  }
-
-  if (!urls && !loading) {
-    return (
-      <button onClick={load} style={{ marginTop: '8px', height: '26px', padding: '0 10px', borderRadius: 'var(--radius-xs)', border: '1px solid var(--taupe-200)', background: 'var(--surface-card)', color: 'var(--ink)', fontSize: '11px', cursor: 'pointer' }}>
-        View receipt documents
-      </button>
-    )
-  }
-  if (loading) return <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-muted)' }}>Loading…</div>
-  if (!urls?.receipt && !urls?.payment) return <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-muted)' }}>Receipt files not found</div>
-
-  return (
-    <div style={{ marginTop: '8px', display: 'flex', gap: '12px' }}>
-      {urls.receipt && (
-        <a href={urls.receipt} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', color: 'var(--action)', textDecoration: 'underline' }}>View Receipt</a>
-      )}
-      {urls.payment && (
-        <a href={urls.payment} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', color: 'var(--action)', textDecoration: 'underline' }}>View Payment Proof</a>
-      )}
-    </div>
-  )
-}

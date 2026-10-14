@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import AdminStats from './AdminStats'
 import AdminAllReports from './AdminAllReports'
+import { payoutAmount } from '../../lib/advanceBalance'
 import AdminReportDetail from './AdminReportDetail'
 import ReimbursementBatch from './ReimbursementBatch'
 import FinancePRsView from './FinancePRsView'
@@ -61,7 +62,7 @@ export default function FinanceDashboard({ user, showToast, onBack, initialTab }
     setPendingLoading(true)
     const { data } = await supabase
       .from('expense_reports')
-      .select(`id, report_reference, total_amount, expense_count, status, brand, approved_at, employee_email,
+      .select(`id, report_reference, total_amount, net_payable, advance_applied, expense_count, status, brand, approved_at, employee_email,
         report_expenses (expense_details (id, vendor, category, amount, reimbursement_type))`)
       .eq('status', 'approved')
       .order('approved_at', { ascending: true })
@@ -246,7 +247,7 @@ export default function FinanceDashboard({ user, showToast, onBack, initialTab }
     )
   }
 
-  const pendingTotal = pendingReports.reduce((s, r) => s + (r.total_amount || 0), 0)
+  const pendingTotal = pendingReports.reduce((s, r) => s + payoutAmount(r), 0)
 
   return (
     <div style={{ background: 'var(--taupe-50)', minHeight: '100vh' }}>
@@ -346,7 +347,7 @@ export default function FinanceDashboard({ user, showToast, onBack, initialTab }
         {tab === 'overview' && <AdminStats />}
 
         {tab === 'reports' && (
-          <AdminAllReports onViewDetail={id => setDetailReportId(id)} />
+          <AdminAllReports user={user} onViewDetail={id => setDetailReportId(id)} />
         )}
 
         {tab === 'pending' && (

@@ -1,6 +1,7 @@
 import { sendReportEmail } from './reportEmail'
 import { FL_THRESHOLD } from './approvalThreshold'
 import { logActivity } from './activityLog'
+import { autoAssignReport } from './assignment'
 import { getApproverEmailsForLevel, getEmailsByRole } from './auth'
 
 // PR approval chain — fixed for every PR regardless of amount:
@@ -188,6 +189,8 @@ export async function processApproval(
         .update({ status: 'under_review', reviewed_by: approverLevel, reviewed_at: now })
         .eq('id', reportId)
       logActivity({ entityType: 'report', entityId: reportId, entityRef: report?.report_reference, action: 'status_change', fromValue: report?.status, toValue: 'under_review', actor, onBehalfOf })
+      // The Accounts team's step: give the report an owner straight away.
+      if (nextApproval.required_role === 'finance') autoAssignReport(reportId)
 
       sendReportEmail({
         type: 'advanced', recipientEmail: report?.employee_email, reportReference: report?.report_reference,
@@ -203,6 +206,7 @@ export async function processApproval(
         .update({ status: 'approved', approved_at: now, reviewed_by: approverLevel, reviewed_at: now })
         .eq('id', reportId)
       logActivity({ entityType: 'report', entityId: reportId, entityRef: report?.report_reference, action: 'status_change', fromValue: 'under_review', toValue: 'approved', actor, onBehalfOf })
+      autoAssignReport(reportId)
 
       sendReportEmail({
         type: 'advanced', recipientEmail: report?.employee_email, reportReference: report?.report_reference,

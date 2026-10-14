@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { payoutAmount } from '../../lib/advanceBalance'
 import { supabase } from '../../lib/supabase'
 import { sendReportEmail } from '../../lib/reportEmail'
 
@@ -25,7 +26,7 @@ export default function ReimbursementBatch({ reports, onReimbursed }) {
   }
 
   const selectedReports = reports.filter(r => selected.has(r.id))
-  const totalAmount = selectedReports.reduce((s, r) => s + (r.total_amount || 0), 0)
+  const totalAmount = selectedReports.reduce((s, r) => s + payoutAmount(r), 0)
 
   async function handleConfirmReimburse() {
     setSubmitting(true)
@@ -51,7 +52,7 @@ export default function ReimbursementBatch({ reports, onReimbursed }) {
 
     selectedReports.forEach(r => sendReportEmail({
       type: 'finalized', recipientEmail: r.employee_email, reportReference: r.report_reference,
-      amount: r.total_amount, currentStep: 4,
+      amount: payoutAmount(r), currentStep: 4,
     }))
 
     setShowModal(false)
@@ -161,7 +162,7 @@ export default function ReimbursementBatch({ reports, onReimbursed }) {
                     {report.expense_count || 0}
                   </td>
                   <td style={{ padding: '12px 14px', fontSize: '13px', fontWeight: 700, color: 'var(--ink)', textAlign: 'right', fontFamily: 'monospace' }}>
-                    {Number(report.total_amount || 0).toLocaleString('en-IN')}
+                    {payoutAmount(report).toLocaleString('en-IN')}
                   </td>
                   <td style={{ padding: '12px 14px', fontSize: '12px', color: 'var(--text-muted)' }}>
                     {report.approved_at ? new Date(report.approved_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
