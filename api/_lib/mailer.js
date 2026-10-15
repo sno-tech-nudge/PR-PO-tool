@@ -1,4 +1,4 @@
-// Shared email-sending helpers — used by api/send-email.js (feedback, PR,
+// Shared email-sending helpers — used by api/send-email.js (PR,
 // report, and vendor lifecycle emails) so all four share one brand header,
 // one status-visual renderer, and one Resend call instead of each
 // hand-rolling its own.

@@ -1,5 +1,5 @@
 // Vercel serverless function — every outbound lifecycle/notification email
-// (feedback, PR, expense report, vendor) in one route, dispatched by
+// (PR, expense report, vendor, advance) in one route, dispatched by
 // `entity`. Previously four separate api/send-*-email.js files; merged into
 // one because this account's Vercel plan caps Serverless Functions per
 // deployment and this project was already at that cap before the
@@ -8,61 +8,8 @@
 // unchanged — only the URL and the added `entity` field differ from before.
 import { escapeHtml, renderBrandHeader, renderStatusBadge, renderTimelineStrip, wrapEmailShell, sendViaResend } from './_lib/mailer.js'
 
-const FEEDBACK_RECIPIENT = 'gaurang.wadhawan@thenudge.org'
-const CATEGORY_LABEL = { bug: 'Bug', feature: 'Feature idea', general: 'General feedback' }
-
 function fmtAmt(n) {
   return `₹${Number(n || 0).toLocaleString('en-IN')}`
-}
-
-// --- feedback -----------------------------------------------------------
-
-function buildFeedbackEmail({ category, title, description, severity, moduleName, pageUrl, browserInfo, submitterName, submitterEmail, refId }) {
-  const categoryLabel = CATEGORY_LABEL[category] || category
-  const subject = `[Feedback${severity ? ` · ${severity}` : ''}] ${title}`
-
-  const rows = [
-    ['Category', categoryLabel],
-    ['Severity', severity],
-    ['Module', moduleName],
-    ['Page', pageUrl],
-    ['Browser / OS', browserInfo],
-    ['Submitted by', submitterName ? `${submitterName} (${submitterEmail || 'no email'})` : submitterEmail],
-    ['Reference', refId],
-  ].filter(([, v]) => v)
-
-  const rowsHtml = rows.map(([label, value]) => `
-    <tr>
-      <td style="padding:4px 12px 4px 0;font-size:12px;color:#6B7280;white-space:nowrap;vertical-align:top;">${escapeHtml(label)}</td>
-      <td style="padding:4px 0;font-size:13px;color:#1A1F36;">${escapeHtml(value)}</td>
-    </tr>`).join('')
-
-  const html = wrapEmailShell({
-    headerHtml: renderBrandHeader(),
-    statusHtml: '',
-    bodyHtml: `
-      <div style="font-size:17px;font-weight:700;color:#1A1F36;margin-bottom:4px;">New feedback: ${escapeHtml(categoryLabel)}</div>
-      <div style="font-size:15px;font-weight:600;color:#374151;margin-bottom:14px;">${escapeHtml(title)}</div>
-      <div style="font-size:14px;color:#1A1F36;background:#F8F9FA;border:1px solid #E3E8EF;border-radius:4px;padding:12px 14px;white-space:pre-wrap;margin-bottom:16px;">${escapeHtml(description)}</div>
-      <table cellpadding="0" cellspacing="0">${rowsHtml}</table>`,
-  })
-
-  const text = `New feedback: ${categoryLabel}\n\n${title}\n\n${description}\n\n` +
-    rows.map(([label, value]) => `${label}: ${value}`).join('\n')
-
-  return { subject, html, text }
-}
-
-async function handleFeedback(req, res, apiKey) {
-  const { category, title, description, severity, moduleName, pageUrl, browserInfo, submitterName, submitterEmail, refId } = req.body || {}
-  if (!category || !title || !description) {
-    res.status(400).json({ error: 'category, title and description are required' })
-    return
-  }
-  const { subject, html, text } = buildFeedbackEmail({ category, title, description, severity, moduleName, pageUrl, browserInfo, submitterName, submitterEmail, refId })
-  const fromAddress = process.env.RESEND_FROM_EMAIL || 'The Nudge Institute <onboarding@resend.dev>'
-  const result = await sendViaResend({ apiKey, from: fromAddress, to: [FEEDBACK_RECIPIENT], subject, html, text })
-  res.status(200).json(result)
 }
 
 // --- vendor ---------------------------------------------------------------
@@ -368,7 +315,7 @@ async function handleAdvance(req, res, apiKey) {
 
 // --- dispatch ---------------------------------------------------------------
 
-const HANDLERS = { feedback: handleFeedback, vendor: handleVendor, pr: handlePr, report: handleReport, advance: handleAdvance }
+const HANDLERS = { vendor: handleVendor, pr: handlePr, report: handleReport, advance: handleAdvance }
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -386,7 +333,7 @@ export default async function handler(req, res) {
   const { entity } = req.body || {}
   const run = HANDLERS[entity]
   if (!run) {
-    res.status(400).json({ error: 'entity must be one of feedback, vendor, pr, report, advance' })
+    res.status(400).json({ error: 'entity must be one of vendor, pr, report, advance' })
     return
   }
 

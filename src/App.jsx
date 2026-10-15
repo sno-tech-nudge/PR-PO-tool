@@ -7,7 +7,6 @@ import { useIsMobile } from './hooks/useIsMobile'
 import LoginScreen from './components/auth/LoginScreen'
 import OfflineBanner from './components/capture/OfflineBanner'
 import NewExpense from './components/capture/NewExpense'
-import FeedbackWidget from './components/shared/FeedbackWidget'
 import FirstTimeWalkthrough from './components/shared/FirstTimeWalkthrough'
 import SidebarUserMenu from './components/shared/SidebarUserMenu'
 import { hasSeenWalkthrough } from './lib/walkthrough'
@@ -502,7 +501,6 @@ export default function App() {
   ]
 
   const activeNav = SCREEN_PARENT[appScreen] || appScreen
-  const moduleName = navItems.find(n => n.key === activeNav)?.label || appScreen
 
   function handleNavClick(key) {
     if (key === 'vendors') openVendorList()
@@ -1181,7 +1179,6 @@ export default function App() {
         )}
       </div>
 
-      <FeedbackWidget user={user} moduleName={moduleName} />
     </div>
   )
 }
