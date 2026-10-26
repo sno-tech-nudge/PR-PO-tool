@@ -35,7 +35,6 @@ const hi = {
   'Pending Tasks': 'लंबित कार्य',
   'Recent Activity': 'हाल की गतिविधि',
   'Recent Reports': 'हाल की रिपोर्टें',
-  'Policy Reminders': 'नीति अनुस्मारक',
   'Your Activity': 'आपकी गतिविधि',
   'Raised': 'प्रस्तुत',
   'In Pipeline': 'प्रक्रिया में',
@@ -51,10 +50,6 @@ const hi = {
   'Rejected': 'अस्वीकृत',
   'Not yet submitted': 'अभी जमा नहीं किया',
   'Purchase Request draft': 'खरीद अनुरोध ड्राफ़्ट',
-  'Submit receipts within 30 days of purchase': 'खरीद के 30 दिनों के भीतर रसीदें जमा करें',
-  'Invoice required for expenses above ₹500': '₹500 से अधिक के खर्च के लिए चालान आवश्यक है',
-  'Meals capped at ₹750 per person per day': 'भोजन प्रति व्यक्ति प्रति दिन ₹750 तक सीमित',
-  'Hotel max ₹3,250/night (non-metro), ₹4,000 (metro)': 'होटल अधिकतम ₹3,250/रात (गैर-मेट्रो), ₹4,000 (मेट्रो)',
 
   // ── Walkthrough ──
   'Skip tour': 'टूर छोड़ें',

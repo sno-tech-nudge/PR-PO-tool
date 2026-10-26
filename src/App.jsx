@@ -874,6 +874,7 @@ export default function App() {
               onViewPR={(id) => { setAppScreen('pr-list'); openPRDetail(id) }}
               onViewVendor={openVendorSmart}
               onOpenReportApproval={(id) => { setApprovalReportId(id); setAppScreen('approval-view') }}
+              onOpenMyExpenses={() => setAppScreen('my-expenses')}
             />
           </div>
         )}

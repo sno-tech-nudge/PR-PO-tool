@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { canAccessApprovals, canAccessFinance, isObserver } from '../../lib/auth'
 import { STATUS_STEP } from '../../lib/approvalEngine'
 import { avgTAT } from '../../lib/tat'
+import NeedsYouStrip from './NeedsYouStrip'
 import StatusTimeline from './StatusTimeline'
 
 // Statuses that mean "still moving through the pipeline" — not a draft,
@@ -10,13 +11,6 @@ import StatusTimeline from './StatusTimeline'
 const PR_PIPELINE_STATUSES = ['submitted', 'approved']
 const REPORT_PIPELINE_STATUSES = ['submitted', 'under_review', 'approved', 'processing']
 const APPROVER_QUEUE_ROLES = ['fl', 'finance', 'coo']
-
-const POLICY_REMINDERS = [
-  { text: 'Submit receipts within 30 days of purchase' },
-  { text: 'Invoice required for expenses above ₹500' },
-  { text: 'Meals capped at ₹750 per person per day' },
-  { text: 'Hotel max ₹3,250/night (non-metro), ₹4,000 (metro)' },
-]
 
 const STATUS_BADGE = {
   draft:        { label: 'Draft',      color: 'var(--text-muted)', bg: 'var(--taupe-100)' },
@@ -66,7 +60,7 @@ export default function HomeScreenAddons({
   user, onViewReport,
   onResumePRDraft, onResumeVendorDraft,
   onOpenExpenseApprovals, onOpenPRApprovals, onOpenFinance,
-  onViewPR, onViewVendor, onOpenReportApproval,
+  onViewPR, onViewVendor, onOpenReportApproval, onOpenMyExpenses,
 }) {
   const [stats, setStats]                 = useState(null)
   const [recentReports, setRecentReports] = useState([])
@@ -461,24 +455,6 @@ export default function HomeScreenAddons({
         </div>
       )}
 
-      {/* Policy reminders */}
-      <div>
-        <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
-          Policy Reminders
-        </div>
-        <div style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
-          {POLICY_REMINDERS.map((r, i) => (
-            <div key={i} style={{
-              padding: '11px 14px',
-              borderBottom: i < POLICY_REMINDERS.length - 1 ? '1px solid var(--taupe-100)' : 'none',
-              background: 'var(--taupe-50)',
-            }}>
-              <span style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '18px' }}>{r.text}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Personal snapshot — a small always-visible summary for employees
           and FL specifically; Finance/Admin already get the full version
           via Finance Dashboard > Analytics > Personal Analytics. */}
@@ -534,6 +510,12 @@ export default function HomeScreenAddons({
           </div>
         </div>
       )}
+
+      {/* The few things only this person can unblock, at the very end of Home */}
+      <NeedsYouStrip
+        user={user} onViewReport={onViewReport} onOpenMyExpenses={onOpenMyExpenses}
+        onResumePRDraft={onResumePRDraft} onResumeVendorDraft={onResumeVendorDraft}
+      />
     </div>
   )
 }
