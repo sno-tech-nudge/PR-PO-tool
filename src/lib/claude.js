@@ -188,7 +188,7 @@ POLICY RULES:
   * ExpenseType=Team → divide amount by attendee count. If attendee count is missing, flag as "missing headcount — cannot verify per-person amount, potential violation".
   * Example: INR 882 Personal meal → 882 > 750 → flag as violation.
   * Example: INR 882 Team meal, 2 people → 441/person → pass.
-- Submission window: expense date vs report submission date. If gap > 7 days, flag as late submission. Calculate the actual gap in days and state it explicitly.
+- Submission window: expense date vs report submission date. If gap > 30 days, flag as late submission. Calculate the actual gap in days and state it explicitly.
 - Invoices required for all amounts above INR 500.
 - GSTIN preferred for expenses above INR 1000 (for input tax credit).
 - Subgranting or donations must have prior approval documented.

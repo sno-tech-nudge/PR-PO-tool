@@ -46,9 +46,9 @@ export function checkSubmissionTiming(expense) {
     const expenseDate = parseExpenseDate(expense.date)
     if (!expenseDate) return passed('submission_timing')
     const diffDays = Math.floor((Date.now() - expenseDate.getTime()) / 86400000)
-    if (diffDays > 7) {
+    if (diffDays > 30) {
       return failed('submission_timing',
-        `This expense is from ${diffDays} days ago. Claims must be submitted within 7 days of the expense date. Exceptions need FL and COO approval.`)
+        `This expense is from ${diffDays} days ago. Claims must be submitted within 30 days of the expense date. Exceptions need FL and COO approval.`)
     }
     return passed('submission_timing')
   } catch { return passed('submission_timing') }

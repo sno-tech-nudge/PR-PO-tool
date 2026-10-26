@@ -12,7 +12,7 @@ const REPORT_PIPELINE_STATUSES = ['submitted', 'under_review', 'approved', 'proc
 const APPROVER_QUEUE_ROLES = ['fl', 'finance', 'coo']
 
 const POLICY_REMINDERS = [
-  { text: 'Submit receipts within 7 days of purchase' },
+  { text: 'Submit receipts within 30 days of purchase' },
   { text: 'Invoice required for expenses above ₹500' },
   { text: 'Meals capped at ₹750 per person per day' },
   { text: 'Hotel max ₹3,250/night (non-metro), ₹4,000 (metro)' },
