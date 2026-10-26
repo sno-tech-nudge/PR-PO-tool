@@ -512,10 +512,7 @@ export default function HomeScreenAddons({
       )}
 
       {/* The few things only this person can unblock, at the very end of Home */}
-      <NeedsYouStrip
-        user={user} onViewReport={onViewReport} onOpenMyExpenses={onOpenMyExpenses}
-        onResumePRDraft={onResumePRDraft} onResumeVendorDraft={onResumeVendorDraft}
-      />
+      <NeedsYouStrip user={user} onViewReport={onViewReport} onOpenMyExpenses={onOpenMyExpenses} />
     </div>
   )
 }
