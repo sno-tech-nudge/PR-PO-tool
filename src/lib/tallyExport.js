@@ -1,3 +1,4 @@
+import { logSystem } from './systemLog'
 // ─── Default category → Tally ledger name mapping ────────────────────────────
 // Keyed off the real 21-item category list (src/components/layer2/ExpenseDetails.jsx).
 // Ledger names are provisional pending Finance's actual chart of accounts — same
@@ -186,6 +187,11 @@ export function generateTallyCSV(reports, ledgerMap, bankLedger) {
 
 // ─── Download helpers ─────────────────────────────────────────────────────────
 export function downloadFile(content, filename, mimeType) {
+  // Every export that leaves through here is recorded like the other downloads.
+  logSystem({
+    category: 'download', action: /csv/i.test(mimeType) || /\.csv$/i.test(filename) ? 'csv_download' : 'file_download',
+    target: filename, detail: `${Math.max(0, String(content).split('\n').length - 1)} lines`,
+  })
   const blob = new Blob([content], { type: mimeType })
   const url = URL.createObjectURL(blob)
   const a = Object.assign(document.createElement('a'), { href: url, download: filename })

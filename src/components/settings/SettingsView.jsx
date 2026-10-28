@@ -66,6 +66,7 @@ export default function SettingsView({ user }) {
       name, email, role: form.role,
       can_approve_vendors: form.role === 'finance' ? form.can_approve_vendors : false,
       function: form.function || null,
+      changed_by: user.email, changed_at: new Date().toISOString(),
     })
     setSaving(false)
     if (err) { setError(err.code === '23505' ? 'That email is already a team member.' : err.message); return }
@@ -78,20 +79,22 @@ export default function SettingsView({ user }) {
     if (member.email.toLowerCase() === user.email.toLowerCase()) return
     if (!window.confirm(`Remove ${member.name} (${member.email})? They will lose access immediately.`)) return
     setRemovingId(member.id)
+    // Stamp who is removing them first, so the System Log can name the person.
+    await supabase.from('team_members').update({ changed_by: user.email, changed_at: new Date().toISOString() }).eq('id', member.id)
     await supabase.from('team_members').delete().eq('id', member.id)
     setMembers(prev => prev.filter(m => m.id !== member.id))
     setRemovingId(null)
   }
 
   async function handleRoleChange(member, role) {
-    const patch = { role, can_approve_vendors: role === 'finance' ? member.can_approve_vendors : false }
+    const patch = { role, can_approve_vendors: role === 'finance' ? member.can_approve_vendors : false, changed_by: user.email, changed_at: new Date().toISOString() }
     setMembers(prev => prev.map(m => m.id === member.id ? { ...m, ...patch } : m))
     await supabase.from('team_members').update(patch).eq('id', member.id)
   }
 
   async function handleApproveToggle(member, checked) {
     setMembers(prev => prev.map(m => m.id === member.id ? { ...m, can_approve_vendors: checked } : m))
-    await supabase.from('team_members').update({ can_approve_vendors: checked }).eq('id', member.id)
+    await supabase.from('team_members').update({ can_approve_vendors: checked, changed_by: user.email, changed_at: new Date().toISOString() }).eq('id', member.id)
   }
 
   // Which Function this person belongs to — drives per-function FL approval
@@ -100,7 +103,7 @@ export default function SettingsView({ user }) {
   // back to today's any-FL-approves behavior when left unassigned.
   async function handleFunctionChange(member, fn) {
     setMembers(prev => prev.map(m => m.id === member.id ? { ...m, function: fn || null } : m))
-    await supabase.from('team_members').update({ function: fn || null }).eq('id', member.id)
+    await supabase.from('team_members').update({ function: fn || null, changed_by: user.email, changed_at: new Date().toISOString() }).eq('id', member.id)
   }
 
   // Only bumps a marker (analytics_reset_at) that Personal Analytics filters

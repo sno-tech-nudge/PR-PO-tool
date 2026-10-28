@@ -1,3 +1,5 @@
+import { logSystem } from './systemLog'
+
 function escapeCSV(val) {
   const s = String(val ?? '')
   return /[,"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
@@ -17,6 +19,8 @@ export function downloadCSV(rows, filename) {
   a.click()
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
+  // Who downloaded what, and how much of it.
+  logSystem({ category: 'download', action: 'csv_download', target: filename, detail: `${rows.length} row${rows.length === 1 ? '' : 's'}, ${headers.length} columns`, meta: { rows: rows.length } })
 }
 
 function fmtDate(d) {

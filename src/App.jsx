@@ -57,6 +57,9 @@ import AdvanceApprovalView from './components/advance/AdvanceApprovalView'
 // Audit module
 import AuditTrail from './components/audit/AuditTrail'
 import ActivityLog from './components/audit/ActivityLog'
+import SystemLogs from './components/audit/SystemLogs'
+import { MaintenanceBanner, MaintenancePage } from './components/shared/MaintenanceNotice'
+import { setSystemActor, recordDeployment, getMaintenance } from './lib/systemLog'
 
 const SIDEBAR_W = 220
 const SIDEBAR_RAIL_W = 68
@@ -75,6 +78,7 @@ const NAV_ICON_PATHS = {
   'po-list': ['M20.5 7.8 12 3 3.5 7.8v8.4L12 21l8.5-4.8z', 'm3.5 7.8 8.5 4.8 8.5-4.8', 'M12 12.6V21'],
   vendors: ['M4 20.5h16', 'M6 20.5V6.5l6-3 6 3v14', 'M9.5 10h1', 'M13.5 10h1', 'M9.5 14h1', 'M13.5 14h1'],
   'activity-log': ['M3 12h4l2.5-7 5 14 2.5-7H21'],
+  'system-logs': ['M5 4.5h14v5H5z', 'M5 14.5h14v5H5z', 'M8 7h.01', 'M8 17h.01', 'M12 7h4', 'M12 17h4'],
   settings: ['M4 7h9', 'M17 7h3', 'M4 12h3', 'M11 12h9', 'M4 17h11', 'M19 17h1', 'M15 7m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0', 'M9 12m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0', 'M17 17m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0'],
   vouch: ['M12 3 19 6v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z', 'm9 12 2 2 4-4'],
   'new-expense': ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', 'M12 8v8', 'M8 12h8'],
@@ -122,6 +126,24 @@ const SCREEN_PARENT = {
 export default function App() {
   const [user, setUser] = useState(null)
   const [sessionLoading, setSessionLoading] = useState(true)
+
+  // System Logs: whoever is signed in is who the log credits, the first open of a
+  // new version records that deployment, and maintenance mode is polled so the
+  // notice (or the hold-back page) appears without anyone refreshing.
+  const [maintenance, setMaintenance] = useState({ on: false })
+  useEffect(() => {
+    setSystemActor(user)
+    if (user) recordDeployment()
+  }, [user])
+  useEffect(() => {
+    if (!user) return
+    let cancelled = false
+    const check = () => getMaintenance().then(m => { if (!cancelled) setMaintenance(m) }).catch(() => {})
+    check()
+    const t = setInterval(check, 60000)
+    window.addEventListener('nudge-maintenance-change', check)
+    return () => { cancelled = true; clearInterval(t); window.removeEventListener('nudge-maintenance-change', check) }
+  }, [user])
   // The sidebar is fixed/always-visible on desktop; below the mobile
   // breakpoint it becomes a slide-out drawer instead, closed by default so
   // it doesn't eat most of a phone-width screen.
@@ -466,6 +488,9 @@ export default function App() {
   if (sessionLoading) return null
   if (!user) return <LoginScreen onLogin={handleLogin} />
 
+  // Maintenance that holds everyone but admins back.
+  if (maintenance.on && maintenance.block && user.role !== 'admin') return <MaintenancePage maintenance={maintenance} onSignOut={handleSignOut} />
+
   const role = user.role
   // Roles that approve PRs at some step but never raise their own (fl,
   // pr_approver, finance) get the approver-facing pending/reviewed view
@@ -496,7 +521,7 @@ export default function App() {
     // profile there; everyone else just sees their own read-only profile.
     // Admin-only system-wide timeline — separate from the per-PO 'Audit Trail'
     // document chain, which stays reachable only from a PO's own page.
-    ...(role === 'admin' ? [{ key: 'activity-log', label: 'Activity Log', icon: '☷' }] : []),
+    ...(role === 'admin' ? [{ key: 'activity-log', label: 'Activity Log', icon: '☷' }, { key: 'system-logs', label: 'System Logs', icon: '▤' }] : []),
     { key: 'settings', label: 'Settings', icon: '⚙' },
   ]
 
@@ -710,6 +735,7 @@ export default function App() {
             <img src={wordmarkLogo} alt="The/Nudge" style={{ height: '16px', width: 'auto', display: 'block' }} />
           </div>
         )}
+        {maintenance.on && <MaintenanceBanner maintenance={maintenance} />}
         <OfflineBanner />
 
         {toast && (
@@ -1028,6 +1054,10 @@ export default function App() {
 
         {appScreen === 'settings' && (
           <SettingsView user={user} />
+        )}
+
+        {appScreen === 'system-logs' && user.role === 'admin' && (
+          <SystemLogs user={user} />
         )}
 
         {appScreen === 'activity-log' && (
