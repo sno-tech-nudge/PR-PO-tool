@@ -149,6 +149,13 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
     ? 'Invalid GSTIN (15 characters)'
     : null
 
+  // Everything optional lives under one fold so the form stays short; it opens on
+  // its own if a problem is inside it, and the fold says how many are filled in.
+  const [moreOpen, setMoreOpen] = useState(false)
+  const filledOptional = [program, donorName, natureOfExpense, poNumber, referenceNumber, subCategory, poPdfLink, paidTo, vrPdfLink, invoiceNumber, gstin]
+    .filter(v => v !== null && v !== undefined && String(v).trim() !== '').length
+  const moreIsOpen = moreOpen || !!gstinFormatError
+
   const itemTotal = itemLines.reduce((sum, l) => sum + (parseFloat(l.amount) || 0), 0)
   const effectiveAmount = itemized ? itemTotal : (parseFloat(amount) || 0)
   const actualAttendeeCount = attendeeCount === '7+' ? (parseInt(customCount) || 7) : attendeeCount
@@ -897,7 +904,30 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
       </div>
       )}
 
-      {/* ══ Optional ══ */}
+      {/* ══ Optional ══ — folded away so the form stays short */}
+      <div style={{ ...fieldWrap, marginTop: '4px' }}>
+        <div
+          role="button"
+          onClick={() => setMoreOpen(o => !o)}
+          aria-expanded={moreIsOpen}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', cursor: 'pointer',
+            padding: '12px 14px', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)',
+            background: moreIsOpen ? 'var(--taupe-50)' : 'var(--surface-card)', userSelect: 'none',
+          }}
+        >
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>More details (optional)</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+              Programme, donor, invoice no., GSTIN, PO link and more{filledOptional > 0 ? ` · ${filledOptional} filled in` : ''}
+            </div>
+          </div>
+          <span style={{ fontSize: '14px', color: 'var(--text-muted)', transform: moreIsOpen ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>▾</span>
+        </div>
+      </div>
+
+      {moreIsOpen && (
+      <div>
 
       {/* Report — optional link to an existing report by this employee */}
       <div style={fieldWrap}>
@@ -1070,6 +1100,8 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
         />
         {gstinFormatError && <div style={errorText}>{gstinFormatError}</div>}
       </div>
+      </div>
+      )}
 
       {error && (
         <div style={{ fontSize: '13px', color: 'var(--clay-text)', marginBottom: '8px' }}>{error}</div>
