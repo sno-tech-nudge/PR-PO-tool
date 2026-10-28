@@ -904,6 +904,23 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
       </div>
       )}
 
+      {/* Claim reimbursement — only for out-of-pocket spend */}
+      {!isCompanyCard && !isAdvanceMode && (
+      <div style={{ ...fieldWrap, display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <input
+          type="checkbox"
+          id="claim-reimbursement"
+          checked={reimbursable}
+          onChange={e => setReimbursable(e.target.checked)}
+          style={{ width: '16px', height: '16px' }}
+        />
+        <label htmlFor="claim-reimbursement" style={{ fontSize: '13px', color: 'var(--text)', cursor: 'pointer' }}>
+          Claim reimbursement
+        </label>
+        <InfoTip text="Check this if you paid out of your own pocket and need this amount paid back to you. Leave it unchecked if the company already paid." />
+      </div>
+      )}
+
       {/* ══ Optional ══ — folded away so the form stays short */}
       <div style={{ ...fieldWrap, marginTop: '4px' }}>
         <div
@@ -943,23 +960,6 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
           ))}
         </select>
       </div>
-
-      {/* Claim reimbursement — only for out-of-pocket spend */}
-      {!isCompanyCard && !isAdvanceMode && (
-      <div style={{ ...fieldWrap, display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <input
-          type="checkbox"
-          id="claim-reimbursement"
-          checked={reimbursable}
-          onChange={e => setReimbursable(e.target.checked)}
-          style={{ width: '16px', height: '16px' }}
-        />
-        <label htmlFor="claim-reimbursement" style={{ fontSize: '13px', color: 'var(--text)', cursor: 'pointer' }}>
-          Claim reimbursement
-        </label>
-        <InfoTip text="Check this if you paid out of your own pocket and need this amount paid back to you. Leave it unchecked if the company already paid." />
-      </div>
-      )}
 
       {programs.length > 0 && (
         <div style={fieldWrap}>
