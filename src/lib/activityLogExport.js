@@ -10,6 +10,7 @@ const ACTION_LABELS = {
   vouch_query: 'Asked employee',
   vouch_reply: 'Employee replied',
   vouch_reopen: 'Took back vouch',
+  draft_deleted: 'Draft deleted',
   vouch_deduct: 'Deducted from line',
   vouch_deduction_removed: 'Removed deduction',
   tds_set: 'TDS decided',

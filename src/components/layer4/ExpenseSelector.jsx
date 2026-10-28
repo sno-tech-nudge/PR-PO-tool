@@ -9,6 +9,7 @@ import GuidedTour, { TourButton } from '../shared/GuidedTour'
 import { REPORT_TOUR } from '../../lib/tours'
 import RejectionBanner from './RejectionBanner'
 import DeleteExpenseButton from '../shared/DeleteExpenseButton'
+import { deleteDraftReport } from '../../lib/reportDelete'
 
 export default function ExpenseSelector({ expenses: initialExpenses, results: initialResults, user, reportMeta, onPreview, onBack, standalone, onRaiseReport }) {
   const isMobile = useIsMobile()
@@ -16,6 +17,9 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
   const [loading, setLoading] = useState(!initialExpenses || initialExpenses.length === 0)
   const [selected, setSelected] = useState(new Set())
   const [grouped, setGrouped] = useState(false)
+  const [confirmingDraft, setConfirmingDraft] = useState(false)
+  const [deletingDraft, setDeletingDraft] = useState(false)
+  const [draftError, setDraftError] = useState(null)
   const [editingExpense, setEditingExpense] = useState(null)
   // Closed until someone clicks "+ Add expense" — an always-open drop box in
   // the middle of the page made people unsure whether they had to use it.
@@ -336,6 +340,15 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
 
   const groupedData = grouped ? getGrouped() : null
 
+  // A small way out for a draft nobody wants any more. The expenses stay saved.
+  const isDraftReport = !!reportMeta?.id && (reportMeta.status || 'draft') === 'draft'
+  async function handleDeleteDraft() {
+    setDeletingDraft(true); setDraftError(null)
+    const res = await deleteDraftReport(reportMeta, user)
+    if (!res.ok) { setDraftError(res.reason); setDeletingDraft(false); return }
+    onBack?.()
+  }
+
   return (
     <div style={{ maxWidth: '480px', margin: '0 auto', width: '100%', paddingBottom: '80px' }}>
       {onBack && (
@@ -363,7 +376,37 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
                   {formatDuration(reportMeta.duration_start, reportMeta.duration_end)}
                 </span>
               )}
+              {isDraftReport && !confirmingDraft && (
+                <span
+                  role="button" onClick={() => setConfirmingDraft(true)}
+                  style={{ fontSize: '11px', color: 'var(--clay-text)', cursor: 'pointer', textDecoration: 'underline', marginLeft: formatDuration(reportMeta.duration_start, reportMeta.duration_end) ? '12px' : 'auto' }}
+                >
+                  Delete draft
+                </span>
+              )}
             </div>
+            {isDraftReport && confirmingDraft && (
+              <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--taupe-200)', background: 'var(--clay-bg)' }}>
+                <div style={{ fontSize: '12px', color: 'var(--ink)', lineHeight: 1.5, marginBottom: '8px' }}>
+                  Delete draft <strong style={{ fontFamily: 'monospace' }}>{reportMeta.report_reference}</strong>? Your expenses and receipts are not deleted; they stay in My Expenses.
+                </div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <button
+                    type="button" disabled={deletingDraft} onClick={handleDeleteDraft}
+                    style={{ height: '30px', padding: '0 14px', border: 'none', borderRadius: 'var(--radius-sm)', background: 'var(--clay-text)', color: 'var(--surface-card)', fontSize: '12px', fontWeight: 600, cursor: deletingDraft ? 'default' : 'pointer' }}
+                  >
+                    {deletingDraft ? 'Deleting…' : 'Delete draft'}
+                  </button>
+                  <button
+                    type="button" disabled={deletingDraft} onClick={() => { setConfirmingDraft(false); setDraftError(null) }}
+                    style={{ height: '30px', padding: '0 12px', border: '1px solid var(--taupe-300)', borderRadius: 'var(--radius-sm)', background: 'var(--surface-card)', color: 'var(--ink)', fontSize: '12px', cursor: 'pointer' }}
+                  >
+                    Keep it
+                  </button>
+                  {draftError && <span style={{ fontSize: '12px', color: 'var(--clay-text)' }}>{draftError}</span>}
+                </div>
+              </div>
+            )}
             {reportMeta.business_purpose && (
               <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--taupe-200)', background: 'var(--taupe-50)' }}>
                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>Business Purpose</div>
