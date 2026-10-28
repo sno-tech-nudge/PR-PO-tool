@@ -56,8 +56,8 @@ import AdvanceApprovalView from './components/advance/AdvanceApprovalView'
 
 // Audit module
 import AuditTrail from './components/audit/AuditTrail'
-import ActivityLog from './components/audit/ActivityLog'
-import SystemLogs from './components/audit/SystemLogs'
+import LogsHub from './components/audit/LogsHub'
+import ViewTabs from './components/shared/ViewTabs'
 import { MaintenanceBanner, MaintenancePage } from './components/shared/MaintenanceNotice'
 import { setSystemActor, recordDeployment, getMaintenance } from './lib/systemLog'
 
@@ -77,8 +77,7 @@ const NAV_ICON_PATHS = {
   'pr-list': ['M7 4.5h10a1.5 1.5 0 0 1 1.5 1.5v13.5a1.5 1.5 0 0 1-1.5 1.5H7a1.5 1.5 0 0 1-1.5-1.5V6A1.5 1.5 0 0 1 7 4.5z', 'M9.5 3h5v3h-5z', 'M9 11.5h6', 'M9 15.5h4'],
   'po-list': ['M20.5 7.8 12 3 3.5 7.8v8.4L12 21l8.5-4.8z', 'm3.5 7.8 8.5 4.8 8.5-4.8', 'M12 12.6V21'],
   vendors: ['M4 20.5h16', 'M6 20.5V6.5l6-3 6 3v14', 'M9.5 10h1', 'M13.5 10h1', 'M9.5 14h1', 'M13.5 14h1'],
-  'activity-log': ['M3 12h4l2.5-7 5 14 2.5-7H21'],
-  'system-logs': ['M5 4.5h14v5H5z', 'M5 14.5h14v5H5z', 'M8 7h.01', 'M8 17h.01', 'M12 7h4', 'M12 17h4'],
+  logs: ['M3 12h4l2.5-7 5 14 2.5-7H21'],
   settings: ['M4 7h9', 'M17 7h3', 'M4 12h3', 'M11 12h9', 'M4 17h11', 'M19 17h1', 'M15 7m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0', 'M9 12m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0', 'M17 17m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0'],
   vouch: ['M12 3 19 6v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z', 'm9 12 2 2 4-4'],
   'new-expense': ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', 'M12 8v8', 'M8 12h8'],
@@ -117,6 +116,7 @@ const SCREEN_PARENT = {
   layer5: 'list',
   status: 'list',
   reimbursed: 'list',
+  history: 'approvals',
   'approval-view': 'approvals',
   'pr-approval-view': 'approvals',
   'advance-approval-view': 'approvals',
@@ -498,6 +498,10 @@ export default function App() {
   // list. Admin can both create and approve, so it keeps "My Requests".
   const isPRApproverOnly = canAccessApprovals(role) && !isObserver(role) && !canCreatePR(role)
 
+  // Finance and employees have no History view of their own (see the note below).
+  const hasApprovalsView = canAccessApprovals(role)
+  const hasHistoryView = role !== 'finance' && role !== 'employee'
+
   const navItems = [
     { key: 'list',    label: 'Home',              icon: '⊞' },
     // Finance doesn't submit expenses/reports themselves, so their own
@@ -505,13 +509,13 @@ export default function App() {
     // reporting is "coming soon" for employees during this testing round
     // (Vendor/PR/PO only), so History is hidden for them too rather than
     // linking to a feature that isn't open yet.
-    ...(role !== 'finance' && role !== 'employee' ? [{ key: 'history', label: 'History', icon: '☰' }] : []),
     // Finance doesn't file its own expense reports, so it stays excluded
     // here too — but this one is otherwise open to everyone, including
     // employees, since raising a report from what's already been saved is
     // core to what they'd use it for.
     ...(role !== 'finance' ? [{ key: 'my-expenses', label: 'My Expenses', icon: '🧾' }] : []),
-    ...(canAccessApprovals(role) ? [{ key: 'approvals', label: 'Approvals', icon: '✓' }] : []),
+    // Approvals and History share one tab. Roles with only one of them just get that one.
+    ...(hasApprovalsView || hasHistoryView ? [{ key: hasApprovalsView ? 'approvals' : 'history', label: hasApprovalsView && hasHistoryView ? 'Approvals & History' : hasApprovalsView ? 'Approvals' : 'History', icon: hasApprovalsView ? '✓' : '☰' }] : []),
     ...(canAccessFinance(role)   ? [{ key: 'finance',   label: 'Finance',   icon: '₹' }] : []),
     { key: 'advances', label: 'Advances', icon: '⏱' },
     { key: 'pr-list', label: 'Purchase Requests',  icon: '◫' },
@@ -521,11 +525,12 @@ export default function App() {
     // profile there; everyone else just sees their own read-only profile.
     // Admin-only system-wide timeline — separate from the per-PO 'Audit Trail'
     // document chain, which stays reachable only from a PO's own page.
-    ...(role === 'admin' ? [{ key: 'activity-log', label: 'Activity Log', icon: '☷' }, { key: 'system-logs', label: 'System Logs', icon: '▤' }] : []),
+    ...(role === 'admin' ? [{ key: 'logs', label: 'Logs', icon: '☷' }] : []),
     { key: 'settings', label: 'Settings', icon: '⚙' },
   ]
 
-  const activeNav = SCREEN_PARENT[appScreen] || appScreen
+  let activeNav = SCREEN_PARENT[appScreen] || appScreen
+  if (activeNav === 'approvals' && !hasApprovalsView) activeNav = 'history'
 
   function handleNavClick(key) {
     if (key === 'vendors') openVendorList()
@@ -969,6 +974,7 @@ export default function App() {
         {/* ── Approvals hub ── */}
         {appScreen === 'approvals' && (
           <div>
+            {hasHistoryView && <ViewTabs items={[['approvals', 'Approvals'], ['history', 'History']]} value="approvals" onChange={setAppScreen} />}
             <div style={{
               display: 'flex', padding: '0 24px',
               background: 'var(--surface-card)', borderBottom: '1px solid var(--taupe-200)',
@@ -1056,12 +1062,8 @@ export default function App() {
           <SettingsView user={user} />
         )}
 
-        {appScreen === 'system-logs' && user.role === 'admin' && (
-          <SystemLogs user={user} />
-        )}
-
-        {appScreen === 'activity-log' && (
-          <ActivityLog user={user} />
+        {appScreen === 'logs' && user.role === 'admin' && (
+          <LogsHub user={user} />
         )}
 
         {appScreen === 'reimbursed' && (
@@ -1073,11 +1075,14 @@ export default function App() {
         )}
 
         {appScreen === 'history' && (
-          <ExpenseHistoryScreen
-            user={user}
-            onViewReport={handleViewReport}
-            onBack={() => setAppScreen('list')}
-          />
+          <div>
+            {hasApprovalsView && <ViewTabs items={[['approvals', 'Approvals'], ['history', 'History']]} value="history" onChange={setAppScreen} />}
+            <ExpenseHistoryScreen
+              user={user}
+              onViewReport={handleViewReport}
+              onBack={() => setAppScreen('list')}
+            />
+          </div>
         )}
 
         {appScreen === 'my-expenses' && (
