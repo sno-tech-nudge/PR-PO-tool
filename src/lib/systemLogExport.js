@@ -9,6 +9,7 @@ export const categoryLabel = c => CATEGORY_LABEL[c] || c
 
 const ACTION_LABEL = {
   csv_download: 'Downloaded a CSV',
+  audit_pack_download: 'Downloaded an audit pack',
   file_download: 'Downloaded a file',
   member_added: 'Person added',
   member_removed: 'Person removed',
@@ -17,6 +18,8 @@ const ACTION_LABEL = {
   deployed: 'New version live',
   started: 'Maintenance started',
   ended: 'Maintenance ended',
+  scheduled: 'Maintenance scheduled',
+  cancelled: 'Maintenance cancelled',
 }
 export const actionLabel = a => ACTION_LABEL[a] || String(a || '')
 

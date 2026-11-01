@@ -59,7 +59,7 @@ import AuditTrail from './components/audit/AuditTrail'
 import LogsHub from './components/audit/LogsHub'
 import ViewTabs from './components/shared/ViewTabs'
 import { MaintenanceBanner, MaintenancePage } from './components/shared/MaintenanceNotice'
-import { setSystemActor, recordDeployment, getMaintenance } from './lib/systemLog'
+import { setSystemActor, recordDeployment, getMaintenance, maintenanceStatus, syncMaintenance, endMaintenance } from './lib/systemLog'
 
 const SIDEBAR_W = 220
 const SIDEBAR_RAIL_W = 68
@@ -131,6 +131,8 @@ export default function App() {
   // new version records that deployment, and maintenance mode is polled so the
   // notice (or the hold-back page) appears without anyone refreshing.
   const [maintenance, setMaintenance] = useState({ on: false })
+  const [nowTick, setNowTick] = useState(() => Date.now())
+  const [endingMaintenance, setEndingMaintenance] = useState(false)
   useEffect(() => {
     setSystemActor(user)
     if (user) recordDeployment()
@@ -138,11 +140,13 @@ export default function App() {
   useEffect(() => {
     if (!user) return
     let cancelled = false
-    const check = () => getMaintenance().then(m => { if (!cancelled) setMaintenance(m) }).catch(() => {})
+    const check = () => getMaintenance().then(m => { if (!cancelled) { setMaintenance(m); syncMaintenance(m) } }).catch(() => {})
     check()
     const t = setInterval(check, 60000)
+    // the clock moves on between checks, so a window that is due to start or end is noticed within the half minute
+    const clock = setInterval(() => setNowTick(Date.now()), 30000)
     window.addEventListener('nudge-maintenance-change', check)
-    return () => { cancelled = true; clearInterval(t); window.removeEventListener('nudge-maintenance-change', check) }
+    return () => { cancelled = true; clearInterval(t); clearInterval(clock); window.removeEventListener('nudge-maintenance-change', check) }
   }, [user])
   // The sidebar is fixed/always-visible on desktop; below the mobile
   // breakpoint it becomes a slide-out drawer instead, closed by default so
@@ -488,8 +492,16 @@ export default function App() {
   if (sessionLoading) return null
   if (!user) return <LoginScreen onLogin={handleLogin} />
 
-  // Maintenance that holds everyone but admins back.
-  if (maintenance.on && maintenance.block && user.role !== 'admin') return <MaintenancePage maintenance={maintenance} onSignOut={handleSignOut} />
+  // Maintenance: while a window is active everyone except admins sees a maintenance
+  // page and nothing else. Admins keep the whole app and can end it from anywhere.
+  // (On a developer's machine a saved test state can stand in for the real one, so
+  // this can be tried without holding back real people.)
+  let activeMaintenance = maintenance
+  if (import.meta.env.DEV) {
+    try { const t = localStorage.getItem('nudge_dev_maintenance'); if (t) activeMaintenance = JSON.parse(t) } catch { /* ignore */ }
+  }
+  const maintenanceNow = maintenanceStatus(activeMaintenance, nowTick)
+  if (maintenanceNow === 'active' && user.role !== 'admin') return <MaintenancePage maintenance={activeMaintenance} onSignOut={handleSignOut} />
 
   const role = user.role
   // Roles that approve PRs at some step but never raise their own (fl,
@@ -740,7 +752,14 @@ export default function App() {
             <img src={wordmarkLogo} alt="The/Nudge" style={{ height: '16px', width: 'auto', display: 'block' }} />
           </div>
         )}
-        {maintenance.on && <MaintenanceBanner maintenance={maintenance} />}
+        <MaintenanceBanner
+          maintenance={activeMaintenance} status={maintenanceNow} isAdmin={user.role === 'admin'} now={nowTick}
+          busy={endingMaintenance}
+          onEnd={async () => {
+            setEndingMaintenance(true)
+            try { await endMaintenance(); window.dispatchEvent(new Event('nudge-maintenance-change')) } finally { setEndingMaintenance(false) }
+          }}
+        />
         <OfflineBanner />
 
         {toast && (

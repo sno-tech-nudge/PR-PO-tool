@@ -1,10 +1,17 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { signIn } from '../../lib/auth'
+import { getMaintenance, maintenanceStatus } from '../../lib/systemLog'
 
 export default function LoginScreen({ onLogin }) {
   const [email, setEmail]   = useState('')
   const [error, setError]   = useState(null)
   const [loading, setLoading] = useState(false)
+  const [underMaintenance, setUnderMaintenance] = useState(false)
+
+  // If maintenance is on, say so before anyone signs in (admins still can).
+  useEffect(() => {
+    getMaintenance().then(m => setUnderMaintenance(maintenanceStatus(m) === 'active')).catch(() => {})
+  }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -18,7 +25,7 @@ export default function LoginScreen({ onLogin }) {
 
   return (
     <div style={{
-      minHeight: '100vh', background: 'var(--taupe-50)',
+      minHeight: '100vh', background: 'var(--surface-hot)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '24px',
     }}>
@@ -26,7 +33,7 @@ export default function LoginScreen({ onLogin }) {
         width: '100%', maxWidth: '380px',
         background: 'var(--surface-card)', border: '1px solid var(--taupe-200)',
         borderRadius: 'var(--radius-xl)', padding: '40px',
-        boxShadow: '0 1px 4px rgba(54, 32, 26,0.06)',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.35)',
       }}>
         {/* Brand */}
         <div style={{ marginBottom: '32px' }}>
@@ -37,6 +44,12 @@ export default function LoginScreen({ onLogin }) {
             Expense Tracker
           </div>
         </div>
+
+        {underMaintenance && (
+          <div role="status" style={{ fontSize: '12px', lineHeight: 1.5, color: 'var(--gold-text)', background: 'var(--gold-bg)', border: '1px solid var(--gold-border)', borderRadius: 'var(--radius-md)', padding: '10px 12px', marginBottom: '16px' }}>
+            The system is under maintenance right now. Only admins can use it until it is back.
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '20px' }}>

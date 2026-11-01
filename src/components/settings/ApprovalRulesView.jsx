@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { ROLES, getRoleLabel } from '../../lib/auth'
+import { logActivity } from '../../lib/activityLog'
+import { systemActor } from '../../lib/systemLog'
 
 // Roles that can actually sit in an approval chain — employees raise
 // requests, observers only look, neither can be a required approver.
@@ -33,6 +35,15 @@ function modeSummary(rule) {
   const levels = rule.levels || []
   if (levels.length === 0) return 'No levels configured'
   return levels.map(l => l.label).join(' → ')
+}
+
+// Changing a rule changes how every future report is routed, so each change is
+// written to the Activity Log with the rule and who changed it.
+function logRule(action, rule, extra) {
+  logActivity({
+    entityType: 'settings', entityId: 'approval_rules', entityRef: `Approval rule: ${rule.name}`,
+    action, toValue: [formatRange(rule), modeSummary(rule)].join(' · '), actor: systemActor(), note: extra || null,
+  })
 }
 
 export default function ApprovalRulesView() {
@@ -127,20 +138,25 @@ export default function ApprovalRulesView() {
     }
     setSaving(false)
     if (err) { setError(err.message); return }
+    logRule(form.id ? 'approval_rule_changed' : 'approval_rule_added', payload, payload.is_active ? null : 'Saved as off')
     cancelEdit()
     load()
   }
 
   async function handleDelete(rule) {
     if (!window.confirm(`Delete the "${rule.name}" approval rule? Reports already routed under it are unaffected — only future submissions stop matching it.`)) return
-    await supabase.from('approval_rules').delete().eq('id', rule.id)
+    const { error: err } = await supabase.from('approval_rules').delete().eq('id', rule.id)
+    if (err) { setError(`Could not delete the rule: ${err.message}`); return }
+    logRule('approval_rule_deleted', rule)
     if (editingId === rule.id) cancelEdit()
     load()
   }
 
   async function handleToggleActive(rule) {
     setRules(prev => prev.map(r => (r.id === rule.id ? { ...r, is_active: !r.is_active } : r)))
-    await supabase.from('approval_rules').update({ is_active: !rule.is_active }).eq('id', rule.id)
+    const { error: err } = await supabase.from('approval_rules').update({ is_active: !rule.is_active }).eq('id', rule.id)
+    if (err) { setError(`Could not change the rule: ${err.message}`); load(); return }
+    logRule('approval_rule_toggled', rule, !rule.is_active ? 'Switched on' : 'Switched off')
   }
 
   async function move(rule, dir) {

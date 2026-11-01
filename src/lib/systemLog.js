@@ -50,34 +50,89 @@ export function recordDeployment() {
 }
 
 // ----------------------------------------------------------------- maintenance
+// Maintenance is a window: it can start now or at a set time, and end when an
+// admin ends it or at a set time. While it is active everyone except admins is
+// held back; admins keep full access and can end it at any moment.
+//
+// The state is one row: { on, reason, scheduled_start, scheduled_end, created_at,
+// set_by, set_by_name }. What it means right now is worked out from the clock.
+export function maintenanceStatus(state, now = Date.now()) {
+  if (!state?.on) return 'off'
+  const start = state.scheduled_start ? new Date(state.scheduled_start).getTime() : 0
+  const end = state.scheduled_end ? new Date(state.scheduled_end).getTime() : null
+  if (now < start) return 'scheduled'
+  if (end != null && now >= end) return 'expired'
+  return 'active'
+}
+
 export async function getMaintenance() {
   const { data } = await supabase.from('system_state').select('value, updated_at, updated_by').eq('key', 'maintenance').maybeSingle()
   return { on: false, ...(data?.value || {}) }
 }
 
-export async function startMaintenance({ reason, block }) {
-  const startedAt = new Date().toISOString()
-  const value = { on: true, block: !!block, reason: reason || null, started_at: startedAt, started_by: actor?.email || null, started_by_name: actor?.name || null }
-  const { error } = await supabase.from('system_state').upsert({ key: 'maintenance', value, updated_at: startedAt, updated_by: actor?.email || null })
+const fmtWhen = iso => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
+
+// startAt / endAt are Dates (or null: start now / end when an admin ends it).
+export async function scheduleMaintenance({ reason, startAt, endAt }) {
+  const createdAt = new Date().toISOString()
+  const start = startAt && startAt.getTime() > Date.now() + 5000 ? startAt.toISOString() : createdAt
+  const value = {
+    on: true, reason: reason || null, scheduled_start: start, scheduled_end: endAt ? endAt.toISOString() : null,
+    created_at: createdAt, set_by: actor?.email || null, set_by_name: actor?.name || null,
+  }
+  const { error } = await supabase.from('system_state').upsert({ key: 'maintenance', value, updated_at: createdAt, updated_by: actor?.email || null })
   if (error) throw error
-  logSystem({
-    category: 'maintenance', action: 'started', detail: reason || 'No reason given',
-    meta: { block: !!block, started_at: startedAt },
-  })
+  const planned = value.scheduled_end ? ` until ${fmtWhen(value.scheduled_end)}` : ''
+  if (start === createdAt) {
+    logSystem({ category: 'maintenance', action: 'started', ref: `maint-start-${createdAt}`, detail: `${reason || 'No reason given'}${planned ? `. Planned${planned}` : ''}`, meta: { started_at: createdAt, planned_end: value.scheduled_end } })
+  } else {
+    logSystem({ category: 'maintenance', action: 'scheduled', detail: `From ${fmtWhen(start)}${planned}. ${reason || 'No reason given'}`, meta: { scheduled_start: start, scheduled_end: value.scheduled_end } })
+  }
   return value
 }
 
-export async function endMaintenance() {
+// Ends an active window, or cancels one that has not started. `auto` is for a
+// window that reached its end time by itself.
+export async function endMaintenance({ auto = false } = {}) {
   const current = await getMaintenance()
-  const endedAt = new Date().toISOString()
-  const { error } = await supabase.from('system_state').upsert({ key: 'maintenance', value: { on: false }, updated_at: endedAt, updated_by: actor?.email || null })
+  if (!current.on) return
+  const status = maintenanceStatus(current)
+  const endedAt = auto && current.scheduled_end ? current.scheduled_end : new Date().toISOString()
+  const { error } = await supabase.from('system_state').upsert({ key: 'maintenance', value: { on: false }, updated_at: new Date().toISOString(), updated_by: actor?.email || null })
   if (error) throw error
-  const seconds = current.started_at ? Math.max(0, Math.round((Date.now() - new Date(current.started_at).getTime()) / 1000)) : null
+  const by = auto ? { email: current.set_by || null, name: current.set_by_name || null } : undefined
+  if (status === 'scheduled') {
+    logSystem({ category: 'maintenance', action: 'cancelled', ref: `maint-cancel-${current.created_at}`, detail: `Scheduled for ${fmtWhen(current.scheduled_start)} was cancelled${current.reason ? `. ${current.reason}` : ''}`, by })
+    return
+  }
+  const seconds = Math.max(0, Math.round((new Date(endedAt).getTime() - new Date(current.scheduled_start || current.created_at).getTime()) / 1000))
   logSystem({
-    category: 'maintenance', action: 'ended',
-    detail: seconds != null ? `Lasted ${formatDuration(seconds)}${current.reason ? `. ${current.reason}` : ''}` : current.reason || null,
-    meta: { started_at: current.started_at || null, ended_at: endedAt, duration_seconds: seconds, started_by: current.started_by || null },
+    category: 'maintenance', action: 'ended', ref: `maint-end-${current.created_at}`, by,
+    detail: `${auto ? 'Ended at its planned time. ' : ''}Lasted ${formatDuration(seconds)}${current.reason ? `. ${current.reason}` : ''}`,
+    meta: { started_at: current.scheduled_start || null, ended_at: endedAt, duration_seconds: seconds, planned_end: current.scheduled_end || null, automatic: auto },
   })
+}
+
+// Run by every signed-in browser each time it checks. When a scheduled window
+// has begun or has reached its end, whoever notices first records it (the unique
+// ref makes a second attempt a no-op) and, at the end, switches maintenance off.
+const synced = new Set()
+export function syncMaintenance(state) {
+  const status = maintenanceStatus(state)
+  const key = `${state?.created_at}:${status}`
+  if (!state?.on || synced.has(key)) return
+  if (status === 'active') {
+    synced.add(key)
+    logSystem({
+      category: 'maintenance', action: 'started', ref: `maint-start-${state.created_at}`,
+      detail: `${state.reason || 'Scheduled maintenance'} began${state.scheduled_end ? `. Planned until ${fmtWhen(state.scheduled_end)}` : ''}`,
+      by: { email: state.set_by || null, name: state.set_by_name || null },
+      meta: { started_at: state.scheduled_start, planned_end: state.scheduled_end },
+    })
+  } else if (status === 'expired') {
+    synced.add(key)
+    endMaintenance({ auto: true }).catch(() => {})
+  }
 }
 
 export function formatDuration(totalSeconds) {

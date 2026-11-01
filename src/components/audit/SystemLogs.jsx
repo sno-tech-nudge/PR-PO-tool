@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 import { downloadCSV } from '../../lib/exportUtils'
-import { getMaintenance, startMaintenance, endMaintenance } from '../../lib/systemLog'
+import { getMaintenance, scheduleMaintenance, endMaintenance, maintenanceStatus } from '../../lib/systemLog'
 import { CATEGORY_LABEL, categoryLabel, actionLabel, fmtStamp, whoText, systemLogRows, downloadSystemLogPDF } from '../../lib/systemLogExport'
 
 const PAGE = 100
@@ -16,56 +16,96 @@ const btn = {
   border: '1px solid var(--action)', background: 'var(--surface-card)', color: 'var(--action)', cursor: 'pointer', whiteSpace: 'nowrap',
 }
 
-// Maintenance mode: while it is on everyone sees a notice, and optionally
-// everyone but admins is held back. Starting and ending it are recorded below.
+// Maintenance mode. While a window is active everyone except admins sees a
+// maintenance page; admins keep full access and can end it at any time. It can
+// start now or at a set time, and end when an admin ends it or at a set time.
 function MaintenanceCard({ onChanged }) {
   const [state, setState] = useState(null)
   const [reason, setReason] = useState('')
-  const [block, setBlock] = useState(false)
+  const [startMode, setStartMode] = useState('now')
+  const [endMode, setEndMode] = useState('manual')
+  const [startAt, setStartAt] = useState('')
+  const [endAt, setEndAt] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+  const [, setTick] = useState(0)
 
   useEffect(() => { getMaintenance().then(setState).catch(() => setState({ on: false })) }, [])
+  useEffect(() => { const t = setInterval(() => setTick(n => n + 1), 30000); return () => clearInterval(t) }, [])
 
   async function change(fn) {
     setBusy(true); setError(null)
     try {
       await fn()
       setState(await getMaintenance())
-      setReason('')
+      setReason(''); setStartAt(''); setEndAt(''); setStartMode('now'); setEndMode('manual')
       window.dispatchEvent(new Event('nudge-maintenance-change'))
       onChanged?.()
     } catch { setError('That could not be saved. Please try again.') }
     setBusy(false)
   }
 
+  function schedule() {
+    const start = startMode === 'later' && startAt ? new Date(startAt) : null
+    const end = endMode === 'at' && endAt ? new Date(endAt) : null
+    if (startMode === 'later' && (!start || start.getTime() <= Date.now())) { setError('Pick a start time in the future, or choose Now.'); return }
+    if (endMode === 'at' && (!end || end.getTime() <= (start ? start.getTime() : Date.now()))) { setError('The end time must be after the start.'); return }
+    change(() => scheduleMaintenance({ reason: reason.trim(), startAt: start, endAt: end }))
+  }
+
   if (!state) return null
+  const status = maintenanceStatus(state)
+  const fmt = iso => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
+  const live = status === 'active'
+  const pill = on => ({
+    padding: '5px 12px', fontSize: '12px', cursor: 'pointer', borderRadius: 'var(--radius-sm)', fontFamily: 'inherit',
+    border: `1px solid ${on ? 'var(--action)' : 'var(--taupe-300)'}`, background: on ? 'var(--action)' : 'var(--surface-card)', color: on ? 'var(--surface-card)' : 'var(--ink)',
+  })
+
   return (
     <div style={{
-      background: state.on ? 'var(--gold-bg)' : 'var(--surface-card)', border: `1px solid ${state.on ? 'var(--gold-border)' : 'var(--taupe-200)'}`,
+      background: live ? 'var(--gold-bg)' : 'var(--surface-card)', border: `1px solid ${live ? 'var(--gold-border)' : 'var(--taupe-200)'}`,
       borderRadius: 'var(--radius-md)', padding: '14px 16px', marginBottom: '16px',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
         <div>
-          <div style={{ fontSize: '13px', fontWeight: 700, color: state.on ? 'var(--gold-text)' : 'var(--ink)' }}>
-            Maintenance mode: {state.on ? 'ON' : 'off'}
+          <div style={{ fontSize: '13px', fontWeight: 700, color: live ? 'var(--gold-text)' : 'var(--ink)' }}>
+            Maintenance mode: {live ? 'ON' : status === 'scheduled' ? 'scheduled' : 'off'}
           </div>
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px', lineHeight: 1.5 }}>
-            {state.on
-              ? `Since ${fmtStamp(state.started_at)} by ${state.started_by_name || state.started_by || 'an admin'}${state.reason ? `. ${state.reason}` : ''}${state.block ? ' Everyone except admins is held back.' : ' Everyone sees a notice.'}`
-              : 'Turn it on before planned work. Everyone sees a notice, and the start and end are recorded here.'}
+            {live && `On since ${fmt(state.scheduled_start)}${state.scheduled_end ? `, planned until ${fmt(state.scheduled_end)}` : ''}${state.set_by_name ? `. Set by ${state.set_by_name}` : ''}${state.reason ? `. ${state.reason}` : ''}. Everyone except admins sees a maintenance page. You can still use everything.`}
+            {status === 'scheduled' && `From ${fmt(state.scheduled_start)}${state.scheduled_end ? ` until ${fmt(state.scheduled_end)}` : ''}${state.reason ? `. ${state.reason}` : ''}. People are told shortly before it starts.`}
+            {status === 'off' && 'While it is on, everyone except admins sees a maintenance page. Admins keep full access and can end it at any time.'}
+            {status === 'expired' && 'Its planned end time has passed. It is being switched off.'}
           </div>
         </div>
-        {state.on && <button type="button" disabled={busy} onClick={() => change(endMaintenance)} style={{ ...btn, background: 'var(--action)', color: 'var(--surface-card)' }}>{busy ? 'Ending…' : 'End maintenance'}</button>}
+        {(live || status === 'scheduled') && (
+          <button type="button" disabled={busy} onClick={() => change(() => endMaintenance())} style={{ ...btn, background: 'var(--action)', color: 'var(--surface-card)' }}>
+            {busy ? 'Saving…' : live ? 'End maintenance' : 'Cancel scheduled maintenance'}
+          </button>
+        )}
       </div>
-      {!state.on && (
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginTop: '10px' }}>
-          <input value={reason} onChange={e => setReason(e.target.value)} placeholder="What is the work? (optional)" style={{ ...controlStyle, flex: '1 1 260px' }} />
-          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--ink)', cursor: 'pointer' }}>
-            <input type="checkbox" checked={block} onChange={e => setBlock(e.target.checked)} />
-            Hold everyone except admins back
-          </label>
-          <button type="button" disabled={busy} onClick={() => change(() => startMaintenance({ reason: reason.trim(), block }))} style={btn}>{busy ? 'Starting…' : 'Start maintenance'}</button>
+
+      {status === 'off' && (
+        <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <input value={reason} onChange={e => setReason(e.target.value)} placeholder="What is the work? (optional, shown to people)" style={controlStyle} />
+          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginRight: '2px' }}>Starts</span>
+              <button type="button" style={pill(startMode === 'now')} onClick={() => setStartMode('now')}>Now</button>
+              <button type="button" style={pill(startMode === 'later')} onClick={() => setStartMode('later')}>At a set time</button>
+              {startMode === 'later' && <input type="datetime-local" value={startAt} onChange={e => setStartAt(e.target.value)} style={controlStyle} aria-label="Start time" />}
+            </div>
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginRight: '2px' }}>Ends</span>
+              <button type="button" style={pill(endMode === 'manual')} onClick={() => setEndMode('manual')}>When I end it</button>
+              <button type="button" style={pill(endMode === 'at')} onClick={() => setEndMode('at')}>At a set time</button>
+              {endMode === 'at' && <input type="datetime-local" value={endAt} onChange={e => setEndAt(e.target.value)} style={controlStyle} aria-label="End time" />}
+            </div>
+            <button type="button" disabled={busy} onClick={schedule} style={btn}>
+              {busy ? 'Saving…' : startMode === 'later' ? 'Schedule maintenance' : 'Start maintenance'}
+            </button>
+          </div>
         </div>
       )}
       {error && <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginTop: '8px' }}>{error}</div>}

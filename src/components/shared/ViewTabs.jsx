@@ -1,9 +1,9 @@
 // A small segmented switch between the views of one combined tab, such as
 // Approvals and History, or Activity Log and System Logs. It sits above the
 // view itself, so each view keeps its own page exactly as it was.
-export default function ViewTabs({ items, value, onChange }) {
+export default function ViewTabs({ items, value, onChange, right = null }) {
   return (
-    <div style={{ padding: '10px 24px', background: 'var(--surface-card)', borderBottom: '1px solid var(--taupe-200)' }}>
+    <div style={{ padding: '10px 24px', background: 'var(--surface-card)', borderBottom: '1px solid var(--taupe-200)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
       <div role="tablist" style={{ display: 'inline-flex', gap: '2px', padding: '3px', background: 'var(--taupe-100)', borderRadius: 'var(--radius-md)' }}>
         {items.map(([key, label]) => {
           const active = value === key
@@ -23,6 +23,7 @@ export default function ViewTabs({ items, value, onChange }) {
           )
         })}
       </div>
+      {right}
     </div>
   )
 }
