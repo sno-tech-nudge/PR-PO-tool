@@ -1,0 +1,40 @@
+{
+  "_about": "Everything the app needs OUTSIDE the database dump, so a rebuild on another Supabase project misses nothing. Checked against the code by `npm run migration:check`. Update this file whenever an API route, cron, env var or storage bucket is added, removed or renamed.",
+  "api_routes": [
+    "api/ai/proxy.js",
+    "api/notify-slack.js",
+    "api/reminders.js",
+    "api/send-email.js"
+  ],
+  "api_helpers": [
+    "api/_lib/mailer.js"
+  ],
+  "crons": [
+    { "path": "/api/reminders", "schedule": "30 3 * * *", "note": "daily 03:30 UTC (09:00 IST). If CRON_SECRET is set the route requires header Authorization: Bearer <CRON_SECRET> (Vercel Cron sends it automatically); if unset the route is open. Reads Supabase through VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY on the server." }
+  ],
+  "env": {
+    "browser_build": ["VITE_SUPABASE_URL", "VITE_SUPABASE_ANON_KEY"],
+    "server_secrets": ["GEMINI_API_KEY", "GROQ_API_KEY", "RESEND_API_KEY", "RESEND_FROM_EMAIL", "SLACK_WEBHOOK_URL", "CRON_SECRET"],
+    "set_by_host_platform": ["VERCEL_ENV", "VERCEL_GIT_COMMIT_SHA", "VERCEL_GIT_COMMIT_MESSAGE", "VERCEL_GIT_COMMIT_AUTHOR_LOGIN", "VERCEL_GIT_COMMIT_AUTHOR_NAME"],
+    "local_only": ["SUPABASE_DB_URL"]
+  },
+  "buckets": ["expense-documents", "feedback-screenshots", "po-pdfs", "pr-quotes", "vendor-documents"],
+  "known_gaps": {
+    "expense-reports": "Referenced by code (report PDF upload and Audit Trail) but has never existed on the live project, so those uploads fail quietly. Copied as-is for an exact replica. Creating the bucket on the new project would make report PDFs start saving: a deliberate behaviour change, decide before cutover.",
+    "feedback-screenshots": "Exists with 2 files but no code uses it any more (feedback widget removed). Copied for completeness."
+  },
+  "excluded_on_purpose": {
+    "nucleus_intake_proxy": {
+      "why": "Decided on 2026-11-02: the Nucleus integration is not being carried over.",
+      "api_routes": ["api/intake/*"],
+      "helpers": ["api/_lib/supabaseAdmin.js"],
+      "env": ["PR_PO_INTAKE_SECRET"],
+      "files": ["INTEGRATION_BRIEF.md"],
+      "left_in_database": "purchase_requests.source and vendors.source (default 'app'); only drives a 'Submitted through Nucleus' tag. Harmless, copied."
+    }
+  },
+  "supabase_managed_not_copied": [
+    "issue_* and pgrst_* event triggers",
+    "extensions pg_stat_statements, supabase_vault (already present on every project)"
+  ]
+}

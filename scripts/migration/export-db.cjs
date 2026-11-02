@@ -1,0 +1,233 @@
+// Read-only export of the live Supabase database: schema, data and storage inventory.
+// Never writes to the database. Output goes to db_export_backup/migration_pack/ (gitignored: it holds
+// real vendor bank details). Source connection: SOURCE_DB_URL, else SUPABASE_DB_URL from .env.local.
+const fs = require('fs')
+const path = require('path')
+const ROOT = path.resolve(__dirname, '..', '..')
+const { Client } = require('pg')
+
+let SOURCE_URL = process.env.SOURCE_DB_URL
+if (!SOURCE_URL) {
+  const m = fs.readFileSync(path.join(ROOT, '.env.local'), 'utf8').match(/^SUPABASE_DB_URL=(.*)$/m)
+  SOURCE_URL = m && m[1].trim()
+}
+if (!SOURCE_URL) throw new Error('Set SOURCE_DB_URL, or SUPABASE_DB_URL in .env.local')
+const OUT = path.join(ROOT, 'db_export_backup', 'migration_pack')
+fs.mkdirSync(OUT, { recursive: true })
+
+const q = async (c, sql, params) => (await c.query(sql, params)).rows
+const ident = s => '"' + String(s).replace(/"/g, '""') + '"'
+const rel = (schema, name) => ident(schema) + '.' + ident(name)
+
+async function main() {
+  const c = new Client({ connectionString: SOURCE_URL, ssl: { rejectUnauthorized: false } })
+  await c.connect()
+  await c.query('SET default_transaction_read_only = on')
+
+  const summary = {}
+  const out = []
+  const sec = t => out.push(`\n-- ============================================================\n-- ${t}\n-- ============================================================\n`)
+
+  out.push('-- Schema export of the live database. Replay on a fresh Supabase project, as the postgres role.')
+  out.push('SET check_function_bodies = false;')
+  out.push('SET client_min_messages = warning;')
+
+  // Schemas other than the system ones that hold our objects
+  const schemas = await q(c, `select nspname from pg_namespace where nspname not like 'pg_%' and nspname not in ('information_schema','auth','storage','extensions','graphql','graphql_public','realtime','vault','pgsodium','pgsodium_masks','supabase_functions','supabase_migrations','net','cron','pgbouncer','_realtime','_analytics','public') order by 1`)
+  summary.extra_schemas = schemas.map(r => r.nspname)
+
+  // Extensions
+  sec('extensions')
+  const exts = await q(c, `select e.extname, n.nspname from pg_extension e join pg_namespace n on n.oid = e.extnamespace where e.extname <> 'plpgsql' order by 1`)
+  summary.extensions = exts.map(e => e.extname)
+  for (const e of exts) out.push(`CREATE EXTENSION IF NOT EXISTS ${ident(e.extname)} WITH SCHEMA ${ident(e.nspname)};`)
+
+  // Sequences
+  sec('sequences')
+  const seqs = await q(c, `select schemaname, sequencename, data_type::text dt, start_value, min_value, max_value, increment_by, cycle, last_value from pg_sequences where schemaname = 'public' order by 2`)
+  // Identity columns own a sequence that Postgres creates with the table; those must not be created twice
+  const identSeqs = {}
+  for (const r of await q(c, `select s.relname seq, t.relname tbl, a.attname col from pg_class s join pg_depend d on d.objid = s.oid and d.classid = 'pg_class'::regclass and d.deptype = 'i' join pg_class t on t.oid = d.refobjid join pg_attribute a on a.attrelid = t.oid and a.attnum = d.refobjsubid where s.relkind = 'S'`)) identSeqs[r.seq] = r
+  for (const s of seqs.filter(s => !identSeqs[s.sequencename])) {
+    out.push(`CREATE SEQUENCE IF NOT EXISTS ${rel(s.schemaname, s.sequencename)} AS ${s.dt} INCREMENT BY ${s.increment_by} MINVALUE ${s.min_value} MAXVALUE ${s.max_value} START WITH ${s.start_value}${s.cycle ? ' CYCLE' : ' NO CYCLE'};`)
+  }
+  summary.sequences = seqs.length
+
+  // Functions (not owned by an extension)
+  sec('functions')
+  const fns = await q(c, `
+    select p.oid, n.nspname, p.proname, pg_get_functiondef(p.oid) def
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.prokind in ('f','p')
+      and not exists (select 1 from pg_depend d where d.objid = p.oid and d.deptype = 'e')
+    order by p.proname, p.oid`)
+  for (const f of fns) out.push(f.def.trim() + ';\n')
+  summary.functions = fns.map(f => f.proname)
+
+  // Tables
+  sec('tables')
+  const tables = await q(c, `select c.oid, c.relname, c.relkind, c.relrowsecurity, c.relforcerowsecurity from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relkind in ('r','p') order by c.relname`)
+  summary.tables = tables.map(t => t.relname)
+  for (const t of tables) {
+    const cols = await q(c, `
+      select a.attname, format_type(a.atttypid, a.atttypmod) typ, a.attnotnull, a.attidentity, a.attgenerated,
+             pg_get_expr(d.adbin, d.adrelid) def
+      from pg_attribute a left join pg_attrdef d on d.adrelid = a.attrelid and d.adnum = a.attnum
+      where a.attrelid = $1 and a.attnum > 0 and not a.attisdropped order by a.attnum`, [t.oid])
+    const lines = cols.map(a => {
+      let s = `  ${ident(a.attname)} ${a.typ}`
+      if (a.attidentity === 'a') s += ' GENERATED ALWAYS AS IDENTITY'
+      else if (a.attidentity === 'd') s += ' GENERATED BY DEFAULT AS IDENTITY'
+      else if (a.attgenerated === 's') s += ` GENERATED ALWAYS AS (${a.def}) STORED`
+      else if (a.def != null) s += ` DEFAULT ${a.def}`
+      if (a.attnotnull) s += ' NOT NULL'
+      return s
+    })
+    out.push(`CREATE TABLE IF NOT EXISTS ${rel('public', t.relname)} (\n${lines.join(',\n')}\n);`)
+  }
+
+  // Constraints: PK/UNIQUE/CHECK first, then FKs
+  sec('constraints')
+  const cons = await q(c, `
+    select cl.relname, co.conname, co.contype, pg_get_constraintdef(co.oid) def
+    from pg_constraint co join pg_class cl on cl.oid = co.conrelid join pg_namespace n on n.oid = cl.relnamespace
+    where n.nspname = 'public' and co.contype in ('p','u','c','f','x') order by (co.contype = 'f'), cl.relname, co.conname`)
+  summary.constraints = cons.length
+  for (const k of cons) out.push(`ALTER TABLE ${rel('public', k.relname)} ADD CONSTRAINT ${ident(k.conname)} ${k.def};`)
+
+  // Indexes not backing a constraint
+  sec('indexes')
+  const idx = await q(c, `
+    select i.indexname, i.indexdef from pg_indexes i
+    where i.schemaname = 'public' and not exists (
+      select 1 from pg_constraint co join pg_class ic on ic.oid = co.conindid where ic.relname = i.indexname)
+    order by i.tablename, i.indexname`)
+  for (const i of idx) out.push(i.indexdef.replace(/^CREATE (UNIQUE )?INDEX/, 'CREATE $1INDEX IF NOT EXISTS') + ';')
+  summary.indexes = idx.length
+
+  // Views
+  sec('views')
+  const views = await q(c, `select c.relname, c.relkind, pg_get_viewdef(c.oid, true) def from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relkind in ('v','m') order by c.relname`)
+  for (const v of views) out.push(`CREATE ${v.relkind === 'm' ? 'MATERIALIZED VIEW' : 'VIEW'} ${rel('public', v.relname)} AS\n${v.def}`)
+  summary.views = views.map(v => v.relname)
+
+  // Triggers
+  sec('triggers')
+  const trgs = await q(c, `select cl.relname, t.tgname, t.tgenabled, pg_get_triggerdef(t.oid, true) def from pg_trigger t join pg_class cl on cl.oid = t.tgrelid join pg_namespace n on n.oid = cl.relnamespace where n.nspname = 'public' and not t.tgisinternal order by cl.relname, t.tgname`)
+  for (const t of trgs) {
+    out.push(t.def + ';')
+    if (t.tgenabled === 'D') out.push(`ALTER TABLE ${rel('public', t.relname)} DISABLE TRIGGER ${ident(t.tgname)};`)
+  }
+  summary.triggers = trgs.map(t => `${t.relname}.${t.tgname}`)
+
+  // RLS flags + policies (public and storage)
+  sec('row level security')
+  for (const t of tables) {
+    if (t.relrowsecurity) out.push(`ALTER TABLE ${rel('public', t.relname)} ENABLE ROW LEVEL SECURITY;`)
+    if (t.relforcerowsecurity) out.push(`ALTER TABLE ${rel('public', t.relname)} FORCE ROW LEVEL SECURITY;`)
+  }
+  const pols = await q(c, `
+    select n.nspname, cl.relname, p.polname, p.polcmd, p.polpermissive,
+           (select coalesce(string_agg(case when r = 0 then 'public' else quote_ident(rolname) end, ', '), 'public')
+              from unnest(p.polroles) r left join pg_roles ro on ro.oid = r) roles,
+           pg_get_expr(p.polqual, p.polrelid) qual, pg_get_expr(p.polwithcheck, p.polrelid) wcheck
+    from pg_policy p join pg_class cl on cl.oid = p.polrelid join pg_namespace n on n.oid = cl.relnamespace
+    where n.nspname in ('public','storage') order by n.nspname, cl.relname, p.polname`)
+  const cmd = { r: 'SELECT', a: 'INSERT', w: 'UPDATE', d: 'DELETE', '*': 'ALL' }
+  for (const p of pols) {
+    out.push(`DROP POLICY IF EXISTS ${ident(p.polname)} ON ${rel(p.nspname, p.relname)};`)
+    out.push(`CREATE POLICY ${ident(p.polname)} ON ${rel(p.nspname, p.relname)} AS ${p.polpermissive ? 'PERMISSIVE' : 'RESTRICTIVE'} FOR ${cmd[p.polcmd]} TO ${p.roles}` +
+      (p.qual ? ` USING (${p.qual})` : '') + (p.wcheck ? ` WITH CHECK (${p.wcheck})` : '') + ';')
+  }
+  summary.policies = pols.map(p => `${p.nspname}.${p.relname}: ${p.polname}`)
+
+  // Grants on tables and sequences (exact: revoke, then grant what exists)
+  sec('grants')
+  const rels = await q(c, `select c.relname, c.relkind, c.relacl from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relkind in ('r','p','S','v','m') order by c.relname`)
+  for (const r of rels) {
+    const kind = r.relkind === 'S' ? 'SEQUENCE' : 'TABLE'
+    out.push(`REVOKE ALL ON ${kind} ${rel('public', r.relname)} FROM anon, authenticated, service_role;`)
+    const acl = await q(c, `select (aclexplode(c.relacl)).grantee g, (aclexplode(c.relacl)).privilege_type p from pg_class c where c.oid = $1::regclass`, [rel('public', r.relname)])
+    const byRole = {}
+    for (const a of acl) {
+      const role = a.g === '0' || a.g === 0 ? 'PUBLIC' : (await q(c, 'select rolname from pg_roles where oid = $1', [a.g]))[0].rolname
+      if (['anon', 'authenticated', 'service_role', 'PUBLIC'].includes(role)) (byRole[role] = byRole[role] || []).push(a.p)
+    }
+    // MAINTAIN only exists on Postgres 17+; leaving it out keeps the file loadable on older versions
+    for (const [role, all] of Object.entries(byRole)) {
+      const privs = all.filter(p => p !== 'MAINTAIN')
+      if (privs.length) out.push(`GRANT ${privs.join(', ')} ON ${kind} ${rel('public', r.relname)} TO ${role === 'PUBLIC' ? 'PUBLIC' : ident(role)};`)
+    }
+  }
+
+  // Event triggers
+  // Written to their own file (04) and applied last, so the migration itself is not logged as a schema change
+  const evtOut = ['-- Event triggers. Apply AFTER the data load.']
+  // Only our own (the functions live in public); Supabase's managed ones already exist on a new project
+  const evts = await q(c, `select e.evtname, e.evtevent, e.evttags, e.evtenabled, n.nspname fn_schema, p.proname fn from pg_event_trigger e join pg_proc p on p.oid = e.evtfoid join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' order by 1`)
+  for (const e of evts) {
+    evtOut.push(`DROP EVENT TRIGGER IF EXISTS ${ident(e.evtname)};`)
+    evtOut.push(`CREATE EVENT TRIGGER ${ident(e.evtname)} ON ${e.evtevent}${e.evttags ? ` WHEN TAG IN (${e.evttags.map(t => `'${t}'`).join(', ')})` : ''} EXECUTE FUNCTION ${rel(e.fn_schema, e.fn)}();`)
+    if (e.evtenabled !== 'O') evtOut.push(`-- note: source had this event trigger in state '${e.evtenabled}'`)
+  }
+  fs.writeFileSync(path.join(OUT, '04_event_triggers.sql'), evtOut.join('\n') + '\n')
+  summary.event_triggers = evts.map(e => `${e.evtname} (${e.evtevent})`)
+
+  // Realtime publication
+  const pub = await q(c, `select schemaname, tablename from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public'`).catch(() => [])
+  if (pub.length) {
+    sec('realtime')
+    for (const p of pub) out.push(`ALTER PUBLICATION supabase_realtime ADD TABLE ${rel(p.schemaname, p.tablename)};`)
+  }
+  summary.realtime_tables = pub.map(p => p.tablename)
+
+  // pg_cron
+  const cron = await q(c, `select jobname, schedule, command from cron.job`).catch(() => null)
+  summary.pg_cron_jobs = cron ? cron.length : 'cron schema not present'
+
+  // Storage buckets
+  sec('storage buckets')
+  const buckets = await q(c, `select id, name, public, file_size_limit, allowed_mime_types from storage.buckets order by name`)
+  for (const b of buckets) {
+    const mimes = b.allowed_mime_types ? `ARRAY[${b.allowed_mime_types.map(x => `'${x}'`).join(',')}]::text[]` : 'NULL'
+    out.push(`INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) VALUES ('${b.id}', '${b.name}', ${b.public}, ${b.file_size_limit == null ? 'NULL' : b.file_size_limit}, ${mimes}) ON CONFLICT (id) DO UPDATE SET public = EXCLUDED.public, file_size_limit = EXCLUDED.file_size_limit, allowed_mime_types = EXCLUDED.allowed_mime_types;`)
+  }
+  summary.buckets = buckets
+
+  // Sequence positions (after data load)
+  const seqSet = seqs.filter(s => s.last_value != null).map(s => {
+    const id = identSeqs[s.sequencename]
+    const target = id ? `pg_get_serial_sequence('public.${id.tbl}', '${id.col}')` : `'${rel(s.schemaname, s.sequencename)}'`
+    return `SELECT setval(${target}, ${s.last_value}, true);`
+  })
+  fs.writeFileSync(OUT + '/03_sequences_setval.sql', seqSet.join('\n') + '\n')
+
+  fs.writeFileSync(OUT + '/01_schema.sql', out.join('\n') + '\n')
+
+  // Data: row counts first, then JSON-based inserts so every type round-trips
+  const data = ['-- Data export. Replay AFTER 01_schema.sql. Uses replica mode so triggers and FKs do not fire during load.',
+    "SET session_replication_role = replica;"]
+  summary.row_counts = {}
+  for (const t of tables) {
+    const rows = await q(c, `select row_to_json(x) j from ${rel('public', t.relname)} x`)
+    summary.row_counts[t.relname] = rows.length
+    for (let i = 0; i < rows.length; i += 200) {
+      const chunk = rows.slice(i, i + 200).map(r => r.j)
+      data.push(`INSERT INTO ${rel('public', t.relname)} OVERRIDING SYSTEM VALUE SELECT * FROM json_populate_recordset(null::${rel('public', t.relname)}, ${c.escapeLiteral(JSON.stringify(chunk))}::json);`)
+    }
+  }
+  data.push('SET session_replication_role = DEFAULT;')
+  fs.writeFileSync(OUT + '/02_data.sql', data.join('\n') + '\n')
+
+  // Storage inventory (what must be copied bucket by bucket)
+  const objs = await q(c, `select bucket_id, name, (metadata->>'size')::bigint size, metadata->>'mimetype' mimetype from storage.objects order by bucket_id, name`)
+  fs.writeFileSync(OUT + '/storage_inventory.json', JSON.stringify(objs, null, 1))
+  const perBucket = {}
+  for (const o of objs) { const b = perBucket[o.bucket_id] = perBucket[o.bucket_id] || { files: 0, bytes: 0 }; b.files++; b.bytes += Number(o.size || 0) }
+  summary.storage = perBucket
+
+  fs.writeFileSync(OUT + '/summary.json', JSON.stringify(summary, null, 2))
+  await c.end()
+  console.log(JSON.stringify({ ...summary, policies: summary.policies.length, functions: summary.functions.length, triggers: summary.triggers.length }, null, 1))
+}
+main().catch(e => { console.error('FAILED:', e.message); process.exit(1) })
