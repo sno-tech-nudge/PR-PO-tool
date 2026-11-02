@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { LocationTag, AllocationPath } from '../shared/LocationTag'
 import { supabase } from '../../lib/supabase'
 import { createPendingPO, approvePRLevel, rejectPRLevel } from '../../lib/prApprovalActions'
 import { canAccessApprovals, canAccessFinance, isOwnEmail } from '../../lib/auth'
@@ -300,7 +301,7 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
         <Row label="Categories" value={pr.category} />
         <Row label="Entity" value={pr.entity} />
         <Row label="Program" value={pr.program} />
-        <Row label="Subprogram" value={pr.subprogram} />
+        <Row label="Subprogram" value={pr.subprogram ? <>{pr.subprogram}<LocationTag entity={pr.entity} program={pr.program} subprogram={pr.subprogram} donor={pr.donor_name} /></> : null} />
         <Row label="Impact Stream" value={pr.impact_stream} />
         <Row label="Purpose" value={pr.purpose} />
         <Row label="Recurring" value={pr.is_recurring ? `Yes — ${pr.recurring_frequency || ''}` : 'No'} />
@@ -364,7 +365,7 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
           <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ink)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '14px' }}>Donor / Programme Allocation</div>
           {pr.donor_allocations.map((a, i) => (
             <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--ink)', marginBottom: '6px' }}>
-              <span>{[a.entity, a.program, a.subprogram, a.donor].filter(Boolean).join(' / ') || '—'}</span>
+              <span><AllocationPath a={a} /></span>
               <span style={{ fontWeight: 600, flexShrink: 0, marginLeft: '12px' }}>{a.percent}%</span>
             </div>
           ))}

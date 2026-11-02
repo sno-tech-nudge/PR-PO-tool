@@ -1,3 +1,4 @@
+import { LocationTag, AllocationPath } from '../shared/LocationTag'
 // Read-only rendering of everything a requester filled in on the PR form —
 // shared by the PO approval page (PODetail.jsx) so a PO approver sees the
 // full underlying request, not just a vendor/amount/purpose summary, before
@@ -52,7 +53,7 @@ export default function PRRequestDetailsCard({ pr }) {
         <Row label="Categories" value={pr.category} />
         <Row label="Entity" value={pr.entity} />
         <Row label="Program" value={pr.program} />
-        <Row label="Subprogram" value={pr.subprogram} />
+        <Row label="Subprogram" value={pr.subprogram ? <>{pr.subprogram}<LocationTag entity={pr.entity} program={pr.program} subprogram={pr.subprogram} donor={pr.donor_name} /></> : null} />
         <Row label="Impact Stream" value={pr.impact_stream} />
         <Row label="Purpose" value={pr.purpose} />
         <Row label="Recurring" value={pr.is_recurring ? `Yes — ${pr.recurring_frequency || ''}` : 'No'} />
@@ -114,7 +115,7 @@ export default function PRRequestDetailsCard({ pr }) {
           <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ink)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '14px' }}>Donor / Programme Allocation</div>
           {pr.donor_allocations.map((a, i) => (
             <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--ink)', marginBottom: '6px' }}>
-              <span>{[a.entity, a.program, a.subprogram, a.donor].filter(Boolean).join(' / ') || '—'}</span>
+              <span><AllocationPath a={a} /></span>
               <span style={{ fontWeight: 600, flexShrink: 0, marginLeft: '12px' }}>{a.percent}%</span>
             </div>
           ))}

@@ -336,6 +336,7 @@ Where to look first for a given question:
 | Who approves this report or PR? | `src/lib/approvalEngine.js`, `src/lib/prApprovalActions.js`, `approval_rules` |
 | How is a document number made? | database function `next_doc_number` |
 | What is recorded in System Logs? | `src/lib/systemLog.js` and the database triggers |
+| Where do entity, programme, sub-programme and donor come from? | `src/lib/donorData.js`. The generated part is rewritten from the mapping sheet with `node scripts/gen-donor-map.cjs "<path to the CSV>"` (do not edit it by hand). The sheet's Location column is not a form field: `getLocation()` looks it up from the donor and `LocationTag` shows it small and blue next to the sub-programme for approvers (PR detail, request card, PR review step). It shows nothing when a donor sits in several places (today: FCRA, SAY, "Unrestricted"). The old TNF entity is not in the sheet and is kept in `LEGACY` so older records resolve. |
 
 ## Design system
 

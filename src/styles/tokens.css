@@ -152,6 +152,9 @@
   --clay-bg:     color-mix(in srgb, var(--clay) 12%, var(--tn-white));
   --clay-border: color-mix(in srgb, var(--clay) 35%, transparent);
 
+  /* Information that is not a status: where the work is (location next to the sub-programme). */
+  --info-blue:   #2f6fb3;
+
   --action-bg:   color-mix(in srgb, var(--action) 10%, var(--tn-white));
 
   /* ---- Families ---- */

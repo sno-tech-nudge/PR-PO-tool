@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { AllocationPath } from '../shared/LocationTag'
 import { supabase } from '../../lib/supabase'
 import { getPRApprovalLevels, getRequiredQuotes } from '../../lib/approvalEngine'
 import { getApprovalLevelRecipients, notifyEmails } from '../../lib/approverRecipients'
@@ -870,7 +871,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px' }}>Donor / Programme Allocation</div>
               {allocations.map((a, i) => (
                 <div key={i} style={{ fontSize: '12px', color: 'var(--ink)', marginBottom: '3px' }}>
-                  {a.percent}% · {[a.entity, a.program, a.subprogram, a.donor].filter(Boolean).join(' / ')}
+                  {a.percent}% · <AllocationPath a={a} />
                 </div>
               ))}
             </div>
