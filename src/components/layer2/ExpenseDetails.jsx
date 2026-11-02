@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
 import { suggestCategory } from '../../lib/claude'
-import { EXPENSE_CATEGORIES } from '../../lib/expenseCategories'
+import { OTHER_CATEGORY } from '../../lib/expenseCategories'
+import { useCategories, matchingCategory } from '../../lib/categories'
+import OtherSpecify from '../shared/OtherSpecify'
 import { ENTITIES, EXPENSE_NATURES, getPrograms, getDonorsForProgram } from '../../lib/donorData'
 import { preloadDirectory, getActiveDirectoryEntries } from '../../lib/directory'
 import { attachPendingBalances, poOptionLabel } from '../../lib/poBalance'
@@ -23,9 +25,6 @@ import VendorInviteModal from '../vendor/VendorInviteModal'
 import AdvancePicker from '../shared/AdvancePicker'
 import { loadAdvanceBalances } from '../../lib/advanceBalance'
 
-// One shared list (also what Settings > TDS Rules offers), so a category added there
-// is always one a line can actually carry.
-const CATEGORIES = EXPENSE_CATEGORIES
 
 // `reportPO` ({ related, poId }) is passed when this expense is being added
 // inside a report whose PO answer is already known (given when the report was
@@ -33,6 +32,8 @@ const CATEGORIES = EXPENSE_CATEGORIES
 // the final report preview is the one place it can be revisited.
 export default function ExpenseDetails({ layer1Data, existingExpense = null, defaultReportId = '', reportPO = null, user, onSaved, onBack, embedded = false, onStatus, trackSave, onDeleted }) {
   const isMobile = useIsMobile()
+  // Built-in categories plus any that grew out of Other (also what Settings > TDS Rules offers).
+  const { expense: CATEGORIES } = useCategories()
   const isEdit = !!existingExpense
   const [reportId, setReportId] = useState(existingExpense?.report_id || defaultReportId || '')
   const [reportOptions, setReportOptions] = useState([])
@@ -148,7 +149,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
   // Everything optional lives under one fold so the form stays short; it opens on
   // its own if a problem is inside it, and the fold says how many are filled in.
   const [moreOpen, setMoreOpen] = useState(false)
-  const filledOptional = [program, donorName, natureOfExpense, poNumber, referenceNumber, subCategory, poPdfLink, paidTo, vrPdfLink, invoiceNumber, gstin]
+  const filledOptional = [program, donorName, natureOfExpense, poNumber, referenceNumber, category === OTHER_CATEGORY ? '' : subCategory, poPdfLink, paidTo, vrPdfLink, invoiceNumber, gstin]
     .filter(v => v !== null && v !== undefined && String(v).trim() !== '').length
   const moreIsOpen = moreOpen || !!gstinFormatError
 
@@ -375,6 +376,8 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
     if (!vendor) e.vendor = 'Required'
     else if (needsRegisteredVendor) e.vendor = 'Pick a registered vendor from the list'
     if (!category) e.category = 'Required'
+    if (category === OTHER_CATEGORY && !subCategory.trim()) e.categoryOther = 'Say what this is'
+    if (itemized && itemLines.some(l => l.category === OTHER_CATEGORY && !String(l.other || '').trim())) e.itemOther = 'Say what "Other" is on each line'
     if (!effectiveAmount) e.amount = 'Required'
     if (!paymentMode) e.paymentMode = 'Required'
     if (paymentMode === 'Company Card' && !cardNo) e.cardNo = 'Required'
@@ -395,7 +398,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
   // Embedded in the report workspace there is no Save button: the expense is
   // saved to the draft in the background as it is edited, and the workspace
   // is told which mandatory fields are still missing.
-  const MISSING_LABELS = { date: 'Expense date', vendor: 'Merchant', category: 'Category', amount: 'Amount', paymentMode: 'Payment mode', cardNo: 'Card no.', advance: 'Advance', entity: 'Entity', description: 'Description' }
+  const MISSING_LABELS = { date: 'Expense date', vendor: 'Merchant', category: 'Category', categoryOther: 'What "Other" is', itemOther: 'What "Other" is', amount: 'Amount', paymentMode: 'Payment mode', cardNo: 'Card no.', advance: 'Advance', entity: 'Entity', description: 'Description' }
   const missingList = Object.keys(getErrors()).map(k => MISSING_LABELS[k]).filter(Boolean)
   const missingKey = missingList.join('|')
   const payloadJson = embedded ? JSON.stringify(buildPayload()) : ''
@@ -663,6 +666,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
           {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
         {errors.category && <div style={errorText}>{errors.category}</div>}
+        <OtherSpecify category={category} value={subCategory} onChange={setSubCategory} error={errors.categoryOther} suggest={matchingCategory(subCategory, CATEGORIES)} onUseCategory={name => { setCategory(name); setSubCategory('') }} />
       </div>
 
       {/* Amount + Itemize */}
@@ -685,7 +689,8 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
         {itemized && (
           <div>
             {itemLines.map((line, idx) => (
-              <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+              <div key={idx} style={{ marginBottom: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
                 <select
                   value={line.category}
                   onChange={e => updateItemLine(idx, 'category', e.target.value)}
@@ -706,6 +711,8 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
                 >
                   ✕
                 </div>
+              </div>
+              <OtherSpecify category={line.category} value={line.other} onChange={v => updateItemLine(idx, 'other', v)} error={submitAttempted && line.category === OTHER_CATEGORY && !String(line.other || '').trim() ? 'Say what this is' : null} />
               </div>
             ))}
             <div
@@ -1023,8 +1030,8 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
         />
       </div>
 
-      {/* Sub Category */}
-      <div style={fieldWrap}>
+      {/* Sub Category (when the category is Other it is asked right under the category instead) */}
+      {category !== OTHER_CATEGORY && <div style={fieldWrap}>
         <label style={labelStyle}>Sub Category</label>
         <input
           type="text"
@@ -1033,7 +1040,7 @@ export default function ExpenseDetails({ layer1Data, existingExpense = null, def
           placeholder="Optional"
           style={{ ...inputStyle, fontSize: '13px' }}
         />
-      </div>
+      </div>}
 
       {/* PO Pdf link */}
       <div style={fieldWrap}>

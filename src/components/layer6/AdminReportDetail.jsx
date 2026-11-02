@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
+import { categoryLabel } from '../../lib/expenseCategories'
 import { supabase } from '../../lib/supabase'
 import { downloadCSV, reportsToRows } from '../../lib/exportUtils'
 import { runAIVouchCheck } from '../../lib/claude'
 import ReportChat from '../shared/ReportChat'
+import PaymentSplit from '../shared/PaymentSplit'
 import { manualLinkPRToExpense } from '../../lib/linkEngine'
 import { getDisplayName } from '../../lib/directory'
 import { generateExpenseAttachmentsPDF, downloadPDF } from '../../lib/expenseAttachmentsPdf'
@@ -71,9 +73,10 @@ export default function AdminReportDetail({ reportId, user, onBack, onViewAuditT
           report_expenses (
             expense_details (
               id, vendor, category, amount, date, payment_method,
-              invoice_number, gstin, description, policy_status,
+              invoice_number, gstin, description, sub_category, policy_status,
               expense_type, reimbursement_type, submitted_at, capture_id,
-              supporting_attachments, po_pdf_link, vr_pdf_link, er_pdf_link
+              supporting_attachments, po_pdf_link, vr_pdf_link, er_pdf_link,
+              base_amount, gst_amount, other_amount, tds_amount, tds_breakdown, deduction_amount
             )
           )
         `)
@@ -544,7 +547,7 @@ function ExpenseTableRow({ exp, av, aiV, pc, i, total }) {
         <td style={{ padding: '10px 14px', fontSize: '13px', fontWeight: 500, color: 'var(--ink)' }}>
           {exp.vendor || 'Unknown vendor'}
         </td>
-        <td style={{ padding: '10px 14px', fontSize: '12px', color: 'var(--ink)' }}>{exp.category || '—'}</td>
+        <td style={{ padding: '10px 14px', fontSize: '12px', color: 'var(--ink)' }}>{categoryLabel(exp) || '—'}</td>
         <td style={{ padding: '10px 14px', fontSize: '12px', color: 'var(--ink)', whiteSpace: 'nowrap' }}>{fmtDate(exp.date)}</td>
         <td style={{ padding: '10px 14px', fontSize: '11px', color: exp.invoice_number ? 'var(--ink)' : 'var(--text-muted)', fontFamily: 'monospace' }}>
           {exp.invoice_number || 'Missing'}
@@ -584,6 +587,7 @@ function ExpenseTableRow({ exp, av, aiV, pc, i, total }) {
               {exp.invoice_number && <MiniField label="Invoice No." value={exp.invoice_number} mono />}
               {exp.description && <MiniField label="Note" value={exp.description} />}
             </div>
+            <PaymentSplit expense={exp} />
             {exp.capture_id && <div style={{ marginTop: '8px' }}><ReceiptDocuments captureId={exp.capture_id} /></div>}
             {!exp.capture_id && !exp.po_pdf_link && !exp.vr_pdf_link && !exp.er_pdf_link && (
               <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-muted)' }}>No receipt linked</div>

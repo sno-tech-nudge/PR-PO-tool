@@ -87,7 +87,9 @@ export async function saveDeduction({ report, expense, amount, reason, note, use
 }
 
 // Saves the TDS decision for one vendor line: the base/GST split, the section
-// and rate that applied, the amount deducted and why.
+// and rate that applied, the amount deducted and why. When the invoice was split
+// into line items by category, each line's own section, rate and TDS is kept in
+// tds_breakdown so Finance can see the split any time.
 export async function saveTds({ report, expense, base, gst, result, amountOverride, user }) {
   const computed = Number(result?.amount) || 0
   const overridden = amountOverride !== '' && amountOverride != null && Number(amountOverride) !== computed
@@ -101,6 +103,9 @@ export async function saveTds({ report, expense, base, gst, result, amountOverri
     tds_section: result?.section || null,
     tds_rate: result?.rate ?? null,
     tds_amount: amount,
+    tds_breakdown: result?.lines?.length
+      ? result.lines.map(l => ({ category: l.category || '', other: l.other || null, amount: num(l.amount), section: l.section || null, rate: l.rate ?? null, tds: num(l.tds), status: l.status }))
+      : null,
     tds_note: overridden ? `Adjusted by Accounts from ${money(computed)}. ${result?.note || ''}`.trim() : (result?.note || null),
     tds_set_by: user?.email || null,
     tds_set_at: new Date().toISOString(),
@@ -110,7 +115,7 @@ export async function saveTds({ report, expense, base, gst, result, amountOverri
   const net = await recomputeNetPayable(report.id)
   logActivity({
     entityType: 'report', entityId: report.id, entityRef: report.report_reference, action: 'tds_set',
-    toValue: `${expense.vendor || 'Expense'} ${money(expense.amount)}: ${amount > 0 ? `${money(amount)} TDS` : 'no TDS'}`,
+    toValue: `${expense.vendor || 'Expense'} ${money(expense.amount)}: ${amount > 0 ? `${money(amount)} TDS${result?.section ? ` (${result.section})` : ''}` : 'no TDS'}`,
     actor: user, note: patch.tds_note,
   })
   return { patch, net }

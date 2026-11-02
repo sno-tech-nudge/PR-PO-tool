@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { categoryLabel } from '../../lib/expenseCategories'
 import { supabase } from '../../lib/supabase'
 import ExpenseDetails from '../layer2/ExpenseDetails'
 import QuickAddDropzone from '../capture/QuickAddDropzone'
@@ -289,7 +290,7 @@ export default function ExpenseSelector({ expenses: initialExpenses, results: in
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                {[exp.category, exp.date].filter(Boolean).join(' · ')}
+                {[categoryLabel(exp), exp.date].filter(Boolean).join(' · ')}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, marginLeft: '8px' }}>
                 {badge && (

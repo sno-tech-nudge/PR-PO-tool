@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { categoryLabel } from '../../lib/expenseCategories'
 import { supabase } from '../../lib/supabase'
 import NotificationToast from './NotificationToast'
 import ReportChat from '../shared/ReportChat'
@@ -370,7 +371,7 @@ export default function ReportStatus({ reportId, user, onBack, onEditRejected, o
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    {[exp.category, exp.date].filter(Boolean).join(' · ')}
+                    {[categoryLabel(exp), exp.date].filter(Boolean).join(' · ')}
                   </div>
                   <div style={{
                     fontSize: '11px', fontWeight: 500, padding: '2px 8px', borderRadius: 'var(--radius-xs)',

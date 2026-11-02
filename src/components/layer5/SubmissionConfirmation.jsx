@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { categoryLabel } from '../../lib/expenseCategories'
 import { supabase } from '../../lib/supabase'
 import { downloadPDF } from '../../lib/pdfGenerator'
 import { createApprovalRecords } from '../../lib/approvalEngine'
@@ -46,7 +47,7 @@ function SubmittedExpense({ expense: e, result, index }) {
       </div>
       <div style={{ padding: '14px 16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
         <Detail label="Date" value={e.date} />
-        <Detail label="Category" value={e.category} />
+        <Detail label="Category" value={categoryLabel(e)} />
         <Detail label="Entity" value={e.entity} />
         <Detail label="Programme" value={e.program} />
         <Detail label="Donor" value={e.donor_name} />

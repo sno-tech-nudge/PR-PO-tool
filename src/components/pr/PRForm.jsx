@@ -242,6 +242,10 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
           : 'Enter quantity, category, and rate per unit for every line item.'
         e.itemFields = true
       }
+      else if ((breakdown.items || []).some(it => it.category === 'Other' && !String(it.description || '').trim())) {
+        e.amount = 'Say what "Other" is: describe the item for every line item whose category is Other.'
+        e.otherItems = true
+      }
       else if (!breakdownTotals({ ...breakdown, base: itemsBase }).valid) e.amount = 'Enter tax for this purchase.'
       if (numericAmount > 0 && numericAmount < PR_MIN)
         e.amount = `Purchases under ₹25,000 don't need a PR — submit as an expense claim instead.`
@@ -688,7 +692,7 @@ export default function PRForm({ user, existingPR = null, onSaved, onBack }) {
             <AmountBreakdown
               value={breakdown}
               onChange={setBreakdown}
-              errors={{ ...(liveErrors.amount ? { base: liveErrors.amount } : {}), ...(liveErrors.itemFields ? { category: true } : {}) }}
+              errors={{ ...(liveErrors.amount ? { base: liveErrors.amount } : {}), ...(liveErrors.itemFields ? { category: true } : {}), ...(liveErrors.otherItems ? { other: true } : {}) }}
             />
           </div>
 

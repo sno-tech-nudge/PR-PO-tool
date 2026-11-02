@@ -146,6 +146,14 @@ Notes that matter when rebuilding:
   split-bill warnings plus India tax checks (GSTIN, PAN, TDS). History is stored as events in `expense_vouch_events`.
 - **Accounts requirements**: vendor payment versus reimbursement, deductions, TDS (rules editable in Settings, TDS Rules),
   advance application, work assignment to a Finance person, and "lower of invoice or proof amount".
+- **Invoice split and TDS** (`layer5/AccountsPanel`, `lib/tds.js`, `lib/paymentSplit.js`): a vendor invoice is split into
+  line items (each with its own category and therefore its own TDS rule), incidentals and GST. Only the line items are
+  taxed; GST and incidentals never are, and incidentals are whatever is left of the invoice total. The split is filled in
+  from the linked purchase request's line items (scaled to the invoice, so a part payment keeps the same proportions),
+  else from the items the employee listed, else one line, and Accounts can edit it. What was confirmed is saved per line
+  in `expense_details.tds_breakdown` and shown to Finance any time as the "Payment split" card (vouching panel, admin
+  report detail, approver card for Finance) and in the audit pack's expenses file. TDS on the advance part of a PO
+  (`po/PoAdvanceTds`) uses the same per-line logic.
 - **AI vouch check** (`AIVouchCard`) gives an advisory verdict that is saved on the report.
 - **Needs you** strip on Home shows what is waiting for the signed-in person.
 
@@ -189,7 +197,7 @@ deducted.
   maintenance page; admins keep full access and can end it. Used to freeze writes during releases or a migration.
 - **Delegation / out of office** (`approval_delegations`): an approver names a teammate for a date range; the delegate
   can act on their pending items and the trail records "on behalf of".
-- **Settings**: Team and Roles, Custom Approval rules, TDS rules, Delegations, My Profile.
+- **Settings**: Team and Roles, Custom Approval rules, TDS rules, Categories (what grew out of Other), Delegations, My Profile.
 - **Language**: an English / Hindi toggle (`src/lib/i18n`). It swaps visible text at runtime from a dictionary
   (`hi.js`); anything not in the dictionary stays English. Hindi strings have not been reviewed by a native speaker.
 - **First-time walkthrough** and guided tours (`lib/walkthrough.js`, `lib/tours.js`).
@@ -211,22 +219,24 @@ Business rules are code (`src/lib/policyEngine.js` and friends) unless noted. Ch
 | Large claim on FCRA entity | above ₹20,000 needs a donor or programme mention (hard block); other entities get a soft prompt |
 | Late claim | an expense more than 30 days old shows a warning; exceptions need Functional Leader and COO approval |
 | Company card | an expense paid on a company card cannot be marked reimbursable (database trigger) |
-| TDS | rules table (`tds_rules`): section, categories, payee type, rate, no-PAN rate, thresholds. Starter rules for 194J and 194C are marked "Starter". A rule is picked by the expense line's category. |
-| Expense categories | 24 categories in one shared list, `src/lib/expenseCategories.js`, used by the expense forms and the TDS rule picker. The PR and PO dropdowns use `src/lib/prConstants.js` (`PR_CATEGORIES`), so a new category must be added to **both**, plus a Tally ledger in `tallyExport.js` and a Hindi label in `i18n/hi.js`. "Machinery & Plants", "Prize Challenge" and "Hiring" were added on 2 Nov 2026. |
+| TDS | rules table (`tds_rules`): section, categories, payee type, rate, no-PAN rate, thresholds. Starter rules for 194J and 194C are marked "Starter". A rule is picked by each line item's category. A rule with **no limit set applies to every bill**; with a limit, TDS applies when one bill is over the single limit or the vendor's payments under that rule this financial year pass the yearly limit (the year's total is counted per rule, so another section's payments do not count). Lines under the same rule on one bill are added together before the single-bill limit is checked. Only one rule can win per category and payee type, so do not put two rules on the same category. |
+| Expense categories | 24 built-in categories in one shared list, `src/lib/expenseCategories.js`, used by the expense forms and the TDS rule picker. The PR and PO dropdowns use `src/lib/prConstants.js` (`PR_CATEGORIES`), so a new built-in category must be added to **both**, plus a Tally ledger in `tallyExport.js` and a Hindi label in `i18n/hi.js`. "Machinery & Plants", "Prize Challenge" and "Hiring" were added on 2 Nov 2026. On top of those, **categories grow out of "Other"** (below). Every picker reads the merged list through `useCategories()` in `src/lib/categories.js`. |
+| "Other" | Choosing Other asks what it is: typed into `expense_details.sub_category` (the expense form, Quick add, the PO invoice form), as `other` on an itemized line or a TDS split line, or as the item description on a PR line item (required there). Finance and approver screens, the report PDF and exports show "Other (what it is)". |
+| Categories made from Other | When the same text is typed under Other **5 times** (editable in Settings, Categories, stored in `system_state` key `category_auto`) the database makes it a category by itself (`custom_categories`), named after its most common spelling. Counted: expense lines, itemized lines and submitted (not draft) PR line items. Not counted: the legacy `Zoho category: ...` text already in `sub_category`, existing built-in names (so "machinery and plants" never duplicates "Machinery & Plants"), vague words (other, misc, general, ...) and anything over 40 characters or 5 words. Spelling, case, plurals and "and" are ignored when matching. Past records are never rewritten. Finance and admin get a notification and an Activity Log entry; Settings, Categories lists what was made, what is close, and can hide one. A new category has no TDS rule until one is added. |
 
 ## Data model
 
-26 tables in the `public` schema. The exact definitions are in a fresh export (`npm run migration:export`); the
+27 tables in the `public` schema. The exact definitions are in a fresh export (`npm run migration:export`); the
 `supabase_migration_*.sql` files in the repo root are history only and do **not** add up to the live schema.
 
 | Area | Tables |
 |---|---|
 | People | `team_members`, `zoho_directory`, `approval_delegations` |
-| Expenses | `expense_captures` (the receipt and payment proof), `expense_details` (one expense, about 70 columns), `expense_reports`, `report_expenses` (report to expense link), `report_approvals`, `expense_vouch_events`, `expense_notifications` |
+| Expenses | `expense_captures` (the receipt and payment proof), `expense_details` (one expense, about 70 columns, including `tds_breakdown`: the per-line TDS split of a vendor invoice), `expense_reports`, `report_expenses` (report to expense link), `report_approvals`, `expense_vouch_events`, `expense_notifications` |
 | Money | `advances`, `report_advances`, `tds_rules` |
 | Procurement | `purchase_requests`, `pr_approvals`, `pr_review_presence`, `purchase_orders` |
 | Vendors | `vendors` (about 60 columns), `vendor_invites`, `vendor_bank_change_log` |
-| Control | `approval_rules`, `activity_log`, `system_logs`, `system_state` (key/value, holds the maintenance state), `audit_trail_access_log`, `feedback` (table remains, the UI was removed) |
+| Control | `approval_rules`, `custom_categories` (categories made from Other), `activity_log`, `system_logs`, `system_state` (key/value: the maintenance state, and `category_auto` the threshold), `audit_trail_access_log`, `feedback` (table remains, the UI was removed) |
 
 Conventions:
 
@@ -245,6 +255,10 @@ Conventions:
   role, vendor-approval right, function, name or email changed. The app stamps `changed_by` / `changed_at` just before the
   change so the log can name who did it; a change with no fresh stamp is recorded as a "direct database change".
 - `system_logs_refuse`: triggers on `system_logs` that reject update, delete and truncate.
+- `promote_other_category(text)`, `category_key(text)`, `jsonb_arr(jsonb)` and the triggers `promote_other_expense` (on
+  `expense_details`) and `promote_other_pr` (on `purchase_requests`): count what is typed under Other and create the
+  category when it is frequent enough. They never raise, so a failure cannot stop a save. The built-in category names are
+  repeated inside `promote_other_category`; if a built-in category is ever added, add it there too.
 - `log_ddl_command`, `log_ddl_drop`: **event triggers** (`system_log_ddl`, `system_log_drop`) that record every schema
   change in the `public` schema into System Logs.
 
@@ -375,7 +389,7 @@ Summary of the procedure:
 
 Why you cannot just replay the repo's SQL files, and what the export captures that they miss: policies, triggers, the
 log lock, grants and event triggers were partly applied by ad hoc scripts. A test replay of the export into a scratch
-Postgres matched all 26 tables row for row and kept the log lock and both event triggers intact.
+Postgres matched all 26 tables (there are 27 now) row for row and kept the log lock and both event triggers intact.
 
 **What the export deliberately does not copy:** Supabase's own `issue_*` and `pgrst_*` event triggers and the
 `pg_stat_statements` and `supabase_vault` extensions (every new project has them), and the Nucleus integration (below).
@@ -402,8 +416,12 @@ Read these before treating the tool as hardened. They are carried over unchanged
   (`TODO(finance)` comments in `prConstants.js` and `tallyExport.js`). The ledgers for the newest categories were
   chosen by the developer, not Finance: Machinery & Plants maps to "Plant and Machinery", Prize Challenge to "Prize and
   Challenge Expenses", Hiring to "Recruitment Expenses". Confirm or change them in `DEFAULT_LEDGER_MAP`.
-- **Older TDS rules use workaround categories** (for example the 194BB prize rule is attached to "Other"). They were
-  not changed; edit them in Settings, TDS Rules to use the new categories.
+- **Older TDS rules use workaround categories**: the 194BB prize rule and the 194I plant and machinery rent rule are both
+  attached to "Other", and the 194I(2) rent rule to "Lodging and Boarding". When two rules cover the same category the
+  first one wins, so "Other" is taxed as a prize. They were not changed; move them onto Prize Challenge, Machinery &
+  Plants and a rent category in Settings, TDS Rules. There is no "Rent" category yet.
+- **Before 2 Nov 2026 a rule with no limits never charged TDS** (the code treated "no limit" as "below the limit", while
+  Settings says it applies to every bill). Fixed that day. Lines already confirmed before then keep what was saved.
 - `INTEGRATION_BRIEF.md` is an older hand-over note written for a different platform and describes an earlier stack
   (Groq only, React 19 as a drop-in). Treat it as history; this README is current.
 

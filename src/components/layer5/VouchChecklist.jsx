@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import { categoryLabel } from '../../lib/expenseCategories'
 import { supabase } from '../../lib/supabase'
 import { findDuplicateSignals } from '../../lib/duplicateCheck'
 import { runTaxChecks } from '../../lib/taxChecks'
-import { loadTdsRules, computeTds, vendorYtdBase } from '../../lib/tds'
+import { loadTdsRules, computeTdsSplit, vendorYtdPieces } from '../../lib/tds'
+import { deriveSplit, loadPrsByPoNumber } from '../../lib/paymentSplit'
 import { loadVendorRegistry, matchVendor } from '../../lib/vendorMatch'
 import { needsPoLink } from '../../lib/policyPrompt'
 import { lineNet, recomputeNetPayable, saveTds } from '../../lib/deductions'
@@ -88,7 +90,7 @@ function CompareTable({ expense, capture, mismatches }) {
     ['Date', 'date', expense.date, capture?.receipt_extracted_date],
     ['Invoice no.', null, expense.invoice_number, null],
     ['GSTIN', null, expense.gstin, null],
-    ['Category', null, expense.category, null],
+    ['Category', null, categoryLabel(expense), null],
   ].filter(([, , entered, read]) => entered || read)
   return (
     <div style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', overflow: 'hidden', marginBottom: '12px' }}>
@@ -162,7 +164,7 @@ function VouchLine({ report, user, expense, capture, events, signals, taxes: all
             <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{expense.vendor || 'Unknown vendor'}</div>
             <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink)', flexShrink: 0 }}>{expense.amount ? `₹${Number(expense.amount).toLocaleString('en-IN')}` : '—'}</div>
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{[expense.category, expense.date].filter(Boolean).join(' · ')}</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{[categoryLabel(expense), expense.date].filter(Boolean).join(' · ')}</div>
           <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginTop: '6px' }}>
             <Chip tone={st.tone}>{st.label}</Chip>
             {dupes.length > 0 && <Chip tone="clay">Possible duplicate</Chip>}
@@ -330,11 +332,11 @@ export default function VouchChecklist({ report, expenses, user, policyResults, 
     if (!isVendor) return
     let cancelled = false
     async function loadTds() {
-      const [rules, registry] = await Promise.all([loadTdsRules(), loadVendorRegistry()])
+      const [rules, registry, prs] = await Promise.all([loadTdsRules(), loadVendorRegistry(), loadPrsByPoNumber(expenses)])
       const entries = await Promise.all(expenses.map(async e => {
         const vendor = (e.vendor_id && registry.find(v => v.id === e.vendor_id)) || matchVendor(registry, { name: e.vendor, gstin: e.gstin })?.vendor || null
-        const ytd = await vendorYtdBase({ ...e, vendor_id: e.vendor_id || vendor?.id || null })
-        return [e.id, { rules, pan: vendor?.pan_number || null, ytd }]
+        const pieces = await vendorYtdPieces({ ...e, vendor_id: e.vendor_id || vendor?.id || null })
+        return [e.id, { rules, pan: vendor?.pan_number || null, pieces, ytd: pieces.reduce((s, p) => s + p.base, 0), pr: prs[e.po_number] || null }]
       }))
       if (!cancelled) setTdsInfo(Object.fromEntries(entries))
     }
@@ -347,7 +349,7 @@ export default function VouchChecklist({ report, expenses, user, policyResults, 
     if (!isVendor) return out
     for (const e of exps) {
       const info = tdsInfo[e.id]
-      if (info) out[e.id] = computeTds({ rules: info.rules, category: e.category, pan: info.pan, base: e.base_amount || e.amount, ytdBase: info.ytd })
+      if (info) out[e.id] = computeTdsSplit({ rules: info.rules, lines: deriveSplit(e, info.pr).lines, pan: info.pan, pieces: info.pieces })
     }
     return out
   }, [isVendor, exps, tdsInfo])
@@ -395,7 +397,8 @@ export default function VouchChecklist({ report, expenses, user, policyResults, 
     if (!isVendor || expense.tds_status) return true
     const preview = tdsPreview[expense.id]
     if (preview?.status !== 'not_applicable') return false
-    const { patch } = await saveTds({ report, expense, base: expense.base_amount || expense.amount, gst: expense.gst_amount, result: preview, amountOverride: '', user })
+    const split = deriveSplit(expense, tdsInfo[expense.id]?.pr)
+    const { patch } = await saveTds({ report, expense, base: preview.base, gst: split.gst, result: preview, amountOverride: '', user })
     onPatch(expense.id, patch)
     return true
   }

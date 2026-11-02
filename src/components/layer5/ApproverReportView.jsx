@@ -361,6 +361,7 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
           result={policyResults[exp.id]}
           onFlag={handleFlagExpense}
           onRemove={handleRemoveExpense}
+          showSplit={canAccessFinance(user.role)}
         />
       ))}
 

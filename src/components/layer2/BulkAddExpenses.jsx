@@ -10,11 +10,12 @@ import { imageFileToJpegBase64, pdfPageToBase64 } from '../../lib/receiptImage'
 import { toInputDate, fromInputDate } from '../../lib/dateFormat'
 import AmountInput from '../shared/AmountInput'
 import InfoTip from '../shared/InfoTip'
-import { EXPENSE_CATEGORIES } from '../../lib/expenseCategories'
+import { OTHER_CATEGORY } from '../../lib/expenseCategories'
+import { useCategories, matchingCategory } from '../../lib/categories'
+import OtherSpecify from '../shared/OtherSpecify'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import { useFileDrop } from '../../hooks/useFileDrop'
 
-const CATEGORIES = EXPENSE_CATEGORIES
 
 const PAYMENT_METHODS = [
   { value: 'cash', label: 'Cash' },
@@ -24,7 +25,7 @@ const PAYMENT_METHODS = [
 
 function blankRow() {
   return {
-    date: '', vendor: '', category: '', amount: '', reimbursable: true, payment_method: '',
+    date: '', vendor: '', category: '', other: '', amount: '', reimbursable: true, payment_method: '',
     capture_id: null, preview: null, qualityFlag: false,
   }
 }
@@ -40,6 +41,7 @@ function blankRow() {
 // makes) and prepended as a pre-filled row, keeping every field editable
 // since a handwritten or low-quality photo won't always extract cleanly.
 export default function BulkAddExpenses({ user, onSaved, onBack }) {
+  const { expense: CATEGORIES } = useCategories()
   const isMobile = useIsMobile()
   const [rows, setRows] = useState(Array.from({ length: 5 }, blankRow))
   const [saving, setSaving] = useState(false)
@@ -134,6 +136,7 @@ export default function BulkAddExpenses({ user, onSaved, onBack }) {
           date: toInputDate(extracted?.date) || '',
           vendor: extracted?.vendor || '',
           category: extracted?.category || '',
+          other: '',
           amount: extracted?.amount != null ? String(extracted.amount) : '',
           reimbursable: true,
           payment_method: ['cash', 'card', 'upi'].includes(extracted?.payment_mode) ? extracted.payment_mode : (extracted?.payment_mode === 'online' ? 'card' : ''),
@@ -158,6 +161,10 @@ export default function BulkAddExpenses({ user, onSaved, onBack }) {
 
   async function handleSave() {
     if (filledRows.length === 0) return
+    if (filledRows.some(r => r.category === OTHER_CATEGORY && !(r.other || '').trim())) {
+      setError('Say what "Other" is on each row you marked Other.')
+      return
+    }
     setSaving(true)
     setError(null)
 
@@ -165,6 +172,7 @@ export default function BulkAddExpenses({ user, onSaved, onBack }) {
       date: r.date ? fromInputDate(r.date) : null,
       vendor: r.vendor || null,
       category: r.category || null,
+      sub_category: r.category === OTHER_CATEGORY ? (r.other || '').trim() : null,
       amount: r.amount ? Number(r.amount) : null,
       payment_method: r.payment_method || null,
       invoice_number: r.invoice_number || null,
@@ -305,6 +313,7 @@ export default function BulkAddExpenses({ user, onSaved, onBack }) {
                     <option value="">Select</option>
                     {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
+                  <OtherSpecify category={r.category} value={r.other} onChange={v => updateRow(i, { other: v })} suggest={matchingCategory(r.other, CATEGORIES)} onUseCategory={name => updateRow(i, { category: name, other: '' })} placeholder="What is it?" label="What is this?" style={{ marginTop: '6px' }} />
                 </td>
                 <td style={{ padding: '8px' }}>
                   <AmountInput value={r.amount} onChange={v => updateRow(i, { amount: v })} placeholder="0.00" inputStyle={{ height: inputStyle.height, fontSize: inputStyle.fontSize }} />

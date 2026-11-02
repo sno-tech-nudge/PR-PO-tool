@@ -24,6 +24,10 @@ const ACTION_LABELS = {
   tds_rule_added: 'TDS rule added',
   tds_rule_changed: 'TDS rule changed',
   tds_rule_deleted: 'TDS rule deleted',
+  category_auto_created: 'Category made from Other',
+  category_hidden: 'Category hidden',
+  category_shown: 'Category shown again',
+  category_threshold_changed: 'Auto-category threshold changed',
 }
 
 export function actionLabel(a) {

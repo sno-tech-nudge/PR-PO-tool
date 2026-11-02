@@ -1,3 +1,4 @@
+import { categoryLabel } from '../../lib/expenseCategories'
 function formatDate(dateStr) {
   if (!dateStr) return '—'
   const parts = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
@@ -218,7 +219,7 @@ function ExpensePage({ expense, index, total, reportData, result }) {
       <div style={{ display: 'flex', gap: '0', marginBottom: '16px' }}>
         <div style={{ width: '50%', paddingRight: '24px' }}>
           <PdfField label="Date" value={formatDate(expense.date)} />
-          <PdfField label="Category" value={expense.category} />
+          <PdfField label="Category" value={categoryLabel(expense)} />
           <PdfField label="Payment method" value={expense.payment_method} />
           <PdfField label="Invoice number" value={expense.invoice_number || 'Not provided'} />
           <PdfField label="GSTIN" value={expense.gstin || 'Not provided'} />

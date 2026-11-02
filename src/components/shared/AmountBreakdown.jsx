@@ -1,6 +1,7 @@
 import { lineItemsBase, breakdownTotals, looksLikeAmount } from '../../lib/formCalc'
 import { blockNonNumericKey, sanitizeNumericPaste, sanitizeNumericValue } from '../../lib/numericInput'
-import { PR_CATEGORIES } from '../../lib/prConstants'
+import { useCategories } from '../../lib/categories'
+import { OTHER_CATEGORY } from '../../lib/expenseCategories'
 import AmountInput from './AmountInput'
 
 // Amount breakdown: one or more line items (Description x Quantity x
@@ -32,6 +33,7 @@ function countField(val, onChange, placeholder, invalid) {
 const EMPTY_ITEM = { description: '', quantity: '', category: '', ratePerUnit: '' }
 
 export default function AmountBreakdown({ value = {}, onChange, errors = {} }) {
+  const { pr: prCategories } = useCategories()
   const items = value.items?.length ? value.items : [EMPTY_ITEM]
   const computedBase = lineItemsBase(items)
   const { total } = breakdownTotals({ ...value, base: computedBase })
@@ -57,10 +59,13 @@ export default function AmountBreakdown({ value = {}, onChange, errors = {} }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '10px' }}>
         {items.map((it, i) => {
           const rowAmount = (Number(it.quantity) || 0) * (Number(it.ratePerUnit) || 0)
+          // "Other" says nothing by itself, so the item description becomes required and says what it is.
+          const isOther = it.category === OTHER_CATEGORY
+          const otherMissing = isOther && !String(it.description || '').trim()
           return (
             <div key={i} style={{ border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', background: '#FAFBFC' }}>
               <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>
-                What is this item? (optional)
+                What is this item?{isOther ? <><span style={{ color: 'var(--clay-text)', marginLeft: '2px' }}>*</span> (required, because the category is Other)</> : ' (optional)'}
               </label>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginBottom: '2px' }}>
                 <div style={{ flex: 1 }}>
@@ -68,8 +73,8 @@ export default function AmountBreakdown({ value = {}, onChange, errors = {} }) {
                     type="text"
                     value={it.description}
                     onChange={e => updateItem(i, { description: e.target.value })}
-                    placeholder="What was bought/booked — e.g. 'Venue rental for workshop', not the amount"
-                    style={{ width: '100%', height: '34px', border: `1px solid ${looksLikeAmount(it.description) ? 'var(--clay-text)' : 'var(--taupe-400)'}`, borderRadius: 'var(--radius-sm)', padding: '0 10px', fontSize: '13px', color: 'var(--ink)', background: 'var(--surface-card)', outline: 'none', boxSizing: 'border-box' }}
+                    placeholder={isOther ? "Say what 'Other' is — e.g. 'Stage hire for the launch event'" : "What was bought/booked — e.g. 'Venue rental for workshop', not the amount"}
+                    style={{ width: '100%', height: '34px', border: `1px solid ${looksLikeAmount(it.description) || (otherMissing && errors.other) ? 'var(--clay-text)' : 'var(--taupe-400)'}`, borderRadius: 'var(--radius-sm)', padding: '0 10px', fontSize: '13px', color: 'var(--ink)', background: 'var(--surface-card)', outline: 'none', boxSizing: 'border-box' }}
                   />
                   {looksLikeAmount(it.description) && (
                     <div style={{ fontSize: '11px', color: 'var(--clay-text)', marginTop: '4px' }}>
@@ -109,8 +114,13 @@ export default function AmountBreakdown({ value = {}, onChange, errors = {} }) {
                     }}
                   >
                     <option value="">Select…</option>
-                    {PR_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    {prCategories.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
+                  {isOther && (
+                    <div style={{ fontSize: '11px', color: otherMissing ? 'var(--clay-text)' : 'var(--text-muted)', marginTop: '4px' }}>
+                      Say what Other is in the item box above.
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>

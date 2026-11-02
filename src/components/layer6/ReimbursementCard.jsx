@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { categoryLabel } from '../../lib/expenseCategories'
 import { payoutAmount } from '../../lib/advanceBalance'
 import { timeAgo } from '../../lib/approvalEngine'
 
@@ -107,7 +108,7 @@ export default function ReimbursementCard({ report, selected, onToggle, readonly
               }}
             >
               <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                {[exp.vendor, exp.category].filter(Boolean).join(' · ')}
+                {[exp.vendor, categoryLabel(exp)].filter(Boolean).join(' · ')}
               </div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', flexShrink: 0, marginLeft: '12px' }}>
                 {exp.amount ? `₹${Number(exp.amount).toLocaleString('en-IN')}` : '—'}

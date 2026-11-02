@@ -1,5 +1,8 @@
 import { useState, useMemo } from 'react'
-import { computeTds } from '../../lib/tds'
+import { computeTdsSplit } from '../../lib/tds'
+import { deriveSplit, lineLabel } from '../../lib/paymentSplit'
+import OtherSpecify from '../shared/OtherSpecify'
+import { useCategories } from '../../lib/categories'
 import { DEDUCTION_REASONS, suggestDeduction, saveDeduction, saveTds, lineNet } from '../../lib/deductions'
 
 const money = n => `₹${Math.round(Number(n) || 0).toLocaleString('en-IN')}`
@@ -40,33 +43,6 @@ export default function AccountsPanel({ report, expense, policy, isVendor, tds, 
     setDBusy(false)
   }
 
-  // --- TDS (vendor payments only) -------------------------------------------
-  const total = Number(expense.amount) || 0
-  const [base, setBase] = useState(String(expense.base_amount ?? expense.amount ?? ''))
-  const [gst, setGst] = useState(String(expense.gst_amount ?? ''))
-  const [override, setOverride] = useState('')
-  const [tBusy, setTBusy] = useState(false)
-  const [tMsg, setTMsg] = useState(null)
-
-  const result = useMemo(() => (isVendor && tds
-    ? computeTds({ rules: tds.rules, category: expense.category, pan: tds.pan, base, ytdBase: tds.ytd })
-    : null), [isVendor, tds, expense.category, base])
-  const other = Math.max(0, Math.round((total - (Number(base) || 0) - (Number(gst) || 0)) * 100) / 100)
-
-  function splitGst() {
-    const b = Math.round((total / 1.18) * 100) / 100
-    setBase(String(b)); setGst(String(Math.round((total - b) * 100) / 100))
-  }
-  async function confirmTds() {
-    setTBusy(true); setTMsg(null)
-    try {
-      const { patch } = await saveTds({ report, expense, base, gst, result, amountOverride: override, user })
-      onPatch(patch)
-      setTMsg('TDS saved.')
-    } catch { setTMsg('That could not be saved. Please try again.') }
-    setTBusy(false)
-  }
-
   const net = lineNet(expense, isVendor ? 'vendor' : 'reimbursement')
 
   return (
@@ -101,44 +77,7 @@ export default function AccountsPanel({ report, expense, policy, isVendor, tds, 
           {!tds ? (
             <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Working out TDS…</div>
           ) : (
-            <>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: '8px' }}>
-                <div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>Base amount</div>
-                  <input type="number" min="0" inputMode="decimal" value={base} onChange={e => setBase(e.target.value)} style={{ ...field, width: '120px' }} />
-                </div>
-                <div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>GST</div>
-                  <input type="number" min="0" inputMode="decimal" value={gst} onChange={e => setGst(e.target.value)} style={{ ...field, width: '100px' }} />
-                </div>
-                <div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>Other</div>
-                  <div style={{ ...field, width: '90px', display: 'flex', alignItems: 'center', background: 'var(--taupe-100)', color: 'var(--text-muted)' }}>{money(other)}</div>
-                </div>
-                <button type="button" onClick={splitGst} style={smallBtn(false, false)}>Split 18% GST</button>
-              </div>
-              <div style={{
-                fontSize: '12px', lineHeight: 1.5, borderRadius: 'var(--radius-sm)', padding: '8px 10px', marginBottom: '8px',
-                background: result.status === 'applicable' ? 'var(--gold-bg)' : 'var(--surface-card)',
-                border: `1px solid ${result.status === 'applicable' ? 'var(--gold-border)' : 'var(--taupe-200)'}`,
-                color: 'var(--ink)',
-              }}>
-                <strong>{result.status === 'applicable' ? `TDS ${money(result.amount)}` : result.status === 'review' ? 'Needs a look' : 'No TDS'}</strong>
-                {result.section ? ` · ${result.section}` : ''}
-                <div style={{ color: 'var(--text-muted)' }}>{result.note}</div>
-                {tds.ytd > 0 && <div style={{ color: 'var(--text-muted)' }}>Already paid to this vendor this financial year: {money(tds.ytd)}.</div>}
-              </div>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                {result.status === 'applicable' && (
-                  <input type="number" min="0" inputMode="decimal" value={override} onChange={e => setOverride(e.target.value)} placeholder={`Change amount (${money(result.amount)})`} style={{ ...field, width: '190px' }} />
-                )}
-                <button type="button" disabled={tBusy || result.status === 'review'} onClick={confirmTds} style={smallBtn(true, tBusy || result.status === 'review')}>
-                  {result.status === 'applicable' ? 'Confirm TDS' : 'Confirm no TDS'}
-                </button>
-                {expense.tds_status && <span style={{ fontSize: '12px', color: 'var(--moss-text)' }}>Saved: {expense.tds_status === 'applicable' ? `${money(expense.tds_amount)} deducted` : 'no TDS'}</span>}
-                {tMsg && <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{tMsg}</span>}
-              </div>
-            </>
+            <TdsEditor report={report} expense={expense} tds={tds} user={user} onPatch={onPatch} />
           )}
         </div>
       )}
@@ -148,5 +87,126 @@ export default function AccountsPanel({ report, expense, policy, isVendor, tds, 
         <strong>{money(net)}</strong>
       </div>
     </div>
+  )
+}
+
+const round2 = n => Math.round(n * 100) / 100
+
+// The invoice split for a vendor line: line items (each taxed by its own
+// category), GST, and incidentals as whatever is left of the invoice total.
+// Only the line items carry TDS. Starts from what Accounts saved, else the
+// purchase request's items scaled to this invoice, else one line.
+function TdsEditor({ report, expense, tds, user, onPatch }) {
+  const { expense: expenseCategories } = useCategories()
+  const total = Number(expense.amount) || 0
+  const [init] = useState(() => deriveSplit(expense, tds.pr))
+  const [lines, setLines] = useState(() => init.lines.map(l => ({ category: l.category, other: l.other || '', amount: l.amount ? String(l.amount) : '' })))
+  const [gst, setGst] = useState(init.gst ? String(init.gst) : '')
+  const [override, setOverride] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState(null)
+
+  const result = useMemo(() => computeTdsSplit({ rules: tds.rules, lines, pan: tds.pan, pieces: tds.pieces }), [tds, lines])
+  const baseSum = round2(lines.reduce((s, l) => s + (Number(l.amount) || 0), 0))
+  const gstNum = Number(gst) || 0
+  const incidental = Math.max(0, round2(total - baseSum - gstNum))
+  const tooMuch = baseSum + gstNum > total + 0.5
+
+  const setLine = (i, patch) => setLines(ls => ls.map((l, k) => (k === i ? { ...l, ...patch } : l)))
+  const addLine = () => setLines(ls => [...ls, { category: '', amount: '' }])
+  const removeLine = i => setLines(ls => ls.filter((_, k) => k !== i))
+  function splitGst() {
+    const newBase = round2(total / 1.18)
+    const factor = baseSum > 0 ? newBase / baseSum : 1
+    setLines(ls => {
+      const scaled = ls.map(l => ({ ...l, amount: String(round2((Number(l.amount) || 0) * factor)) }))
+      const drift = round2(newBase - scaled.reduce((s, l) => s + (Number(l.amount) || 0), 0))
+      if (scaled.length && drift) scaled[scaled.length - 1].amount = String(round2((Number(scaled[scaled.length - 1].amount) || 0) + drift))
+      return scaled
+    })
+    setGst(String(round2(total - newBase)))
+  }
+  async function confirmTds() {
+    setBusy(true); setMsg(null)
+    try {
+      const { patch } = await saveTds({ report, expense, base: baseSum, gst, result, amountOverride: override, user })
+      onPatch(patch)
+      setMsg('TDS saved.')
+    } catch { setMsg('That could not be saved. Please try again.') }
+    setBusy(false)
+  }
+
+  const cell = { fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }
+  return (
+    <>
+      <div style={cell}>Line items, each taxed by its own category. GST and incidentals are never taxed.</div>
+      {init.hint && <div style={{ fontSize: '11px', color: 'var(--gold-text)', marginBottom: '6px' }}>{init.hint}</div>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '8px' }}>
+        {lines.map((l, i) => (
+          <div key={i}>
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            <select value={l.category} onChange={e => setLine(i, { category: e.target.value })} style={{ ...field, flex: '1 1 180px', minWidth: 0, color: l.category ? 'var(--ink)' : 'var(--text-muted)' }} aria-label={`Category of line ${i + 1}`}>
+              <option value="">Select category…</option>
+              {l.category && !expenseCategories.includes(l.category) && <option value={l.category}>{l.category}</option>}
+              {expenseCategories.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <input type="number" min="0" inputMode="decimal" value={l.amount} onChange={e => setLine(i, { amount: e.target.value })} placeholder="Amount" style={{ ...field, width: '110px' }} aria-label={`Amount of line ${i + 1}`} />
+            {lines.length > 1 && (
+              <button type="button" onClick={() => removeLine(i)} title="Remove this line" style={{ ...smallBtn(false, false), width: '30px', padding: 0 }}>×</button>
+            )}
+          </div>
+          <OtherSpecify category={l.category} value={l.other} onChange={v => setLine(i, { other: v })} required={false} label="What is Other?" style={{ marginTop: '4px' }} />
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: '8px' }}>
+        <button type="button" onClick={addLine} style={smallBtn(false, false)}>+ Add line</button>
+        <div>
+          <div style={cell}>GST</div>
+          <input type="number" min="0" inputMode="decimal" value={gst} onChange={e => setGst(e.target.value)} style={{ ...field, width: '100px' }} aria-label="GST" />
+        </div>
+        <div>
+          <div style={cell}>Incidentals</div>
+          <div style={{ ...field, width: '90px', display: 'flex', alignItems: 'center', background: 'var(--taupe-100)', color: 'var(--text-muted)' }}>{money(incidental)}</div>
+        </div>
+        <button type="button" onClick={splitGst} style={smallBtn(false, false)}>Split 18% GST</button>
+      </div>
+      <div style={{ fontSize: '12px', color: tooMuch ? 'var(--clay-text)' : 'var(--text-muted)', marginBottom: '8px' }}>
+        {money(baseSum)} line items + {money(incidental)} incidentals + {money(gstNum)} GST = {money(baseSum + incidental + gstNum)} of the {money(total)} invoice.
+        {tooMuch && ' The lines and GST add up to more than the invoice.'}
+      </div>
+
+      <div style={{
+        fontSize: '12px', lineHeight: 1.5, borderRadius: 'var(--radius-sm)', padding: '8px 10px', marginBottom: '8px',
+        background: result.status === 'applicable' ? 'var(--gold-bg)' : 'var(--surface-card)',
+        border: `1px solid ${result.status === 'applicable' ? 'var(--gold-border)' : 'var(--taupe-200)'}`,
+        color: 'var(--ink)',
+      }}>
+        <strong>{result.status === 'applicable' ? `TDS ${money(result.amount)}` : result.status === 'review' ? 'Needs a look' : 'No TDS'}</strong>
+        {result.section ? ` · ${result.section}` : ''}
+        {result.lines.length > 1 && (
+          <div style={{ margin: '4px 0' }}>
+            {result.lines.map((l, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
+                <span>{lineLabel(l)} {money(l.amount)}</span>
+                <span style={{ color: l.tds > 0 ? 'var(--ink)' : 'var(--text-muted)' }}>{l.tds > 0 ? `${l.section} at ${l.rate}%: ${money(l.tds)}` : 'no TDS'}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <div style={{ color: 'var(--text-muted)' }}>{result.note}</div>
+        {tds.ytd > 0 && <div style={{ color: 'var(--text-muted)' }}>Already paid to this vendor this financial year: {money(tds.ytd)}.</div>}
+      </div>
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+        {result.status === 'applicable' && (
+          <input type="number" min="0" inputMode="decimal" value={override} onChange={e => setOverride(e.target.value)} placeholder={`Change amount (${money(result.amount)})`} style={{ ...field, width: '190px' }} />
+        )}
+        <button type="button" disabled={busy || result.status === 'review' || tooMuch} onClick={confirmTds} style={smallBtn(true, busy || result.status === 'review' || tooMuch)}>
+          {result.status === 'applicable' ? 'Confirm TDS' : 'Confirm no TDS'}
+        </button>
+        {expense.tds_status && <span style={{ fontSize: '12px', color: 'var(--moss-text)' }}>Saved: {expense.tds_status === 'applicable' ? `${money(expense.tds_amount)} deducted` : 'no TDS'}</span>}
+        {msg && <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{msg}</span>}
+      </div>
+    </>
   )
 }

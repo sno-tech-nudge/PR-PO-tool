@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { categoryLabel } from '../../lib/expenseCategories'
 
 const POLICY_BADGE = {
   passed: { label: 'Passed', color: 'var(--moss)', bg: 'var(--moss-bg)' },
@@ -42,7 +43,7 @@ export default function ExpenseLineItem({ expense, result }) {
       {/* Category + date row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
         <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-          {[expense.category, expense.date].filter(Boolean).join(' · ')}
+          {[categoryLabel(expense), expense.date].filter(Boolean).join(' · ')}
         </div>
         <div style={{
           fontSize: '11px', fontWeight: 500,
@@ -75,7 +76,7 @@ export default function ExpenseLineItem({ expense, result }) {
             <DetailRow label="Amount" value={expense.amount ? `₹${Number(expense.amount).toLocaleString('en-IN')}` : null} />
             <DetailRow label="Vendor" value={expense.vendor} />
             <DetailRow label="Date" value={expense.date} />
-            <DetailRow label="Category" value={expense.category} />
+            <DetailRow label="Category" value={categoryLabel(expense)} />
             <DetailRow
               label="Who it was for"
               value={expense.expense_type === 'just_me' ? 'Just me' : expense.expense_type === 'team' ? 'Team' : expense.expense_type}

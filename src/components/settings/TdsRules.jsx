@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
-import { EXPENSE_CATEGORIES } from '../../lib/expenseCategories'
+import { useCategories } from '../../lib/categories'
 import { computeTds } from '../../lib/tds'
 import { logActivity } from '../../lib/activityLog'
 
@@ -20,6 +20,7 @@ const btn = primary => ({
 const EMPTY = { section: '', label: '', categories: [], payee_type: 'any', rate: '', no_pan_rate: '20', single_threshold: '', annual_threshold: '', notes: '', active: true }
 
 function RuleForm({ initial, onSave, onCancel, saving, error }) {
+  const { expense: categories } = useCategories()
   const [f, setF] = useState(() => ({
     ...EMPTY, ...initial,
     rate: initial?.rate != null ? String(initial.rate) : '',
@@ -51,7 +52,7 @@ function RuleForm({ initial, onSave, onCancel, saving, error }) {
 
       <label style={lab}>Applies to these expense categories (the ledger)</label>
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
-        {EXPENSE_CATEGORIES.map(c => {
+        {categories.map(c => {
           const on = f.categories.includes(c)
           return (
             <span key={c} role="button" onClick={() => toggleCat(c)} style={{
@@ -81,6 +82,7 @@ function RuleForm({ initial, onSave, onCancel, saving, error }) {
 // categories carry TDS, at what rate for which kind of vendor, and above what
 // limits. Saved rules are used immediately by every vendor payment.
 export default function TdsRules({ user }) {
+  const { expense: categories } = useCategories()
   const isAdmin = user?.role === 'admin'
   const [rules, setRules] = useState(null)
   const [editing, setEditing] = useState(null) // null | 'new' | rule id
@@ -187,7 +189,7 @@ export default function TdsRules({ user }) {
           <div>
             <label style={lab}>Expense category</label>
             <select style={input} value={t.category} onChange={e => setT({ ...t, category: e.target.value })}>
-              {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              {categories.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
           <div><label style={lab}>Vendor PAN (optional)</label><input style={input} value={t.pan} onChange={e => setT({ ...t, pan: e.target.value.toUpperCase() })} placeholder="e.g. ABCPD1234E" maxLength={10} /></div>

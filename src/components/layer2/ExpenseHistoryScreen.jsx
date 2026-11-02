@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { categoryLabel } from '../../lib/expenseCategories'
 import { supabase } from '../../lib/supabase'
 import ExpenseDetailModal from './ExpenseDetailModal'
 import StatusBadge from '../shared/ExpenseStatusBadge'
@@ -44,7 +45,7 @@ function ExpenseRow({ exp, onClick, compact }) {
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-          {exp.category} · {fmtDate(exp.date)}
+          {categoryLabel(exp)} · {fmtDate(exp.date)}
         </div>
         <StatusBadge status={exp.status} sourceStatus={exp.source_status} />
       </div>

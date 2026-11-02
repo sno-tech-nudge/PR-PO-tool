@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { categoryLabel } from '../../lib/expenseCategories'
 import { ReceiptDocuments, SupportingAttachments, DownloadAttachmentsButton, ExternalAttachmentLinks } from '../shared/ExpenseAttachments'
+import PaymentSplit from '../shared/PaymentSplit'
 
 const WHO_LABELS = { just_me: 'Just me', my_team: 'Multiple people' }
 
@@ -13,7 +15,7 @@ function DetailRow({ label, value }) {
   )
 }
 
-export default function ExpenseApprovalCard({ expense, result, onFlag, onRemove }) {
+export default function ExpenseApprovalCard({ expense, result, onFlag, onRemove, showSplit = false }) {
   const [expanded, setExpanded] = useState(false)
   const [flagging, setFlagging] = useState(false)
   const [flagNote, setFlagNote] = useState('')
@@ -56,7 +58,7 @@ export default function ExpenseApprovalCard({ expense, result, onFlag, onRemove 
 
       {/* Second row */}
       <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>
-        {[expense.category, expense.date, expense.entity].filter(Boolean).join(' · ')}
+        {[categoryLabel(expense), expense.date, expense.entity].filter(Boolean).join(' · ')}
       </div>
 
       {/* Description */}
@@ -65,6 +67,9 @@ export default function ExpenseApprovalCard({ expense, result, onFlag, onRemove 
           {expense.description.length > 80 ? expense.description.slice(0, 80) + '…' : expense.description}
         </div>
       )}
+
+      {/* How a vendor invoice was split into taxed line items, incidentals and GST: Finance only */}
+      {showSplit && <PaymentSplit expense={expense} />}
 
       {/* Policy status */}
       {hasViolation ? (

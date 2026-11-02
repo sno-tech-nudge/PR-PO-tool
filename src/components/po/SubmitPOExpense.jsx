@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { EXPENSE_NATURES } from '../../lib/donorData'
-import { PR_CATEGORIES } from '../../lib/prConstants'
+import { useCategories, matchingCategory } from '../../lib/categories'
+import { OTHER_CATEGORY } from '../../lib/expenseCategories'
+import OtherSpecify from '../shared/OtherSpecify'
 import AmountInput from '../shared/AmountInput'
 import VoiceInputButton from '../shared/VoiceInputButton'
 
@@ -66,6 +68,7 @@ const textareaStyle = { width: '100%', border: '1px solid var(--taupe-400)', bor
 // report gets its date range/name and is submitted for approval on its
 // own. Never touches the PR/PO's own status.
 export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose, onSubmitted, onNextToReport }) {
+  const { pr: prCategories } = useCategories()
   const [stage, setStage] = useState(1)
 
   // Stage 1 — this invoice's core numbers, manually entered (no attachment
@@ -82,6 +85,11 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
   const [subprogram, setSubprogram] = useState(pr?.subprogram || '')
   const [donor, setDonor] = useState(pr?.donor_name || '')
   const [category, setCategory] = useState(pr?.category?.split(',')[0]?.trim() || '')
+  // When the category is Other: what it is. The request's own item description is a good start.
+  const [categoryOther, setCategoryOther] = useState(() => {
+    const item = Array.isArray(pr?.line_items) ? pr.line_items.find(it => it.category === OTHER_CATEGORY && it.description) : null
+    return item?.description?.slice(0, 80) || ''
+  })
   const [expenseNature, setExpenseNature] = useState(pr?.expense_type || '')
   const [description, setDescription] = useState(pr?.purpose || '')
   const [gstin, setGstin] = useState(vendor?.gstin || '')
@@ -120,6 +128,7 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
   // in one pass instead of saving first and starting a report separately.
   async function handleSave(mode = 'save') {
     if (!amount || amt <= 0 || overPending) { setError('Check the invoice amount before saving.'); return }
+    if (category === OTHER_CATEGORY && !categoryOther.trim()) { setError('Say what "Other" is under Category.'); return }
 
     setSaving(true)
     setError(null)
@@ -145,6 +154,7 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
           vendor_id: vendor?.id || null,
           date: new Date().toISOString().slice(0, 10),
           category: category || null,
+          sub_category: category === OTHER_CATEGORY ? categoryOther.trim() : null,
           expense_type: 'purchase_order_tranche',
           expense_nature: expenseNature || null,
           description: description.trim() || null,
@@ -300,8 +310,9 @@ export default function SubmitPOExpense({ po, pr, vendor, user, pending, onClose
             <Field label="Category">
               <select value={category} onChange={e => setCategory(e.target.value)} style={inputStyle}>
                 <option value="">Select category…</option>
-                {PR_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                {prCategories.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
+              <OtherSpecify category={category} value={categoryOther} onChange={setCategoryOther} suggest={matchingCategory(categoryOther, prCategories)} onUseCategory={name => { setCategory(name); setCategoryOther('') }} />
             </Field>
             <Field label="Expense Nature">
               <select value={expenseNature} onChange={e => setExpenseNature(e.target.value)} style={inputStyle}>

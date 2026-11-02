@@ -3,6 +3,7 @@ import { getDisplayName } from './directory'
 import { logSystem } from './systemLog'
 import { categoryLabel, actionLabel as systemActionLabel, fmtStamp } from './systemLogExport'
 import { actionLabel as activityActionLabel } from './activityLogExport'
+import { describeSplit } from './paymentSplit'
 
 // One zip for an audit: for every report submitted in a date range, its summary,
 // its expenses, the receipts and payment proofs, and everything Finance did on
@@ -141,7 +142,7 @@ export async function buildAuditPack({ from, to, user, onProgress = () => {} }) 
         'No': i + 1, 'Date': l.date || '', 'Vendor': l.vendor || '', 'Category': l.category || '', 'Amount (INR)': money(l.amount),
         'Payment mode': l.payment_method || '', 'Invoice no.': l.invoice_number || '', 'GSTIN': l.gstin || '',
         'Deducted (INR)': money(l.deduction_amount), 'Deduction reason': l.deduction_reason || '',
-        'TDS (INR)': money(l.tds_amount), 'TDS section': l.tds_section || '',
+        'TDS (INR)': money(l.tds_amount), 'TDS section': l.tds_section || '', 'Payment split': describeSplit(l),
         'Reason for being over policy': l.policy_justification || '', 'Reason for no PR/PO': l.no_po_reason || '',
         'Vouch status': last ? VOUCH_VERB[last.kind] : 'Not vouched',
         'AI content label': cap?.ai_content_flag ? 'Yes' : '',
