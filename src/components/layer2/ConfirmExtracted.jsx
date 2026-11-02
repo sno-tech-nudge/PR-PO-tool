@@ -1,15 +1,9 @@
 import { useState, useEffect } from 'react'
 import { suggestCategory } from '../../lib/claude'
 import QuestionScreen from './QuestionScreen'
+import { EXPENSE_CATEGORIES } from '../../lib/expenseCategories'
 
-const CATEGORIES = [
-  'Travel Fare', 'Lodging and Boarding', 'Food', 'Bike Fare',
-  'Consultant Fee', 'Professional Fee', 'Retainership / Consultancy',
-  'Legal Fees', 'Courier', 'Service', 'Staff Welfare', 'Filing Fees',
-  'Furniture and Fixtures', 'Housekeeping', 'Leasehold Improvements',
-  'Medicine', 'Relocation Allowance', 'Repairs and Maintenance',
-  'Subscription / Software', 'Learning and Development', 'Other',
-]
+const CATEGORIES = EXPENSE_CATEGORIES
 
 export default function ConfirmExtracted({ layer1Data, onContinue, onBack }) {
   const [data, setData] = useState({

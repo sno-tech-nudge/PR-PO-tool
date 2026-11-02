@@ -24,6 +24,9 @@ export const DEFAULT_LEDGER_MAP = {
   'Repairs and Maintenance':    'Repairs and Maintenance',
   'Subscription / Software':    'Subscription & Software Expenses',
   'Learning and Development':   'Training & Development Expenses',
+  'Machinery & Plants':         'Plant and Machinery',
+  'Prize Challenge':            'Prize and Challenge Expenses',
+  'Hiring':                     'Recruitment Expenses',
   'Other':                      'Miscellaneous Expenses',
 
   // Orphaned pre-rename keys — kept so historical reports still export correctly.

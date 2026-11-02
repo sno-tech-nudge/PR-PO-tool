@@ -10,17 +10,11 @@ import { imageFileToJpegBase64, pdfPageToBase64 } from '../../lib/receiptImage'
 import { toInputDate, fromInputDate } from '../../lib/dateFormat'
 import AmountInput from '../shared/AmountInput'
 import InfoTip from '../shared/InfoTip'
+import { EXPENSE_CATEGORIES } from '../../lib/expenseCategories'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import { useFileDrop } from '../../hooks/useFileDrop'
 
-const CATEGORIES = [
-  'Travel Fare', 'Lodging and Boarding', 'Food', 'Bike Fare',
-  'Consultant Fee', 'Professional Fee', 'Retainership / Consultancy',
-  'Legal Fees', 'Courier', 'Service', 'Staff Welfare', 'Filing Fees',
-  'Furniture and Fixtures', 'Housekeeping', 'Leasehold Improvements',
-  'Medicine', 'Relocation Allowance', 'Repairs and Maintenance',
-  'Subscription / Software', 'Learning and Development', 'Other',
-]
+const CATEGORIES = EXPENSE_CATEGORIES
 
 const PAYMENT_METHODS = [
   { value: 'cash', label: 'Cash' },

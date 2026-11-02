@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
 import { suggestCategory } from '../../lib/claude'
+import { EXPENSE_CATEGORIES } from '../../lib/expenseCategories'
 import { ENTITIES, EXPENSE_NATURES, getPrograms, getDonorsForProgram } from '../../lib/donorData'
 import { preloadDirectory, getActiveDirectoryEntries } from '../../lib/directory'
 import { attachPendingBalances, poOptionLabel } from '../../lib/poBalance'
@@ -22,14 +23,9 @@ import VendorInviteModal from '../vendor/VendorInviteModal'
 import AdvancePicker from '../shared/AdvancePicker'
 import { loadAdvanceBalances } from '../../lib/advanceBalance'
 
-const CATEGORIES = [
-  'Travel Fare', 'Lodging and Boarding', 'Food', 'Bike Fare',
-  'Consultant Fee', 'Professional Fee', 'Retainership / Consultancy',
-  'Legal Fees', 'Courier', 'Service', 'Staff Welfare', 'Filing Fees',
-  'Furniture and Fixtures', 'Housekeeping', 'Leasehold Improvements',
-  'Medicine', 'Relocation Allowance', 'Repairs and Maintenance',
-  'Subscription / Software', 'Learning and Development', 'Other',
-]
+// One shared list (also what Settings > TDS Rules offers), so a category added there
+// is always one a line can actually carry.
+const CATEGORIES = EXPENSE_CATEGORIES
 
 // `reportPO` ({ related, poId }) is passed when this expense is being added
 // inside a report whose PO answer is already known (given when the report was

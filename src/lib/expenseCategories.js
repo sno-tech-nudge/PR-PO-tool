@@ -5,5 +5,6 @@ export const EXPENSE_CATEGORIES = [
   'Legal Fees', 'Courier', 'Service', 'Staff Welfare', 'Filing Fees',
   'Furniture and Fixtures', 'Housekeeping', 'Leasehold Improvements',
   'Medicine', 'Relocation Allowance', 'Repairs and Maintenance',
-  'Subscription / Software', 'Learning and Development', 'Other',
+  'Subscription / Software', 'Learning and Development',
+  'Machinery & Plants', 'Prize Challenge', 'Hiring', 'Other',
 ]

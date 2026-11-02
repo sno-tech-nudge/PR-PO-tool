@@ -211,7 +211,8 @@ Business rules are code (`src/lib/policyEngine.js` and friends) unless noted. Ch
 | Large claim on FCRA entity | above ₹20,000 needs a donor or programme mention (hard block); other entities get a soft prompt |
 | Late claim | an expense more than 30 days old shows a warning; exceptions need Functional Leader and COO approval |
 | Company card | an expense paid on a company card cannot be marked reimbursable (database trigger) |
-| TDS | rules table (`tds_rules`): section, categories, payee type, rate, no-PAN rate, thresholds. Starter rules for 194J and 194C are marked "Starter". |
+| TDS | rules table (`tds_rules`): section, categories, payee type, rate, no-PAN rate, thresholds. Starter rules for 194J and 194C are marked "Starter". A rule is picked by the expense line's category. |
+| Expense categories | 24 categories in one shared list, `src/lib/expenseCategories.js`, used by the expense forms and the TDS rule picker. The PR and PO dropdowns use `src/lib/prConstants.js` (`PR_CATEGORIES`), so a new category must be added to **both**, plus a Tally ledger in `tallyExport.js` and a Hindi label in `i18n/hi.js`. "Machinery & Plants", "Prize Challenge" and "Hiring" were added on 2 Nov 2026. |
 
 ## Data model
 
@@ -398,7 +399,11 @@ Read these before treating the tool as hardened. They are carried over unchanged
   fresh API key are still needed before email is reliable.
 - **Hindi translation** is unreviewed by a native speaker.
 - **Some category lists and Tally ledger names are provisional** pending Finance's final chart of accounts
-  (`TODO(finance)` comments in `prConstants.js` and `tallyExport.js`).
+  (`TODO(finance)` comments in `prConstants.js` and `tallyExport.js`). The ledgers for the newest categories were
+  chosen by the developer, not Finance: Machinery & Plants maps to "Plant and Machinery", Prize Challenge to "Prize and
+  Challenge Expenses", Hiring to "Recruitment Expenses". Confirm or change them in `DEFAULT_LEDGER_MAP`.
+- **Older TDS rules use workaround categories** (for example the 194BB prize rule is attached to "Other"). They were
+  not changed; edit them in Settings, TDS Rules to use the new categories.
 - `INTEGRATION_BRIEF.md` is an older hand-over note written for a different platform and describes an earlier stack
   (Groq only, React 19 as a drop-in). Treat it as history; this README is current.
 

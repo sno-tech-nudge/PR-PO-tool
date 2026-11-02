@@ -8,5 +8,5 @@ export const PR_CATEGORIES = [
   'Legal Fees', 'Courier', 'Service', 'Staff Welfare', 'Filing Fees',
   'Furniture and Fixtures', 'Housekeeping', 'Leasehold Improvements',
   'Medicine', 'Relocation Allowance', 'Repairs and Maintenance',
-  'Subscription / Software', 'Other',
+  'Subscription / Software', 'Machinery & Plants', 'Prize Challenge', 'Hiring', 'Other',
 ]
