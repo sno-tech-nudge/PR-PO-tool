@@ -53,6 +53,28 @@ export async function getApprovalLevelRecipients({ requiredRole, requiredApprove
   }
 }
 
+// Who to tell that a purchase order is waiting: the Finance team members who have the PO approval
+// switch on, and anyone covering for a Finance team member through an out-of-office delegation.
+export async function getPOApproverRecipients() {
+  try {
+    const { data: members } = await supabase.from('team_members').select('email').eq('role', 'finance').eq('can_approve_pos', true)
+    const today = todayStr()
+    const { data: dels } = await supabase.from('approval_delegations').select('delegate_email, delegator_role')
+      .is('revoked_at', null).lte('start_date', today).gte('end_date', today)
+    const delegates = (dels || []).filter(d => d.delegator_role === 'finance').map(d => d.delegate_email)
+    const seen = new Set()
+    return [...(members || []).map(m => m.email), ...delegates].filter(e => {
+      const k = String(e || '').toLowerCase()
+      if (!k || seen.has(k)) return false
+      seen.add(k)
+      return true
+    })
+  } catch (err) {
+    console.error('Resolving PO approvers failed:', err)
+    return []
+  }
+}
+
 // One in-app notification per recipient. Best-effort — never throws.
 export async function notifyEmails(emails, { type, message, relatedType, relatedId }) {
   try {

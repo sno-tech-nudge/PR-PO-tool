@@ -40,7 +40,7 @@ export default function TeamDirectory({ members, loading }) {
       ) : (
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr><th style={th}>Name</th><th style={th}>Email</th><th style={th}>Role</th><th style={th}>Function</th><th style={th}>Approves vendors</th></tr>
+            <tr><th style={th}>Name</th><th style={th}>Email</th><th style={th}>Role</th><th style={th}>Function</th><th style={th}>Approves vendors</th><th style={th}>Approves POs</th></tr>
           </thead>
           <tbody>
             {rows.map(m => (
@@ -50,6 +50,7 @@ export default function TeamDirectory({ members, loading }) {
                 <td style={td}>{getRoleLabel(m.role)}</td>
                 <td style={td}>{m.function || '—'}</td>
                 <td style={td}>{m.role === 'finance' ? (m.can_approve_vendors ? 'Yes' : 'No') : '—'}</td>
+                <td style={td}>{m.role === 'finance' ? (m.can_approve_pos ? 'Yes' : 'No') : '—'}</td>
               </tr>
             ))}
           </tbody>

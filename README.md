@@ -104,7 +104,7 @@ Roles live in `team_members.role` and are managed by an admin in **Settings, Tea
 | `fl` (Functional Leader) | Everything an employee can, plus approve PRs at level 1 and reports above the threshold. A person can also be pinned as the named approver for a specific PR. |
 | `super_fl` | Functional Leader with wider scope. |
 | `pr_approver` | PR approval level 2. |
-| `finance` | The Finance dashboard: vouching, TDS, deductions, assignment, reimbursement, Tally export, vendor management. Approving or rejecting vendors additionally needs `team_members.can_approve_vendors`. |
+| `finance` | The Finance dashboard: vouching, TDS, deductions, assignment, reimbursement, Tally export, vendor management. Approving or rejecting vendors additionally needs `team_members.can_approve_vendors`, and approving or rejecting POs needs `team_members.can_approve_pos`. An admin ticks both per person in Settings, Team & Roles. Without the PO switch a Finance member does not see Approve PO, does not get the "PO waiting" bell or email, and Home hides the PO tile (they can still act on a PO while covering for someone through a delegation). When the PO switch was added every existing Finance member was switched on, so nothing changed until an admin unticked someone. |
 | `coo` | Approval role kept in the code and rules; currently nobody holds it and the COO approval level is retired. |
 | `admin` | Everything, including Logs, Settings, delegations and maintenance. Admin is deliberately not delegable. Admin acts at the level it holds, like everyone else: it does **not** get the any-level approval power below. |
 | `finance_admin` | An admin's powers over Finance work and Settings (Finance dashboard, vendors, TDS rules, Custom Approval, Categories, Delegations, Analytics, PO audit trail), plus **approving or rejecting at any level** of a report, PR, PO, vendor or advance, never on something they raised themselves. They do **not** see Logs (Activity Log, System Logs, audit pack), maintenance control, or the people list: Settings shows a read-only Team view of only the Finance team, PR approver and Functional Leader roles, with no add, edit or remove. Assigned by an admin in Settings, Team & Roles. |
@@ -168,7 +168,7 @@ Notes that matter when rebuilding:
 - A **PR** (`components/pr`) is raised for a purchase of ₹25,000 and above: vendor (must be an approved vendor), line items,
   quotes, comparative statement, budget, advance terms, donor allocations, purpose.
 - **PR approval chain** is fixed: Functional Leader, then PR Approver. After final approval a PO is created.
-- **PO** (`components/po`): Finance approves and issues it (`pending_approval`, `issued`), then it ends as `completed`,
+- **PO** (`components/po`): a Finance member with the PO approval switch approves and issues it (`pending_approval`, `issued`), then it ends as `completed`,
   `cancelled` or `rejected`. A PO has a generated PDF and can be exported. Vendor invoices are paid by raising a report
   against the PO (`SubmitPOExpense`), with the PO balance tracked.
 - **Reminders**: a daily cron nudges stale draft PRs, PRs waiting for an approver and rejected PRs.

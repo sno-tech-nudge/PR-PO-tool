@@ -134,7 +134,7 @@ export default function HomeScreenAddons({
       canApprove
         ? supabase.from('purchase_requests').select('id', { count: 'exact', head: true }).eq('status', 'submitted')
         : Promise.resolve({ count: 0 }),
-      canFinance
+      canFinance && !(role === 'finance' && !user?.can_approve_pos) // a Finance member without PO approval has nothing to do here
         ? supabase.from('purchase_orders').select('id', { count: 'exact', head: true }).eq('status', 'pending_approval')
         : Promise.resolve({ count: 0 }),
       // Recent activity (employees) — most recently created non-draft PR/

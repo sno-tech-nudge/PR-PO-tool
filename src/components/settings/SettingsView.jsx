@@ -9,7 +9,7 @@ import TdsRules from './TdsRules'
 import TeamDirectory from './TeamDirectory'
 import CategoriesView from './CategoriesView'
 
-const EMPTY_FORM = { name: '', email: '', role: 'employee', can_approve_vendors: false, function: '' }
+const EMPTY_FORM = { name: '', email: '', role: 'employee', can_approve_vendors: false, can_approve_pos: false, function: '' }
 
 export default function SettingsView({ user }) {
   const isAdmin = user.role === 'admin' // adds, edits and removes people
@@ -72,6 +72,7 @@ export default function SettingsView({ user }) {
     const { error: err } = await supabase.from('team_members').insert({
       name, email, role: form.role,
       can_approve_vendors: form.role === 'finance' ? form.can_approve_vendors : false,
+      can_approve_pos: form.role === 'finance' ? form.can_approve_pos : false,
       function: form.function || null,
       changed_by: user.email, changed_at: new Date().toISOString(),
     })
@@ -94,14 +95,15 @@ export default function SettingsView({ user }) {
   }
 
   async function handleRoleChange(member, role) {
-    const patch = { role, can_approve_vendors: role === 'finance' ? member.can_approve_vendors : false, changed_by: user.email, changed_at: new Date().toISOString() }
+    const patch = { role, can_approve_vendors: role === 'finance' ? member.can_approve_vendors : false, can_approve_pos: role === 'finance' ? member.can_approve_pos : false, changed_by: user.email, changed_at: new Date().toISOString() }
     setMembers(prev => prev.map(m => m.id === member.id ? { ...m, ...patch } : m))
     await supabase.from('team_members').update(patch).eq('id', member.id)
   }
 
-  async function handleApproveToggle(member, checked) {
-    setMembers(prev => prev.map(m => m.id === member.id ? { ...m, can_approve_vendors: checked } : m))
-    await supabase.from('team_members').update({ can_approve_vendors: checked, changed_by: user.email, changed_at: new Date().toISOString() }).eq('id', member.id)
+  // field is can_approve_vendors or can_approve_pos
+  async function handleApproveToggle(member, checked, field = 'can_approve_vendors') {
+    setMembers(prev => prev.map(m => m.id === member.id ? { ...m, [field]: checked } : m))
+    await supabase.from('team_members').update({ [field]: checked, changed_by: user.email, changed_at: new Date().toISOString() }).eq('id', member.id)
   }
 
   // Which Function this person belongs to — drives per-function FL approval
@@ -280,6 +282,15 @@ export default function SettingsView({ user }) {
                 Can approve vendors
               </label>
             )}
+            {form.role === 'finance' && (
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--ink)', paddingBottom: '8px' }}>
+                <input
+                  type="checkbox" checked={form.can_approve_pos}
+                  onChange={e => setForm(f => ({ ...f, can_approve_pos: e.target.checked }))}
+                />
+                Can approve POs
+              </label>
+            )}
             <div>
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Function (optional)</div>
               <select
@@ -314,7 +325,7 @@ export default function SettingsView({ user }) {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: 'var(--taupe-50)', borderBottom: '1px solid var(--taupe-200)' }}>
-                  {['Name', 'Email', 'Role', 'Function', 'Can Approve Vendors', ''].map(h => (
+                  {['Name', 'Email', 'Role', 'Function', 'Can Approve Vendors', 'Can Approve POs', ''].map(h => (
                     <th key={h} style={{ padding: '10px 14px', fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       {h}
                     </th>
@@ -348,12 +359,25 @@ export default function SettingsView({ user }) {
                         </select>
                       </td>
                       <td style={{ padding: '10px 14px' }}>
-                        {m.role === 'admin' ? (
+                        {m.role === 'admin' || m.role === 'finance_admin' ? (
                           <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>always</span>
                         ) : m.role === 'finance' ? (
                           <input
                             type="checkbox" checked={!!m.can_approve_vendors}
                             onChange={e => handleApproveToggle(m, e.target.checked)}
+                          />
+                        ) : (
+                          <span style={{ fontSize: '12px', color: 'var(--taupe-400)' }}>—</span>
+                        )}
+                      </td>
+                      <td style={{ padding: '10px 14px' }}>
+                        {m.role === 'finance_admin' ? (
+                          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>always</span>
+                        ) : m.role === 'finance' ? (
+                          <input
+                            type="checkbox" checked={!!m.can_approve_pos}
+                            aria-label={`Can ${m.name} approve purchase orders`}
+                            onChange={e => handleApproveToggle(m, e.target.checked, 'can_approve_pos')}
                           />
                         ) : (
                           <span style={{ fontSize: '12px', color: 'var(--taupe-400)' }}>—</span>

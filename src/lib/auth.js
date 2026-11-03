@@ -40,6 +40,7 @@ function buildUser(row) {
     name:                row.name,
     roleLabel:           getRoleLabel(row.role),
     can_approve_vendors: !!row.can_approve_vendors,
+    can_approve_pos:     !!row.can_approve_pos,
     function:            row.function || null,
     ownEmails,
   }
@@ -50,7 +51,7 @@ async function lookupMember(email) {
   if (!normalized) return null
   const { data } = await supabase
     .from('team_members')
-    .select('name, email, role, can_approve_vendors, function, linked_email')
+    .select('name, email, role, can_approve_vendors, can_approve_pos, function, linked_email')
     .ilike('email', normalized)
     .maybeSingle()
   return data || null
@@ -135,6 +136,11 @@ export const isOwnOverride = (user, requesterEmail) => canOverrideApprovals(user
 // else (including other finance members) can only view.
 export const canApproveVendor = (user) =>
   !!user && (user.role === 'admin' || user.role === 'finance_admin' || (user.role === 'finance' && user.can_approve_vendors))
+
+// Approving or rejecting purchase orders: each Finance team member has a switch (can_approve_pos) that an
+// admin sets in Settings, Team & Roles. Finance Admin can always (but not for a request they raised: see PODetail).
+export const canApprovePO = (user) =>
+  !!user && (user.role === 'finance_admin' || (user.role === 'finance' && !!user.can_approve_pos))
 
 // Raising a PR is a requester action — people who sit somewhere in the
 // approval chain (fl, pr_approver, finance/PO approver) shouldn't also be

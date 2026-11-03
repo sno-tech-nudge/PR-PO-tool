@@ -184,9 +184,12 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail, onRaise
   // etc.) stay gated to the broader isFinance/admin access.
   // A delegate covering for a Finance team member (out of office) can approve
   // POs too; admin still can't, and nobody gets it by holding a broader role.
-  const poDelegation = user.role !== 'finance' ? delegationCovers(delegations, { requiredRole: 'finance' }) : null
-  // Finance Admin can approve any PO except one for a request they raised themselves.
-  const isPOApprover = user.role === 'finance' || (canOverrideApprovals(user.role) && !isOwnEmail(user, pr?.requested_by)) || !!poDelegation
+  // A Finance team member needs the PO approval switch (Settings, Team & Roles); without it they can still act
+  // while covering for someone through a delegation. Finance Admin can approve any PO except one for a request
+  // they raised themselves.
+  const holdsPOApproval = user.role === 'finance' && !!user.can_approve_pos
+  const poDelegation = holdsPOApproval ? null : delegationCovers(delegations, { requiredRole: 'finance' })
+  const isPOApprover = holdsPOApproval || (canOverrideApprovals(user.role) && !isOwnEmail(user, pr?.requested_by)) || !!poDelegation
   const reportsTotal = linkedExpenses.filter(e => e.status !== 'rejected').reduce((sum, e) => sum + (Number(e.total_amount) || 0), 0)
   const savedTotal = savedExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0)
   const totalSubmitted = reportsTotal + savedTotal

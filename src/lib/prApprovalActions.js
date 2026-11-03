@@ -2,7 +2,7 @@ import { supabase } from './supabase'
 import { generatePOPDF, uploadPDFToSupabase } from './pdfGenerator'
 import { autoLinkPRToExpense } from './linkEngine'
 import { getFiscalYearPrefix } from './formCalc'
-import { getApprovalLevelRecipients, notifyEmails } from './approverRecipients'
+import { getApprovalLevelRecipients, getPOApproverRecipients, notifyEmails } from './approverRecipients'
 import { notifySlack, recordUrl } from './slack'
 import { sendPREmail } from './prEmail'
 import { buildPRTimelineSteps } from './prStatusSteps'
@@ -34,15 +34,6 @@ export async function generatePONumber() {
   const { data, error } = await supabase.rpc('next_doc_number', { kind: 'PO', fy_prefix: fy })
   if (error) throw error
   return data
-}
-
-// Notifies every team member holding `role` that a PR/PO needs their
-// review — best-effort, must never block the approval action that
-// triggered it. Without this, the next approver in the chain has no way to
-// know it's their turn short of manually checking the Approvals page.
-async function notifyRole(role, { type, message, relatedType, relatedId }) {
-  const emails = await getApprovalLevelRecipients({ requiredRole: role })
-  await notifyEmails(emails, { type, message, relatedType, relatedId })
 }
 
 // Notifies whoever actually needs to act on a pr_approvals level — the one
@@ -164,14 +155,14 @@ export async function createPendingPO({ prId, pr, amount }) {
     }).select().single()
     if (error) throw error
     logActivity({ entityType: 'po', entityId: newPO.id, entityRef: poNumber, action: 'created', toValue: 'pending_approval', note: `For PR ${pr?.pr_number || ''}` })
-    notifyRole('finance', {
+    getPOApproverRecipients().then(emails => notifyEmails(emails, {
       type: 'po_pending_review',
       message: `Purchase Order ${poNumber} for ₹${Number(poAmount || 0).toLocaleString('en-IN')} (PR ${pr?.pr_number || ''}) is pending your approval.`,
       relatedType: 'po',
       relatedId: newPO.id,
-    })
+    }))
     notifySlack(`📦 PO <${recordUrl('po', newPO.id)}|${poNumber}> created for PR ${pr?.pr_number || ''} — ${fmtAmt(poAmount)} — awaiting *Finance* approval.`)
-    getApprovalLevelRecipients({ requiredRole: 'finance' }).then(emails => sendPREmail({
+    getPOApproverRecipients().then(emails => sendPREmail({
       type: 'action_needed', recipientEmail: emails, prNumber: pr?.pr_number,
       amount: poAmount, nextLevelLabel: 'Finance (PO issuance)',
     }))
