@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { isAdminLike } from '../../lib/auth'
 import { categoryLabel } from '../../lib/expenseCategories'
 import { supabase } from '../../lib/supabase'
 import { downloadCSV, reportsToRows } from '../../lib/exportUtils'
@@ -223,7 +224,7 @@ export default function AdminReportDetail({ reportId, user, onBack, onViewAuditT
               View PDF
             </a>
           )}
-          {user?.role === 'admin' && onViewAuditTrail && (
+          {isAdminLike(user?.role) && onViewAuditTrail && (
             <button
               onClick={() => onViewAuditTrail(report.po_id, report.id)}
               disabled={!report.po_id}

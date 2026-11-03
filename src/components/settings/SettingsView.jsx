@@ -1,17 +1,20 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { ROLES, getRoleLabel, canAccessFinance } from '../../lib/auth'
+import { ROLES, getRoleLabel, canAccessFinance, isAdminLike, FINANCE_ADMIN_VISIBLE_ROLES } from '../../lib/auth'
 import { FUNCTIONS } from '../../lib/functionRouting'
 import MyProfile from './MyProfile'
 import ApprovalRulesView from './ApprovalRulesView'
 import Delegations from './Delegations'
 import TdsRules from './TdsRules'
+import TeamDirectory from './TeamDirectory'
 import CategoriesView from './CategoriesView'
 
 const EMPTY_FORM = { name: '', email: '', role: 'employee', can_approve_vendors: false, function: '' }
 
 export default function SettingsView({ user }) {
-  const isAdmin = user.role === 'admin'
+  const isAdmin = user.role === 'admin' // adds, edits and removes people
+  const isFinanceAdmin = user.role === 'finance_admin' // everything else an admin has here, but only looks at the team
+  const adminLike = isAdminLike(user.role)
   const canSeeSettingsTabs = canAccessFinance(user.role) // admin or finance
   const [tab, setTab] = useState('profile')
   const [members, setMembers] = useState([])
@@ -28,7 +31,10 @@ export default function SettingsView({ user }) {
 
   async function load() {
     setLoading(true)
-    const { data } = await supabase.from('team_members').select('*').order('name')
+    // A Finance Admin never loads anyone outside the Finance, PR approver and Functional Leader roles.
+    let query = supabase.from('team_members').select('*').order('name')
+    if (isFinanceAdmin) query = query.in('role', FINANCE_ADMIN_VISIBLE_ROLES)
+    const { data } = await query
     setMembers(data || [])
     setLoading(false)
   }
@@ -137,7 +143,9 @@ export default function SettingsView({ user }) {
           <div className="tab-scroll" style={{ display: 'flex', gap: '4px' }}>
             {[
               ['profile', 'My Profile'],
-              ...(isAdmin ? [['team', 'Team & Roles'], ['delegations', 'Delegations'], ['tds', 'TDS Rules']] : []),
+              ...(isAdmin ? [['team', 'Team & Roles']] : []),
+              ...(isFinanceAdmin ? [['team', 'Team']] : []),
+              ...(adminLike ? [['delegations', 'Delegations'], ['tds', 'TDS Rules']] : []),
               ['approvals', 'Custom Approval'],
               ['categories', 'Categories'],
             ].map(([key, label]) => (
@@ -179,7 +187,7 @@ export default function SettingsView({ user }) {
         </div>
       )}
 
-      {tab === 'tds' && isAdmin && (
+      {tab === 'tds' && adminLike && (
         <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 28px' }}>
           <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '28px' }}>
             <TdsRules user={user} />
@@ -187,10 +195,18 @@ export default function SettingsView({ user }) {
         </div>
       )}
 
-      {tab === 'delegations' && isAdmin && (
+      {tab === 'delegations' && adminLike && (
         <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 28px' }}>
           <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '28px' }}>
             <Delegations user={user} mode="admin" />
+          </div>
+        </div>
+      )}
+
+      {tab === 'team' && isFinanceAdmin && (
+        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 28px' }}>
+          <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-md)', padding: '28px' }}>
+            <TeamDirectory members={members} loading={loading} />
           </div>
         </div>
       )}

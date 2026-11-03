@@ -162,7 +162,7 @@ export default function HomeScreenAddons({
         ? supabase.from('report_approvals')
             .select('id, created_at, report:expense_reports(id, report_reference, total_amount, status, employee_email)')
             .eq('status', 'pending')
-            .or(`required_role.eq.${role},required_role.is.null`)
+            .or(role === 'finance_admin' ? 'id.not.is.null' : `required_role.eq.${role},required_role.is.null`)
             .order('created_at', { ascending: false })
             .limit(3)
         : Promise.resolve({ data: [] }),

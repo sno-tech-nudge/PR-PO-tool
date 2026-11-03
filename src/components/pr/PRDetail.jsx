@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { LocationTag, AllocationPath } from '../shared/LocationTag'
 import { supabase } from '../../lib/supabase'
 import { createPendingPO, approvePRLevel, rejectPRLevel } from '../../lib/prApprovalActions'
-import { canAccessApprovals, canAccessFinance, isOwnEmail } from '../../lib/auth'
+import { canAccessApprovals, canAccessFinance, canOverrideApprovals, isOwnEmail } from '../../lib/auth'
 import { getDisplayName } from '../../lib/directory'
 import { getActiveDelegationsForDelegate, delegationCovers } from '../../lib/delegation'
 import AmountInput from '../shared/AmountInput'
@@ -75,7 +75,9 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
     const pending = approvals.find(a => a.status === 'pending')
     // Super FL bypasses per-function FL routing entirely — can act on the
     // FL level of any PR regardless of which specific FL it resolved to.
-    const matches = pending?.required_role === 'fl' && user.role === 'super_fl'
+    const matches = canOverrideApprovals(user.role)
+      ? !isOwnEmail(user, pr.requested_by) // Finance Admin: any level, never their own request
+      : pending?.required_role === 'fl' && user.role === 'super_fl'
       ? true
       : pending?.required_approver_email
         ? isOwnEmail(user, pending.required_approver_email)
@@ -208,7 +210,9 @@ export default function PRDetail({ prId, user, onBack, onEdit, showToast, onView
   // not even admin" rule as above. The one deliberate exception: `super_fl`
   // is a standing override role that can act on the FL level of ANY PR
   // regardless of which specific FL it resolved to (currently just Anurag).
-  const roleMatches = currentPending?.required_role === 'fl' && user.role === 'super_fl'
+  const roleMatches = canOverrideApprovals(user.role)
+    ? !isOwnEmail(user, pr.requested_by) // Finance Admin: any level, never their own request
+    : currentPending?.required_role === 'fl' && user.role === 'super_fl'
     ? true
     : currentPending?.required_approver_email
       ? isOwnEmail(user, currentPending.required_approver_email)

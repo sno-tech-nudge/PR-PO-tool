@@ -5,13 +5,14 @@ import { supabase } from './supabase'
 // instead of a hardcoded map — see src/components/settings/SettingsView.jsx.
 // No passwords: access is still just "type an authorised email," identical
 // trust model to before, now editable by an admin instead of a developer.
-export const ROLES = ['employee', 'fl', 'super_fl', 'admin', 'finance', 'pr_approver', 'coo', 'observer']
+export const ROLES = ['employee', 'fl', 'super_fl', 'admin', 'finance_admin', 'finance', 'pr_approver', 'coo', 'observer']
 
 const ROLE_LABEL = {
   employee:    'Employee',
   fl:          'Functional Leader',
   super_fl:    'Super FL',
   admin:       'Admin',
+  finance_admin: 'Finance Admin',
   finance:     'Finance Team',
   pr_approver: 'PR Approver',
   coo:         'COO',
@@ -104,25 +105,39 @@ export async function getEmailsByRole(role) {
 // already lets act there — the email reaches exactly who can actually act.
 export async function getApproverEmailsForLevel(requiredRole) {
   if (requiredRole) return getEmailsByRole(requiredRole)
-  const { data } = await supabase.from('team_members').select('email').in('role', ['admin', 'finance', 'fl', 'super_fl', 'pr_approver', 'coo'])
+  const { data } = await supabase.from('team_members').select('email').in('role', ['admin', 'finance_admin', 'finance', 'fl', 'super_fl', 'pr_approver', 'coo'])
   return (data || []).map(r => r.email)
 }
 
 // ─── Permission helpers ──────────────────────────────────────────────────
 // admin bypasses every restriction below — "admin has both finance & employee
 // view... can access & do anything."
-export const canAccessFinance   = (role) => role === 'admin' || role === 'finance'
-export const canAccessApprovals = (role) => role === 'admin' || role === 'finance' || role === 'fl' || role === 'super_fl' || role === 'pr_approver' || role === 'coo'
+export const canAccessFinance   = (role) => role === 'admin' || role === 'finance_admin' || role === 'finance'
+export const canAccessApprovals = (role) => role === 'admin' || role === 'finance_admin' || role === 'finance' || role === 'fl' || role === 'super_fl' || role === 'pr_approver' || role === 'coo'
 export const isObserver         = (role) => role === 'observer'
+
+// Finance Admin has an admin's powers over Finance work and Settings, but not the logs
+// (Activity Log, System Logs, audit pack) and not the team list: they can only see who
+// holds the finance, PR approver and Functional Leader roles, and cannot change anyone.
+// Use this wherever "admin" means "can run Finance and Settings"; keep `role === 'admin'`
+// for the logs, adding or editing people, and maintenance mode.
+export const isAdminLike = (role) => role === 'admin' || role === 'finance_admin'
+export const FINANCE_ADMIN_VISIBLE_ROLES = ['finance', 'pr_approver', 'fl', 'super_fl']
+
+// Unlike every other role, Finance Admin can approve or reject at ANY level of a report,
+// purchase request, purchase order, vendor or advance, not only the level held. It can
+// never act on something it raised itself (see isOwnOverride).
+export const canOverrideApprovals = (role) => role === 'finance_admin'
+export const isOwnOverride = (user, requesterEmail) => canOverrideApprovals(user?.role) && isOwnEmail(user, requesterEmail)
 
 // The one fine-grained guardrail explicitly requested: within Finance,
 // only members individually flagged can approve/reject vendors — everyone
 // else (including other finance members) can only view.
 export const canApproveVendor = (user) =>
-  !!user && (user.role === 'admin' || (user.role === 'finance' && user.can_approve_vendors))
+  !!user && (user.role === 'admin' || user.role === 'finance_admin' || (user.role === 'finance' && user.can_approve_vendors))
 
 // Raising a PR is a requester action — people who sit somewhere in the
 // approval chain (fl, pr_approver, finance/PO approver) shouldn't also be
 // able to submit requests for themselves to approve. Employees always can;
 // admin always can, per "admin can access & do anything."
-export const canCreatePR = (role) => role === 'admin' || role === 'employee'
+export const canCreatePR = (role) => role === 'admin' || role === 'finance_admin' || role === 'employee'

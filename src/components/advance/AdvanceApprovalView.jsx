@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { sendAdvanceEmail } from '../../lib/advanceEmail'
 import { getDisplayName } from '../../lib/directory'
+import { isOwnOverride } from '../../lib/auth'
 import VoiceInputButton from '../shared/VoiceInputButton'
 
 function fmtDate(d) {
@@ -23,6 +24,7 @@ function Row({ label, value }) {
 // decision to make here, unlike PRDetail/VendorApprovalView's multi-step
 // chains.
 export default function AdvanceApprovalView({ advance, user, onBack, onActioned }) {
+  const ownAdvance = isOwnOverride(user, advance.requested_by) // Finance Admin can't approve their own advance
   const [rejecting, setRejecting] = useState(false)
   const [reason, setReason] = useState('')
   const [saving, setSaving] = useState(false)
@@ -88,7 +90,9 @@ export default function AdvanceApprovalView({ advance, user, onBack, onActioned 
               </div>
             )}
 
-            {!rejecting ? (
+            {ownAdvance ? (
+              <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>You raised this advance, so someone else needs to approve it.</div>
+            ) : !rejecting ? (
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button
                   onClick={handleApprove}

@@ -106,7 +106,8 @@ Roles live in `team_members.role` and are managed by an admin in **Settings, Tea
 | `pr_approver` | PR approval level 2. |
 | `finance` | The Finance dashboard: vouching, TDS, deductions, assignment, reimbursement, Tally export, vendor management. Approving or rejecting vendors additionally needs `team_members.can_approve_vendors`. |
 | `coo` | Approval role kept in the code and rules; currently nobody holds it and the COO approval level is retired. |
-| `admin` | Everything, including Logs, Settings, delegations and maintenance. Admin is deliberately not delegable. |
+| `admin` | Everything, including Logs, Settings, delegations and maintenance. Admin is deliberately not delegable. Admin acts at the level it holds, like everyone else: it does **not** get the any-level approval power below. |
+| `finance_admin` | An admin's powers over Finance work and Settings (Finance dashboard, vendors, TDS rules, Custom Approval, Categories, Delegations, Analytics, PO audit trail), plus **approving or rejecting at any level** of a report, PR, PO, vendor or advance, never on something they raised themselves. They do **not** see Logs (Activity Log, System Logs, audit pack), maintenance control, or the people list: Settings shows a read-only Team view of only the Finance team, PR approver and Functional Leader roles, with no add, edit or remove. Assigned by an admin in Settings, Team & Roles. |
 | `observer` | Read-only. |
 
 Notes that matter when rebuilding:
@@ -117,6 +118,11 @@ Notes that matter when rebuilding:
   never `=== user.email`.
 - `zoho_directory` is a read-only copy of the employee directory (email, name, role, status) used for pickers and lookups.
 - **Admin-only screens (Logs) are enforced in the app, not by the database.**
+- Use `isAdminLike(role)` in `src/lib/auth.js` where "admin" should include Finance Admin (Finance and Settings powers) and keep
+  `role === 'admin'` for Logs, adding or editing people, and maintenance mode. The any-level approval power is `canOverrideApprovals`,
+  and `isOwnOverride(user, requesterEmail)` is the "not your own request" guard. Every activity-log entry by a Finance Admin is
+  tagged "Acted as Finance Admin". Finance Admin does not get the bell or email notifications for items waiting at a level (those go
+  to the people holding the level's role); they find them in Approvals.
 
 ## What the tool does
 
@@ -200,7 +206,12 @@ deducted.
 - **Settings**: Team and Roles, Custom Approval rules, TDS rules, Categories (what grew out of Other), Delegations, My Profile.
 - **Language**: an English / Hindi toggle (`src/lib/i18n`). It swaps visible text at runtime from a dictionary
   (`hi.js`); anything not in the dictionary stays English. Hindi strings have not been reviewed by a native speaker.
-- **First-time walkthrough** and guided tours (`lib/walkthrough.js`, `lib/tours.js`).
+- **First-time walkthrough** and guided tours (`lib/walkthrough.js`, `lib/tours.js`, `shared/GuidedTour.jsx`). Everyone gets the
+  Home tour on their first visit; the Finance role gets its own 7-step tour instead (where notifications arrive, where to approve
+  expense reports, PRs, POs and vendors, how vouching works, and how to mark payments reimbursed). Each step points at an element
+  tagged `data-tour-anchor`; the sidebar items carry `nav-<screen>` and the bell `notif-bell`. A tour is remembered per browser under
+  its own key (`nudge_tour_<name>_seen_v1`, Home keeps `nudge_walkthrough_seen_v1`) and can be replayed from Help in the account
+  menu. Add a tour for another role by adding its steps in `tours.js` and a case in `tourForRole`. Admins currently get the Home tour.
 
 ## Rules and thresholds
 

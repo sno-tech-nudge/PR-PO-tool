@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { processApproval, createNotification } from '../../lib/approvalEngine'
-import { canAccessApprovals, canAccessFinance } from '../../lib/auth'
+import { canAccessApprovals, canAccessFinance, canOverrideApprovals, isOwnEmail } from '../../lib/auth'
 import { getActiveDelegationsForDelegate, delegationCovers } from '../../lib/delegation'
 import { generateManagerSummary } from '../../lib/claude'
 import { runAllChecks } from '../../lib/policyEngine'
@@ -211,7 +211,10 @@ export default function ApproverReportView({ reportId, user, onBack, showToast }
   // Manager has no natural 1:1 role in the roster, so required_role stays
   // null for it and falls back to the coarse any-approver-role rule, same
   // as legacy rows created before this column existed.
-  const ownRoleMatches = pendingApproval?.required_role
+  // Finance Admin can act at any level, but never on their own report.
+  const ownRoleMatches = canOverrideApprovals(user.role)
+    ? !isOwnEmail(user, report.employee_email)
+    : pendingApproval?.required_role
     ? user.role === pendingApproval.required_role
     : canAccessApprovals(user.role)
   // Covering for someone out of office — only when the viewer wouldn't

@@ -17,7 +17,8 @@ export function logActivity({ entityType, entityId, entityRef, action, fromValue
       actor_email: actor?.email || null,
       actor_name: actor?.name || null,
       on_behalf_of: onBehalfOf || null,
-      note: note || null,
+      // Finance Admin can act at any level, so every one of their actions says so in the trail.
+      note: [note, actor?.role === 'finance_admin' ? 'Acted as Finance Admin' : null].filter(Boolean).join('. ') || null,
     }).then(({ error }) => {
       if (error) console.error('activity_log insert failed:', error.message)
     })

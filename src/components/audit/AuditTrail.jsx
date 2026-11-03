@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { isAdminLike } from '../../lib/auth'
 import { supabase } from '../../lib/supabase'
 import { getDisplayName } from '../../lib/directory'
 import { fetchAuditTrail, logAuditTrailAccess, downloadAuditTrailBundle } from '../../lib/auditTrail'
@@ -92,7 +93,7 @@ export default function AuditTrail({ poId, reportId, user, onBack, onViewVendor,
   const [downloading, setDownloading] = useState(false)
   const [downloadError, setDownloadError] = useState(null)
 
-  const isAdmin = user?.role === 'admin'
+  const isAdmin = isAdminLike(user?.role)
 
   useEffect(() => {
     if (!isAdmin) return

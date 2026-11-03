@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { approvePO, rejectPO, regeneratePOPdf } from '../../lib/prApprovalActions'
-import { canAccessFinance, isOwnEmail } from '../../lib/auth'
+import { canAccessFinance, canOverrideApprovals, isAdminLike, isOwnEmail } from '../../lib/auth'
 import { getDisplayName } from '../../lib/directory'
 import { downloadPOBundle } from '../../lib/poBundle'
 import { getActiveDelegationsForDelegate, delegationCovers } from '../../lib/delegation'
@@ -185,7 +185,8 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail, onRaise
   // A delegate covering for a Finance team member (out of office) can approve
   // POs too; admin still can't, and nobody gets it by holding a broader role.
   const poDelegation = user.role !== 'finance' ? delegationCovers(delegations, { requiredRole: 'finance' }) : null
-  const isPOApprover = user.role === 'finance' || !!poDelegation
+  // Finance Admin can approve any PO except one for a request they raised themselves.
+  const isPOApprover = user.role === 'finance' || (canOverrideApprovals(user.role) && !isOwnEmail(user, pr?.requested_by)) || !!poDelegation
   const reportsTotal = linkedExpenses.filter(e => e.status !== 'rejected').reduce((sum, e) => sum + (Number(e.total_amount) || 0), 0)
   const savedTotal = savedExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0)
   const totalSubmitted = reportsTotal + savedTotal
@@ -264,7 +265,7 @@ export default function PODetail({ poId, user, onBack, onViewAuditTrail, onRaise
                 {bundling ? 'Preparing…' : '↓ Download PO + Attachments + Approval Flow'}
               </button>
             )}
-            {user.role === 'admin' && onViewAuditTrail && (
+            {isAdminLike(user.role) && onViewAuditTrail && (
               <button
                 onClick={() => onViewAuditTrail(po.id)}
                 title="Admin only — full Vendor → PR → PO → Expense Report audit trail"

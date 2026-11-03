@@ -9,6 +9,23 @@ export const HOME_TOUR = [
   { anchor: null, text: 'Before submitting any form, you can preview an attached document first — look for the ↗ Preview link next to any upload.' },
 ]
 
+// First visit for the Finance team: where each kind of work reaches them and what to do with it.
+// Anchors are the sidebar items (data-tour-anchor="nav-<screen>") and the notification bell.
+export const FINANCE_TOUR = [
+  { anchor: 'notif-bell', text: 'This bell is where new work reaches you first: reports waiting at the Finance step, purchase orders to approve, vendors to approve, and an employee’s reply when you’ve asked them a question. Click one to open it.' },
+  { anchor: 'nav-approvals', text: 'Expense reports: open Approvals, then the Expense Reports tab. Reports waiting for Finance are under Pending, and the ones you’ve acted on are under Reviewed.' },
+  { anchor: 'nav-approvals', text: 'Purchase requests: the Purchase Requests tab in the same place. You’ll see the requests waiting at a level you approve. When a request is fully approved, a purchase order is created for Finance.' },
+  { anchor: 'nav-po-list', text: 'Purchase orders: open Purchase Orders and choose Pending Approval. Open an order and press Approve PO. It then moves to Issued.' },
+  { anchor: 'nav-approvals', text: 'Vendors: the Vendors tab under Approvals lists new vendor registrations. Open one, check the documents, then approve or reject. Only Finance members who have been given vendor approval can approve; the full list is under Vendor Management.' },
+  { anchor: 'nav-approvals', text: 'Vouching: open a report from Pending. Each expense is a line. Tick a line to vouch it, Flag it if something is off, or Ask employee for an answer (you can’t approve while a reply is awaited). The Accounts box on a line takes off a deduction and, on vendor payments, works out TDS.' },
+  { anchor: 'nav-finance', text: 'Marking payments: once a report has its last approval it waits in Finance, Pending Payments. Tick the reports you’ve paid and press Mark as Reimbursed, then confirm.' },
+]
+
+// Which tour a person gets on their first visit, and the key it is remembered under.
+export function tourForRole(role) {
+  return role === 'finance' ? { key: 'finance', steps: FINANCE_TOUR } : { key: 'home', steps: HOME_TOUR }
+}
+
 export const VENDOR_TOUR = [
   { anchor: 'vendor-docs', text: 'This list shows which documents you need, based on your type of organisation, and ticks each one as you attach it. It folds away when you don’t need it. Open it any time.' },
   { anchor: 'vendor-attachments', text: 'Attach your documents in this panel. We read each one and fill in the form for you, and fields filled this way carry a green tag. Under each document you’ll see what was read and what you need to type in yourself. Use “Show in form” to jump to it, and fold the panel away if you need the space.' },

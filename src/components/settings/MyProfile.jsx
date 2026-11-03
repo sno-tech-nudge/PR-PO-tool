@@ -1,4 +1,4 @@
-import { getRoleLabel, canAccessFinance, canAccessApprovals, canApproveVendor, canCreatePR, isObserver } from '../../lib/auth'
+import { getRoleLabel, canAccessFinance, canAccessApprovals, canApproveVendor, canCreatePR, canOverrideApprovals, isObserver } from '../../lib/auth'
 import { DELEGATABLE_ROLES } from '../../lib/delegation'
 import Delegations from './Delegations'
 
@@ -43,6 +43,7 @@ export default function MyProfile({ user, members = [] }) {
   const permissions = [
     { label: 'Raise Purchase Requests', on: canCreatePR(user.role) },
     { label: 'Approve at an assigned level (Functional Leader / PR Approver)', on: canAccessApprovals(user.role) && !isObserver(user.role) },
+    { label: 'Approve or reject anything, at any level (not your own requests)', on: canOverrideApprovals(user.role) },
     { label: 'Approve vendor onboarding', on: canApproveVendor(user) },
     { label: 'Access Finance dashboard & approve Purchase Orders', on: canAccessFinance(user.role) },
     { label: 'Manage team members & roles', on: user.role === 'admin' },

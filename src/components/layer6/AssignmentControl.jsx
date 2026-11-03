@@ -8,7 +8,7 @@ export default function AssignmentControl({ report, user, onChanged, compact = f
   const [team, setTeam] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
-  const canAct = user?.role === 'finance' || user?.role === 'admin'
+  const canAct = user?.role === 'finance' || user?.role === 'admin' || user?.role === 'finance_admin'
   const mine = !!assigned.email && (user?.ownEmails || [user?.email]).includes(assigned.email)
 
   async function change(member) {

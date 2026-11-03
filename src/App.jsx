@@ -9,7 +9,8 @@ import OfflineBanner from './components/capture/OfflineBanner'
 import NewExpense from './components/capture/NewExpense'
 import FirstTimeWalkthrough from './components/shared/FirstTimeWalkthrough'
 import SidebarUserMenu from './components/shared/SidebarUserMenu'
-import { hasSeenWalkthrough } from './lib/walkthrough'
+import { hasSeenTour } from './lib/walkthrough'
+import { tourForRole } from './lib/tours'
 import NotificationBell from './components/shared/NotificationBell'
 import SettingsView from './components/settings/SettingsView'
 import ExpenseDetails from './components/layer2/ExpenseDetails'
@@ -194,7 +195,7 @@ export default function App() {
   const [appScreen, setAppScreen] = useState('list')
 
   useEffect(() => {
-    if (appScreen === 'list' && user && !walkthroughAutoShown && !hasSeenWalkthrough()) {
+    if (appScreen === 'list' && user && !walkthroughAutoShown && !hasSeenTour(tourForRole(user.role).key)) {
       setWalkthroughAutoShown(true)
       setWalkthroughOpen(true)
     }
@@ -593,14 +594,16 @@ export default function App() {
         }}>
           {!rail && <img src={wordmarkLogo} alt="The/Nudge" style={{ height: '19px', width: 'auto', display: 'block' }} />}
           <div style={{ display: 'flex', flexDirection: rail ? 'column' : 'row', alignItems: 'center', gap: '2px' }}>
-            <NotificationBell
-              user={user}
-              iconOnly
-              onOpenReport={handleViewReport}
-              onOpenPR={(id) => { setAppScreen('pr-list'); openPRDetail(id) }}
-              onOpenVendor={openVendorSmart}
-              onOpenPO={(id) => { setAppScreen('po-list'); openPODetail(id) }}
-            />
+            <div data-tour-anchor="notif-bell" style={{ display: 'flex' }}>
+              <NotificationBell
+                user={user}
+                iconOnly
+                onOpenReport={handleViewReport}
+                onOpenPR={(id) => { setAppScreen('pr-list'); openPRDetail(id) }}
+                onOpenVendor={openVendorSmart}
+                onOpenPO={(id) => { setAppScreen('po-list'); openPODetail(id) }}
+              />
+            </div>
             {!isMobile && (
               <button
                 type="button"
@@ -627,7 +630,7 @@ export default function App() {
             return (
               <div
                 key={key}
-                data-tour-anchor={key === 'pr-list' ? 'pr-nav' : undefined}
+                data-tour-anchor={key === 'pr-list' ? 'pr-nav' : `nav-${key}`}
                 onClick={() => handleNavClick(key)}
                 title={rail ? label : undefined}
                 className="sidebar-item"
@@ -727,7 +730,12 @@ export default function App() {
         </div>
       </div>
 
-      <FirstTimeWalkthrough open={walkthroughOpen} onClose={() => setWalkthroughOpen(false)} />
+      <FirstTimeWalkthrough
+        open={walkthroughOpen}
+        role={user.role}
+        onClose={() => { setWalkthroughOpen(false); if (isMobile) setSidebarOpen(false) }}
+        onStepChange={step => { if (isMobile && /^(nav|notif)-/.test(step?.anchor || '')) setSidebarOpen(true) }}
+      />
 
       {/* ── Main content ── */}
       <div style={{ marginLeft: isMobile ? 0 : sbW, transition: 'margin-left 0.2s ease', flex: 1, minHeight: '100vh', overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}>

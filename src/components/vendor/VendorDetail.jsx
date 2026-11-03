@@ -5,7 +5,7 @@ import VendorStatusBadge from './VendorStatusBadge'
 import PanDuplicateModal from './PanDuplicateModal'
 import VendorPdfTemplate from './VendorPdfTemplate'
 import { generateVendorProfilePDF, downloadVendorProfilePDF } from '../../lib/vendorProfilePdf'
-import { canAccessFinance, canApproveVendor, isObserver, isOwnEmail } from '../../lib/auth'
+import { canAccessFinance, canApproveVendor, isObserver, isOwnEmail, isOwnOverride } from '../../lib/auth'
 
 // Sole Proprietorship shares the same Aadhaar-based document requirement as
 // Individual/Freelancer per Finance's Vendor Document Requirements sheet.
@@ -128,7 +128,7 @@ export default function VendorDetail({ vendorId, user, onBack, onEdit, onApprove
   )
 
   const canEdit = !canAccessFinance(user.role) && isOwnEmail(user, vendor.submitted_by) && vendor.status !== 'approved'
-  const canApprove = canApproveVendor(user) && vendor.status === 'pending'
+  const canApprove = canApproveVendor(user) && vendor.status === 'pending' && !isOwnOverride(user, vendor.submitted_by)
   const canRequestBankChange = vendor.status === 'approved' && !isObserver(user.role) &&
     (canAccessFinance(user.role) || isOwnEmail(user, vendor.submitted_by))
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { isAdminLike } from '../../lib/auth'
 import { supabase } from '../../lib/supabase'
 import { useCategories } from '../../lib/categories'
 import { computeTds } from '../../lib/tds'
@@ -83,7 +84,7 @@ function RuleForm({ initial, onSave, onCancel, saving, error }) {
 // limits. Saved rules are used immediately by every vendor payment.
 export default function TdsRules({ user }) {
   const { expense: categories } = useCategories()
-  const isAdmin = user?.role === 'admin'
+  const isAdmin = isAdminLike(user?.role)
   const [rules, setRules] = useState(null)
   const [editing, setEditing] = useState(null) // null | 'new' | rule id
   const [saving, setSaving] = useState(false)

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { isAdminLike } from '../../lib/auth'
 import { supabase } from '../../lib/supabase'
 import { avgTAT, prApprovedAt, daysBetween } from '../../lib/tat'
 import { getDisplayName } from '../../lib/directory'
@@ -125,7 +126,7 @@ export default function AnalyticsView({ user, onViewPR, onViewPO, onViewVendor }
   const [personalStats, setPersonalStats] = useState(null)
   const [personalLoading, setPersonalLoading] = useState(true)
 
-  const isAdmin = user?.role === 'admin'
+  const isAdmin = isAdminLike(user?.role)
 
   // Fast-moving numbers (cash flow, live pipeline counts, TAT) poll every
   // 30s so they stay current. Scoped to the current fiscal year, not the

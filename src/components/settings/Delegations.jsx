@@ -6,7 +6,7 @@ import { logActivity } from '../../lib/activityLog'
 
 // People who can be handed approvals: anyone who can open the approval screens.
 // (An employee-role delegate couldn't even open the PR/PO detail pages.)
-const DELEGATE_ROLES = ['admin', 'finance', 'fl', 'super_fl', 'pr_approver', 'coo']
+const DELEGATE_ROLES = ['admin', 'finance_admin', 'finance', 'fl', 'super_fl', 'pr_approver', 'coo']
 
 function todayStr() {
   const d = new Date()
