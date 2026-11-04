@@ -173,6 +173,11 @@ export default function POList({ user, onViewPO }) {
     ? [...filtered].sort((a, b) => pendingWeight(b) - pendingWeight(a))
     : filtered
 
+  // For Finance: an issued PO with nothing left to invoice (Pending is 0) is ready to be closed with
+  // "Mark as Completed", so its row is tinted light green.
+  const isReadyToClose = po => isFinance && po.status === 'issued' && po.pending != null && Number(po.pending) <= 0
+  const readyCount = sorted.filter(isReadyToClose).length
+
   const tabCount = (key) => key === 'all' ? pos.length : pos.filter(p => p.status === key).length
 
   function handleExport(fieldKeys) {
@@ -293,6 +298,13 @@ export default function POList({ user, onViewPO }) {
         </div>
       </div>
 
+      {readyCount > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+          <span style={{ width: '12px', height: '12px', background: 'var(--ready-bg)', border: '1px solid var(--ready-border)', display: 'inline-block', flexShrink: 0 }} />
+          {readyCount} fully invoiced (Pending ₹0). Open one and press Mark as Completed to close it.
+        </div>
+      )}
+
       {/* Table */}
       {loading ? (
         <div style={{ padding: '60px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>Loading…</div>
@@ -326,7 +338,7 @@ export default function POList({ user, onViewPO }) {
                       key={po.id}
                       style={{
                         borderBottom: i < sorted.length - 1 ? '1px solid var(--taupe-100)' : 'none',
-                        background: 'var(--surface-card)',
+                        background: isReadyToClose(po) ? 'var(--ready-bg)' : 'var(--surface-card)',
                       }}
                     >
                       <td style={{ padding: '12px 14px', fontFamily: 'monospace', fontSize: '12px', color: 'var(--action)', fontWeight: 600, whiteSpace: 'nowrap' }}>

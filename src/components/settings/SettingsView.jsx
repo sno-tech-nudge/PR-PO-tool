@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { ROLES, getRoleLabel, canAccessFinance, isAdminLike, FINANCE_ADMIN_VISIBLE_ROLES } from '../../lib/auth'
+import { ROLES, getRoleLabel, canAccessFinance, isAdminLike, FINANCE_ADMIN_VISIBLE_ROLES, DEPARTMENTS, departmentOf } from '../../lib/auth'
 import { FUNCTIONS } from '../../lib/functionRouting'
 import MyProfile from './MyProfile'
 import ApprovalRulesView from './ApprovalRulesView'
@@ -26,6 +26,7 @@ export default function SettingsView({ user }) {
   const [removingId, setRemovingId] = useState(null)
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState('')
+  const [deptFilter, setDeptFilter] = useState('')
 
   useEffect(() => { load() }, [])
 
@@ -129,7 +130,8 @@ export default function SettingsView({ user }) {
     const q = search.trim().toLowerCase()
     const matchesSearch = !q || m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q)
     const matchesRole = !roleFilter || m.role === roleFilter
-    return matchesSearch && matchesRole
+    const matchesDept = !deptFilter || departmentOf(m.email) === deptFilter
+    return matchesSearch && matchesRole && matchesDept
   })
 
   const selectStyle = {
@@ -225,6 +227,10 @@ export default function SettingsView({ user }) {
             <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} style={{ ...selectStyle, height: '34px' }}>
               <option value="">All roles</option>
               {ROLES.map(r => <option key={r} value={r}>{getRoleLabel(r)}</option>)}
+            </select>
+            <select value={deptFilter} onChange={e => setDeptFilter(e.target.value)} aria-label="Filter by department" style={{ ...selectStyle, height: '34px' }}>
+              <option value="">All departments</option>
+              {DEPARTMENTS.map(d => <option key={d.key} value={d.key}>{d.label}</option>)}
             </select>
           </div>
           <button

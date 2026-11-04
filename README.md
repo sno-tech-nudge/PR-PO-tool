@@ -170,7 +170,8 @@ Notes that matter when rebuilding:
 - **PR approval chain** is fixed: Functional Leader, then PR Approver. After final approval a PO is created.
 - **PO** (`components/po`): a Finance member with the PO approval switch approves and issues it (`pending_approval`, `issued`), then it ends as `completed`,
   `cancelled` or `rejected`. A PO has a generated PDF and can be exported. Vendor invoices are paid by raising a report
-  against the PO (`SubmitPOExpense`), with the PO balance tracked.
+  against the PO (`SubmitPOExpense`), with the PO balance tracked. In the PO list, Finance sees an issued PO whose Pending
+  balance is ₹0 (fully invoiced) tinted light green (`--ready-bg`), with a legend, as a cue to close it with Mark as Completed.
 - **Reminders**: a daily cron nudges stale draft PRs, PRs waiting for an approver and rejected PRs.
 - **Document numbers** look like `26/27-PR-07-0053` (fiscal year, kind `PR`, `PO` or `VR` for vendor registration, a fixed
   `07` segment, a 4-digit counter). They are issued by the database function `next_doc_number`: one counter per kind per
@@ -203,7 +204,9 @@ deducted.
   maintenance page; admins keep full access and can end it. Used to freeze writes during releases or a migration.
 - **Delegation / out of office** (`approval_delegations`): an approver names a teammate for a date range; the delegate
   can act on their pending items and the trail records "on behalf of".
-- **Settings**: Team and Roles, Custom Approval rules, TDS rules, Categories (what grew out of Other), Delegations, My Profile.
+- **Settings**: Team and Roles (search, and filters by role and by department: The Nudge or The Delta, told apart by email
+  domain `thenudge.org` / `thedelta.org.in`, since there is no department column; see `DEPARTMENTS` in `lib/auth.js`),
+  Custom Approval rules, TDS rules, Categories (what grew out of Other), Delegations, My Profile.
 - **Language**: an English / Hindi toggle (`src/lib/i18n`). It swaps visible text at runtime from a dictionary
   (`hi.js`); anything not in the dictionary stays English. Hindi strings have not been reviewed by a native speaker.
 - **First-time walkthrough** and guided tours (`lib/walkthrough.js`, `lib/tours.js`, `shared/GuidedTour.jsx`). Everyone gets the

@@ -137,6 +137,16 @@ export const isOwnOverride = (user, requesterEmail) => canOverrideApprovals(user
 export const canApproveVendor = (user) =>
   !!user && (user.role === 'admin' || user.role === 'finance_admin' || (user.role === 'finance' && user.can_approve_vendors))
 
+// The two organisations the team belongs to, told apart by email domain (there is no department column).
+export const DEPARTMENTS = [
+  { key: 'nudge', label: 'The Nudge', domain: 'thenudge.org' },
+  { key: 'delta', label: 'The Delta', domain: 'thedelta.org.in' },
+]
+export const departmentOf = (email) => {
+  const domain = String(email || '').toLowerCase().split('@')[1] || ''
+  return DEPARTMENTS.find(d => d.domain === domain)?.key || null
+}
+
 // Approving or rejecting purchase orders: each Finance team member has a switch (can_approve_pos) that an
 // admin sets in Settings, Team & Roles. Finance Admin can always (but not for a request they raised: see PODetail).
 export const canApprovePO = (user) =>

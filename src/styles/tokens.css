@@ -155,6 +155,10 @@
   /* Information that is not a status: where the work is (location next to the sub-programme). */
   --info-blue:   #2f6fb3;
 
+  /* Light green for rows that are ready for Finance to close (for example a fully invoiced PO). */
+  --ready-bg:     #e1f3e3;
+  --ready-border: #9fd3a8;
+
   --action-bg:   color-mix(in srgb, var(--action) 10%, var(--tn-white));
 
   /* ---- Families ---- */
