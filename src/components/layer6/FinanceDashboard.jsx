@@ -353,7 +353,7 @@ export default function FinanceDashboard({ user, showToast, onBack, initialTab }
         {tab === 'pending' && (
           pendingLoading
             ? <div style={{ fontSize: '13px', color: 'var(--text-muted)', padding: '40px 0', textAlign: 'center' }}>Loading…</div>
-            : <ReimbursementBatch reports={pendingReports} onReimbursed={handleReimbursed} />
+            : <ReimbursementBatch reports={pendingReports} onReimbursed={handleReimbursed} user={user} />
         )}
 
         {tab === 'prs' && (

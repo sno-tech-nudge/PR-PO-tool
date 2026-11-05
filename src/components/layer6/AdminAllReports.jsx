@@ -3,6 +3,8 @@ import { supabase } from '../../lib/supabase'
 import { downloadCSV, reportsToRows } from '../../lib/exportUtils'
 import { getDisplayName } from '../../lib/directory'
 import { netAmount } from '../../lib/deductions'
+import ReimburseModal from './ReimburseModal'
+import { payoutAmount } from '../../lib/advanceBalance'
 
 const STATUS_CONFIG = {
   submitted:    { label: 'Submitted',     color: 'var(--gold-text)', bg: 'var(--gold-bg)' },
@@ -24,12 +26,15 @@ export default function AdminAllReports({ onViewDetail, user }) {
   const [kindFilter, setKindFilter] = useState('all') // all | vendor | reimbursement
   const [ownerFilter, setOwnerFilter] = useState('all') // all | mine | unassigned
   const [policyFilter, setPolicyFilter] = useState('all')
+  const [pendingFilter, setPendingFilter] = useState('all') // all | zero | some
   const [datePreset, setDatePreset] = useState('all')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState(new Set())
   const [exporting, setExporting] = useState(false)
+  const [reimburseList, setReimburseList] = useState(null) // the reports the confirm dialog is about
+  const [notice, setNotice] = useState(null)
 
   useEffect(() => { load() }, [])
 
@@ -41,7 +46,7 @@ export default function AdminAllReports({ onViewDetail, user }) {
         id, report_reference, status, brand, total_amount, expense_count,
         approval_route, created_at, approved_at, rejected_at, reimbursed_at,
         rejection_reason, vouched_at, vouched_by, employee_email,
-        net_payable, payment_kind, assigned_to_email, assigned_to_name,
+        net_payable, advance_applied, payment_kind, assigned_to_email, assigned_to_name,
         report_approvals (approver_level, approver_name, status, actioned_at),
         report_expenses (
           expense_details (
@@ -60,6 +65,12 @@ export default function AdminAllReports({ onViewDetail, user }) {
   const categoryOptions = [...new Set((reports || []).flatMap(r =>
     (r.report_expenses || []).map(re => re.expense_details?.category).filter(Boolean)
   ))].sort()
+
+  // What is still to be paid out on a report: the cash payout once approved, nothing once it is marked
+  // reimbursed, and not applicable before approval. "Pending 0" on an approved report means there is nothing
+  // left to pay (for example it was settled from an advance), so it only needs confirming as reimbursed.
+  const pendingAmount = r => (r.status === 'approved' ? payoutAmount(r) : r.status === 'reimbursed' ? 0 : null)
+  const isReady = r => r.status === 'approved' && pendingAmount(r) === 0
 
   function presetDateRange(preset) {
     const now = new Date()
@@ -106,6 +117,8 @@ export default function AdminAllReports({ onViewDetail, user }) {
     if (ownerFilter === 'unassigned' && r.assigned_to_email) return false
     if (vouchedFilter === 'yes' && !r.vouched_at) return false
     if (vouchedFilter === 'no'  &&  r.vouched_at) return false
+    if (pendingFilter === 'zero' && !isReady(r)) return false
+    if (pendingFilter === 'some' && !(r.status === 'approved' && pendingAmount(r) > 0)) return false
     if (policyFilter !== 'all') {
       const exps = (r.report_expenses || []).map(re => re.expense_details).filter(Boolean)
       const hasViolation = exps.some(e => e.policy_status === 'violation')
@@ -170,6 +183,19 @@ export default function AdminAllReports({ onViewDetail, user }) {
     .filter(r => selected.has(r.id))
     .reduce((s, r) => s + netAmount(r), 0)
 
+  // Only approved reports can be marked reimbursed; anything else that is ticked is left alone.
+  const reimbursable = filtered.filter(r => selected.has(r.id) && r.status === 'approved')
+  const readyCount = filtered.filter(isReady).length
+
+  function handleReimbursed(ids, res) {
+    const done = new Set(ids)
+    const now = new Date().toISOString()
+    setReports(prev => prev.map(r => (done.has(r.id) ? { ...r, status: 'reimbursed', reimbursed_at: now } : r)))
+    setSelected(prev => new Set([...prev].filter(id => !done.has(id))))
+    setReimburseList(null)
+    setNotice(`${ids.length} report${ids.length !== 1 ? 's' : ''} marked as reimbursed.${res?.skipped ? ` ${res.skipped} could not be changed because they were no longer approved.` : ''}`)
+  }
+
   const selectStyle = {
     height: '32px', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)',
     padding: '0 8px', fontSize: '12px', color: 'var(--ink)', background: 'var(--surface-card)',
@@ -178,13 +204,13 @@ export default function AdminAllReports({ onViewDetail, user }) {
 
   const activeFilterCount = [
     statusFilter !== 'all', entityFilter !== 'all', categoryFilter !== 'all',
-    vouchedFilter !== 'all', policyFilter !== 'all', dateFrom || dateTo,
+    vouchedFilter !== 'all', policyFilter !== 'all', pendingFilter !== 'all', dateFrom || dateTo,
     kindFilter !== 'all', ownerFilter !== 'all',
   ].filter(Boolean).length
 
   function clearFilters() {
     setStatusFilter('all'); setEntityFilter('all'); setCategoryFilter('all')
-    setVouchedFilter('all'); setPolicyFilter('all'); setKindFilter('all'); setOwnerFilter('all')
+    setVouchedFilter('all'); setPolicyFilter('all'); setPendingFilter('all'); setKindFilter('all'); setOwnerFilter('all')
     setDatePreset('all'); setDateFrom(''); setDateTo(''); setSearch('')
   }
 
@@ -237,6 +263,11 @@ export default function AdminAllReports({ onViewDetail, user }) {
             <option value="flagged">Has flags</option>
             <option value="clean">Clean only</option>
           </select>
+          <select value={pendingFilter} onChange={e => setPendingFilter(e.target.value)} style={selectStyle} aria-label="Filter by pending amount">
+            <option value="all">Pending: All</option>
+            <option value="zero">Pending ₹0 (not marked yet)</option>
+            <option value="some">Pending above ₹0</option>
+          </select>
           {activeFilterCount > 0 && (
             <button onClick={clearFilters} style={{ height: '32px', padding: '0 10px', background: 'none', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', fontSize: '12px', color: 'var(--text-muted)', cursor: 'pointer' }}>
               Clear ({activeFilterCount})
@@ -276,6 +307,14 @@ export default function AdminAllReports({ onViewDetail, user }) {
               {filtered.length} record{filtered.length !== 1 ? 's' : ''}
               {selected.size > 0 && ` · ${selected.size} selected · INR ${selectedTotal.toLocaleString('en-IN')}`}
             </span>
+            {reimbursable.length > 0 && (
+              <button
+                onClick={() => setReimburseList(reimbursable)}
+                style={{ height: '32px', padding: '0 16px', borderRadius: 'var(--radius-sm)', background: 'var(--moss-text)', color: 'var(--surface-card)', border: 'none', fontSize: '12px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              >
+                Mark {reimbursable.length} as Reimbursed
+              </button>
+            )}
             <button
               onClick={handleExport}
               disabled={exporting || filtered.length === 0}
@@ -294,6 +333,13 @@ export default function AdminAllReports({ onViewDetail, user }) {
         </div>
       </div>
 
+      {notice && (
+        <div style={{ background: 'var(--moss-bg)', border: '1px solid var(--moss-border)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', marginBottom: '12px', fontSize: '13px', color: 'var(--moss-text)', display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
+          <span>{notice}</span>
+          <span role="button" onClick={() => setNotice(null)} style={{ cursor: 'pointer', textDecoration: 'underline', flexShrink: 0 }}>Dismiss</span>
+        </div>
+      )}
+
       {loading && (
         <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', padding: '40px 0', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>
           Loading…
@@ -306,9 +352,16 @@ export default function AdminAllReports({ onViewDetail, user }) {
         </div>
       )}
 
+      {readyCount > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+          <span style={{ width: '12px', height: '12px', background: 'var(--ready-bg)', border: '1px solid var(--ready-border)', display: 'inline-block', flexShrink: 0 }} />
+          {readyCount} approved report{readyCount !== 1 ? 's have' : ' has'} nothing left to pay (Pending ₹0). Tick Reimbursed to confirm.
+        </div>
+      )}
+
       {!loading && filtered.length > 0 && (
         <div style={{ background: 'var(--surface-card)', border: '1px solid var(--taupe-200)', borderRadius: 'var(--radius-sm)', overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1100px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1300px' }}>
             <thead>
               <tr style={{ background: 'var(--taupe-50)', borderBottom: '1px solid var(--taupe-200)' }}>
                 <th style={{ width: '40px', padding: '10px 14px' }}>
@@ -327,8 +380,8 @@ export default function AdminAllReports({ onViewDetail, user }) {
                     )}
                   </div>
                 </th>
-                {['Reference', 'Type', 'Entity', 'Expenses', 'Amount (INR)', 'Submitted By', 'Approved By', 'Vouched By', 'Processed By', 'Date', 'Status', ''].map(h => (
-                  <th key={h} style={{ padding: '10px 14px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textAlign: h === 'Amount (INR)' ? 'right' : 'left', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                {['Reference', 'Type', 'Entity', 'Expenses', 'Amount (INR)', 'Pending (INR)', 'Reimbursed', 'Submitted By', 'Approved By', 'Vouched By', 'Processed By', 'Date', 'Status', ''].map(h => (
+                  <th key={h} style={{ padding: '10px 14px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textAlign: h === 'Amount (INR)' || h === 'Pending (INR)' ? 'right' : 'left', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
                     {h}
                   </th>
                 ))}
@@ -345,7 +398,7 @@ export default function AdminAllReports({ onViewDetail, user }) {
                     key={report.id}
                     style={{
                       borderBottom: i < filtered.length - 1 ? '1px solid var(--taupe-100)' : 'none',
-                      background: isSelected ? 'var(--action-bg)' : i % 2 === 0 ? 'var(--surface-card)' : 'var(--taupe-50)',
+                      background: isSelected ? 'var(--action-bg)' : isReady(report) ? 'var(--ready-bg)' : i % 2 === 0 ? 'var(--surface-card)' : 'var(--taupe-50)',
                     }}
                   >
                     <td style={{ padding: '11px 14px' }}>
@@ -399,6 +452,29 @@ export default function AdminAllReports({ onViewDetail, user }) {
                         <div style={{ fontSize: '10px', fontWeight: 400, color: 'var(--text-muted)', textDecoration: 'line-through' }}>{Number(report.total_amount || 0).toLocaleString('en-IN')}</div>
                       )}
                     </td>
+                    <td style={{ padding: '11px 14px', fontSize: '13px', textAlign: 'right', fontFamily: 'monospace', fontWeight: isReady(report) ? 700 : 400, color: pendingAmount(report) == null ? 'var(--text-muted)' : 'var(--ink)' }}>
+                      {pendingAmount(report) == null ? '—' : pendingAmount(report).toLocaleString('en-IN')}
+                    </td>
+                    <td style={{ padding: '11px 14px' }}>
+                      {report.status === 'approved' ? (
+                        <div
+                          role="checkbox" aria-checked="false" tabIndex={0}
+                          aria-label={`Confirm ${report.report_reference} as reimbursed`} title="Tick to confirm this report as reimbursed"
+                          onClick={() => setReimburseList([report])}
+                          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setReimburseList([report]) } }}
+                          style={{ width: '18px', height: '18px', border: '1.5px solid var(--moss-text)', borderRadius: 'var(--radius-xs)', background: 'var(--surface-card)', cursor: 'pointer', boxSizing: 'border-box' }}
+                        />
+                      ) : report.status === 'reimbursed' ? (
+                        <div
+                          title={report.reimbursed_at ? `Reimbursed on ${new Date(report.reimbursed_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}` : 'Reimbursed'}
+                          style={{ width: '18px', height: '18px', background: 'var(--moss-text)', borderRadius: 'var(--radius-xs)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <svg width="10" height="8" viewBox="0 0 8 6" fill="none"><path d="M1 3L3 5L7 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>—</span>
+                      )}
+                    </td>
                     <td style={{ padding: '11px 14px', fontSize: '12px', color: 'var(--ink)' }}>
                       {report.employee_email ? getDisplayName(report.employee_email) : '—'}
                     </td>
@@ -439,6 +515,7 @@ export default function AdminAllReports({ onViewDetail, user }) {
                       >
                         View
                       </button>
+
                     </td>
                   </tr>
                 )
@@ -450,6 +527,10 @@ export default function AdminAllReports({ onViewDetail, user }) {
             {selected.size > 0 && ` · ${selected.size} selected`}
           </div>
         </div>
+      )}
+
+      {reimburseList && (
+        <ReimburseModal reports={reimburseList} user={user} onClose={() => setReimburseList(null)} onDone={handleReimbursed} />
       )}
     </div>
   )

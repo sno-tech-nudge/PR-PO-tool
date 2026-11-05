@@ -1,13 +1,10 @@
 import { useState } from 'react'
 import { payoutAmount } from '../../lib/advanceBalance'
-import { supabase } from '../../lib/supabase'
-import { sendReportEmail } from '../../lib/reportEmail'
+import ReimburseModal from './ReimburseModal'
 
-export default function ReimbursementBatch({ reports, onReimbursed }) {
+export default function ReimbursementBatch({ reports, onReimbursed, user }) {
   const [selected, setSelected] = useState(new Set())
   const [showModal, setShowModal] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState(null)
 
   function toggleReport(id) {
     setSelected(prev => {
@@ -27,39 +24,6 @@ export default function ReimbursementBatch({ reports, onReimbursed }) {
 
   const selectedReports = reports.filter(r => selected.has(r.id))
   const totalAmount = selectedReports.reduce((s, r) => s + payoutAmount(r), 0)
-
-  async function handleConfirmReimburse() {
-    setSubmitting(true)
-    setError(null)
-    const now = new Date().toISOString()
-    const today = new Date().toISOString().slice(0, 10)
-
-    const ids = Array.from(selected)
-    const { error: err } = await supabase
-      .from('expense_reports')
-      .update({
-        status: 'reimbursed',
-        reimbursed_at: now,
-        processing_date: today,
-      })
-      .in('id', ids)
-
-    if (err) {
-      setError('Could not mark as reimbursed. Please try again.')
-      setSubmitting(false)
-      return
-    }
-
-    selectedReports.forEach(r => sendReportEmail({
-      type: 'finalized', recipientEmail: r.employee_email, reportReference: r.report_reference,
-      amount: payoutAmount(r), currentStep: 4,
-    }))
-
-    setShowModal(false)
-    setSubmitting(false)
-    setSelected(new Set())
-    if (onReimbursed) onReimbursed(ids)
-  }
 
   if (reports.length === 0) {
     return (
@@ -174,44 +138,13 @@ export default function ReimbursementBatch({ reports, onReimbursed }) {
         </table>
       </div>
 
-      {/* Confirmation modal */}
       {showModal && (
-        <div
-          onClick={() => !submitting && setShowModal(false)}
-          style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(54, 32, 26,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{ background: 'var(--surface-card)', padding: '28px 32px', borderRadius: 'var(--radius-sm)', width: '400px', border: '1px solid var(--taupe-200)' }}
-          >
-            <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--ink)', marginBottom: '6px' }}>
-              Confirm Reimbursement
-            </div>
-            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-              {selected.size} report{selected.size !== 1 ? 's' : ''} · INR {Number(totalAmount).toLocaleString('en-IN')} total
-            </div>
-            <div style={{ fontSize: '13px', color: 'var(--ink)', marginBottom: '24px', padding: '12px', background: 'var(--taupe-50)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--taupe-200)' }}>
-              This will mark the selected reports as reimbursed and notify the employees.
-            </div>
-            {error && <div style={{ fontSize: '12px', color: 'var(--clay-text)', marginBottom: '12px' }}>{error}</div>}
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setShowModal(false)}
-                disabled={submitting}
-                style={{ height: '34px', padding: '0 16px', background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--taupe-200)', fontSize: '13px', cursor: 'pointer', borderRadius: 'var(--radius-sm)' }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmReimburse}
-                disabled={submitting}
-                style={{ height: '34px', padding: '0 20px', background: submitting ? 'var(--text-muted)' : 'var(--moss-text)', color: 'var(--surface-card)', border: 'none', fontSize: '13px', fontWeight: 600, cursor: submitting ? 'default' : 'pointer', borderRadius: 'var(--radius-sm)' }}
-              >
-                {submitting ? 'Processing…' : 'Confirm'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ReimburseModal
+          reports={selectedReports}
+          user={user}
+          onClose={() => setShowModal(false)}
+          onDone={ids => { setShowModal(false); setSelected(new Set()); if (onReimbursed) onReimbursed(ids) }}
+        />
       )}
     </div>
   )

@@ -147,6 +147,15 @@ Notes that matter when rebuilding:
   not tied to one role: any approver-type person can act on it.
 - **Approvers** (`layer5/ApproverDashboard`, `ApproverReportView`) approve, reject with a reason, or send back.
 - **Finance** (`layer6`): all reports, vouching, policy violations, analytics, reimbursement batches, Tally export.
+- **Marking reports reimbursed (paid)**: from Finance, Pending Payments (tick reports) **and** from All Reports (tick rows for the bulk
+  button, or tick the "Reimbursed" box on an approved row). All Reports also has a **Pending (INR)** column (the cash still to pay out
+  on an approved report: its net payable less what came from advances, shown as 0 once reimbursed, blank before approval) and a "Pending
+  ₹0 (not marked yet)" filter; approved reports with nothing left to pay are tinted light green (`--ready-bg`) since they only need
+  confirming. Both screens use `lib/reimburse.js` (`markReportsReimbursed`) and the same confirm dialog
+  (`layer6/ReimburseModal.jsx`). Only reports still `approved` are changed; each change is written to the Activity Log; the dialog has
+  a "tell the employees by email" tick (on by default) and warns when reports were approved over 90 days ago, so old, already-paid
+  reports can be closed without emailing anyone. Before 4 Nov 2026 this save wrote a `processing_date` column that does not exist, so it
+  always failed and no report had ever been marked reimbursed (906 approved reports were waiting).
 - **Vouching** (`layer5/VouchChecklist`, `AccountsPanel`, `VouchQueries`): Finance clears or flags each line, can ask the
   employee a question on a line (approval is blocked while a line awaits the employee), and sees duplicate and
   split-bill warnings plus India tax checks (GSTIN, PAN, TDS). History is stored as events in `expense_vouch_events`.

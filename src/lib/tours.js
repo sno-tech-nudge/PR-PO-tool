@@ -18,7 +18,7 @@ export const FINANCE_TOUR = [
   { anchor: 'nav-po-list', text: 'Purchase orders: open Purchase Orders and choose Pending Approval. Open an order and press Approve PO. It then moves to Issued. Only Finance members an admin has switched on for PO approval can approve.' },
   { anchor: 'nav-approvals', text: 'Vendors: the Vendors tab under Approvals lists new vendor registrations. Open one, check the documents, then approve or reject. Only Finance members who have been given vendor approval can approve; the full list is under Vendor Management.' },
   { anchor: 'nav-approvals', text: 'Vouching: open a report from Pending. Each expense is a line. Tick a line to vouch it, Flag it if something is off, or Ask employee for an answer (you can’t approve while a reply is awaited). The Accounts box on a line takes off a deduction and, on vendor payments, works out TDS.' },
-  { anchor: 'nav-finance', text: 'Marking payments: once a report has its last approval it waits in Finance, Pending Payments. Tick the reports you’ve paid and press Mark as Reimbursed, then confirm.' },
+  { anchor: 'nav-finance', text: 'Marking payments: once a report has its last approval it waits in Finance. In Pending Payments or All Reports, tick the reports you’ve paid and press Mark as Reimbursed, then confirm.' },
 ]
 
 // Which tour a person gets on their first visit, and the key it is remembered under.
