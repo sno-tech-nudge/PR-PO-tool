@@ -65,6 +65,7 @@ async function main() {
     fs.copyFileSync(path.join(PACK, from), path.join(dbDocs, to))
   }
   console.log('Updated docs/database/ (schema, sequences, event triggers, summary).')
+  run('gen-nucleus-schema.cjs') // the Nucleus-safe schema is derived from the schema just copied
 
   fs.mkdirSync(OUT, { recursive: true })
 

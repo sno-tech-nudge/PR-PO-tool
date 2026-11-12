@@ -14,6 +14,9 @@
     "migration:storage": "node scripts/migration/download-storage.cjs",
     "migration:upload-storage": "node scripts/migration/upload-storage.cjs",
     "migration:vectors": "node scripts/migration/gen-parity-vectors.mjs",
+    "migration:nucleus-schema": "node scripts/migration/gen-nucleus-schema.cjs",
+    "migration:nucleus-apply": "node scripts/migration/apply-nucleus.cjs",
+    "migration:nucleus-verify": "node scripts/migration/verify-nucleus-schema.mjs",
     "migration:prompts": "node scripts/migration/gen-ai-prompts.cjs",
     "handover": "node scripts/migration/build-handover.cjs"
   },

@@ -18,6 +18,8 @@ This file is the quick reference for the scripts in this folder:
 | `node scripts/migration/apply-db.cjs` | Load the export into an empty new project (`TARGET_DB_URL`) |
 | `npm run migration:upload-storage` | Upload the downloaded files into the new project (`TARGET_SUPABASE_URL`, `TARGET_SERVICE_ROLE_KEY`) |
 | `node scripts/migration/copy-storage.cjs` | Direct project-to-project file copy while the old project is still reachable |
+| `npm run migration:nucleus-schema` / `migration:nucleus-verify` | Generate `docs/database/nucleus_schema.sql` and prove it on a scratch Postgres shaped like Nucleus |
+| `node scripts/migration/apply-nucleus.cjs` | Load tables and data into the Nucleus project (guards: `CONFIRM_PROJECT_REF`, clash pre-flight, empty-table check). `--dry-run`, `--schema-only`, `--data-only` |
 | `npm run migration:check` | Fail if the code and `inventory.json` disagree |
 
 ## What is where
