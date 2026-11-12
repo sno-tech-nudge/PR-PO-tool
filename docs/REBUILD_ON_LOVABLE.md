@@ -1,5 +1,7 @@
 # Rebuilding this tool in Lovable: step by step
 
+> **Building into the existing Nucleus ERP? Use [`BUILD_INTO_NUCLEUS.md`](BUILD_INTO_NUCLEUS.md) instead.** This page assumes a brand-new, empty Lovable project and a new Supabase project. Do **not** run its database steps against Nucleus: the load script would bring in open-to-everyone policies and, on a database that already has tables, is meant to refuse.
+
 For the person doing the rebuild. You have a **GitHub repo link**, the **CODE_AND_DOCS zip** (same as the repo) and, if you are allowed to have it, the **DATA_PRIVATE zip** (real data: bank details, PAN, Aadhaar; do not share it onward, and never upload it to a chat).
 
 ## First, what Lovable can and cannot do

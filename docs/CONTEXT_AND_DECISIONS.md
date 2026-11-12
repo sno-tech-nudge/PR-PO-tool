@@ -35,6 +35,7 @@ The decision is what the owner chose; the reason is recorded where the owner or 
 
 | Decision | Why |
 |---|---|
+| **The tool is rebuilt natively inside the Nucleus ERP (Lovable, TanStack Start, Supabase), with all data only in Nucleus's Supabase project, and the two systems are not connected** (12 Nov 2026). Nucleus is treated as if it never had a PR, PO or vendor module; its leftover intake code is removed | One ERP, one login, one database; no relay or sync to maintain. See `BUILD_INTO_NUCLEUS.md` |
 | Rebuild as an **exact replica first**, improve afterwards | The owner needs continuity for ~470 people; parity is provable, "improvements" are not. All later changes should be additive |
 | **Supabase** (new project) is the database and file store; API routes and the daily job move with the code | Owner's stated preference |
 | **Leave out the Nucleus intake proxy** (2 Nov 2026) | The integration with another internal system is not being carried over |

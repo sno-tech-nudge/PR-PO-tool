@@ -42,7 +42,7 @@ Secrets (API keys, the database password) are in neither package. They are liste
 
 The root `README.md` is the shorter overview, kept current with every change. Reference data: [`data/`](data/) holds the Finance mapping sheet (entity, programme, sub-programme, location, donor) the donor lists were generated from.
 
-Rebuilding in **Lovable**? Read [`REBUILD_ON_LOVABLE.md`](REBUILD_ON_LOVABLE.md): a short step-by-step of what to do outside Lovable and what to tell it.
+**The chosen target is the existing Nucleus ERP (Lovable, TanStack Start, Cloudflare, Supabase).** Read [`BUILD_INTO_NUCLEUS.md`](BUILD_INTO_NUCLEUS.md): what Nucleus already has, what cannot be copied, the decisions needed, the one check to run on the live Nucleus database, how to load the data safely, build order and cutover. [`REBUILD_ON_LOVABLE.md`](REBUILD_ON_LOVABLE.md) is the generic version for a brand-new, empty Lovable project.
 
 ## Two ways to rebuild
 
@@ -93,7 +93,7 @@ You may freely replace: the React inline-style UI, the Vercel functions, the bro
 
 ## Decisions the owner has already made (do not re-ask)
 
-Supabase is the database and file store. The API routes and the daily job live in the codebase that moves. The Nucleus integration is out.
+The tool is rebuilt natively inside the Nucleus ERP with all data only in Nucleus's Supabase project, not connected to the old system (`BUILD_INTO_NUCLEUS.md`). Supabase is the database and file store. The API routes and the daily job live in the codebase that moves. The Nucleus integration is out.
 The tool must be an **exact replica** first; improvements come after parity. Changes are additive and never alter existing behaviour.
 Finance Admin exists and may approve anything except its own requests. PO approval is a per-person switch, as vendor approval is.
 TDS applies to line items only. "Other" requires saying what it is. Pending ₹0 means nothing left to pay out.
