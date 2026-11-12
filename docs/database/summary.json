@@ -1,0 +1,189 @@
+{
+  "extra_schemas": [],
+  "extensions": [
+    "pg_stat_statements",
+    "pgcrypto",
+    "supabase_vault",
+    "uuid-ossp"
+  ],
+  "sequences": 5,
+  "functions": [
+    "category_key",
+    "enforce_company_card_not_reimbursable",
+    "jsonb_arr",
+    "log_ddl_command",
+    "log_ddl_drop",
+    "log_team_member_change",
+    "next_doc_number",
+    "promote_other_category",
+    "system_logs_refuse",
+    "trg_promote_other_expense",
+    "trg_promote_other_pr"
+  ],
+  "tables": [
+    "activity_log",
+    "advances",
+    "approval_delegations",
+    "approval_rules",
+    "audit_trail_access_log",
+    "custom_categories",
+    "expense_captures",
+    "expense_details",
+    "expense_notifications",
+    "expense_reports",
+    "expense_vouch_events",
+    "feedback",
+    "pr_approvals",
+    "pr_review_presence",
+    "purchase_orders",
+    "purchase_requests",
+    "report_advances",
+    "report_approvals",
+    "report_expenses",
+    "system_logs",
+    "system_state",
+    "tds_rules",
+    "team_members",
+    "vendor_bank_change_log",
+    "vendor_invites",
+    "vendors",
+    "zoho_directory"
+  ],
+  "constraints": 56,
+  "indexes": 11,
+  "views": [],
+  "triggers": [
+    "expense_details.promote_other_expense",
+    "expense_details.trg_company_card_not_reimbursable",
+    "purchase_requests.promote_other_pr",
+    "system_logs.system_logs_no_change",
+    "system_logs.system_logs_no_truncate",
+    "team_members.team_members_system_log"
+  ],
+  "policies": [
+    "public.activity_log: activity_log_all",
+    "public.advances: advances_all",
+    "public.approval_delegations: approval_delegations_all",
+    "public.approval_rules: approval_rules_all",
+    "public.audit_trail_access_log: audit_trail_access_log_all",
+    "public.custom_categories: custom_categories_all",
+    "public.expense_captures: expense_captures_all",
+    "public.expense_details: expense_details_all",
+    "public.expense_notifications: expense_notifications_all",
+    "public.expense_reports: expense_reports_all",
+    "public.expense_vouch_events: expense_vouch_events_all",
+    "public.feedback: feedback_all",
+    "public.pr_approvals: pr_approvals_all",
+    "public.pr_review_presence: pr_review_presence_all",
+    "public.purchase_orders: purchase_orders_all",
+    "public.purchase_requests: purchase_requests_all",
+    "public.report_advances: report_advances_all",
+    "public.report_approvals: report_approvals_all",
+    "public.report_expenses: report_expenses_all",
+    "public.system_logs: system_logs_add",
+    "public.system_logs: system_logs_read",
+    "public.system_state: system_state_all",
+    "public.tds_rules: tds_rules_all",
+    "public.team_members: team_members_all",
+    "public.vendor_bank_change_log: vendor_bank_change_log_all",
+    "public.vendor_invites: vendor_invites_all",
+    "public.vendors: vendors_all",
+    "public.zoho_directory: zoho_directory_all",
+    "storage.objects: feedback_screenshots_all",
+    "storage.objects: nudge_buckets_all"
+  ],
+  "event_triggers": [
+    "system_log_ddl (ddl_command_end)",
+    "system_log_drop (sql_drop)"
+  ],
+  "realtime_tables": [],
+  "pg_cron_jobs": "cron schema not present",
+  "buckets": [
+    {
+      "id": "expense-documents",
+      "name": "expense-documents",
+      "public": false,
+      "file_size_limit": null,
+      "allowed_mime_types": null
+    },
+    {
+      "id": "feedback-screenshots",
+      "name": "feedback-screenshots",
+      "public": false,
+      "file_size_limit": null,
+      "allowed_mime_types": null
+    },
+    {
+      "id": "po-pdfs",
+      "name": "po-pdfs",
+      "public": false,
+      "file_size_limit": null,
+      "allowed_mime_types": null
+    },
+    {
+      "id": "pr-quotes",
+      "name": "pr-quotes",
+      "public": false,
+      "file_size_limit": null,
+      "allowed_mime_types": null
+    },
+    {
+      "id": "vendor-documents",
+      "name": "vendor-documents",
+      "public": false,
+      "file_size_limit": null,
+      "allowed_mime_types": null
+    }
+  ],
+  "row_counts": {
+    "activity_log": 141,
+    "advances": 5,
+    "approval_delegations": 0,
+    "approval_rules": 3,
+    "audit_trail_access_log": 9,
+    "custom_categories": 0,
+    "expense_captures": 50,
+    "expense_details": 2142,
+    "expense_notifications": 1300,
+    "expense_reports": 950,
+    "expense_vouch_events": 7,
+    "feedback": 2,
+    "pr_approvals": 85,
+    "pr_review_presence": 0,
+    "purchase_orders": 1041,
+    "purchase_requests": 1050,
+    "report_advances": 2,
+    "report_approvals": 52,
+    "report_expenses": 1657,
+    "system_logs": 66,
+    "system_state": 2,
+    "tds_rules": 6,
+    "team_members": 474,
+    "vendor_bank_change_log": 0,
+    "vendor_invites": 24,
+    "vendors": 647,
+    "zoho_directory": 1231
+  },
+  "storage": {
+    "expense-documents": {
+      "files": 62,
+      "bytes": 12325566
+    },
+    "feedback-screenshots": {
+      "files": 2,
+      "bytes": 463478
+    },
+    "po-pdfs": {
+      "files": 380,
+      "bytes": 74318456
+    },
+    "pr-quotes": {
+      "files": 128,
+      "bytes": 43334863
+    },
+    "vendor-documents": {
+      "files": 194,
+      "bytes": 63271030
+    }
+  }
+}

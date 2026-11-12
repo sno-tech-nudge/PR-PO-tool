@@ -5,6 +5,21 @@ cron running from this codebase. The Nucleus intake-proxy is deliberately left o
 
 Nothing here writes to the live database. The export is read-only.
 
+**The full, current runbook is [`docs/MIGRATION_RUNBOOK.md`](../../docs/MIGRATION_RUNBOOK.md)** (start at `docs/START_HERE.md`).
+This file is the quick reference for the scripts in this folder:
+
+| Command | What it does |
+|---|---|
+| `npm run handover` | Export, regenerate the docs, build the two zips (`CODE_AND_DOCS`, `DATA_PRIVATE`) and checksums into `db_export_backup/handover/`. Flags: `-- --skip-export`, `-- --with-storage` |
+| `npm run migration:export` | Read-only export of schema, data, sequences, event triggers, storage list |
+| `npm run migration:docs` / `migration:prompts` / `migration:vectors` | Regenerate `docs/DATA_MODEL.md`, `docs/AI_PROMPTS.md`, `docs/data/parity_vectors.json` |
+| `npm run migration:storage` | Download every stored file to `db_export_backup/migration_pack/storage/` |
+| `node scripts/migration/verify-pack.mjs` | Replay the export into an in-memory Postgres and compare row counts (touches nothing real) |
+| `node scripts/migration/apply-db.cjs` | Load the export into an empty new project (`TARGET_DB_URL`) |
+| `npm run migration:upload-storage` | Upload the downloaded files into the new project (`TARGET_SUPABASE_URL`, `TARGET_SERVICE_ROLE_KEY`) |
+| `node scripts/migration/copy-storage.cjs` | Direct project-to-project file copy while the old project is still reachable |
+| `npm run migration:check` | Fail if the code and `inventory.json` disagree |
+
 ## What is where
 
 | Piece | Source of truth | How it moves |

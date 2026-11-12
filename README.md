@@ -17,8 +17,10 @@ The internal finance workflow tool of The Nudge Institute. One web app that hand
 | Live app | https://pr-po-tool.vercel.app (Vercel project `pr-po-tool`) |
 | Source | GitHub `sno-tech-nudge/PR-PO-tool`, branch `main`. A push to `main` deploys automatically. |
 
-If you are here to **rebuild or migrate** the tool, read [Rebuilding on a new Supabase project](#rebuilding-on-a-new-supabase-project)
-and then `scripts/migration/README.md`. Everything needed is prepared there.
+If you are here to **rebuild or migrate** the tool, start with [`docs/START_HERE.md`](docs/START_HERE.md). It lists everything
+in the handover package, in reading order: context and decisions, architecture, business rules, workflows, roles, the OCR and AI
+prompts, the data model and SQL, integrations, the migration runbook and the parity checklist. The short version is in
+[Rebuilding on a new Supabase project](#rebuilding-on-a-new-supabase-project) below.
 
 ---
 
@@ -346,7 +348,9 @@ src/
                           delegation, systemLog, activityLog, auditPack, tallyExport, offlineQueue, i18n, ...
   styles/tokens.css       design tokens
 public/                   favicon, comparative-statement templates
-scripts/migration/        everything needed to rebuild on a new Supabase project
+docs/                     the handover documentation (start at docs/START_HERE.md); docs/database = schema as SQL,
+                          docs/data = mapping sheet and rule test vectors
+scripts/migration/        tooling to export, verify, load and package the database and files
 supabase_migration_*.sql  history of schema changes (not a complete schema)
 ```
 
@@ -388,35 +392,45 @@ change automatically.
 
 ## Rebuilding on a new Supabase project
 
-Everything for an exact replica is prepared under [`scripts/migration/`](scripts/migration/README.md):
+**Documentation for a rebuild lives in [`docs/`](docs/START_HERE.md).** Two packages are produced by `npm run handover`:
+
+| Package | Contents | Share |
+|---|---|---|
+| This repository / `CODE_AND_DOCS` zip | Code, API routes, `docs/` (context, architecture, rules, workflows, roles, AI prompts, data model, schema SQL, runbook, parity checklist), migration scripts | Safe: scanned for secrets, no personal data |
+| `DATA_PRIVATE` zip | Every database row and every stored file | **Private**: bank details, PAN, Aadhaar, employee records |
+
+Tooling in [`scripts/migration/`](scripts/migration/README.md):
 
 | File | Role |
 |---|---|
-| `README.md` | The step-by-step runbook and smoke-test checklist. Start here. |
+| `build-handover.cjs` | `npm run handover`: refreshes the export and generated docs, scans for secrets, builds both zips and their checksums into `db_export_backup/handover/` (gitignored). |
 | `export-db.cjs` | Read-only export of the **live** schema, data and storage list into `db_export_backup/migration_pack/` (gitignored). |
-| `apply-db.cjs` | Loads that export into an empty new project and checks every row count. Refuses to run against the live project. |
-| `copy-storage.cjs` | Copies every file in every bucket, keeping the same paths (the database stores them). |
-| `inventory.json` | Everything outside the database: API routes, cron, env vars, buckets. |
-| `check-inventory.cjs` | `npm run migration:check` fails if the code and the inventory disagree. |
+| `gen-data-model-doc.cjs`, `gen-ai-prompts.cjs`, `gen-parity-vectors.mjs` | Regenerate `docs/DATA_MODEL.md`, `docs/AI_PROMPTS.md` and `docs/data/parity_vectors.json` from the live database and code. |
+| `verify-pack.mjs` | Proves the export loads: replays it into an in-memory Postgres and compares every table's row count. |
+| `apply-db.cjs` | Loads the export into an empty new project and checks every row count. Refuses to run against the live project. |
+| `download-storage.cjs`, `upload-storage.cjs`, `copy-storage.cjs` | Download every stored file; upload them from disk to a new project; or copy directly project to project. Same paths throughout. |
+| `inventory.json`, `check-inventory.cjs` | Everything outside the database (routes, cron, env, buckets); `npm run migration:check` fails if the code and the inventory disagree. |
 
-Summary of the procedure:
+Summary of the procedure (full version: [`docs/MIGRATION_RUNBOOK.md`](docs/MIGRATION_RUNBOOK.md)):
 
 1. Create an empty Supabase project (same or newer Postgres major version).
-2. Freeze writes on the live tool using maintenance mode, then `npm run migration:export` so the data is final.
+2. Freeze writes on the live tool using maintenance mode, then `npm run handover -- --with-storage` so the data is final.
 3. `apply-db.cjs` with `TARGET_DB_URL`. This creates the schema, loads the data, restores sequence positions and
    last of all installs the event triggers (so the migration itself is not logged as a schema change).
-4. `copy-storage.cjs` with the new project's URL and service-role key.
+4. `upload-storage.cjs` (or `copy-storage.cjs`) with the new project's URL and service-role key.
 5. Deploy this repo with the environment variables above pointing at the new project, and make sure the host runs
    `api/*.js` as functions and calls `/api/reminders` daily (with `Authorization: Bearer <CRON_SECRET>`).
-6. Smoke test (old report opens with its attachments, new document numbers continue the old sequence, System Logs show
-   the history and refuse edits), then switch over and end maintenance.
+6. Smoke test and the [parity checklist](docs/PARITY_CHECKLIST.md), then switch over and end maintenance.
 
-Why you cannot just replay the repo's SQL files, and what the export captures that they miss: policies, triggers, the
-log lock, grants and event triggers were partly applied by ad hoc scripts. A test replay of the export into a scratch
-Postgres matched all 26 tables (there are 27 now) row for row and kept the log lock and both event triggers intact.
+Why you cannot just replay the repo's SQL files: policies, triggers, the log lock, grants and event triggers were partly applied
+by ad hoc scripts, so only the export (`docs/database/schema.sql`) is complete. A test replay of the export into a scratch
+Postgres matched all 27 tables row for row and kept the log lock and both event triggers intact.
 
 **What the export deliberately does not copy:** Supabase's own `issue_*` and `pgrst_*` event triggers and the
 `pg_stat_statements` and `supabase_vault` extensions (every new project has them), and the Nucleus integration (below).
+
+**Keep it current:** when you change a business rule, prompt, role, route, env var or bucket, update the matching file in `docs/`
+(and `inventory.json`) in the same change; `npm run handover` regenerates the parts that come from the database and code.
 
 ## Known gaps, quirks and security posture
 
@@ -436,6 +450,9 @@ Read these before treating the tool as hardened. They are carried over unchanged
 - **Resend sending domain is unresolved**: `thenudge.org` is claimed by another Resend team, so a verified sender and a
   fresh API key are still needed before email is reliable.
 - **Hindi translation** is unreviewed by a native speaker.
+- **Policy checks test stale entity names**: the FCRA message and the FCRA/TNF notes in `policyEngine.js` compare against `NLF FCRA` and
+  `TNF US`, which no entity is called any more, so they never fire. The over-₹20,000 donor-mention check is blocking for every entity.
+- **API routes are unauthenticated** (AI proxy, email, Slack): anyone who finds the URL can use them.
 - **Some category lists and Tally ledger names are provisional** pending Finance's final chart of accounts
   (`TODO(finance)` comments in `prConstants.js` and `tallyExport.js`). The ledgers for the newest categories were
   chosen by the developer, not Finance: Machinery & Plants maps to "Plant and Machinery", Prize Challenge to "Prize and
