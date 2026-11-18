@@ -101,8 +101,7 @@ TDS applies to line items only. "Other" requires saying what it is. Pending ₹0
 ## Secrets to provision (names only)
 
 `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (browser build, and read by the daily job); `GEMINI_API_KEY`, `GROQ_API_KEY`, `RESEND_API_KEY`,
-`RESEND_FROM_EMAIL`, `SLACK_WEBHOOK_URL`, `CRON_SECRET` (server only). A verified sending domain is needed in Resend (the original domain was
-claimed by another Resend team and is still unresolved).
+`RESEND_FROM_EMAIL`, `SLACK_WEBHOOK_URL`, `CRON_SECRET` (server only). That is the **old tool**. In the Nucleus build email goes through Nucleus's own mail instead of Resend (so `RESEND_*` is not needed), and Slack may use Nucleus's existing bot; see `BUILD_INTO_NUCLEUS.md`, decisions log.
 
 ## A ready-to-paste brief for an AI coding tool
 

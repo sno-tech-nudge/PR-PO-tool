@@ -45,7 +45,7 @@ Relocation Allowance, Medicine, Staff Welfare (`needsPoLink`). The form also sug
 - The route is decided by the report's **total**, against active rules in `approval_rules` ordered by `sort_order`. A rule matches when
   `total > min_amount` (or no minimum) and `total <= max_amount` (or no maximum). First match wins.
 - Live rules: **up to ₹2,00,000** → Reporting Manager, then Finance Team. **Above ₹2,00,000** → Reporting Manager, Functional Lead, Finance Team.
-  A third rule named "Retired: COO level" is still active and overlaps the second; it should be switched off (see CONTEXT_AND_DECISIONS.md).
+  A third rule named "Retired: COO level" exists but is inactive (`is_active = false` in the 12 Nov 2026 export) and, being third in sort order, could never win over the second even if switched on.
 - A rule can instead be `auto_approve` or `auto_reject`, which settles the report on submission and emails the employee.
 - With no matching rule the code falls back to the same two routes using `FL_THRESHOLD = 200000` (`src/lib/approvalThreshold.js`).
 - Each level becomes a `report_approvals` row: the first is `pending`, the rest `waiting`, each with `due_at` 48 hours after submission and a

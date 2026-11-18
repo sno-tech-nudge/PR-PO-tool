@@ -85,9 +85,9 @@ The decision is what the owner chose; the reason is recorded where the owner or 
 
 ## 6. Open items and known debt
 
-1. **Resend domain** unresolved (another Resend team owns `thenudge.org`): find the owning team, or verify a subdomain; then set the key and `RESEND_FROM_EMAIL` and send a test.
+1. **Resend domain** unresolved for the **old tool** (another Resend team owns `thenudge.org`). It does not matter for the Nucleus build: the owner decided (18 Nov 2026) that the new module sends email through **Nucleus's own mail**, not Resend.
 2. **FCRA/TNF entity checks** do not match current entity names (above). Decide the intended behaviour with Finance.
-3. `approval_rules` row 3 "Retired: COO level" is still active and overlaps the over-₹2,00,000 rule. Confirm which the router picks, then switch it off.
+3. ~~`approval_rules` row 3 "Retired: COO level"~~ Checked 18 Nov 2026: already inactive in the data, and rules are matched in sort order (rule 2 first), so it can never be picked. Nothing to do.
 4. **TDS rules** for Prize (194BB) and rent on plant (194I) sit on category "Other" (first wins, so Other is taxed as a prize); rent (194I(2)) on "Lodging and Boarding"; there is no "Rent" category. Move them in Settings, TDS Rules.
 5. **Tally ledger names** for the three new categories are developer guesses (Plant and Machinery, Prize and Challenge Expenses, Recruitment Expenses); `TODO(finance)` comments mark the others. Confirm with Finance's chart of accounts.
 6. **Hindi** is unreviewed by a native speaker.

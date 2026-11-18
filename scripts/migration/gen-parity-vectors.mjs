@@ -114,6 +114,7 @@ const R = [
   { id: 3, section: '194C', label: 'Contractor (others)', categories: ['Service'], payee_type: 'other', rate: 2, no_pan_rate: 20, single_threshold: 30000, annual_threshold: 100000 },
   { id: 4, section: '194BB', label: 'Prize, no limits', categories: ['Prize Challenge'], payee_type: 'any', rate: 30, no_pan_rate: 30, single_threshold: null, annual_threshold: null },
 ]
+out.tds_rules = R // the rule set every tds / tds_split case below is computed with (pass it as `rules`)
 const PERSON = 'ABCPE1234F', COMPANY = 'AABCC1234F'
 const T = (name, input) => {
   const r = tds.computeTds({ rules: R, ...input })
@@ -141,5 +142,5 @@ S('yearly pieces count only toward the rule they fall under', { pan: PERSON, lin
 
 fs.mkdirSync(path.join(ROOT, 'docs', 'data'), { recursive: true })
 fs.writeFileSync(path.join(ROOT, 'docs', 'data', 'parity_vectors.json'), JSON.stringify(out, null, 2) + '\n')
-const n = Object.values(out).filter(Array.isArray).reduce((s, a) => s + a.length, 0)
+const n = Object.entries(out).filter(([k, v]) => Array.isArray(v) && k !== 'tds_rules').reduce((s, [, a]) => s + a.length, 0)
 console.log(`Wrote docs/data/parity_vectors.json (${n} cases)`)

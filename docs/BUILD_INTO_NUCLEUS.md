@@ -17,7 +17,7 @@ What follows comes from reading the Nucleus repository (`Anurag-TNI/tni-nucleus`
 | Backend | **Supabase** (Postgres, Storage, Edge Functions in Deno under `supabase/functions/`, each with `verify_jwt` set in `supabase/config.toml`). Migrations are in `supabase/migrations/` |
 | Sign-in | Real **Google OAuth through Supabase**. Identity and role come from the `employees` table: `erp_role` (`super_admin`, `admin`, `manager`, `member`), `managed_module`, `manager_id`, `department_id`, `is_finance_admin`. Helper SQL functions already exist: `current_employee_email`, `is_finance_admin`, `is_functional_lead`, `has_finance_access`, `expense_is_finance`, `expense_is_manager` |
 | Modules | `src/lib/nav-items.ts` (`NAV`) is the single source for menu items; `src/lib/access.ts` (`canSeeModule`, `useModuleAccessGuard`) decides who sees a module. **Expenses is currently a launch gate: super admin plus the module's manager only.** A Finance module with dashboards already exists |
-| Leftovers to remove | Nucleus contains remnants of an earlier plan to forward vendor and PR submissions to the old tool: the screens Vendor Registration, Purchase Request and My Submissions (`src/components/expenses/`, route `src/routes/_app.expenses.tsx`), the edge function `intake-proxy`, the table `intake_submissions`, TypeScript copies of `donorData`, `prConstants` and `vendorGuards` in `src/lib/`, and (**CHECK**, section 4) possibly early stub versions of some of this tool's tables from migration `20260705185851`. **Delete or replace all of it** when the native module is built; none of it is kept, and nothing should be wired to the old tool |
+| Leftovers to remove | **State of `origin/main` on 18 Nov 2026** (the earlier reading was of a checkout 478 commits behind): the old intake screens are already gone, and `/expenses` is an empty placeholder page ("The Nucleus Expenses module is being rebuilt"). Still present: the edge function `intake-proxy`, the table `intake_submissions` and its migration, `src/lib/donorData.ts` and `src/lib/prConstants.ts` (TypeScript copies of this tool's lists), and a July 2026 migration (`20260705185851`) that creates early stub versions of this tool's tables; the live generated types do **not** list those stubs, so they do not exist in the database. Delete the first four when the module is built; nothing is wired to the old tool |
 | OCR | An edge function `ocr-receipt` already calls Gemini (`gemini-2.5-flash`, `GEMINI_API_KEY`). It is simpler than this tool's reader. Replace it with the prompts in `AI_PROMPTS.md` |
 
 Nucleus's `NAV` already has an Expenses item and a Finance item; the new module can take over those slots.
@@ -130,7 +130,90 @@ There is no live link between the systems, so the move is a **one-time copy**:
 
 - Run the section 4 query and confirm any same-named leftover tables are empty before they are dropped.
 - Approve any change to the live Nucleus database; apply the load (SQL editor or a machine with Node and the connection string).
-- Create the Supabase secrets (`GEMINI_API_KEY`, `GROQ_API_KEY`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `SLACK_WEBHOOK_URL`, `CRON_SECRET`) and the daily cron.
-- Verify an email-sending domain in Resend (the original domain is tied up with another Resend team).
+- Create the Supabase secrets the module needs: `GROQ_API_KEY` (new: Nucleus has none today), `CRON_SECRET`, and `GEMINI_API_KEY` (Nucleus already has it). `RESEND_*` is not needed. Add the daily cron.
+- Confirm what "Nucleus mail" is and how a module calls it (see the decisions log: no sending code was found in the Nucleus repo).
 - Confirm the role mapping with Finance and HR, and who is allowed to see bank, PAN and Aadhaar data.
 - Upload the stored files (needs the service-role key).
+
+## 9. Decisions log (answers to the Nucleus builder's ten questions, 18 Nov 2026)
+
+Checked against the Nucleus repo and the tool's data on that date. "Settled" means the owner has agreed; "Recommended" needs the owner's yes.
+
+| # | Question | Answer |
+|---|---|---|
+| 1 | Who ports the logic files? | **Done (18 Nov 2026), on a branch, awaiting review.** Ported with a generator, not by hand, so it can be proven and repeated: branch `feature/expenses-logic` of the Nucleus repo, folder `src/modules/expenses/lib/` (72 logic files, `.ts`, logic unchanged). All 50 parity cases and the integrity check pass; the folder type-checks and lints clean in Nucleus. See section 11. Lovable now builds only the screens. |
+| 2 | Where do roles live? | **Settled in principle: keep the tool's own `team_members` table as the role table for this module**, linked to Nucleus users by email (the schema already loads it, 474 rows). Do not add columns to Nucleus `employees`. The sign-in-only policies use `employees` only to confirm the person is an active Nucleus employee. |
+| 3 | Role mapping | `team_members` already holds every person's tool role, so there is little to map. The real work is a **check**: people in `team_members` who are not in Nucleus `employees` (old Zoho accounts, the second `thedelta.org.in` address) cannot sign in. Run the query in section 10 after the load and decide who to add, link or ignore. Confirm the finance, PR approver and Finance Admin names with Finance. |
+| 4 | Reporting Manager level | **Copy the current behaviour exactly** (any approver-type role may act). Switching to `employees.manager_id` is an improvement for after parity. |
+| 5 | Known bugs | **Copy the tool as it is, then fix with Finance.** Stale entity names (`NLF FCRA`, `TNF US`): the FCRA notes never fire; decide the intended behaviour. **Retired COO rule: no action, it is already inactive** and could never be picked (the earlier note that it was active was wrong). Two TDS rules on category "Other": fix in Settings, TDS Rules by moving them to proper categories, with Finance. `expense-reports` bucket: do **not** create it at first (parity); decide afterwards whether report PDFs should be stored. |
+| 6 | AI text calls | **Keep Groq for text with the same prompts**, so the tuned behaviour is unchanged (summaries, audit opinion, category hint, policy check; all advisory). Nucleus has **no Groq key today**, so one new secret `GROQ_API_KEY` is needed. OCR stays on Gemini, but use the tool's prompts and settings (`AI_PROMPTS.md`: temperature 0, JSON output, thinking off, 3 attempts), not Nucleus's simpler `ocr-receipt`. Model `qwen/qwen3.8-27b` could be retired by Groq one day: keep the model name in one place. |
+| 7 | Email | **Settled: use Nucleus's own mail, not Resend.** Open point: **no email-sending code or mail secret exists in the Nucleus repo** (no function, no Resend/SMTP/Gmail key; its functions use only Supabase, Gemini, Slack and Keka secrets). Someone must say what Nucleus mail is (a platform feature, Supabase Auth SMTP, an external service) and give the module one function it can call with recipient, subject and body. The old tool's email templates (`api/send-email.js`) are the content to reuse. |
+| 8 | Public vendor self-registration link | **Agreed: build last, with a security review.** The schema gives the signed-out role no access at all (correctly), so the public page must call a Supabase Edge Function that checks the invite token, limits use, and writes with the service role. The original page wrote straight to the database with the public key. |
+| 9 | Existing Nucleus Finance module (MIS) | **Settled: keep it separate and untouched.** |
+| 10 | Cutover date | **Agree a firm freeze date with Finance.** Anything entered in the old tool after the freeze is lost. Before the freeze, Finance should clear the backlog of 906 approved reports never marked reimbursed (now possible from All Reports), so the carried-over data is clean. |
+
+**Two risks the builder raised, and where they stand**
+
+- **Name clashes.** Checked: none of the tool's 27 table names appear in Nucleus's generated live types. Ten appear in an old Nucleus migration (5 July 2026) that the live types do not show, so they are probably gone. The generic names (`feedback`, `activity_log`, `system_state`, `system_logs`) have no trace in Nucleus; its own feedback table is `product_feedback` and its other logs are `audit_logs` and `okr_activity_log`. The migration also checks **functions** (not only tables) and **aborts without changing anything** on any clash, so a same-named Nucleus function can never be silently overwritten. The live check query is still the proof.
+- **Event triggers.** Already handled: `nucleus_schema.sql` does not install them; only the append-only lock on `system_logs` is kept.
+- **Sensitive data in production.** Agreed: build and test on the empty schema plus a few test rows; load the real data only at cutover, after the access rules are verified for each role. Today's baseline lets every active employee read the tool's tables through the API (hiding the menu does not protect data). **Role-based database rules must be in place before the real data is loaded** (section 5, "Still to do").
+
+## 10. How to proceed
+
+1. **Owner:** reply to the builder with the answers above; run the section 4 check query on Nucleus; find out what "Nucleus mail" is.
+2. **Port the logic (Claude Code, on a Nucleus branch such as `feature/expenses-logic`):** copy the rule files from `src/lib/` of this repo into a new Nucleus folder (for example `src/modules/expenses/lib/`), convert to TypeScript, swap the Supabase client import for Nucleus's (`@/integrations/supabase/client`), keep every function and constant unchanged. Add a test script that runs `docs/data/parity_vectors.json` and make all 50 pass. Note the 50 cases cover only the pure rules (policy limits, approval route, advance notice, GSTIN, TDS); the files that read and write the database are proven by `PARITY_CHECKLIST.md`. Merge to `main` through a pull request.
+3. **Create the empty tables:** apply `docs/database/nucleus_schema.sql` as a Nucleus migration (after the clash check), plus a few test rows; do not load real data yet.
+4. **Lovable builds the screens**, one module at a time (section 6), with the standing instruction: use the existing tables and the ported logic files, never edit or recreate them.
+5. **Role-based database rules**, tested per role with the same scratch-Postgres harness (`verify-nucleus-schema.mjs` is the base). Vendor bank details, PAN and Aadhaar need special care because row rules cannot hide single columns.
+6. **Public vendor link** and **email**, last.
+7. **Cutover:** freeze date, final export, load the real data with `apply-nucleus.cjs --data-only`, upload files, run the parity checklist, open the module.
+
+**After the load, find people who cannot sign in** (in the tool's `team_members` but not an active Nucleus employee):
+
+```sql
+select tm.email, tm.name, tm.role
+from public.team_members tm
+left join public.employees e on lower(e.email) = lower(tm.email) and coalesce(e.is_active, true)
+where e.id is null and tm.role <> 'employee'
+order by tm.role, tm.email;
+```
+
+Any approver, finance or admin person listed here would be locked out of their approvals. Plain employees who are missing are usually old or test accounts.
+
+## 11. The logic port (done, 18 Nov 2026)
+
+**Where:** Nucleus repository, branch `feature/expenses-logic` (cut from `origin/main` at the time), folder `src/modules/expenses/lib/`. It is in a separate git worktree, so nothing in anyone's normal Nucleus working copy was touched. Pushed to the Nucleus remote as a branch for review; it reaches `main` only through a pull request.
+
+**How:** `node scripts/migration/port-to-nucleus.mjs --nucleus <path to the Nucleus checkout>` in this repository. It copies each `src/lib/*.js` as a `.ts` file with only mechanical changes, and **compares every file with its original line by line, stopping if any other line differs**:
+
+1. a header (`eslint-disable`, `@ts-nocheck`, where the file came from);
+2. relative imports get an explicit `.ts` extension (Nucleus's convention);
+3. `await fetch('/api/...` becomes `await apiFetch('/api/...` (`seams.ts` sends it to a Nucleus Edge Function), plus one import line;
+4. `auth.ts` only: the type-an-email sign-in is replaced by a lookup of the signed-in Nucleus user in `team_members`; all permission helpers are unchanged.
+
+Not ported: `supabase.js` (replaced by `supabase.ts`, which re-exports Nucleus's shared client, so the user's session and the database access rules apply) and `src/lib/i18n` (UI).
+
+**Proof**
+
+- `node --test src/modules/expenses/lib/parity.test.mjs` (also `npm run test:expenses-logic`): 51 tests pass: the 50 cases in `docs/data/parity_vectors.json` plus a **port integrity** check that fails if any ported file is edited later (so Lovable or anyone cannot silently change a rule).
+- Sabotage test: changing the food limit from 750 to 800 made the integrity check and the two food cases fail; restoring the file made all 51 pass again.
+- `tsc --noEmit` on the Nucleus project: 0 errors in the new folder. ESLint with Nucleus's own rules: clean.
+- Re-running the generator without `--force` succeeds and changes nothing; it refuses to overwrite a file that was edited in Nucleus.
+
+**What the 50 cases do and do not cover.** They cover the pure rules: policy limits, approval route by total, advance notice, GSTIN check digit and TDS. The files that read and write the database (approvals, vouching, reimbursement, numbering, notifications) are not covered by them; those are proven by `PARITY_CHECKLIST.md` once screens exist.
+
+**Honest limits of this step**
+
+- The files are `.ts` but carry `@ts-nocheck`: that is what keeps the logic byte-for-byte. Real types can be added later in a separate, reviewed change with the parity test as the safety net.
+- **Three Edge Functions do not exist yet:** `send-email`, `notify-slack`, `ai-proxy`. Until they do, OCR and AI hints fail quietly (the user types instead) and no email or Slack message is sent, which is the same best-effort behaviour as the old tool. The mail service is still undecided (see decisions log, #7). `ai-proxy` should reuse the original `callGeminiDirect` / `callGroqDirect` code (it is in `gemini.ts` and `groq.ts`) with the real keys as Supabase secrets, and must require a signed-in user.
+- Nucleus lacks `jszip` and `pdf-lib`, needed only when a screen imports the PDF and export files (`pdfMerge`, `pdfGenerator`, `poBundle`, `auditPack`, `auditTrail`, `vendorProfilePdf`, `expenseAttachmentsPdf`). `jspdf`, `html2canvas`, `pdfjs-dist` and `react` are present.
+- `slack.ts` `recordUrl()` builds a link for the old single-page app; Nucleus routes need their own link format.
+- Unrelated to this port: `intake-proxy` and its table still exist in Nucleus and should be removed when the module ships.
+
+**Next, in order**
+
+1. Review the branch. In the Nucleus repository: `git diff origin/main --stat` and read `src/modules/expenses/lib/README.md`. Commit it, push it, open a pull request, merge. Because Lovable also commits to `main`, merge promptly and keep the branch short-lived.
+2. Create the three Edge Functions (`ai-proxy` first; `send-email` once the mail path is known).
+3. Apply `docs/database/nucleus_schema.sql` as a Nucleus migration (empty), with a few test rows.
+4. Give Lovable this standing instruction for every screen prompt: *"Use the existing tables. Import all rules from `@/modules/expenses/lib/...`. Never edit, move or reimplement anything in `src/modules/expenses/lib`. If a rule seems wrong, say so instead of changing it."* Then build screens one module at a time (section 6).
+5. Add role-based database rules and test them per role before any real data is loaded (section 5, "Still to do").

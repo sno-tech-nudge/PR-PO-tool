@@ -20,6 +20,7 @@ This file is the quick reference for the scripts in this folder:
 | `node scripts/migration/copy-storage.cjs` | Direct project-to-project file copy while the old project is still reachable |
 | `npm run migration:nucleus-schema` / `migration:nucleus-verify` | Generate `docs/database/nucleus_schema.sql` and prove it on a scratch Postgres shaped like Nucleus |
 | `node scripts/migration/apply-nucleus.cjs` | Load tables and data into the Nucleus project (guards: `CONFIRM_PROJECT_REF`, clash pre-flight, empty-table check). `--dry-run`, `--schema-only`, `--data-only` |
+| `node scripts/migration/port-to-nucleus.mjs --nucleus <path>` | Port the tool's logic (`src/lib`) into a Nucleus checkout as `src/modules/expenses/lib/`, unchanged except imports and server-route seams, with a manifest and the parity test. Re-run after any rule change in this tool. See `docs/BUILD_INTO_NUCLEUS.md` section 11 |
 | `npm run migration:check` | Fail if the code and `inventory.json` disagree |
 
 ## What is where

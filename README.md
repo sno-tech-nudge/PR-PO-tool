@@ -445,8 +445,7 @@ Read these before treating the tool as hardened. They are carried over unchanged
 - **Report PDFs are not stored**: the `expense-reports` bucket does not exist (see above).
 - **Direct SQL edits are not logged as data changes**: System Logs record schema changes, deployments, team changes,
   maintenance and downloads, not arbitrary row edits made in SQL.
-- **Rule overlap to check**: `approval_rules` row 3 is named "Retired: COO level (not used)" but is still `is_active`
-  and overlaps row 2 for amounts above ₹2,00,000. Confirm which one the router actually picks before relying on it.
+- **Retired COO rule**: `approval_rules` row 3 is named "Retired: COO level (not used)". In the 12 Nov 2026 export it is already `is_active = false`, and even if it were switched on, rule 2 has a lower sort order and always wins first, so it can never be picked. Nothing to fix; it stays as history.
 - **Resend sending domain is unresolved**: `thenudge.org` is claimed by another Resend team, so a verified sender and a
   fresh API key are still needed before email is reliable.
 - **Hindi translation** is unreviewed by a native speaker.

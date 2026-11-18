@@ -126,7 +126,7 @@ Run the quick list below, then the full `PARITY_CHECKLIST.md`.
 - `expense-reports` bucket does not exist on the live project; creating it on the new one would make report PDFs and audit-trail files start saving. A behaviour change: decide before cutover (default: do not).
 - Login and policies are carried over unchanged in Route A (same exposure as today).
 - The mapping sheet, TDS rules, approval rules and Team & Roles are **data in the database**; they arrive with it.
-- Data issues worth fixing after parity, not during: `approval_rules` row 3 "Retired: COO level" is still active; TDS sections for Prize (194BB) and rent (194I) share the category "Other"; 906 approved reports have never been marked reimbursed.
+- Data issues worth fixing after parity, not during: TDS sections for Prize (194BB) and rent (194I) share the category "Other"; 906 approved reports have never been marked reimbursed.
 
 ## 8. Refreshing the packages from the live system
 
