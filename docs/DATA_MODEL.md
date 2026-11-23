@@ -1,6 +1,6 @@
 # Data model
 
-Generated from the live database on 2026-11-12 by `npm run migration:docs`. Do not edit by hand: regenerate.
+Generated from the live database on 2026-11-22 by `npm run migration:docs`. Do not edit by hand: regenerate.
 The exact, replayable schema is `docs/database/schema.sql`. This file explains it.
 
 27 tables in the `public` schema, plus Supabase Storage. Row counts are a snapshot, not a rule.
@@ -16,7 +16,7 @@ The exact, replayable schema is `docs/database/schema.sql`. This file explains i
 
 | Table | Rows | What it is |
 |---|---|---|
-| [activity_log](#activity_log) | 141 | What people did in the tool (approvals, submissions, rule changes). Admin-only to read. |
+| [activity_log](#activity_log) | 142 | What people did in the tool (approvals, submissions, rule changes). Admin-only to read. |
 | [advances](#advances) | 5 | Money paid to an employee in advance, with its own approval and recorded status. |
 | [approval_delegations](#approval_delegations) | 0 | Out-of-office cover: an approver names a teammate for a date range. |
 | [approval_rules](#approval_rules) | 3 | Configurable report approval routes by amount range (levels, auto-approve, auto-reject). |
@@ -24,18 +24,18 @@ The exact, replayable schema is `docs/database/schema.sql`. This file explains i
 | [custom_categories](#custom_categories) | 0 | Categories that grew out of "Other" automatically (see BUSINESS_RULES.md). |
 | [expense_captures](#expense_captures) | 50 | The receipt image and payment proof as uploaded, with what OCR read from them (amounts, UPI details), a SHA-256 of the receipt for duplicate detection, and the AI-content flag. |
 | [expense_details](#expense_details) | 2142 | One expense (about 70 columns): amounts, vendor, category, policy results, GST/TDS split, deductions, and links to its capture, report, PO and advances. |
-| [expense_notifications](#expense_notifications) | 1300 | In-app notifications (the bell). |
+| [expense_notifications](#expense_notifications) | 1514 | In-app notifications (the bell). |
 | [expense_reports](#expense_reports) | 950 | A report: a bundle of expenses submitted for approval and payment, with status, route, net payable, advance applied, vouch and assignment fields. |
 | [expense_vouch_events](#expense_vouch_events) | 7 | Finance line-by-line vouching history: clear, flag, query, reply, reopen. A line status is its latest event. |
 | [feedback](#feedback) | 2 | Legacy table from the removed Share feedback widget. Kept; nothing writes to it. |
 | [pr_approvals](#pr_approvals) | 85 | One row per approval level of a PR (Functional Leader, then PR Approver). |
 | [pr_review_presence](#pr_review_presence) | 0 | Heartbeat so two approvers see that someone else is reviewing the same PR. |
 | [purchase_orders](#purchase_orders) | 1041 | A PO created from an approved PR, approved and issued by Finance, with its PDF. |
-| [purchase_requests](#purchase_requests) | 1050 | A purchase request: vendor, line items, quotes, budget, donor allocations, advance terms, status. |
+| [purchase_requests](#purchase_requests) | 1051 | A purchase request: vendor, line items, quotes, budget, donor allocations, advance terms, status. |
 | [report_advances](#report_advances) | 2 | How much of each advance a report used (a report can draw on several advances and the reverse). |
 | [report_approvals](#report_approvals) | 52 | One row per approval level of a report: pending, waiting, approved or rejected. |
 | [report_expenses](#report_expenses) | 1657 | Links a report to its expenses (many to many). |
-| [system_logs](#system_logs) | 66 | Append-only record of changes to the system itself: schema changes, deployments, team changes, maintenance, downloads. Update, delete and truncate are refused. |
+| [system_logs](#system_logs) | 69 | Append-only record of changes to the system itself: schema changes, deployments, team changes, maintenance, downloads. Update, delete and truncate are refused. |
 | [system_state](#system_state) | 2 | Key/value settings: the maintenance state, and the auto-category threshold. |
 | [tds_rules](#tds_rules) | 6 | TDS rules owned by Finance: section, categories, payee type, rates, thresholds. |
 | [team_members](#team_members) | 474 | Everyone who can sign in: name, email, role, function, and the switches for approving vendors and POs. Login is "type an authorised email", so this table IS the user list. |
@@ -78,8 +78,8 @@ Row-level security: enabled. Policies: `activity_log_all` (all, using `true`).
 
 Values in use:
 
-- `entity_type`: `report` (91), `vendor` (14), `pr` (12), `settings` (11), `expense` (8), `po` (5)
-- `action`: `status_change` (33), `level_approved` (24), `draft_deleted` (16), `resubmitted` (15), `draft_created` (10), `assigned` (8), `deleted` (8), `tds_rule_changed` (6), `tds_rule_added` (3), `vouch_clear` (3), `payment_kind_changed` (3), `vouch_reopen` (2), `submitted` (2), `approval_rule_toggled` (2), `confirmed_after_review` (1), `vouch_query` (1), `submitted_for_review` (1), `vouch_reply` (1), `created` (1), `tds_set` (1)
+- `entity_type`: `report` (91), `vendor` (14), `pr` (13), `settings` (11), `expense` (8), `po` (5)
+- `action`: `status_change` (33), `level_approved` (24), `draft_deleted` (16), `resubmitted` (15), `draft_created` (11), `assigned` (8), `deleted` (8), `tds_rule_changed` (6), `tds_rule_added` (3), `vouch_clear` (3), `payment_kind_changed` (3), `vouch_reopen` (2), `submitted` (2), `approval_rule_toggled` (2), `confirmed_after_review` (1), `vouch_query` (1), `submitted_for_review` (1), `vouch_reply` (1), `created` (1), `tds_set` (1)
 
 ### advances
 
@@ -399,8 +399,8 @@ Row-level security: enabled. Policies: `expense_notifications_all` (all, using `
 
 Values in use:
 
-- `type`: `pr_pending_reminder` (939), `pr_submitted` (129), `pr_draft_reminder` (96), `po_pending_review` (61), `pr_approved` (18), `approved` (17), `vendor_submitted` (12), `assigned` (8), `link_suggestion` (6), `vendor_approved` (5), `pr_raised` (2), `pr_rejected` (1), `pr_pending_review` (1), `vendor_raised` (1), `rejected` (1), `reply` (1), `vendor_rejected` (1), `query` (1)
-- `related_type`: `pr` (1175), `po` (61), `report` (31), `vendor` (18), `(null)` (15)
+- `type`: `pr_pending_reminder` (1119), `pr_draft_reminder` (130), `pr_submitted` (129), `po_pending_review` (61), `pr_approved` (18), `approved` (17), `vendor_submitted` (12), `assigned` (8), `link_suggestion` (6), `vendor_approved` (5), `pr_raised` (2), `pr_rejected` (1), `pr_pending_review` (1), `vendor_raised` (1), `rejected` (1), `reply` (1), `vendor_rejected` (1), `query` (1)
+- `related_type`: `pr` (1389), `po` (61), `report` (31), `vendor` (18), `(null)` (15)
 
 ### expense_reports
 
@@ -698,9 +698,9 @@ Row-level security: enabled. Policies: `purchase_requests_all` (all, using `true
 
 Values in use:
 
-- `status`: `po_generated` (1034), `submitted` (6), `approved` (6), `draft` (3), `rejected` (1)
-- `expense_type`: `Revenue Expenditure` (917), `Capital Expenditure (CAPEX)` (128), `Program Expenditure` (5)
-- `source`: `app` (1049), `nucleus` (1)
+- `status`: `po_generated` (1034), `submitted` (6), `approved` (6), `draft` (4), `rejected` (1)
+- `expense_type`: `Revenue Expenditure` (918), `Capital Expenditure (CAPEX)` (128), `Program Expenditure` (5)
+- `source`: `app` (1050), `nucleus` (1)
 
 ### report_advances
 
@@ -823,8 +823,8 @@ Row-level security: enabled. Policies: `system_logs_add` (insert, using `true`);
 
 Values in use:
 
-- `category`: `team` (30), `schema` (21), `deployment` (14), `download` (1)
-- `action`: `member_updated` (16), `deployed` (14), `role_changed` (13), `CREATE FUNCTION` (9), `CREATE INDEX` (3), `ALTER TABLE` (3), `CREATE TRIGGER` (2), `CREATE POLICY` (2), `CREATE TABLE` (1), `po_approval_switched_on` (1), `DROP INDEX` (1), `audit_pack_download` (1)
+- `category`: `team` (30), `schema` (21), `deployment` (17), `download` (1)
+- `action`: `deployed` (17), `member_updated` (16), `role_changed` (13), `CREATE FUNCTION` (9), `CREATE INDEX` (3), `ALTER TABLE` (3), `CREATE TRIGGER` (2), `CREATE POLICY` (2), `CREATE TABLE` (1), `po_approval_switched_on` (1), `DROP INDEX` (1), `audit_pack_download` (1)
 
 ### system_state
 
