@@ -6,6 +6,8 @@
 // 3. "vendor registry": the approved-vendor list is read through exp_vendor_directory(), never the vendors table directly
 //    (bank, PAN and Aadhaar are Finance-only in Nucleus, so a direct read returns only the person's own vendors).
 // 4. "auto-link": the PR/report auto-linker reads vendor names through exp_vendor_directory() too, and still links correctly.
+// 5. "vouch": the line-by-line vouching rules (line status from the latest event, receipt-versus-entered mismatches, what is
+//    saved and who is notified).
 // Needs no database and no network: the Nucleus Supabase client is replaced by an inert stub for this run.
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
@@ -228,3 +230,65 @@ for (const trigger of ["pr", "expense_report"]) {
     }
   });
 }
+
+// ---------- 5. vouch ----------
+const vouch = await import("./vouch.ts");
+
+test("vouch: a line's status is its latest event; a reopen takes the tick back", () => {
+  const ev = (...kinds) => kinds.map((kind) => ({ kind }));
+  assert.equal(vouch.lineStatus([]), "none");
+  assert.equal(vouch.lineStatus(ev("clear")), "clear");
+  assert.equal(vouch.lineStatus(ev("flag")), "flag");
+  assert.equal(vouch.lineStatus(ev("query")), "query");
+  assert.equal(vouch.lineStatus(ev("query", "reply")), "replied");
+  assert.equal(vouch.lineStatus(ev("clear", "reopen")), "none");
+  assert.equal(vouch.lineStatus(ev("clear", "reopen", "query")), "query");
+  assert.deepEqual(Object.keys(vouch.LINE_STATUS), ["none", "clear", "flag", "query", "replied"]);
+});
+
+test("vouch: receipt mismatches only report differences that matter", () => {
+  const expense = { amount: 1000, date: "25/11/2026", vendor: "Sharma Travels" };
+  const same = { receipt_extracted_amount: 1000.5, receipt_extracted_date: "2026-11-25", receipt_extracted_vendor: "Sharma Travels Pvt Ltd" };
+  assert.deepEqual(vouch.receiptMismatches(expense, null), []);
+  assert.deepEqual(vouch.receiptMismatches(expense, same), []); // under Rs 1 off, same date in another format, vendor contained
+  const bad = { receipt_extracted_amount: 1500, receipt_extracted_date: "2026-11-20", receipt_extracted_vendor: "Zenith Mart" };
+  assert.deepEqual(vouch.receiptMismatches(expense, bad).map((m) => m.field), ["amount", "date", "vendor"]);
+  // a vendor with a word in common is not a mismatch
+  assert.deepEqual(vouch.receiptMismatches(expense, { receipt_extracted_vendor: "Sharma Cabs" }), []);
+});
+
+test("vouch: events are saved with author and role, and only the right person is notified", async () => {
+  const inserts = [];
+  const notes = [];
+  const chain = { select: () => chain, single: () => chain, then: (res) => Promise.resolve({ data: { saved: true }, error: null }).then(res) };
+  const table = (name) => ({
+    insert: (row) => (inserts.push([name, row]), chain),
+    select: () => chain, update: () => chain, eq: () => chain, order: () => chain, limit: () => chain, single: () => chain,
+    then: (res) => Promise.resolve({ data: [], error: null }).then(res),
+  });
+  globalThis.__testSupabase = { from: table, rpc: () => chain };
+  try {
+    const report = { id: "rep-1", report_reference: "TNIE1", employee_email: "emp@x.org" };
+    const expense = { id: "exp-1", vendor: "Sharma Travels", amount: 1200 };
+    const user = { email: "fin@x.org", name: "Fin" };
+    const row = () => inserts.find(([t]) => t === "expense_vouch_events")[1];
+    await vouch.addVouchEvent({ report, expense, kind: "query", body: "  which trip?  ", user, role: "finance" });
+    assert.deepEqual(
+      { kind: row().kind, body: row().body, author_email: row().author_email, author_role: row().author_role, report_id: row().report_id, expense_id: row().expense_id },
+      { kind: "query", body: "which trip?", author_email: "fin@x.org", author_role: "finance", report_id: "rep-1", expense_id: "exp-1" },
+    );
+    await vouch.addVouchEvent({ report, expense, kind: "flag", body: "", user, role: "finance" });
+    assert.equal(inserts.filter(([t]) => t === "expense_vouch_events").at(-1)[1].body, null);
+    const notified = () => inserts.filter(([t]) => t === "expense_notifications").map(([, r]) => [r.recipient_id, r.type]);
+    // a query tells the employee; a flag tells nobody
+    assert.deepEqual(notified(), [["emp@x.org", "query"]]);
+    // a reply tells the person named in notifyEmail, and only when one is given
+    await vouch.addVouchEvent({ report, expense, kind: "reply", body: "the Pune trip", user: { email: "emp@x.org", name: "Emp" }, role: "employee" });
+    assert.deepEqual(notified(), [["emp@x.org", "query"]]);
+    await vouch.addVouchEvent({ report, expense, kind: "reply", body: "the Pune trip", user: { email: "emp@x.org", name: "Emp" }, role: "employee", notifyEmail: "fin@x.org" });
+    assert.deepEqual(notified(), [["emp@x.org", "query"], ["fin@x.org", "reply"]]);
+    assert.deepEqual(await vouch.clearLines({ report, expenses: [], user }), []); // nothing to tick, nothing saved
+  } finally {
+    delete globalThis.__testSupabase;
+  }
+});

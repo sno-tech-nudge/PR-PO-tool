@@ -203,6 +203,21 @@ for (const [from, to] of specFiles) {
   fs.writeFileSync(dest, lf(fs.readFileSync(path.join(ROOT, from), 'utf8')))
 }
 
+// ---- the original screens, as read-only reference for whoever rebuilds them ----
+// Every file gets ".txt" appended (ReportWorkspace.jsx -> ReportWorkspace.jsx.txt) so nothing under docs/ is ever built, linted or imported.
+// The folder structure is kept (src/components/..., src/App.jsx.txt, src/lib/i18n/...). The folder is rewritten on every run so it never goes stale.
+const UI = path.join(SPEC, 'original-ui')
+fs.rmSync(UI, { recursive: true, force: true })
+let uiCount = 0
+function copyAsTxt(from, to) {
+  if (fs.statSync(from).isDirectory()) { for (const n of fs.readdirSync(from).sort()) copyAsTxt(path.join(from, n), path.join(to, n)); return }
+  fs.mkdirSync(path.dirname(to), { recursive: true })
+  fs.writeFileSync(`${to}.txt`, lf(fs.readFileSync(from, 'utf8')))
+  uiCount++
+}
+for (const rel of ['src/components', 'src/App.jsx', 'src/lib/i18n']) copyAsTxt(path.join(ROOT, rel), path.join(UI, rel))
+console.log(`Original screens copied as read-only .txt reference: ${uiCount} files in ${path.relative(process.cwd(), UI) || UI}`)
+
 let toolCommit = null, toolDirty = null
 try {
   toolCommit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT }).toString().trim()
