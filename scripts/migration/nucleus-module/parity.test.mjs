@@ -3,6 +3,8 @@
 // 1. "port integrity": no ported file has been edited since it was ported (compares each file with PORT_MANIFEST.json).
 // 2. "parity vectors": the 50 cases in parity_vectors.json (policy limits, approval route, advance notice, GSTIN, TDS) give
 //    the same answers as the original code produced.
+// 3. "vendor registry": the approved-vendor list is read through exp_vendor_directory(), never the vendors table directly
+//    (bank, PAN and Aadhaar are Finance-only in Nucleus, so a direct read returns only the person's own vendors).
 // Needs no database and no network: the Nucleus Supabase client is replaced by an inert stub for this run.
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
@@ -17,7 +19,7 @@ register(
     encodeURIComponent(`
 export async function resolve(specifier, context, next) {
   if (specifier === "@/integrations/supabase/client") {
-    return { url: 'data:text/javascript,export const supabase = new Proxy({}, { get: () => { throw new Error("the database was used in a rule test") } })', shortCircuit: true };
+    return { url: 'data:text/javascript,export const supabase = new Proxy({}, { get: (_, key) => { if (globalThis.__testSupabase) return globalThis.__testSupabase[key]; throw new Error("the database was used in a rule test") } })', shortCircuit: true };
   }
   return next(specifier, context);
 }`),
@@ -141,3 +143,33 @@ for (const c of vectors.tds_split) {
     );
   });
 }
+
+// ---------- 3. vendor registry ----------
+test("vendor registry: read through exp_vendor_directory(), approved only, never the vendors table", async () => {
+  const calls = [];
+  const rows = [{ id: "v1", vendor_id: "V-1", org_name: "Acme Traders Pvt Ltd", status: "approved", gstin: "27AAPFU0939F1ZV" }];
+  const builder = {
+    eq: (...a) => (calls.push(["eq", ...a]), builder),
+    order: (...a) => (calls.push(["order", ...a]), builder),
+    limit: (...a) => (calls.push(["limit", ...a]), builder),
+    then: (resolve) => Promise.resolve({ data: rows }).then(resolve),
+  };
+  globalThis.__testSupabase = {
+    rpc: (name) => (calls.push(["rpc", name]), builder),
+    from: (name) => {
+      throw new Error(`the vendors table must not be read directly (from('${name}'))`);
+    },
+  };
+  try {
+    const vm = await import("./vendorMatch.ts");
+    const registry = await vm.loadVendorRegistry(true);
+    assert.deepEqual(calls[0], ["rpc", "exp_vendor_directory"]);
+    assert.ok(calls.some((c) => c[0] === "eq" && c[1] === "status" && c[2] === "approved"), "must filter to status = approved");
+    assert.equal(registry.length, 1);
+    // directory rows carry no pan_number; matching must still work on GSTIN and on name
+    assert.equal(vm.matchVendor(registry, { gstin: "27aapfu0939f1zv" })?.how, "gstin");
+    assert.equal(vm.matchVendor(registry, { name: "Acme Traders Pvt Ltd" })?.how, "name");
+  } finally {
+    delete globalThis.__testSupabase;
+  }
+});
