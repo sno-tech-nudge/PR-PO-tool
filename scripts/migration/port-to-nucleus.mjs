@@ -9,7 +9,7 @@
 //   2. relative imports get an explicit .ts extension (Nucleus's convention; './gemini.js' becomes './gemini.ts');
 //   3. `await fetch('/api/...` becomes `await apiFetch('/api/...` (seams.ts sends it to a Nucleus Edge Function), plus one import line;
 //   4. auth.js only: the type-an-email sign-in is replaced by a lookup of the signed-in Nucleus user in team_members.
-//   5. vendorMatch.js only: the vendors-table read becomes the database function exp_vendor_directory() (vendor bank/PAN/Aadhaar are Finance-only in Nucleus).
+//   5. vendorMatch.js and linkEngine.js only: vendor reads become the database function exp_vendor_directory() (vendor bank/PAN/Aadhaar are Finance-only in Nucleus).
 // supabase.js is replaced by supabase.ts (the shared Nucleus client). src/lib/i18n is not ported (it is UI).
 // The script compares every ported file with its original line by line and stops if anything else differs.
 // Re-run it whenever the old tool's logic changes before cutover. It refuses to overwrite files edited in Nucleus unless --force.
@@ -102,6 +102,37 @@ function adaptVendorMatch(t) {
   return t.replace(oldRead, ".rpc('exp_vendor_directory')\n").replace(anchor, note + anchor)
 }
 
+function adaptLinkEngine(t) {
+  const embed = "vendor_id, vendors(org_name)')"
+  const plain = "vendor_id')"
+  const prAnchor = '      if (!pr) return\n'
+  const prsAnchor = '\n      const vendorNames = (report.report_expenses || []).map('
+  const fnAnchor = 'export async function autoLinkPRToExpense('
+  if (t.split(embed).length !== 3 || !t.includes(prAnchor) || t.split(prsAnchor).length !== 2 || !t.includes(fnAnchor)) throw new Error('linkEngine.js changed shape: cannot find the vendors(org_name) reads. Update port-to-nucleus.mjs.')
+  const helper = [
+    '// ===== ADAPTED FOR NUCLEUS (start) =====',
+    '// In Nucleus, ordinary employees cannot read the vendors table (bank, PAN and Aadhaar are Finance-only), so the embedded',
+    '// vendors(org_name) in the purchase_requests queries would come back empty for them. The vendor names are read through the',
+    '// database function exp_vendor_directory() instead and attached as pr.vendors = { org_name }, the same shape the embed gave,',
+    '// so the scoring below is unchanged.',
+    'async function attachVendorNames(prs) {',
+    '  const ids = [...new Set(prs.map(p => p.vendor_id).filter(Boolean))]',
+    '  for (const p of prs) p.vendors = null',
+    '  if (!ids.length) return',
+    "  const { data } = await supabase.rpc('exp_vendor_directory').in('id', ids)",
+    '  const names = new Map((data || []).map(v => [v.id, v.org_name]))',
+    '  for (const p of prs) if (names.has(p.vendor_id)) p.vendors = { org_name: names.get(p.vendor_id) }',
+    '}',
+    '// ===== ADAPTED FOR NUCLEUS (end) =====',
+    '',
+    '',
+  ].join('\n')
+  return t.split(embed).join(plain)
+    .replace(prAnchor, prAnchor + '      await attachVendorNames([pr])\n')
+    .replace(prsAnchor, '\n      await attachVendorNames(prs || [])' + prsAnchor)
+    .replace(fnAnchor, helper + fnAnchor)
+}
+
 fs.mkdirSync(OUT, { recursive: true })
 const files = []
 const skipped = []
@@ -118,9 +149,10 @@ for (const name of fs.readdirSync(SRC).sort()) {
   let body = original.replace(importRe, '$1$2./$3.ts$2')
   const usesSeam = fetchRe.test(body); fetchRe.lastIndex = 0
   if (usesSeam) body = body.replace(fetchRe, "await apiFetch('/api/")
-  const adapted = base === 'auth' || base === 'vendorMatch'
+  const adapted = base === 'auth' || base === 'vendorMatch' || base === 'linkEngine'
   if (base === 'auth') body = adaptAuth(body)
   if (base === 'vendorMatch') body = adaptVendorMatch(body)
+  if (base === 'linkEngine') body = adaptLinkEngine(body)
   const seamImport = usesSeam ? "import { apiFetch } from './seams.ts'\n" : ''
   const ported = header(base, origSha, adapted) + seamImport + body
 
@@ -136,7 +168,7 @@ for (const name of fs.readdirSync(SRC).sort()) {
       changed++
     }
     report.push(`${base}.ts: ${changed} line(s) adjusted${usesSeam ? ' (+ apiFetch import)' : ''}`)
-  } else report.push(base === 'auth' ? 'auth.ts: ADAPTED (sign-in replaced by a Nucleus lookup)' : 'vendorMatch.ts: ADAPTED (vendor list read through exp_vendor_directory())')
+  } else report.push(base === 'auth' ? 'auth.ts: ADAPTED (sign-in replaced by a Nucleus lookup)' : `${base}.ts: ADAPTED (vendor names read through exp_vendor_directory())`)
 
   fs.writeFileSync(path.join(OUT, `${base}.ts`), ported)
   files.push({ ported: `${base}.ts`, source: `src/lib/${name}`, sourceSha256: origSha, portedSha256: sha(ported), kind: adapted ? 'adapted' : usesSeam ? 'verbatim+seam' : 'verbatim' })

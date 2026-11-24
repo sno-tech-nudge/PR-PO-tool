@@ -5,6 +5,7 @@
 //    the same answers as the original code produced.
 // 3. "vendor registry": the approved-vendor list is read through exp_vendor_directory(), never the vendors table directly
 //    (bank, PAN and Aadhaar are Finance-only in Nucleus, so a direct read returns only the person's own vendors).
+// 4. "auto-link": the PR/report auto-linker reads vendor names through exp_vendor_directory() too, and still links correctly.
 // Needs no database and no network: the Nucleus Supabase client is replaced by an inert stub for this run.
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
@@ -173,3 +174,57 @@ test("vendor registry: read through exp_vendor_directory(), approved only, never
     delete globalThis.__testSupabase;
   }
 });
+
+// ---------- 4. auto-link ----------
+// A fake client: records every call, answers per table. Reading the vendors table (or embedding it) is a failure.
+function fakeLinkDb({ pr, reports, prs }) {
+  const log = { rpc: [], selects: [], updates: [], tables: [] };
+  const make = (table) => {
+    const st = { table, op: "select", single: false };
+    const b = {
+      select: (cols) => (st.op === "select" && log.selects.push([table, cols]), b),
+      update: (row) => ((st.op = "update"), log.updates.push([table, row]), b),
+      insert: () => ((st.op = "insert"), b),
+      eq: () => b, is: () => b, in: () => b, order: () => b, limit: () => b,
+      single: () => ((st.single = true), b),
+      then: (resolve) => {
+        let data = null;
+        if (st.op === "select" && table === "purchase_requests") data = st.single ? pr : prs;
+        if (st.op === "select" && table === "expense_reports") data = st.single ? reports[0] : reports;
+        return Promise.resolve({ data, error: null }).then(resolve);
+      },
+    };
+    return b;
+  };
+  const fake = {
+    from: (table) => (log.tables.push(table), make(table)),
+    rpc: (name) => {
+      log.rpc.push(name);
+      const b = { in: (col, ids) => (log.rpc.push([col, ids]), b), then: (resolve) => Promise.resolve({ data: [{ id: "ven-1", org_name: "Acme Traders Pvt Ltd" }] }).then(resolve) };
+      return b;
+    },
+  };
+  return { fake, log };
+}
+const prRow = { id: "pr-1", amount: 10000, submitted_at: new Date().toISOString(), requested_by: "a@x.org", vendor_id: "ven-1" };
+const reportRow = { id: "rep-1", employee_email: "a@x.org", total_amount: 10000, created_at: new Date().toISOString(), report_expenses: [{ expense_details: { vendor: "Acme Traders" } }] };
+
+for (const trigger of ["pr", "expense_report"]) {
+  test(`auto-link (${trigger}): vendor name comes from exp_vendor_directory(), vendors table never read, link still made`, async () => {
+    const { fake, log } = fakeLinkDb({ pr: prRow, reports: [reportRow], prs: [prRow] });
+    globalThis.__testSupabase = fake;
+    try {
+      const { autoLinkPRToExpense } = await import("./linkEngine.ts");
+      await autoLinkPRToExpense(trigger === "pr" ? "pr-1" : "rep-1", trigger);
+      assert.ok(!log.tables.includes("vendors"), "the vendors table must not be read");
+      assert.ok(log.selects.every(([, cols]) => !/vendors\(/.test(cols)), "no embedded vendors(...) in any select");
+      assert.equal(log.rpc[0], "exp_vendor_directory");
+      assert.deepEqual(log.rpc[1], ["id", ["ven-1"]]);
+      // 20 (same person) + 30 (amount) + 20 (dates) + 30 (vendor name) = 100, so a high-confidence link in both directions
+      assert.ok(log.updates.some(([t, r]) => t === "purchase_requests" && r.linked_expense_report_id === "rep-1" && r.link_confidence === "high"));
+      assert.ok(log.updates.some(([t, r]) => t === "expense_reports" && r.pr_id === "pr-1" && r.link_confidence === "high"));
+    } finally {
+      delete globalThis.__testSupabase;
+    }
+  });
+}
